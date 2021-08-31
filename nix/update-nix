@@ -1,0 +1,17 @@
+#!/usr/bin/env nix-shell
+#! nix-shell -i bash -p curl jq nix
+set -exo pipefail
+
+owner="nixos"
+
+if [ ! -z "$2" ]; then
+    owner="$1"
+    rev="$2"
+else
+    rev="${1:-master}"
+fi
+
+resolved_rev=$(curl "https://api.github.com/repos/${owner}/nixpkgs/commits?sha=${rev}" | jq -r 'first.sha')
+url="https://github.com/${owner}/nixpkgs/archive/${resolved_rev}.tar.gz"
+digest=$(nix-prefetch-url --unpack "$url")
+echo "{\"url\": \"${url}\", \"sha256\": \"${digest}\"}" | jq '.' > nix/nixpkgs.json

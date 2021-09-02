@@ -22,5 +22,6 @@ mkShell {
 
   shellHook = ''
     export PATH=$(pwd)/bin:$PATH
+    export HARDHAT_NETWORK=localhost
   '';
 }

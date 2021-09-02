@@ -38,3 +38,11 @@ Run the command
 to start all background services. For the time being this is just running `geth` with default configuration.
 
 To add additional processes add lines to `Procfile` and (if desired) scripts to run in the `./bin` directory.
+
+### Hardhat
+
+Run a script that connect to the local network (on port 8545)
+
+```
+> npx hardhat run scripts/sample-script.js --network localhost
+```

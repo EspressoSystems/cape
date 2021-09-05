@@ -1,5 +1,14 @@
 # AAP on Ethereum
 
+### Obtaining this source code
+Check out the source with submodules by running
+
+    git clone --recursive git@gitlab.com:translucence/aap-on-ethereum
+
+Or, to initialize the submodules in an existing checkout
+
+    git submodule update --init --recursive
+
 ### Dependencies
 Install the [nix](https://nixos.org) package manager to provide dependencies with
 correct versions. Installation instructions can be found [here](https://nixos.org/download.html).

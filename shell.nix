@@ -1,10 +1,18 @@
-with import ./nix/nixpkgs.nix {};
+with import ./nix/nixpkgs.nix { };
 
-mkShell {
+let
+  geth = callPackage ./nix/go-ethereum {
+    inherit (darwin) libobjc;
+    inherit (darwin.apple_sdk.frameworks) IOKit;
+  };
+in
+mkShell
+{
   buildInputs = [
-    solc          # solidity compiler
-    go-ethereum   # blockchain node
-    hivemind      # process runner
+    geth
+    solc # solidity compiler
+    hivemind # process runner
+    nodejs-12_x # nodejs
   ];
 
   shellHook = ''

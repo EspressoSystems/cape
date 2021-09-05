@@ -1,6 +1,6 @@
 # AAP on Ethereum
 
-### Obtaining this source code
+### Obtaining the source code
 Check out the source with submodules by running
 
     git clone --recursive git@gitlab.com:translucence/aap-on-ethereum
@@ -28,7 +28,7 @@ Note that it direnv needs to be [hooked](https://direnv.net/docs/hook.html) into
 To enable `direnv` run
 
     direnv allow
-    .
+
 from the root directory of this repo. The first time this may take a few minutes to download all dependencies.
 Once the `nix-shell` is activated all dependencies as well as scripts in the `./bin` directory will be in the
 `PATH`.

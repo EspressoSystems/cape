@@ -58,9 +58,16 @@ Run a script that connect to the local network (on port 8545)
 
 ### Tests
 
-To run the tests do:
+* Launch the private blockchain
+```
+> cd local_network_conf
+> ./run_private_geth.sh
+```
+
+* Run the tests
 
 ```
+> cd aap-contracts
 > npx hardhat test
 ```
 

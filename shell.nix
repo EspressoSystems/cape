@@ -1,4 +1,5 @@
 with import ./nix/nixpkgs.nix {};
+with python38Packages;
 
 #let
 #  geth = go-ethereum.overrideAttrs (old: rec {

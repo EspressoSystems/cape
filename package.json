@@ -1,0 +1,17 @@
+{
+  "name": "local_network_conf",
+  "version": "1.0.0",
+  "description": "",
+  "main": "generate_genesis.js",
+  "dependencies": {
+    "async": "^3.2.1",
+    "async-child-process": "^1.1.1"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

@@ -1,5 +1,14 @@
 # AAP on Ethereum
 
+### Obtaining the source code
+Check out the source with submodules by running
+
+    git clone --recursive git@gitlab.com:translucence/aap-on-ethereum
+
+Or, to initialize the submodules in an existing checkout
+
+    git submodule update --init --recursive
+
 ### Dependencies
 Install the [nix](https://nixos.org) package manager to provide dependencies with
 correct versions. Installation instructions can be found [here](https://nixos.org/download.html).
@@ -12,14 +21,14 @@ To update the pinned version of `nixpkgs` run `nix/update-nix`, optionally passi
 revision as arguments. The default is: `nix/update-nix nixos master`. Make sure to commit any changed
 files in the `./nix` directory afterwards.
 
-### Enviornment
+### Environment
 The [direnv](https://direnv.net/) shell extension can be used to activate the environment.
 Note that it direnv needs to be [hooked](https://direnv.net/docs/hook.html) into the shell to function.
 
 To enable `direnv` run
 
     direnv allow
-    .
+
 from the root directory of this repo. The first time this may take a few minutes to download all dependencies.
 Once the `nix-shell` is activated all dependencies as well as scripts in the `./bin` directory will be in the
 `PATH`.
@@ -46,3 +55,12 @@ Run a script that connect to the local network (on port 8545)
 ```
 > npx hardhat run scripts/sample-script.js --network localhost
 ```
+
+### Tests
+
+To run the tests do:
+
+```
+> npx hardhat test
+```
+

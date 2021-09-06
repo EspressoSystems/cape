@@ -9,11 +9,13 @@ specifiers:
   ethereum-waffle: ^3.4.0
   ethers: ^5.4.6
   hardhat: ^2.6.2
+  noble-bls12-381: ^0.14.1
   pnpm: ^6.14.7
 
 dependencies:
   async: 3.2.1
   async-child-process: 1.1.1
+  noble-bls12-381: 0.14.1
   pnpm: 6.14.7
 
 devDependencies:
@@ -5029,6 +5031,10 @@ packages:
   /nice-try/1.0.5:
     resolution: {integrity: sha512-1nh45deeb5olNY7eX82BkPO7SSxR5SSYJiPTrTdFUVYwAl8CKMA5N9PjTYkHiRjisVcxcQ1HXdLhx2qxxJzLNQ==}
     dev: true
+
+  /noble-bls12-381/0.14.1:
+    resolution: {integrity: sha512-egSRU82z60IqTfESlJTUPtE7REmf1Eq2uRZwSLPuwiB+vuMJZBaV67LeGQPSWSS1/G6m7mI6rzU3szz7Qic/8A==}
+    dev: false
 
   /node-addon-api/2.0.2:
     resolution: {integrity: sha512-Ntyt4AIXyaLIuMHF6IOoTakB3K+RWxwtsHNRxllEoA6vPwP9o4866g6YWDLUdnucilZhmkxiHwHr11gAENw+QA==}

@@ -1,6 +1,5 @@
 with import ./nix/nixpkgs.nix {};
 with import ./nix/nixpkgs.nix { };
-with python38Packages;
 
 let
   geth = callPackage ./nix/go-ethereum {

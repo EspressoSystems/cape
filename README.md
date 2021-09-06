@@ -53,7 +53,7 @@ To add additional processes add lines to `Procfile` and (if desired) scripts to 
 Run a script that connect to the local network (on port 8545)
 
 ```
-> npx hardhat run scripts/sample-script.js --network localhost
+> hardhat run scripts/sample-script.js --network localhost
 ```
 
 ### Tests
@@ -68,6 +68,6 @@ Run a script that connect to the local network (on port 8545)
 
 ```
 > cd aap-contracts
-> npx hardhat test
+> hardhat test
 ```
 

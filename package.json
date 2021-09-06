@@ -1,13 +1,20 @@
 {
-  "name": "local_network_conf",
+  "name": "aap-on-ethereum",
   "version": "1.0.0",
   "description": "",
-  "main": "generate_genesis.js",
   "dependencies": {
     "async": "^3.2.1",
-    "async-child-process": "^1.1.1"
+    "async-child-process": "^1.1.1",
+    "pnpm": "^6.14.7"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "@nomiclabs/hardhat-ethers": "^2.0.2",
+    "@nomiclabs/hardhat-waffle": "^2.0.1",
+    "chai": "^4.3.4",
+    "ethereum-waffle": "^3.4.0",
+    "ethers": "^5.4.6",
+    "hardhat": "^2.6.2"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },

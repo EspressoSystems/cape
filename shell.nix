@@ -17,6 +17,5 @@ mkShell
   ];
   shellHook = ''
     export PATH=$(pwd)/bin:$(pwd)/node_modules/.bin:$PATH
-    export HARDHAT_NETWORK=localhost
   '';
 }

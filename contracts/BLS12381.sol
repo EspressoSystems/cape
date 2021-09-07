@@ -736,7 +736,6 @@ library B12_381Lib {
     using B12 for B12.G1Point;
     using B12 for B12.G2Point;
 
-    // TODO fix the op codes
     uint8 constant G1_ADD = 0xA;
     uint8 constant G1_MUL = 0xB;
     uint8 constant G1_MULTI_EXP = 0xC;

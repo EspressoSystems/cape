@@ -22,6 +22,7 @@ revision as arguments. The default is: `nix/update-nix nixos master`. Make sure 
 files in the `./nix` directory afterwards.
 
 ### Environment
+#### 1. Activate the nix environment
 The [direnv](https://direnv.net/) shell extension can be used to activate the environment.
 Note that it direnv needs to be [hooked](https://direnv.net/docs/hook.html) into the shell to function.
 
@@ -38,6 +39,11 @@ temporarily disable `direnv` and manually enter a nix shell run
 
     direnv deny
     nix-shell
+
+#### 2. Install nodejs dependencies
+Install the node dependencies with pnpm
+
+    pnpm i
 
 ### Run
 Run the command
@@ -58,16 +64,26 @@ Run a script that connect to the local network (on port 8545)
 
 ### Tests
 
-* Launch the private blockchain
+* Launch a hardhat node based on ethereumjs (easier debugging)
+
+```
+hardhat node
+```
+
+* Launch the private `geth` blockchain (more like the real thing)
 ```
 > cd local_network_conf
 > ./run_private_geth.sh
 ```
 
-* Run the tests
+* Run the tests against geth or hardhat node running on `localhost:8545`
 
 ```
-> cd aap-contracts
+> hardhat --network local test
+```
+
+* Run the tests in standalone fashion
+
+```
 > hardhat test
 ```
-

@@ -10,6 +10,7 @@ mkShell
 {
   buildInputs = [
     geth
+    nodePackages.pnpm
     solc # solidity compiler
     hivemind # process runner
     nodejs-12_x # nodejs

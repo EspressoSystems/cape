@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
 #exec -c geth
 
-# TODO change once we can get our geth packages from nix
-exec -c /home/philippe/repositories/Translucence/go-ethereum/build/bin/geth
+exec -c geth --http --dev

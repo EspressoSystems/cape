@@ -1,4 +1,3 @@
-with import ./nix/nixpkgs.nix {};
 with import ./nix/nixpkgs.nix { };
 
 let
@@ -10,7 +9,6 @@ in
 mkShell
 {
   buildInputs = [
-
     geth
     solc # solidity compiler
     hivemind # process runner

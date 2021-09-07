@@ -33,9 +33,6 @@ describe("Greeter", function () {
 
     // Call BLS12-381 functions
     let point = await greeter.addG1();
-    console.log(point);
-
-
   });
 
 });

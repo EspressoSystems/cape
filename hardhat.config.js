@@ -1,5 +1,14 @@
 require("@nomiclabs/hardhat-waffle");
 
+const Common = require("@ethereumjs/common").default;
+forCustomChain = Common.forCustomChain;
+Common.forCustomChain = (...args) => {
+  const common = forCustomChain(...args);
+  common._eips = [2537];
+  return common;
+};
+
+
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
 task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
@@ -17,8 +26,23 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
  * @type import('hardhat/config').HardhatUserConfig
  */
 module.exports = {
-  solidity: "0.8.4",
+  networks: {
+    hardhat: {
+    },
+    local: {
+      url: "http://localhost:8545",
+    }
+  },
+  solidity: {
+    version: "0.7.2",
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 1000,
+      },
+    },
+  },
   gasPrice: 4700,
-  gasLimit: 3000000,
+  gasLimit: 300000000,
   chainId: 8889,
 };

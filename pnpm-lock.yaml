@@ -3,6 +3,9 @@ lockfileVersion: 5.3
 specifiers:
   '@nomiclabs/hardhat-ethers': ^2.0.2
   '@nomiclabs/hardhat-waffle': ^2.0.1
+  '@summa-tx/memview-sol': ^2.0.0
+  async: ^3.2.1
+  async-child-process: ^1.1.1
   chai: ^4.3.4
   ethereum-waffle: ^3.4.0
   ethers: ^5.4.6
@@ -10,6 +13,9 @@ specifiers:
   noble-bls12-381: ^0.14.1
 
 dependencies:
+  '@summa-tx/memview-sol': 2.0.0
+  async: 3.2.1
+  async-child-process: 1.1.1
   noble-bls12-381: 0.14.1
 
 devDependencies:
@@ -650,6 +656,10 @@ packages:
     resolution: {integrity: sha512-H8BSBoKE8EubJa0ONqecA2TviT3TnHeC4NpgnAHSUiuhZoQBfPB4L2P9bs8R6AoTW10Endvh3vc+fomVMIDIYQ==}
     dev: true
 
+  /@summa-tx/memview-sol/2.0.0:
+    resolution: {integrity: sha512-30OvyqlTToJSBX/zwJ2jERUsFxz1SOESkJvJi0E3NHp8YDz7NMSgCtItSZ031dEfEUFCRAtYbEhfeyQ/2Crspw==}
+    dev: false
+
   /@szmarczak/http-timer/1.1.2:
     resolution: {integrity: sha512-XIB2XbzHTN6ieIjfIMV9hlVcfPU26s2vafYWQcZHWXHOxiaRZYEDKEwdl129Zyg50+foYV2jCgtrqSA6qNuNSA==}
     engines: {node: '>=6'}
@@ -1001,6 +1011,12 @@ packages:
     engines: {node: '>=0.10.0'}
     dev: true
 
+  /async-child-process/1.1.1:
+    resolution: {integrity: sha1-J9ClmLVzhwf5iYwEi9IxNAWDdHs=}
+    dependencies:
+      babel-runtime: 6.26.0
+    dev: false
+
   /async-eventemitter/0.2.4:
     resolution: {integrity: sha512-pd20BwL7Yt1zwDFy+8MX8F1+WCT8aQeKj0kQnTrH9WaeRETlRamVhD0JtRPmrV4GfOJ2F9CvdQkZeZhnh2TuHw==}
     dependencies:
@@ -1026,6 +1042,10 @@ packages:
     dependencies:
       lodash: 4.17.21
     dev: true
+
+  /async/3.2.1:
+    resolution: {integrity: sha512-XdD5lRO/87udXCMC9meWdYiR+Nq6ZjUfXidViUZGu2F1MO4T3XwZ1et0hb2++BgLfhyJwy44BGB/yx80ABx8hg==}
+    dev: false
 
   /asynckit/0.4.0:
     resolution: {integrity: sha1-x57Zf380y48robyXkLzDZkdLS3k=}
@@ -1464,7 +1484,6 @@ packages:
     dependencies:
       core-js: 2.6.12
       regenerator-runtime: 0.11.1
-    dev: true
 
   /babel-template/6.26.0:
     resolution: {integrity: sha1-3gPi0WOWsGn0bdn/+FIfsaDjXgI=}
@@ -2109,7 +2128,6 @@ packages:
     resolution: {integrity: sha512-Kb2wC0fvsWfQrgk8HU5lW6U/Lcs8+9aaYcy4ZFc6DDlo4nZ7n70dEgE5rtR0oG6ufKDUnrwfWL1mXR5ljDatrQ==}
     deprecated: core-js@<3.3 is no longer maintained and not recommended for usage due to the number of issues. Because of the V8 engine whims, feature detection in old core-js versions could cause a slowdown up to 100x even if nothing is polyfilled. Please, upgrade your dependencies to the actual version of core-js.
     requiresBuild: true
-    dev: true
 
   /core-util-is/1.0.2:
     resolution: {integrity: sha1-tf1UIgqivFq1eqtxQMlAdUUDwac=}
@@ -5739,7 +5757,6 @@ packages:
 
   /regenerator-runtime/0.11.1:
     resolution: {integrity: sha512-MguG95oij0fC3QV3URf4V2SDYGJhJnJGqvIIgdECeODCT98wSWDAJ94SSuVpYQUoTcGUIL6L4yNB7j1DFFHSBg==}
-    dev: true
 
   /regenerator-transform/0.10.1:
     resolution: {integrity: sha512-PJepbvDbuK1xgIgnau7Y90cwaAmO/LCLMI2mPvaXq2heGMR3aWW5/BQvYrhJ8jgmQjXewXvBjzfqKcVOmhjZ6Q==}

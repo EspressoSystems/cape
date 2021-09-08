@@ -1,7 +1,7 @@
 require("@nomiclabs/hardhat-waffle");
 
 const Common = require("@ethereumjs/common").default;
-forCustomChain = Common.forCustomChain;
+const forCustomChain = Common.forCustomChain;
 Common.forCustomChain = (...args) => {
   const common = forCustomChain(...args);
   common._eips = [2537];
@@ -26,6 +26,7 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
  * @type import('hardhat/config').HardhatUserConfig
  */
 module.exports = {
+  defaultNetwork: "localhost",
   networks: {
     hardhat: {
     },

@@ -1,5 +1,4 @@
 # AAP on Ethereum
-
 ### Obtaining the source code
 Check out the source with submodules by running
 
@@ -45,6 +44,7 @@ Install the node dependencies with pnpm
 
     pnpm i
 
+Also run this command after pulling in changes that modify `package-lock.json`.
 ### Run
 Run the command
 
@@ -54,36 +54,48 @@ to start all background services. For the time being this is just running `geth`
 
 To add additional processes add lines to `Procfile` and (if desired) scripts to run in the `./bin` directory.
 
-### Hardhat
+### Testing
+We support running against a go-ethereum (geth) or hardhat (shortcut `hh`) node running on `localhost:8545`.
 
+#### Testing against go-ethereum node
+We use a [patched version](https://gitlab.com/translucence/go-ethereum) of geth
+that enables `EIP-2537` (BLS precompiles).
+
+Start the geth chain in separate terminal
+
+    run-geth
+
+When running tests against geth
+
+- Tests run faster than with the hardhat node.
+- The `console.log` statements in solidity **do nothing** (except consume a tiny amount of gas (?)).
+- Failing `require` statements are shown in the`geth` console log.
+
+#### Testing against hardhat node
+The hardhat node enables `EIP-2537` (BLS precompiles) via monkeypatching in `hardhat.config.js`.
+This may cause undesirable effects with some hardhat features but so far we have not found any.
+
+##### Separate hardhat node
+Start the hardhat node in separate terminal
+
+    hh node
+
+When running tests against this hardhat node
+
+- Tests are slow.
+- The `console.log` statements in solidity show in terminal running the node.
+- Failing `require` statements are shown in human readable form in the terminal running the node.
+
+##### Hardhat node integrated in test command
+It's also possible to run the hardhat node and tests in one command
+
+    hh --network hardhat test
+
+- Tests are slow.
+- The `console.log` statements are shown in in the terminal.
+- Failing `require` statements are shown in human readable form in the terminal.
+
+#### Running scripts
 Run a script that connect to the local network (on port 8545)
 
-```
-> hardhat run scripts/sample-script.js --network localhost
-```
-
-### Tests
-
-* Launch a hardhat node based on ethereumjs (easier debugging)
-
-```
-hardhat node
-```
-
-* Launch the private `geth` blockchain (more like the real thing)
-```
-> cd local_network_conf
-> ./run_private_geth.sh
-```
-
-* Run the tests against geth or hardhat node running on `localhost:8545`
-
-```
-> hardhat --network local test
-```
-
-* Run the tests in standalone fashion
-
-```
-> hardhat test
-```
+    hh run scripts/sample-script.js --network localhost

@@ -12,6 +12,7 @@ specifiers:
   hardhat: ^2.6.2
   hardhat-shorthand: ^1.0.0
   noble-bls12-381: ^0.14.1
+  prettier: ^2.3.2
 
 dependencies:
   '@summa-tx/memview-sol': 2.0.0
@@ -27,6 +28,7 @@ devDependencies:
   ethers: 5.4.6
   hardhat: 2.6.2
   hardhat-shorthand: 1.0.0
+  prettier: 2.3.2
 
 packages:
 

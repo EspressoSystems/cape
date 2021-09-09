@@ -736,6 +736,9 @@ library B12_381Lib {
     using B12 for B12.G1Point;
     using B12 for B12.G2Point;
 
+    // Note that these opcodes are different from the ones defined in https://github.com/prestwich/b12-sol.
+    // The values can be found in the geth source code:
+    //   https://github.com/ethereum/go-ethereum/blob/90987db7334c1d10eb866ca550efedb66dea8a20/core/vm/contracts.go#L97
     uint8 constant G1_ADD = 0xA;
     uint8 constant G1_MUL = 0xB;
     uint8 constant G1_MULTI_EXP = 0xC;

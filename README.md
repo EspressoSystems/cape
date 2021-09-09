@@ -44,7 +44,7 @@ Install the node dependencies with pnpm
 
     pnpm i
 
-Also run this command after pulling in changes that modify `package-lock.json`.
+Also run this command after pulling in changes that modify `pnpm-lock.yaml`.
 ### Run
 Run the command
 

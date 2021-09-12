@@ -1,4 +1,5 @@
 require("@nomiclabs/hardhat-waffle");
+const { TASK_COMPILE_SOLIDITY_GET_SOLC_BUILD } = require("hardhat/builtin-tasks/task-names");
 
 const Common = require("@ethereumjs/common").default;
 const forCustomChain = Common.forCustomChain;
@@ -19,6 +20,25 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
   }
 });
 
+// Use the compiler downloaded with nix if the version matches
+// Based on: https://github.com/fvictorio/hardhat-examples/tree/master/custom-solc
+subtask(TASK_COMPILE_SOLIDITY_GET_SOLC_BUILD, async (args, hre, runSuper) => {
+  if (args.solcVersion === process.env.SOLC_VERSION) {
+    const compilerPath = process.env.SOLC_PATH;
+
+    return {
+      compilerPath,
+      isSolcJs: false, // native solc
+      version: args.solcVersion,
+      // for extra information in the build-info files, otherwise not important
+      longVersion: `${args.solcVersion}-dummy-long-version`
+    }
+  }
+
+  console.warn("Warning: Using compiler downloaded by hardhat")
+  return runSuper(); // Fall back to running the default subtask
+})
+
 // You need to export an object to set up your config
 // Go to https://hardhat.org/config/ to learn more
 
@@ -35,7 +55,7 @@ module.exports = {
     }
   },
   solidity: {
-    version: "0.7.2",
+    version: process.env.SOLC_VERSION,
     settings: {
       optimizer: {
         enabled: true,

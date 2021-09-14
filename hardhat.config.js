@@ -55,7 +55,14 @@ module.exports = {
     }
   },
   solidity: {
-    version: process.env.SOLC_VERSION,
+    compilers: [
+      {
+        version: process.env.SOLC_VERSION,
+      },
+      {
+        version: "0.4.14"
+      }
+    ],
     settings: {
       optimizer: {
         enabled: true,

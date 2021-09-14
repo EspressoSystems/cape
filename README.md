@@ -99,3 +99,27 @@ It's also possible to run the hardhat node and tests in one command
 Run a script that connect to the local network (on port 8545)
 
     hh run scripts/sample-script.js --network localhost
+
+#### Precompiled solidity binaries
+Hardhat is configured to use the solc binary installed with nix (see
+[nix/solc-bin/default.nix](nix/solc-bin/default.nix)) if matches the version
+number. If hardhat downloads and uses another binary a warning is printed the
+console.
+
+##### Details
+The binaries used by hardhat, brownie, solc-select, ... from
+https://solc-bin.ethereum.org/linux-amd64/list.json underwent a change in build
+process from v0.7.5 to v0.7.6 ([this
+commit](https://github.com/ethereum/solidity/commit/7308abc08475869cf7bc6a0654acb9d45bafc52a)).
+
+The new solc binaries either fail to run or depend on files that aren't provide by nix.
+
+Hardhat always "works" because it falls back to solcjs silently (unless running with `--verbose`)
+
+    $ hardhat compile --verbose
+    ...
+    hardhat:core:tasks:compile Native solc binary doesn't work, using solcjs instead +8ms
+    ...
+
+The solcjs compiler is a lot slower than native solc and brownie (using py-solc-x),
+solc-select do not have such a fallback mechanisms.

@@ -23,16 +23,4 @@ describe("Greeter", function () {
 
   });
 
-  it("Should add two points in G1 correctly", async function () {
-
-    const [owner] = await ethers.getSigners();
-
-    const Greeter = await ethers.getContractFactory("Greeter");
-    const greeter = await Greeter.deploy("Hello, world!");
-    await greeter.deployed();
-
-    // Call BLS12-381 functions
-    let point = await greeter.addG1();
-  });
-
 });

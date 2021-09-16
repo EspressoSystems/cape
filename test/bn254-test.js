@@ -1,7 +1,7 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
-describe("bn254", function () {
+describe.skip("bn254", function () {
 
   it("should add two G1 points", async function () {
 

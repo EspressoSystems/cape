@@ -2,7 +2,6 @@
 pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
-import "hardhat/console.sol";
 import { Curve } from "./BN254.sol";
 
 contract DummyPlonkVerifier {
@@ -12,17 +11,31 @@ contract DummyPlonkVerifier {
 
     function verify(bytes memory chunk) public returns (bool) {
         // Count the number of transactions
-        uint aaptx_size =  3000; // TODO put real value
-        uint n_aaptx =  chunk.length / aaptx_size; // TODO be more precise
-        console.log("n_aaptx", n_aaptx);
+        uint aaptx_size =  3000;
+        uint n_aaptx =  chunk.length / aaptx_size;
 
         // Run the plonk verifier once for each AAP transaction
-        bool res;
         for (uint i=0; i<n_aaptx; i++) {
-            res = verify_plonk_proof() && res;
+            verify_plonk_proof();
         }
+        return true;
+    }
 
-        return res;
+    function batch_verify(bytes memory chunk) public returns (bool) {
+        // Count the number of transactions
+        uint aaptx_size =  3000;
+        uint n_aaptx =  chunk.length / aaptx_size;
+
+        // We lower bound the complexity by
+        // 2 pairings operations
+        // 2 $n_aaptx$ multi exp in G1
+
+        run_multi_exp_g1(n_aaptx);
+
+        run_pairing_check();
+        run_pairing_check();
+
+        return true;
     }
 
     function verify_plonk_proof() public returns (bool){
@@ -98,13 +111,10 @@ contract DummyPlonkVerifier {
 
     function run_pairing_check() private {
         Curve.G1Point memory g1 = Curve.P1();
-        uint scalar1 = 545454; // TODO sample a bigger scalar
-        Curve.G1Point memory p1 = Curve.g1mul(g1,scalar1);
-
         Curve.G2Point memory g2 = Curve.P2();
 
         Curve.G1Point [] memory points1 = new Curve.G1Point[](1);
-        points1[0] = p1;
+        points1[0] = g1;
 
         Curve.G2Point [] memory points2 = new Curve.G2Point[](1);
         points2[0] = g2;
@@ -112,13 +122,17 @@ contract DummyPlonkVerifier {
     }
 
     // TODO use proper multiexp opcode
-    // TODO missing group addition
     function run_multi_exp_g1(uint size) private {
         for (uint i=0;i<size;i++) {
             // Group scalar multiplications
             Curve.G1Point memory g1 = Curve.P1();
             uint scalar1 = 545454; // TODO use bigger scalar
             Curve.G1Point memory p1 = Curve.g1mul(g1,scalar1);
+
+            // (size-1) group additions
+            if (i>=1) {
+                Curve.G1Point memory p2 = Curve.g1add(g1,g1);
+            }
         }
     }
 }

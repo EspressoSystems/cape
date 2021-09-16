@@ -13,22 +13,29 @@ describe("Dummy Plonk Verifier", function () {
 
     // TODO increment the AAP block size
     let aap_bytes_size = 3000;
-    let n_app_tx = 20;
-    let bytes_len = n_app_tx * aap_bytes_size;
+    let n_aap_tx = 40;
+    let bytes_len = n_aap_tx * aap_bytes_size;
 
     let chunk = new Uint8Array(bytes_len);
     for (let i=0; i< bytes_len; i++){
       chunk[i] = 12;
     }
 
+    // Simple plonk verification
     let tx = await dpv.verify(chunk);
     let txReceipt = await tx.wait();
 
-    // TODO why does this not work
-    // expect(tx).to.equal(true);
-
     let gasUsed = txReceipt.cumulativeGasUsed.toString();
-    let expectedGasUsed = ethers.BigNumber.from("5117998");
+    let expectedGasUsed = ethers.BigNumber.from("5235314");
     expect(gasUsed).equal(expectedGasUsed);
+
+    // Batch plonk verification
+    tx = await dpv.batch_verify(chunk);
+    txReceipt = await tx.wait();
+
+    gasUsed = txReceipt.cumulativeGasUsed.toString();
+    expectedGasUsed = ethers.BigNumber.from("1314580");
+    expect(gasUsed).equal(expectedGasUsed);
+
   });
 });

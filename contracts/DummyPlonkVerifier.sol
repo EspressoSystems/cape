@@ -9,6 +9,10 @@ contract DummyPlonkVerifier {
     constructor() public {
     }
 
+    function verify_empty(bytes memory chunk) public returns (bool) {
+        return true;
+    }
+
     function verify(bytes memory chunk) public returns (bool) {
         // Count the number of transactions
         uint aaptx_size =  3000;
@@ -27,12 +31,20 @@ contract DummyPlonkVerifier {
         uint n_aaptx =  chunk.length / aaptx_size;
 
         // We lower bound the complexity by
-        // 2 pairings operations
-        // 2 $n_aaptx$ multi exp in G1
+        // 1 pairing check
+        // 2  multi exp in G1 of size $n_aaptx$ (See rust code PlonkKzgSnark.batch_verify)
+        // $n_aaptx$ multi-exp in G1 of size $c$ where c=29 (Empirically 29=<c<=36. See rust code call `prepare_pcs_info` in PlonkKzgSnark.batch_verify)
 
+        // 2 multi exp in G1 of size $n_aaptx$
+        run_multi_exp_g1(n_aaptx);
         run_multi_exp_g1(n_aaptx);
 
-        run_pairing_check();
+        // $n_aaptx$ multi-exp in G1 of size $c$ where c=
+        for (uint i=0;i<n_aaptx;i++){
+            run_multi_exp_g1(29);
+        }
+
+        // 1 pairing check
         run_pairing_check();
 
         return true;
@@ -84,8 +96,8 @@ contract DummyPlonkVerifier {
         // [D]_1 = [r']_1 + u[z]_1
         // Cost: 16 F_p multiplications
         //       12 F_p sums
-        //       G_1 multi exponentiations of size 11
-        run_multi_exp_g1(11);
+        //       G_1 multi exponentiations of size 10
+        run_multi_exp_g1(10);
 
         // TODO
         // Step 10
@@ -99,12 +111,18 @@ contract DummyPlonkVerifier {
         // Group encoded batch evaluation [E]_1
         // Cost: 6 F_p sums
         //       10 F_p multiplications
+        //       G_1 multi exponentiations of size 1
+        run_multi_exp_g1(1);
 
 
         // Step 12
         // Batch validate all evaluations
         // Cost 1 pairing check
+        //      G_1 multi exponentiations of size 2
+        //      G_1 multi exponentiations of size 4
         run_pairing_check();
+        run_multi_exp_g1(2);
+        run_multi_exp_g1(4);
 
         return true;
     }

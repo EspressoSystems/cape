@@ -18,11 +18,25 @@ contract DummyPlonkVerifier {
         uint aaptx_size =  3000;
         uint n_aaptx =  chunk.length / aaptx_size;
 
-        // Run the plonk verifier once for each AAP transaction
-        for (uint i=0; i<n_aaptx; i++) {
-            verify_plonk_proof();
+        // n_aaptx pairing check
+        for (uint i=0;i<n_aaptx;i++){
+            run_pairing_check();
         }
+
+        // Cost of prepare_pcs_info
+        prepare_pcs_info(n_aaptx);
+
         return true;
+    }
+
+    function prepare_pcs_info(uint n_aaptx) private {
+        // $n_aaptx$ multi-exp in G1 of size $c$ where c=32
+        // (Empirically 29=<c<=36. See rust code call `prepare_pcs_info` in PlonkKzgSnark.batch_verify)
+
+        uint c = 32;
+        for (uint i=0;i<n_aaptx;i++){
+            run_multi_exp_g1(c);
+        }
     }
 
     function batch_verify(bytes memory chunk) public returns (bool) {
@@ -33,96 +47,16 @@ contract DummyPlonkVerifier {
         // We lower bound the complexity by
         // 1 pairing check
         // 2  multi exp in G1 of size $n_aaptx$ (See rust code PlonkKzgSnark.batch_verify)
-        // $n_aaptx$ multi-exp in G1 of size $c$ where c=29 (Empirically 29=<c<=36. See rust code call `prepare_pcs_info` in PlonkKzgSnark.batch_verify)
+        // Cost of prepare_pcs_info(n_aaptx)
 
         // 2 multi exp in G1 of size $n_aaptx$
         run_multi_exp_g1(n_aaptx);
         run_multi_exp_g1(n_aaptx);
 
-        // $n_aaptx$ multi-exp in G1 of size $c$ where c=
-        for (uint i=0;i<n_aaptx;i++){
-            run_multi_exp_g1(29);
-        }
-
         // 1 pairing check
         run_pairing_check();
 
-        return true;
-    }
-
-    function verify_plonk_proof() public returns (bool){
-        // From "PLONK: Permutations over Lagrange-bases for Oecumenical Noninteractive arguments of Knowledge"
-        // https://eprint.iacr.org/2019/953/20210719:164544, page 30, "Verifier algorithm"
-
-        // TODO
-        // Step1
-        // Validate ([a]_1,[b]_1,[c]_1,[z]_1,[t_{l0}]_1, [t_mid]_1,[t_hi]_1,[W_z],[W_{z\omega}]_1) \in G_1
-
-        // TODO
-        // Step 2
-        // Validate (\bar{a},\bar{b},\bar{c},\bar{s_{\sigma1}},\bar{s_{\sigma2}}, \bar{s_{z_\omega}}} \in F_p
-
-        // TODO
-        // Step 3
-        // Validate (w_i)_{i \in l} \in F_p
-
-        // TODO
-        // Step 4
-        // Compute challenges \beta, \gamma, \alpha, z, v, u \in F_p as in prover's description from the common inputs
-        // public input, and elements of \pi_{snark}
-
-        // TODO
-        // Step 5
-        // Compute zero polynomial evaluation Z_H(z)=z^n -1
-
-        // TODO
-        // Step 6
-        // Compute Lagrange polynomial evaluation L_1(z)= \frac{\omega(z^n-1)}{n(z-\omega)}
-
-        // TODO
-        // Step 7
-        // Compute public input polynomial evaluation
-        // PI(z) = \sum_{i \in l}L_i(z)
-
-        // TODO
-        // Step 8
-        // Compute r's constant term
-        // r_0 = PI(z)-L1(z)\alpha^2 - \alpha(\bar{a} + \beta \bar{s_{\sigma1}} + \gamma)(\bar{b} + \beta \bar{\sigma_2} + \gamma)(\bar{c} +\gamma)\bar{z_{\omega}}
-        // let r'(X)= r(X)-r_0
-
-        // TODO
-        // Step 9
-        // Compute the first part of batched polynomial commitment
-        // [D]_1 = [r']_1 + u[z]_1
-        // Cost: 16 F_p multiplications
-        //       12 F_p sums
-        //       G_1 multi exponentiations of size 10
-        run_multi_exp_g1(10);
-
-        // TODO
-        // Step 10
-        // Compute full batched polynomial commitment [F]_1
-        // Cost: 4 F_p multiplications
-        //       G_1 multi exponentiations of size 6
-        run_multi_exp_g1(6);
-
-        // TODO
-        // Step 11
-        // Group encoded batch evaluation [E]_1
-        // Cost: 6 F_p sums
-        //       10 F_p multiplications
-        //       G_1 multi exponentiations of size 1
-        run_multi_exp_g1(1);
-
-
-        // Step 12
-        // Batch validate all evaluations
-        // Cost 1 pairing check
-        //      G_1 multi exponentiations of size 2
-        //      G_1 multi exponentiations of size 4
-        run_pairing_check();
-        run_multi_exp_g1(2);
-        run_multi_exp_g1(4);
+        prepare_pcs_info(n_aaptx);
 
         return true;
     }

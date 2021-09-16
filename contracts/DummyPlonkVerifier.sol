@@ -14,6 +14,7 @@ contract DummyPlonkVerifier {
         // Count the number of transactions
         uint aaptx_size =  3000; // TODO put real value
         uint n_aaptx =  chunk.length / aaptx_size; // TODO be more precise
+        console.log("n_aaptx", n_aaptx);
 
         // Run the plonk verifier once for each AAP transaction
         bool res;
@@ -111,6 +112,7 @@ contract DummyPlonkVerifier {
     }
 
     // TODO use proper multiexp opcode
+    // TODO missing group addition
     function run_multi_exp_g1(uint size) private {
         for (uint i=0;i<size;i++) {
             // Group scalar multiplications

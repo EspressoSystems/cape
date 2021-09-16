@@ -13,7 +13,7 @@ describe("Dummy Plonk Verifier", function () {
 
     // TODO increment the AAP block size
     let aap_bytes_size = 3000;
-    let n_app_tx = 2;
+    let n_app_tx = 20;
     let bytes_len = n_app_tx * aap_bytes_size;
 
     let chunk = new Uint8Array(bytes_len);
@@ -28,7 +28,7 @@ describe("Dummy Plonk Verifier", function () {
     // expect(tx).to.equal(true);
 
     let gasUsed = txReceipt.cumulativeGasUsed.toString();
-    let expectedGasUsed = ethers.BigNumber.from("5114573");
+    let expectedGasUsed = ethers.BigNumber.from("5117998");
     expect(gasUsed).equal(expectedGasUsed);
   });
 });

@@ -3,7 +3,7 @@ const { ethers } = require("hardhat");
 
 describe("Greeter", function () {
 
-  it("Should return the new greeting once it's changed", async function () {
+  it.skip("Should return the new greeting once it's changed", async function () {
 
     const [owner] = await ethers.getSigners();
 
@@ -21,18 +21,6 @@ describe("Greeter", function () {
     let greeting_str = await greeter.greet();
     expect(greeting_str).to.equal("Hola, mundo!");
 
-  });
-
-  it("Should add two points in G1 correctly", async function () {
-
-    const [owner] = await ethers.getSigners();
-
-    const Greeter = await ethers.getContractFactory("Greeter");
-    const greeter = await Greeter.deploy("Hello, world!");
-    await greeter.deployed();
-
-    // Call BLS12-381 functions
-    let point = await greeter.addG1();
   });
 
 });

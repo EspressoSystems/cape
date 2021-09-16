@@ -66,4 +66,7 @@ module.exports = {
   gasPrice: 4700,
   gasLimit: 300000000,
   chainId: 8889,
+  mocha: {
+    timeout: 120000
+  }
 };

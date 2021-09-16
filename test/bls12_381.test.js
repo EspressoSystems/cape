@@ -23,7 +23,7 @@ function combine(a, b) {
   return BigInt("0x" + aa + bb);
 }
 
-describe("BLS12-381", function () {
+describe.skip("BLS12-381", function () {
   let instance;
   this.timeout(60000);
 

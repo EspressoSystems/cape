@@ -18,11 +18,10 @@ Watch directory and run tests on changes
     cargo watch -x test
 
 ## Examples
-Run the contract example
-
-    cargo run -p aap-rust-sandbox --example contract_local_signer
-
-
 Generate a `jf_txn::transfer::TransferNote` and save it to a file `my_note.bin`:
 
     cargo run -p aap-rust-sandbox --example create_note
+
+Load the file
+
+    cargo run -p aap-rust-sandbox --example read_note

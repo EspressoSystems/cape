@@ -1,5 +1,5 @@
 # Ethereum rust sandbox
-This directory has it's own nix-shell.
+This directory has its own nix-shell.
 
 ## Development
 Run a geth node (in a separate terminal, from anywhere)
@@ -8,7 +8,7 @@ Run a geth node (in a separate terminal, from anywhere)
 
 Compile the contracts to extract the abi for the ethers abigen (workflow to be improved!)
 
-    build-abi
+    ./bin/build-abi
 
 Note: structs will only be included in the ABI if there is a (public, I guess)
 function that uses them.

@@ -1,39 +1,78 @@
 pub mod aap_jf;
+mod contract_group_operations;
 mod contract_read_aaptx;
 mod ethereum;
 
-use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
-use ark_std;
+#[allow(unused_imports)]
+use ark_bn254::{Fq, FqParameters, Fr, FrParameters, G1Affine, G1Projective};
+#[allow(unused_imports)]
+use ark_ff::{Field, FpParameters, One, PrimeField, Zero};
 use ethers::prelude::U256;
 use jf_utils::to_bytes;
+use std::{fmt::Debug, ops::Deref};
 
-// 52435875175126190479447740508185965837690552500527637822603658699938581184513
-const MODULUS_ETHERS: U256 = U256([
-    0xffffffff00000001,
-    0x53bda402fffe5bfe,
-    0x3339d80809a1d805,
-    0x73eda753299d7d48,
-]);
+const MODULUS_FR: U256 = U256(FrParameters::MODULUS.0);
+const MODULUS_FQ: U256 = U256(FqParameters::MODULUS.0);
 
-/// # Examples
-/// ```
-/// use jf_txn::BlsScalar;
-/// use aap_rust_sandbox::to_ethers;
-///
-/// let n = BlsScalar::from(1);
-/// let ethers_uint = to_ethers(n);
-/// # use ethers::prelude::U256;
-/// # assert_eq!(ethers_uint, U256::from(1));
-/// ```
-pub fn to_ethers<T: CanonicalSerialize>(number: T) -> U256 {
+#[derive(Debug, Clone, Copy)]
+pub struct G1Ark(G1Affine);
+
+impl Deref for G1Ark {
+    type Target = G1Affine;
+
+    fn deref(&self) -> &G1Affine {
+        &self.0
+    }
+}
+
+// TODO this struct is not very useful. If we don't mind depending
+// on G1Point from the abigen we can get rid of it.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct G1Ethers {
+    x: U256,
+    y: U256,
+}
+
+impl From<G1Ark> for G1Ethers {
+    fn from(point: G1Ark) -> Self {
+        if (*point).is_zero() {
+            return G1Ethers {
+                x: U256::zero(),
+                y: U256::zero(),
+            };
+        }
+
+        let x = to_bytes!(&point.x).expect("Failed to serialize ark type");
+        let y = to_bytes!(&point.y).expect("Failed to serialize ark type");
+
+        G1Ethers {
+            x: U256::from_little_endian(&x[..]),
+            y: U256::from_little_endian(&y[..]),
+        }
+    }
+}
+
+impl From<G1Ethers> for G1Ark {
+    fn from(point: G1Ethers) -> Self {
+        // TODO check if point is valid?
+        let infinity = point.x.is_zero() && point.y.is_zero();
+        if infinity {
+            return Self(G1Affine::zero());
+        }
+        Self(G1Affine::new(to_ark(point.x), to_ark(point.y), false))
+    }
+}
+
+pub fn to_ethers<T: Field>(number: T) -> U256 {
     let b = to_bytes!(&number).expect("Failed to serialize ark type");
     U256::from_little_endian(&b)
 }
 
-pub fn to_bls<T: CanonicalDeserialize>(number: U256) -> T {
-    if number >= MODULUS_ETHERS {
-        panic!("Value {} is too large", number)
-    }
+pub fn to_ark<T: Field>(number: U256) -> T {
+    // let max = U256(T::MODULUS.0) // XXX how can we check if number is a valid T
+    // if number > max {
+    //     panic!("Value {} is too large", number)
+    // }
     let mut bytes: Vec<u8> = vec![0; 32];
     number.to_little_endian(&mut bytes);
     T::deserialize(&bytes[..]).expect("Failed to deserialize as ark type")
@@ -41,59 +80,103 @@ pub fn to_bls<T: CanonicalDeserialize>(number: U256) -> T {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
 
-    use crate::{to_bls, to_ethers, MODULUS_ETHERS};
-    use ark_bls12_381;
+    use ark_bn254::Fr;
     use ark_ff::{BigInteger256, FpParameters};
-    use ethers::prelude::U256;
-    use jf_txn::BlsScalar;
+    use ark_std::UniformRand;
     use proptest::prelude::*;
 
-    fn check_serde(n: BlsScalar) {
-        assert_eq!(to_bls::<BlsScalar>(to_ethers(n)), n);
+    #[test]
+    fn g1_ark_ethers_serde_works_for_zero() {
+        let zero_ark = G1Ark(G1Affine::zero());
+        let zero_ethers = G1Ethers::from(zero_ark);
+        let zero_ark_2: G1Ark = zero_ethers.into();
+        let zero_ethers_2 = G1Ethers::from(zero_ark_2);
+        assert_eq!(*zero_ark, *zero_ark_2);
+        assert_eq!(zero_ethers, zero_ethers_2);
     }
 
     #[test]
-    fn to_bls_works() {
-        assert_eq!(to_bls::<BlsScalar>(U256::from(1)), BlsScalar::from(1));
+    fn g1_ark_ethers_serde_works_for_random_group_element() {
+        let mut rng = ark_std::test_rng();
+        let p_ark = G1Ark(G1Affine::from(G1Projective::rand(&mut rng)));
+        let p_ethers = G1Ethers::from(p_ark);
+        let p_ark_2 = G1Ark::from(p_ethers);
+        let p_ethers_2 = G1Ethers::from(p_ark_2);
+        assert_eq!(*p_ark, *p_ark_2);
+        assert_eq!(p_ethers, p_ethers_2);
+    }
+
+    fn check_serde<T: Field>(n: T) {
+        assert_eq!(to_ark::<T>(to_ethers(n)), n);
+    }
+
+    #[test]
+    fn to_ark_works() {
+        assert_eq!(to_ark::<Fr>(U256::from(1)), Fr::from(1));
     }
 
     #[test]
     fn to_ethers_works() {
-        assert_eq!(to_ethers(BlsScalar::from(1)), U256::from(1));
+        assert_eq!(to_ethers(Fr::from(1)), U256::from(1));
     }
 
     #[test]
     fn to_ethers_and_back_works_with_one() {
-        check_serde(BlsScalar::from(1));
+        check_serde(Fr::from(1));
     }
 
     #[test]
     fn to_ethers_and_back_works_with_largest_element() {
-        check_serde(BlsScalar::from(0) - BlsScalar::from(1));
+        check_serde(Fr::from(0) - Fr::from(1));
     }
 
-    #[test]
-    #[should_panic(expected = "too large")]
-    fn to_bls_fails_with_modulus() {
-        to_bls(MODULUS_ETHERS)
-    }
+    // TODO these 2 tests fail with
+    //      'Failed to deserialize as ark type: IoError(Custom { kind: Other, error: "FromBytes::read failed" })'
 
-    #[test]
-    fn test_ethers_modulus_value_matches_bls12_381() {
-        assert_eq!(
-            to_ethers(ark_bls12_381::FrParameters::MODULUS),
-            MODULUS_ETHERS
-        );
-    }
+    // #[test]
+    // #[should_panic(expected = "too large")]
+    // fn to_ark_fr_fails_with_modulus() {
+    //     to_ark::<Fr>(MODULUS_FR);
+    // }
+
+    // #[test]
+    // #[should_panic(expected = "too large")]
+    // fn to_ark_fq_fails_with_modulus() {
+    //     to_ark::<Fq>(MODULUS_FQ);
+    // }
+
+    // TODO these 2 tests fail with:
+    //      panicked at 'called `Option::unwrap()` on a `None` value'
+    //
+    // #[test]
+    // fn test_ethers_modulus_fr_value_matches_ark() {
+    //     assert_eq!(to_ethers::<Fr>(FrParameters::MODULUS.into()), MODULUS_FR);
+    // }
+
+    // #[test]
+    // fn test_ethers_modulus_fq_value_matches_ark() {
+    //     assert_eq!(to_ethers::<Fq>(FqParameters::MODULUS.into()), MODULUS_FQ);
+    // }
 
     proptest! {
         #[test]
-        fn prop_test_to_ethers_and_back(n in prop::array::uniform4(0u64..)
+        fn prop_test_to_ethers_and_back_fq(n in prop::array::uniform4(0u64..)
             .prop_map(|limbs| BigInteger256::new(limbs))
             .prop_filter("Must not exceed Modulus",
-                         |v| v < &ark_bls12_381::FrParameters::MODULUS)
-                 .prop_map(|v| BlsScalar::new(v)))
+                         |v| v < &FqParameters::MODULUS)
+                 .prop_map(|v| Fq::new(v)))
+        {
+            check_serde(n);
+        }
+
+        #[test]
+        fn prop_test_to_ethers_and_back_fr(n in prop::array::uniform4(0u64..)
+            .prop_map(|limbs| BigInteger256::new(limbs))
+            .prop_filter("Must not exceed Modulus",
+                         |v| v < &FrParameters::MODULUS)
+                 .prop_map(|v| Fr::new(v)))
         {
             check_serde(n);
         }

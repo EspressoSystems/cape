@@ -61,6 +61,7 @@ async fn load_contract(path: &Path) -> Result<CompiledContract> {
 }
 
 // TODO: why do we need 'static ?
+// https://docs.rs/anyhow/1.0.44/anyhow/struct.Error.html ?
 pub async fn deploy<C: 'static + Middleware>(client: Arc<C>, path: &Path) -> Result<Contract<C>> {
     let contract = load_contract(&path).await?;
     let factory = ContractFactory::new(

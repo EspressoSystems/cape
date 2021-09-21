@@ -40,6 +40,7 @@ async fn compile_contract(path: &String, name: &String) -> Result<CompiledContra
     Ok(compiled.get(name).expect("could not find contract").clone())
 }
 
+// TODO: why do we need 'static ?
 pub async fn deploy<C: 'static + Middleware>(
     client: Arc<C>,
     path: &String,

@@ -3,12 +3,25 @@ name = "aap-rust-sandbox"
 version = "0.1.0"
 edition = "2018"
 
+[lib]
+doctest = false
+
 [dependencies]
 ethers = { git = "https://github.com/gakonst/ethers-rs" }
-
-[dev-dependencies]
-anyhow = "1.0.39"
+jf-txn = { git = "ssh://git@gitlab.com/translucence/crypto/jellyfish.git", rev = "d396f15d44747bec55ad7f898647675326f6bbdd" } # latest
+jf-utils = { git = "ssh://git@gitlab.com/translucence/crypto/jellyfish.git", rev = "d396f15d44747bec55ad7f898647675326f6bbdd" } # latest
+itertools = "0.10.1" # needed for jf-txn rev="55080e9073d9b9dbd8b8a9e6d7bc2dd23014412a" to compile
+ark-std = "0.3.0"
+serde_json = "1.0.67"
+bincode = "1.3.3"
+ark-serialize = "0.3.0"
+ark-ff = "0.3.0"
+hex = "0.4.3"
+ark-bls12-381 = "0.3.0"
+tokio = { version = "1.5", features = ["macros", "rt-multi-thread"] }
 rand = "0.8.4"
 serde = { version = "1.0.124", features = ["derive"] }
-serde_json = "1.0.64"
-tokio = { version = "1.5", features = ["macros", "rt-multi-thread"] }
+anyhow = "1.0.39"
+
+[dev-dependencies]
+proptest = "1.0.0"

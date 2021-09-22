@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+set -euxo pipefail
+shopt -s extglob
+
+mkdir -p contracts
+cd ..
+direnv exec . hardhat compile
+
+# each solidity file
+for directory in artifacts/contracts/*.sol; do
+
+    # each contract in solidity file
+    for json in $(ls $directory/*.json | grep -v ".dbg.json\$"); do
+
+        file="${directory##*/}"
+        basename="${file/%.sol}.json"
+
+        # extract .abi field and write to rust/contracts/$CONTRACT.json
+        cat "$json" | jq -r .abi > "rust/contracts/$basename"
+    done
+done
+
+echo "Finished extracting ABIs"

@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+hardhat compile
+
+out_base_dir="rust/contracts"
+mkdir -p "$out_base_dir"
+
+# For each solidity file (or its artifact output directory)
+for directory in artifacts/contracts/*.sol; do
+
+    # For each contract in the solidity file
+    for combined in $directory/*.json; do
+
+        if [[ $combined == *.dbg.json ]]; then
+            continue
+        fi
+
+        basename_json="${combined##*/}"
+        basename="${basename_json/%.json}"
+
+        # Note: Currently wouldn't work if two solidity files contained a
+        # contract with the same name.
+
+        outdir="$out_base_dir/$basename"
+        echo "$combined -> $outdir"
+        mkdir -p "$outdir"
+
+        # extract .abi field and write to rust/contracts/$CONTRACT.json
+        cat "$combined" | jq -r .abi > "$outdir/abi.json"
+        cat "$combined" | jq -r .bytecode > "$outdir/bin.txt"
+    done
+done
+
+echo "Finished extracting ABIs"

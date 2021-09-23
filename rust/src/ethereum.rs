@@ -1,12 +1,8 @@
 #![cfg_attr(debug_assertions, allow(dead_code))]
 use anyhow::Result;
-use ethers::{
-    core::k256::ecdsa::SigningKey,
-    prelude::*,
-    utils::{compile, CompiledContract, Solc},
-};
+use ethers::{core::k256::ecdsa::SigningKey, prelude::*, utils::CompiledContract};
 use rand;
-use std::{convert::TryFrom, sync::Arc, time::Duration};
+use std::{convert::TryFrom, fs, path::Path, sync::Arc, time::Duration};
 
 pub async fn get_funded_deployer(
 ) -> Result<Arc<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>> {
@@ -35,18 +31,38 @@ pub async fn get_funded_deployer(
     )))
 }
 
-async fn compile_contract(path: &String, name: &String) -> Result<CompiledContract> {
-    let compiled = compile(Solc::new(path).allowed_paths(vec!["../contracts".into()])).await?;
-    Ok(compiled.get(name).expect("could not find contract").clone())
+async fn load_contract(path: &Path) -> Result<CompiledContract> {
+    let abi_path = path.join("abi.json");
+    let bin_path = path.join("bin.txt");
+
+    let abi = ethers::abi::Contract::load(match fs::File::open(&abi_path) {
+        Ok(v) => v,
+        Err(_) => panic!("Unable to open path {:?}", abi_path),
+    })?;
+
+    let bytecode_str = match fs::read_to_string(&bin_path) {
+        Ok(v) => v,
+        Err(_) => panic!("Unable to read from path {:?}", bin_path),
+    };
+    let trimmed = bytecode_str.trim().trim_start_matches("0x");
+    let bytecode = match hex::decode(&trimmed) {
+        Ok(v) => v,
+        Err(_) => {
+            panic!("Cannot parse hex {:?}", trimmed)
+        }
+    }
+    .into();
+
+    Ok(CompiledContract {
+        abi,
+        bytecode,
+        runtime_bytecode: Default::default(),
+    })
 }
 
 // TODO: why do we need 'static ?
-pub async fn deploy<C: 'static + Middleware>(
-    client: Arc<C>,
-    path: &String,
-    name: &String,
-) -> Result<Contract<C>> {
-    let contract = compile_contract(&path, &name).await?;
+pub async fn deploy<C: 'static + Middleware>(client: Arc<C>, path: &Path) -> Result<Contract<C>> {
+    let contract = load_contract(&path).await?;
     let factory = ContractFactory::new(
         contract.abi.clone(),
         contract.bytecode.clone(),

@@ -6,12 +6,14 @@ use ethers::prelude::abigen;
 //   contract events: (not used here)
 abigen!(
     ReadAAPTx,
-    "./contracts/ReadAAPTx.json",
+    "./contracts/ReadAAPTx/abi.json",
     event_derives(serde::Deserialize, serde::Serialize)
 );
 
 #[cfg(test)]
 mod tests {
+    use std::path::Path;
+
     use super::*;
     use ethers::prelude::U256;
 
@@ -20,13 +22,9 @@ mod tests {
     #[tokio::test]
     async fn test_read_transfer_note_struct_in_contract() {
         let client = get_funded_deployer().await.unwrap();
-        let contract = deploy(
-            client.clone(),
-            &String::from("../contracts/ReadAAPTx.sol"),
-            &String::from("ReadAAPTx"),
-        )
-        .await
-        .unwrap();
+        let contract = deploy(client.clone(), Path::new("./contracts/ReadAAPTx"))
+            .await
+            .unwrap();
         let contract = ReadAAPTx::new(contract.address(), client);
 
         let one = U256::one();

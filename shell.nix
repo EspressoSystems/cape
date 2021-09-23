@@ -15,6 +15,8 @@ mkShell
     mySolc
     hivemind # process runner
     nodejs-12_x # nodejs
+    jq
+    entr # watch files for changes, for example: ls contracts/*.sol | entr -c hardhat compile
   ];
   # export SOLCX_BINARY_PATH=${solcWithVersion}/bin
   shellHook = ''

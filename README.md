@@ -139,7 +139,7 @@ Compile the contracts to extract the abi for the ethers abigen (workflow to be
 improved!). 
 Run the following command from the root of the `aap-on-ethereum` checkout:
 
-    ./bin/build-abi
+    build-abi
 
 Note: structs will only be included in the ABI if there is a (public, I guess)
 function that uses them.

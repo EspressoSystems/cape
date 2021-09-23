@@ -1,12 +1,11 @@
-mod ethereum;
-mod contract_read_aaptx;
 pub mod aap_jf;
+mod contract_read_aaptx;
+mod ethereum;
 
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ark_std;
 use ethers::prelude::U256;
 use jf_utils::to_bytes;
-
 
 // 52435875175126190479447740508185965837690552500527637822603658699938581184513
 const MODULUS_ETHERS: U256 = U256([
@@ -15,7 +14,6 @@ const MODULUS_ETHERS: U256 = U256([
     0x3339d80809a1d805,
     0x73eda753299d7d48,
 ]);
-
 
 /// # Examples
 /// ```

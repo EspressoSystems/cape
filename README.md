@@ -54,7 +54,7 @@ to start all background services. For the time being this is just running `geth`
 
 To add additional processes add lines to `Procfile` and (if desired) scripts to run in the `./bin` directory.
 
-### Testing
+### Testing (Javascript)
 We support running against a go-ethereum (geth) or hardhat (shortcut `hh`) node running on `localhost:8545`.
 
 #### Testing against go-ethereum node
@@ -123,3 +123,54 @@ Hardhat always "works" because it falls back to solcjs silently (unless running 
 
 The solcjs compiler is a lot slower than native solc and brownie (using py-solc-x),
 solc-select do not have such a fallback mechanisms.
+
+# Rust client
+
+All the rust code can be found in the `rust` directory.
+
+**Note that this directory has its own `shell.nix` file.**
+
+## Development
+Run a geth node (in a separate terminal, from anywhere):
+
+    geth --dev --http
+
+Compile the contracts to extract the abi for the ethers abigen (workflow to be
+improved!). 
+Run the following command from the root of the `aap-on-ethereum` checkout:
+
+    ./bin/build-abi
+
+Note: structs will only be included in the ABI if there is a (public, I guess)
+function that uses them.
+
+Instead of running `geth` and `build-abi` one can also just run 
+
+    hivemind
+
+From the root directory of the repo checkout. 
+This will also recompile the contracts when there are changes to any of the contract files.
+
+Watch directory and run tests on changes:
+
+    cd rust
+    nix-shell
+    cargo watch -x test
+
+
+## Examples
+
+Remember to "cd" into `rust` directory and launch the shell:
+
+    cd rust
+    nix-shell
+
+
+Generate a `jf_txn::transfer::TransferNote` and save it to a file `my_note.bin`:
+
+    cargo run -p aap-rust-sandbox --example create_note
+
+
+Load the file:
+
+    cargo run -p aap-rust-sandbox --example read_note

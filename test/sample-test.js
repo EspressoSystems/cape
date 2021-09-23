@@ -3,7 +3,7 @@ const { ethers } = require("hardhat");
 
 describe("Greeter", function () {
 
-  it.skip("Should return the new greeting once it's changed", async function () {
+  it("Should return the new greeting once it's changed", async function () {
 
     const [owner] = await ethers.getSigners();
 

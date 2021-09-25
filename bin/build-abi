@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+echo "Compiling contracts ..."
+
 hardhat compile
 
 out_base_dir="rust/contracts"

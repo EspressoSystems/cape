@@ -157,7 +157,7 @@ Watch directory and run tests on changes:
     nix-shell
     cargo watch -x test
 
-If some compilation error occurs delete the files generated previously (from the root of theproject):
+If some compilation error occurs, delete the files generated previously (from the root of theproject):
 
     rm -R artifacts rust/contracts
 

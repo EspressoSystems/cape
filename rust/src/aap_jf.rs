@@ -38,5 +38,5 @@ pub fn create_test_anon_xfr_2in_6out() -> TransferNote {
         .build_transfer_note(&mut prng, &prover_key, valid_until)
         .unwrap();
 
-    return note;
+    note
 }

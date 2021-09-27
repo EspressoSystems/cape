@@ -1,16 +1,12 @@
 with import ./nix/nixpkgs.nix { };
 
 let
-  geth = callPackage ./nix/go-ethereum {
-    inherit (darwin) libobjc;
-    inherit (darwin.apple_sdk.frameworks) IOKit;
-  };
   mySolc = callPackage ./nix/solc-bin { };
 in
 mkShell
 {
   buildInputs = [
-    geth
+    go-ethereum
     nodePackages.pnpm
     mySolc
     hivemind # process runner

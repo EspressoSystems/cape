@@ -2,9 +2,7 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
 describe("Dummy Plonk Verifier", function () {
-
   it("Should return the compute the gas fee", async function () {
-
     const [owner] = await ethers.getSigners();
 
     const DPV = await ethers.getContractFactory("DummyPlonkVerifier");
@@ -18,7 +16,7 @@ describe("Dummy Plonk Verifier", function () {
     let bytes_len = n_aap_tx * aap_bytes_size;
 
     let chunk = new Uint8Array(bytes_len);
-    for (let i=0; i< bytes_len; i++){
+    for (let i = 0; i < bytes_len; i++) {
       chunk[i] = 12;
     }
 
@@ -27,7 +25,7 @@ describe("Dummy Plonk Verifier", function () {
     let txReceipt = await tx.wait();
 
     let gasUsed = txReceipt.cumulativeGasUsed.toString();
-    let expectedGasUsed = ethers.BigNumber.from("509377");
+    let expectedGasUsed = ethers.BigNumber.from("509343");
     expect(gasUsed).equal(expectedGasUsed);
 
     // Simple plonk verification
@@ -35,7 +33,7 @@ describe("Dummy Plonk Verifier", function () {
     txReceipt = await tx.wait();
 
     let gasUsedSimplePlonk = txReceipt.cumulativeGasUsed.toString();
-    expectedGasUsed = ethers.BigNumber.from("3761863");
+    expectedGasUsed = ethers.BigNumber.from("3767429");
     expect(gasUsedSimplePlonk).equal(expectedGasUsed);
 
     // Batch plonk verification
@@ -43,11 +41,10 @@ describe("Dummy Plonk Verifier", function () {
     txReceipt = await tx.wait();
 
     let gasUsedBatchPlonk = txReceipt.cumulativeGasUsed.toString();
-    expectedGasUsed = ethers.BigNumber.from("3169106");
+    expectedGasUsed = ethers.BigNumber.from("3165011");
     expect(gasUsedBatchPlonk).equal(expectedGasUsed);
-    
+
     let ratio = gasUsedBatchPlonk / gasUsedSimplePlonk;
     expect(ratio).lt(1);
-
   });
 });

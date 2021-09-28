@@ -1,7 +1,6 @@
 #![cfg_attr(debug_assertions, allow(dead_code))]
 use anyhow::Result;
 use ethers::{core::k256::ecdsa::SigningKey, prelude::*, utils::CompiledContract};
-use rand;
 use std::{convert::TryFrom, fs, path::Path, sync::Arc, time::Duration};
 
 pub async fn get_funded_deployer(
@@ -61,8 +60,9 @@ async fn load_contract(path: &Path) -> Result<CompiledContract> {
 }
 
 // TODO: why do we need 'static ?
+// https://docs.rs/anyhow/1.0.44/anyhow/struct.Error.html ?
 pub async fn deploy<C: 'static + Middleware>(client: Arc<C>, path: &Path) -> Result<Contract<C>> {
-    let contract = load_contract(&path).await?;
+    let contract = load_contract(path).await?;
     let factory = ContractFactory::new(
         contract.abi.clone(),
         contract.bytecode.clone(),

@@ -1,3 +1,0 @@
-[submodule "go-ethereum"]
-	path = go-ethereum
-	url = git@gitlab.com:translucence/go-ethereum

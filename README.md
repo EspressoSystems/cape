@@ -131,7 +131,7 @@ Run a geth node (in a separate terminal, from anywhere):
     geth --dev --http
 
 Compile the contracts to extract the abi for the ethers abigen (workflow to be
-improved!). 
+improved!).
 Run the following command from the root of the `aap-on-ethereum` checkout:
 
     build-abi
@@ -139,11 +139,11 @@ Run the following command from the root of the `aap-on-ethereum` checkout:
 Note: structs will only be included in the ABI if there is a (public, I guess)
 function that uses them.
 
-Instead of running `geth` and `build-abi` one can also just run 
+Instead of running `geth` and `build-abi` one can also just run
 
     hivemind
 
-From the root directory of the repo checkout. 
+From the root directory of the repo checkout.
 This will also recompile the contracts when there are changes to any of the contract files.
 
 Watch directory and run tests on changes:
@@ -163,12 +163,25 @@ Remember to "cd" into `rust` directory and launch the shell:
     cd rust
     nix-shell
 
-
 Generate a `jf_txn::transfer::TransferNote` and save it to a file `my_note.bin`:
 
     cargo run -p aap-rust-sandbox --example create_note
 
-
 Load the file:
 
     cargo run -p aap-rust-sandbox --example read_note
+
+## Ethereum key management
+The keys are derived from the mnemonic in the `TEST_MNEMONIC` env var.
+
+- Hardhat has builtin mnemonic support.
+- For geth we start an ephemeral chain but specify a `--keystore` location and
+load the addresses into it inside the `bin/run-geth` script.
+- A simple python utility to derive keys can be found in `bin/hdwallet-derive`.
+  For description of the arguments run `hdwallet-derive --help`.
+
+## Python tools
+We are using `poetry` for python dependencies and `poetry2nix` to integrate them
+in the nix-shell development environment.
+
+Use any poetry command e. g. `poetry add --dev ipython` to add packages.

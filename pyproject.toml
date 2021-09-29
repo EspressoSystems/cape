@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "aap-on-ethereum"
+version = "0.1.0"
+description = ""
+authors = ["Translucence Research Institute"]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+
+[tool.poetry.dev-dependencies]
+black = "^21.9b0"
+hdwallet = "^1.3.2"
+ipython = "^7.28.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

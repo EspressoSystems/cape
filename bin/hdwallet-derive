@@ -1,0 +1,43 @@
+#!/usr/bin/env python
+import argparse
+
+from hdwallet import BIP44HDWallet as HDWallet
+from hdwallet.derivations import BIP44Derivation as Derivation
+from hdwallet.cryptocurrencies import EthereumMainnet
+
+parser = argparse.ArgumentParser(description="Process some integers.")
+parser.add_argument(
+    "--mnemonic",
+    "-m",
+    required=True,
+)
+parser.add_argument(
+    "--num-keys",
+    "-n",
+    default=1,
+    type=int,
+    help="Number of keys to derive",
+)
+parser.add_argument(
+    "--property",
+    "-p",
+    default="address",
+    choices=["private_key", "address"],
+    help="Property of the derived wallet to output to terminal",
+)
+args = parser.parse_args()
+
+hdwallet = HDWallet(cryptocurrency=EthereumMainnet).from_mnemonic(
+    mnemonic=args.mnemonic
+)
+
+# Clean default BIP44 derivation indexes/paths
+hdwallet.clean_derivation()
+
+for address_index in range(args.num_keys):
+    derivation = Derivation(
+        cryptocurrency=EthereumMainnet, account=0, change=False, address=address_index
+    )
+    hdwallet.from_path(path=derivation)
+    print(getattr(hdwallet, args.property)())
+    hdwallet.clean_derivation()

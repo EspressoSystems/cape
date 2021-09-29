@@ -1,5 +1,7 @@
 require("@nomiclabs/hardhat-waffle");
-const { TASK_COMPILE_SOLIDITY_GET_SOLC_BUILD } = require("hardhat/builtin-tasks/task-names");
+const {
+  TASK_COMPILE_SOLIDITY_GET_SOLC_BUILD,
+} = require("hardhat/builtin-tasks/task-names");
 
 const Common = require("@ethereumjs/common").default;
 const forCustomChain = Common.forCustomChain;
@@ -8,7 +10,6 @@ Common.forCustomChain = (...args) => {
   common._eips = [2537];
   return common;
 };
-
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -31,13 +32,13 @@ subtask(TASK_COMPILE_SOLIDITY_GET_SOLC_BUILD, async (args, hre, runSuper) => {
       isSolcJs: false, // native solc
       version: args.solcVersion,
       // for extra information in the build-info files, otherwise not important
-      longVersion: `${args.solcVersion}-dummy-long-version`
-    }
+      longVersion: `${args.solcVersion}-dummy-long-version`,
+    };
   }
 
-  console.warn("Warning: Using compiler downloaded by hardhat")
+  console.warn("Warning: Using compiler downloaded by hardhat");
   return runSuper(); // Fall back to running the default subtask
-})
+});
 
 // You need to export an object to set up your config
 // Go to https://hardhat.org/config/ to learn more
@@ -49,10 +50,13 @@ module.exports = {
   defaultNetwork: "localhost",
   networks: {
     hardhat: {
+      accounts: {
+        mnemonic: process.env.TEST_MNEMONIC,
+      },
     },
     local: {
       url: "http://localhost:8545",
-    }
+    },
   },
   solidity: {
     version: process.env.SOLC_VERSION,
@@ -67,6 +71,6 @@ module.exports = {
   gasLimit: 300000000,
   chainId: 8889,
   mocha: {
-    timeout: 120000
-  }
+    timeout: 120000,
+  },
 };

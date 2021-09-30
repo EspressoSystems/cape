@@ -2,6 +2,12 @@ with import ./nix/nixpkgs.nix { };
 
 let
   mySolc = callPackage ./nix/solc-bin { };
+  myPython = [
+    poetry
+    (poetry2nix.mkPoetryEnv {
+      projectDir = ./.;
+    })
+  ];
 in
 mkShell
 {
@@ -13,9 +19,10 @@ mkShell
     nodejs-12_x # nodejs
     jq
     entr # watch files for changes, for example: ls contracts/*.sol | entr -c hardhat compile
-  ];
-  # export SOLCX_BINARY_PATH=${solcWithVersion}/bin
+  ] ++ myPython;
+
   shellHook = ''
+    export TEST_MNEMONIC="test test test test test test test test test test test junk"
     export SOLC_VERSION=${mySolc.version}
     export SOLC_PATH=${mySolc}/bin/solc
     export PATH=$(pwd)/bin:$(pwd)/node_modules/.bin:$PATH

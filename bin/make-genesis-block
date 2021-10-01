@@ -7,7 +7,7 @@ def make_genesis_block(gas_limit, addresses):
     coinbase = addresses[0].replace("0x", "")
     return {
         "config": {
-            "chainId": 8889,
+            "chainId": 1337,
             "homesteadBlock": 0,
             "eip150Block": 0,
             "eip155Block": 0,

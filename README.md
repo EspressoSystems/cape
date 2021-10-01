@@ -126,10 +126,17 @@ All the rust code can be found in the `rust` directory.
 **Note that this directory has its own `shell.nix` file.**
 
 ## Development
+### go-ethereum / geth
 Run a geth node (in a separate terminal, from anywhere):
 
-    geth --dev --http
+    run-geth
 
+The genesis block is generated with the python script `bin/make-genesis-block`.
+
+If time permits replacing the `run-geth` bash script with a python script that
+uses `make-genesis-block` and `hdwallet-derive` could be useful.
+
+### Ethereum contracts
 Compile the contracts to extract the abi for the ethers abigen (workflow to be
 improved!).
 Run the following command from the root of the `aap-on-ethereum` checkout:
@@ -146,6 +153,7 @@ Instead of running `geth` and `build-abi` one can also just run
 From the root directory of the repo checkout.
 This will also recompile the contracts when there are changes to any of the contract files.
 
+### Rust
 Watch directory and run tests on changes:
 
     cd rust
@@ -156,7 +164,7 @@ If some compilation error occurs, delete the files generated previously (from th
 
     rm -R artifacts rust/contracts
 
-## Examples
+### Examples
 
 Remember to "cd" into `rust` directory and launch the shell:
 

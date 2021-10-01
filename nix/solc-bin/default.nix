@@ -1,19 +1,24 @@
-{ stdenv, lib, fetchurl, autoPatchelfHook }:
+{ stdenv, lib, fetchurl, autoPatchelfHook, version }:
 
-stdenv.mkDerivation rec {
-  version = "0.8.4";
+stdenv.mkDerivation {
+  version = version;
   pname = "solc-bin";
-  system = "x86_64-linux";
 
-  # See https://solc-bin.ethereum.org/linux-amd64/list.json
-  src = fetchurl {
-    url = "https://solc-bin.ethereum.org/linux-amd64/solc-linux-amd64-v${version}+commit.c7e474f2";
-    sha256 = "1y571l0ngzdwf14afrdg20niyhhlhsgr9258mbrxr68qy755q4gp";
-  };
+  src =
+    let
+      platform_id = if stdenv.isLinux then "linux-amd64" else "macosx-amd64";
+      build_list = lib.importJSON (fetchurl (lib.importJSON ./sources.json)."${platform_id}");
+      build = lib.findSingle (x: x.version == version)
+        (throw "not found")
+        (throw "found multiple")
+        build_list.builds;
+    in
+    fetchurl {
+      url = "https://binaries.soliditylang.org/${platform_id}/${build.path}";
+      sha256 = lib.removePrefix "0x" build.sha256;
+    };
 
-  nativeBuildInputs = [
-    autoPatchelfHook
-  ];
+  nativeBuildInputs = lib.optionals stdenv.isLinux [ autoPatchelfHook ];
 
   dontUnpack = true;
 
@@ -26,6 +31,6 @@ stdenv.mkDerivation rec {
     homepage = https://github.com/ethereum/solidity;
     license = licenses.gpl3;
     maintainers = with stdenv.lib.maintainers; [ ];
-    platforms = [ "x86_64-linux" ];
+    platforms = [ "x86_64-linux" "x86_64-darwin" ];
   };
 }

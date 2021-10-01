@@ -1,0 +1,10 @@
+{
+  "linux-amd64": {
+    "url": "https://binaries.soliditylang.org/linux-amd64/list.json",
+    "sha256": "0x3gwyg3kr35825xbwri3kih2bri6ivms7jvnzyxbimfym2id96p"
+  },
+  "macos-amd64": {
+    "url": "https://binaries.soliditylang.org/macosx-amd64/list.json",
+    "sha256": "0iihpjnhr1p3slykq6670ssmb94jis90q931r05qsz28z9vzakn6"
+  }
+}

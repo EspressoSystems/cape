@@ -1,6 +1,6 @@
 with import ../nix/nixpkgs.nix { };
 let
-  mySolc = callPackage ../nix/solc-bin { };
+  mySolc = callPackage ../nix/solc-bin { version = "0.8.4"; };
 in
 mkShell {
 

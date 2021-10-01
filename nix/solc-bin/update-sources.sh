@@ -14,7 +14,7 @@ cat <<EOF | tee sources.json
     "url": "$URL_LINUX",
     "sha256": "$SHA_LINUX"
   },
-  "macos-amd64": {
+  "macosx-amd64": {
     "url": "$URL_MACOS",
     "sha256": "$SHA_MACOS"
   }

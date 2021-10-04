@@ -7,7 +7,8 @@
     "ethers": "^5.4.7",
     "hardhat": "^2.6.4",
     "hardhat-shorthand": "^1.0.0",
-    "prettier": "^2.4.1"
+    "prettier": "^2.4.1",
+    "prettier-plugin-solidity": "^1.0.0-beta.18"
   },
   "dependencies": {
     "@summa-tx/memview-sol": "^2.0.0",
@@ -24,6 +25,11 @@
   },
   "scripts": {
     "test": "hardhat test"
+  },
+  "prettier": {
+    "plugins": [
+      "node_modules/prettier-plugin-solidity"
+    ]
   },
   "repository": {
     "type": "git",

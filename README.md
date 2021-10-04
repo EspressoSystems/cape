@@ -193,3 +193,18 @@ We are using `poetry` for python dependencies and `poetry2nix` to integrate them
 in the nix-shell development environment.
 
 Use any poetry command e. g. `poetry add --dev ipython` to add packages.
+
+# Benchmarks
+
+The smart contract `DummyVerifier.sol` simulates the most expensive (in gas) operations of an AAP verifier.
+
+Our "implementation" of the Rescue permutation function is less performant than [Starkware's one](https://etherscan.io/address/0x7B6fc6b18A20823c3d3663E58AB2Af8D780D0AFe#code) .
+We provide here the gas cost for one AAP transaction.
+In the following table, *MTU* means "Merkle tree updates".
+
+| Verifier |Without MTU| With MTU (Starkware) | With MTU (NO Starkware)|
+| -------- | --------- | -------------------  |  --------------------- |
+| Only read tx  | 53_637   |         53_132   |  53_129                |
+| Simple        | 375_497  |        2_272_352 |  2_479_714             |
+| Batch         | 323_493  |        2_220_163 |  2_427_522             |
+

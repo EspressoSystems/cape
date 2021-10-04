@@ -53,6 +53,8 @@ module.exports = {
       accounts: {
         mnemonic: process.env.TEST_MNEMONIC,
       },
+      // Avoid: "InvalidInputError: Transaction gas limit is 31061912 and exceeds block gas limit of 30000000"
+      gas: 25_000_000,
     },
     local: {
       url: "http://localhost:8545",
@@ -67,9 +69,6 @@ module.exports = {
       },
     },
   },
-  gasPrice: 4700,
-  gasLimit: 300000000,
-  chainId: 8889,
   mocha: {
     timeout: 120000,
   },

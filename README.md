@@ -275,6 +275,38 @@ To run the benchmarks against Arbitrum Rinkeby follow these steps:
 You can check the deployment and transactions on Arbitrum for the contract
 at https://testnet.arbiscan.io/address/0x2FB18F4b4519a5fc792cb6508C6505675BA659E9.
 
+# AAP on Arbitrum (a.k.a AAPA)
+
+Clone the arbitrum submodule (https://gitlab.com/translucence/arbitrum fork)
+
+    git submodule update --init --recursive
+    cd arbitrum
+    nix-shell
+
+# Running local arb-dev-node (not officially supported!)
+Install dependencies
+
+    pip install -r requirements-dev.txt
+    yarn
+    yarn install:validator
+
+Build and run `arb-dev-node` and keep it running
+
+    cd packages/arb-rpc-node/cmd/arb-dev-node
+    go run arb-dev-node.go
+
+Run scripts
+
+    hardhat --network arbitrum_dev run scripts/benchmarks.js
+
+We are investigating why some of these transactions revert.
+
+Run tests
+
+    hardhat --network arbitrum_dev test/test-dummy-verifier.js
+
+at the moment this will fail due to gas mismatch.
+
 ## Gas Reporter
 Set the env var `REPORT_GAS` to get extra output about the gas consumption of
 contract functions called in the tests.

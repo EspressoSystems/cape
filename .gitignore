@@ -2,5 +2,7 @@
 node_modules
 artifacts
 cache
-/.pre-commit-config.yaml
 .env
+
+# prevent our formatters from formatting submodule repos
+arbitrum/

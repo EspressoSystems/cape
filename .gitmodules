@@ -1,0 +1,4 @@
+[submodule "arbitrum"]
+	path = arbitrum
+	url = git@gitlab.com:translucence/arbitrum
+	branch = translucence

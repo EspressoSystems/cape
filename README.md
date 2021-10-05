@@ -211,14 +211,28 @@ Use any poetry command e. g. `poetry add --dev ipython` to add packages.
 The smart contract `DummyVerifier.sol` simulates the most expensive (in gas) operations of an AAP verifier.
 
 Our "implementation" of the Rescue permutation function is less performant than [Starkware's one](https://etherscan.io/address/0x7B6fc6b18A20823c3d3663E58AB2Af8D780D0AFe#code) .
-We provide here the gas cost for one AAP transaction.
-In the following table, *MTU* means "Merkle tree updates".
+We provide here the gas and usd cost for one AAP transaction.
 
-| Verifier |Without MTU| With MTU (Starkware) | With MTU (NO Starkware)|
-| -------- | --------- | -------------------  |  --------------------- |
-| Only read tx  | 53_637   |         53_132   |  53_129                |
-| Simple        | 375_497  |        2_272_352 |  2_479_714             |
-| Batch         | 323_493  |        2_220_163 |  2_427_522             |
+```
+> hardhat run scripts/benchmarks.js
+**** NO Merkle tree update****
+verify_empty:  51892.42857142857 gas  ------ 39.205975204000005 USD 
+verify:  375636 gas  ------ 283.802013264 USD 
+batch_verify:  318932.85714285716 gas  ------ 240.96142796 USD 
+
+
+**** Merkle tree update (Starkware)****
+verify_empty:  51895.857142857145 gas  ------ 39.208565572000005 USD 
+verify:  2562065.285714286 gas  ------ 1935.7018129240003 USD 
+batch_verify:  2504806 gas  ------ 1892.4410483440001 USD 
+
+
+**** Merkle tree update (NO Starkware)****
+verify_empty:  51894.142857142855 gas  ------ 39.207270388 USD 
+verify:  2816589.5714285714 gas  ------ 2128.001019364 USD 
+batch_verify:  2759316.285714286 gas  ------ 2084.7296774480005 USD 
+
+```
 
 ## Gas Reporter
 Set the env var `REPORT_GAS` to get extra output about the gas consumption of

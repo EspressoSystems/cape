@@ -2988,7 +2988,7 @@ packages:
 
   /ethereumjs-common/1.5.0:
     resolution: {integrity: sha512-SZOjgK1356hIY7MRj3/ma5qtfr/4B5BL+G4rP/XSMYr2z1H5el4RX5GReYCKmQmYI/nSBmRnwrZ17IfHuG0viQ==}
-    deprecated: 'New package name format for new versions: @ethereumjs/common. Please update.'
+    deprecated: 'New package name format for new versions: @ethereumjs/lib. Please update.'
     dev: true
 
   /ethereumjs-tx/1.3.7:

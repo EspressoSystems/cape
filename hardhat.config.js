@@ -1,4 +1,5 @@
 require("@nomiclabs/hardhat-waffle");
+require("hardhat-gas-reporter");
 const {
   TASK_COMPILE_SOLIDITY_GET_SOLC_BUILD,
 } = require("hardhat/builtin-tasks/task-names");
@@ -68,6 +69,11 @@ module.exports = {
         runs: 1000,
       },
     },
+  },
+  gasReporter: {
+    enabled: process.env.REPORT_GAS ? true : false,
+    showMethodSig: true,
+    onlyCalledMethods: false,
   },
   mocha: {
     timeout: 120000,

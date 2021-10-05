@@ -1,7 +1,7 @@
 with import ./nix/nixpkgs.nix { };
 
 let
-  mySolc = callPackage ./nix/solc-bin { };
+  mySolc = callPackage ./nix/solc-bin { version = "0.8.4"; };
   myPython = [
     poetry
     (poetry2nix.mkPoetryEnv {

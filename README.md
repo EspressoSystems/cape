@@ -220,3 +220,8 @@ In the following table, *MTU* means "Merkle tree updates".
 | Simple        | 375_497  |        2_272_352 |  2_479_714             |
 | Batch         | 323_493  |        2_220_163 |  2_427_522             |
 
+## Gas Reporter
+Set the env var `REPORT_GAS` to get extra output about the gas consumption of
+contract functions called in the tests.
+
+    env REPORT_GAS=1 hh test

@@ -1,0 +1,25 @@
+[formatter.nix]
+command = "nixpkgs-fmt"
+includes = ["**/*.nix"]
+
+[formatter.rust]
+command = "rustfmt"
+work-dir = "rust"
+options = ["--edition", "2018"]
+includes = ["**/*.rs"]
+
+[formatter.python]
+command = "black"
+includes = [
+  "**/*.py",
+  "bin/hdwallet-derive",
+  "bin/make-genesis-block",
+]
+
+[formatter.javascript]
+command = "prettier"
+includes = ["**/*.js"]
+
+[formatter.solidity]
+command = "prettier"
+includes = ["**/*.sol"]

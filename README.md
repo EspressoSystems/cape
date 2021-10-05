@@ -157,7 +157,6 @@ This will also recompile the contracts when there are changes to any of the cont
 Watch directory and run tests on changes:
 
     cd rust
-    nix-shell
     cargo watch -x test
 
 If some compilation error occurs, delete the files generated previously (from the root of theproject):
@@ -178,6 +177,19 @@ Generate a `jf_txn::transfer::TransferNote` and save it to a file `my_note.bin`:
 Load the file:
 
     cargo run -p aap-rust-sandbox --example read_note
+
+### Formatting
+Format all the source files with their respective formatters:
+
+    treefmt
+
+Check if all files are correctly formatted:
+
+    treefmt --fail-on-change
+
+### Git hooks
+Pre-commit hooks are managed by nix. Edit `./nix/precommit.nix` to manage the
+hooks.
 
 ## Ethereum key management
 The keys are derived from the mnemonic in the `TEST_MNEMONIC` env var.

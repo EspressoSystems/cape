@@ -1,4 +1,6 @@
-with import ../nix/nixpkgs.nix { };
+{ pkgs ? import ../nix/nixpkgs.nix { } }:
+
+with pkgs;
 
 mkShell {
 
@@ -14,10 +16,6 @@ mkShell {
     cargo
     cargo-edit
     cargo-watch
-
-    jq
-
-    entr
   ] ++ lib.optionals stdenv.isDarwin [
     # required to compile ethers-rs
     darwin.apple_sdk.frameworks.Security
@@ -34,7 +32,6 @@ mkShell {
   RUSTFLAGS = if stdenv.isLinux then "-C link-arg=-fuse-ld=lld" else "";
 
   shellHook = ''
-    export PATH=$(pwd)/bin:$PATH
     export RUST_LOG=info
 
     # Needed with the ldd linker

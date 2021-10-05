@@ -1,3 +1,0 @@
-#!/usr/bin/env bash
-set -euo pipefail
-black bin/hdwallet-derive bin/make-genesis-block

@@ -2,6 +2,7 @@ const { ethers } = require("hardhat");
 const common  = require("../lib/common");
 
 const N_AAPTX = 1;
+
 const GAS_PRICE = 223; // See https://legacy.ethgasstation.info/calculatorTxV.php
 const ETH_PRICE_USD = 3388;
 
@@ -46,6 +47,8 @@ async function main() {
     dpv.provider.pollingInterval = 20;
 
     await dpv.deployed();
+
+    console.log("Contract deployed at address " + dpv.address);
 
     fun_to_eval = [dpv.verify_empty, dpv.verify, dpv.batch_verify];
     fun_names = ["verify_empty", "verify", "batch_verify"];

@@ -12,7 +12,7 @@ async function check_gas(
   const tx = await fun_to_evaluate(chunk, merkle_trees_update, is_starkware);
   const txReceipt = await tx.wait();
 
-  const gasUsed = txReceipt.cumulativeGasUsed.toString();
+  const gasUsed = txReceipt.gasUsed.toString();
   const expectedGasUsed = ethers.BigNumber.from(expected_gas_str);
   expect(expectedGasUsed).equal(gasUsed);
 }

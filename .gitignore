@@ -3,3 +3,4 @@ node_modules
 artifacts
 cache
 /.pre-commit-config.yaml
+.env

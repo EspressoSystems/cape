@@ -1,7 +1,7 @@
 const { ethers } = require("hardhat");
 const common  = require("../lib/common");
 
-const N_AAPTX = 7;
+const N_AAPTX = 1;
 const GAS_PRICE = 223; // See https://legacy.ethgasstation.info/calculatorTxV.php
 const ETH_PRICE_USD = 3388;
 
@@ -22,10 +22,15 @@ async function compute_gas_and_price(
 async function print_report(title,fun_to_eval,fun_names,chunk,merkle_tree_update,is_starkware) {
     console.log("**** " + title + "****");
     for (let i = 0; i < fun_to_eval.length; i++) {
-        let res = await compute_gas_and_price(fun_to_eval[i], chunk, merkle_tree_update, is_starkware);
-        let gas = res[0] / N_AAPTX;
-        let price = res[1] / N_AAPTX;
-        console.log(fun_names[i] + ":  " + gas + " gas  ------ " +  price + " USD ");
+        let res;
+        try {
+            res = await compute_gas_and_price(fun_to_eval[i], chunk, merkle_tree_update, is_starkware);
+            let gas = res[0] / N_AAPTX;
+            let price = res[1] / N_AAPTX;
+            console.log(fun_names[i] + ":  " + gas + " gas  ------ " +  price + " USD ");
+        } catch(error) {
+            console.log(error);
+        }
     }
     console.log("\n");
 }

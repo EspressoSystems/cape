@@ -27,7 +27,15 @@ mkShell
   ++ myRustShell.buildInputs;
 
   shellHook = ''
-    export TEST_MNEMONIC="test test test test test test test test test test test junk"
+
+    if [ ! -f .env ]; then
+      echo "Copying .env.sample to .env"
+      cp .env.sample .env
+    fi
+
+    echo "Exporting all vars in .env file"
+    set -a; source .env; set +a;
+
     export SOLC_VERSION=${mySolc.version}
     export SOLC_PATH=${mySolc}/bin/solc
     export PATH=$(pwd)/bin:$(pwd)/node_modules/.bin:$PATH

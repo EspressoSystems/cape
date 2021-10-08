@@ -57,6 +57,12 @@ module.exports = {
       // Avoid: "InvalidInputError: Transaction gas limit is 31061912 and exceeds block gas limit of 30000000"
       gas: 25_000_000,
     },
+    arbitrum: {
+      url: `https://rinkeby.arbitrum.io/rpc`,
+      gasPrice: 1_000_000_000,
+      gas: 25_000_000,
+      accounts: { mnemonic: process.env.ARBITRUM_MNEMONIC },
+    },
     local: {
       url: "http://localhost:8545",
     },

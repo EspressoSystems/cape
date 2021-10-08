@@ -213,6 +213,8 @@ The smart contract `DummyVerifier.sol` simulates the most expensive (in gas) ope
 Our "implementation" of the Rescue permutation function is less performant than [Starkware's one](https://etherscan.io/address/0x7B6fc6b18A20823c3d3663E58AB2Af8D780D0AFe#code) .
 We provide here the gas and usd cost for one AAP transaction.
 
+## Local network
+
 ```
 > hardhat run scripts/benchmarks.js
 **** NO Merkle tree update****
@@ -231,13 +233,23 @@ batch_verify:  2504806 gas  ------ 1892.4410483440001 USD
 verify_empty:  51894.142857142855 gas  ------ 39.207270388 USD
 verify:  2816589.5714285714 gas  ------ 2128.001019364 USD
 batch_verify:  2759316.285714286 gas  ------ 2084.7296774480005 USD
-
 ```
 
-To run the benchmarks agains Arbitrum Rinkeby follow these steps:
+## Rinkeby
+
+* Set the RINKEBY_URL in the .env file.
+* Set the RINKEBY_MNEMONIC in the .env file.
+* Run the following command
+```
+> hardhat --network rinkeby run scripts/benchmarks.js
+```
+
+## Arbitrum on Rinkeby
+
+To run the benchmarks against Arbitrum Rinkeby follow these steps:
 
 * Install [Metamask](https://metamask.io/) in your browser and copy the mnemonic.
-* Set the ARBITRUM_MNEMONIC in the .env file.
+* Set the RINKEBY_MNEMONIC in the .env file.
 * Switch metamask to the rinkeby network.
 * Get some Rinkeby coins at the [MyCrypto faucet](https://app.mycrypto.com/faucet). You can also use the official [Rinkeby faucet](https://faucet.rinkeby.io) which is less stable but where you can get more coins at once.
 * Go to the [Arbitrum bridge](https://bridge.arbitrum.io/) and deposit your
@@ -246,13 +258,10 @@ To run the benchmarks agains Arbitrum Rinkeby follow these steps:
 * Run the following command
 ```
 > hardhat --network arbitrum run scripts/benchmarks.js
-
 ```
 
 You can check the deployment and transactions on Arbitrum for the contract
 at https://testnet.arbiscan.io/address/0x2FB18F4b4519a5fc792cb6508C6505675BA659E9.
-
-
 
 ## Gas Reporter
 Set the env var `REPORT_GAS` to get extra output about the gas consumption of

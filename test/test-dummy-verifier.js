@@ -14,7 +14,7 @@ async function check_gas(
 
   const gasUsed = txReceipt.gasUsed.toString();
   const expectedGasUsed = ethers.BigNumber.from(expected_gas_str);
-  expect(expectedGasUsed).equal(gasUsed);
+  expect(gasUsed).equal(expectedGasUsed);
 }
 
 describe("Dummy Verifier", function () {
@@ -41,33 +41,33 @@ describe("Dummy Verifier", function () {
 
     it("Works with merkle tree update (Starkware)", async function () {
 
-      const expected_gas_array = ["265661", "11361761", "11100813"];
+      const expected_gas_array = ["265025", "11361125", "11100177"];
 
       for (let i = 0; i < fun_to_eval.length; i++) {
         await check_gas(fun_to_eval[i], chunk, true, true,expected_gas_array[i]);
       }
 
       let best_cost_per_tx = parseInt(expected_gas_array[2])/N_AAPTX;
-      expect(best_cost_per_tx).equal(2220162.6);
+      expect(best_cost_per_tx).equal(2220035.4);
 
     });
 
     it("Works with merkle tree update (NO Starkware)", async function () {
 
-      const expected_gas_array = ["265649", "12542007", "12281036"];
+      const expected_gas_array = ["265013", "12541371", "12280400"];
 
       for (let i = 0; i < fun_to_eval.length; i++) {
         await check_gas(fun_to_eval[i], chunk, true, false,expected_gas_array[i]);
       }
 
       let best_cost_per_tx = parseInt(expected_gas_array[2])/N_AAPTX;
-      expect(2456207.2).equal(best_cost_per_tx);
+      expect(2456080).equal(best_cost_per_tx);
 
     });
 
     it("Works with without merkle tree update)", async function () {
 
-      const expected_gas_array = ["265637", "1877487", "1617465"];
+      const expected_gas_array = ["265001", "1876851", "1616829"];
 
       // Batch verification is faster than simple verification
       expect(parseInt(expected_gas_array[2])).lt(
@@ -79,7 +79,7 @@ describe("Dummy Verifier", function () {
       }
 
       let best_cost_per_tx = parseInt(expected_gas_array[2])/N_AAPTX;
-      expect(best_cost_per_tx).equal(323493);
+      expect(best_cost_per_tx).equal(323365.8);
 
     });
   });

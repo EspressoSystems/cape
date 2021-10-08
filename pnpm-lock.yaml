@@ -15,12 +15,14 @@ specifiers:
   noble-bls12-381: ^0.14.1
   prettier: ^2.4.1
   prettier-plugin-solidity: ^1.0.0-beta.18
+  random-seed: ^0.3.0
 
 dependencies:
   '@summa-tx/memview-sol': 2.0.0
   async: 3.2.1
   async-child-process: 1.1.1
   noble-bls12-381: 0.14.1
+  random-seed: 0.3.0
 
 devDependencies:
   '@nomiclabs/hardhat-ethers': 2.0.2_ethers@5.4.7+hardhat@2.6.4
@@ -4530,7 +4532,6 @@ packages:
 
   /json-stringify-safe/5.0.1:
     resolution: {integrity: sha1-Epai1Y/UXxmg9s4B1lcB4sc1tus=}
-    dev: true
 
   /json5/0.5.1:
     resolution: {integrity: sha1-Hq3nrMASA0rYTiOWdn6tn6VJWCE=}
@@ -5953,6 +5954,13 @@ packages:
     engines: {node: '>=0.4.x'}
     deprecated: The querystring API is considered Legacy. new code should use the URLSearchParams API instead.
     dev: true
+
+  /random-seed/0.3.0:
+    resolution: {integrity: sha1-2UXy4fOPSejViRNDG4v2u5N1Vs0=}
+    engines: {node: '>= 0.6.0'}
+    dependencies:
+      json-stringify-safe: 5.0.1
+    dev: false
 
   /randombytes/2.1.0:
     resolution: {integrity: sha512-vYl3iOX+4CKUWuxGi9Ukhie6fsqXqS9FE2Zaic4tNFD2N2QQaXOMFbuKK4QmDHC0JO6B1Zp41J0LpT0oR68amQ==}

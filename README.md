@@ -245,7 +245,8 @@ batch_verify:  2759316.285714286 gas  ------ 2084.7296774480005 USD
 
 ## Rinkeby
 
-* Set the RINKEBY_URL in the .env file.
+* Set the RINKEBY_URL in the .env file. A project can be created at
+  https://infura.io/dashboard/ethereum.
 * Set the RINKEBY_MNEMONIC in the .env file.
 * Run the following command
 ```

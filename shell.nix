@@ -22,6 +22,7 @@ mkShell
     jq
     entr # watch files for changes, for example: ls contracts/*.sol | entr -c hardhat compile
     treefmt # multi language formatter
+    git # required for pre-commit hook installation
   ]
   ++ myPython
   ++ myRustShell.buildInputs;

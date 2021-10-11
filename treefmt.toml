@@ -18,8 +18,10 @@ includes = [
 
 [formatter.javascript]
 command = "prettier"
+options = ["-w"]
 includes = ["**/*.js"]
 
 [formatter.solidity]
 command = "prettier"
+options = ["-w"]
 includes = ["**/*.sol"]

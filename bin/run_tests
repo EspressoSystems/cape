@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "Running tests on locally..."
+hardhat test
+
+echo "Running tests on Rinkeby..."
+hardhat --network rinkeby test

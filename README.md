@@ -90,7 +90,15 @@ It's also possible to run the hardhat node and tests in one command
 - The `console.log` statements are shown in in the terminal.
 - Failing `require` statements are shown in human readable form in the terminal.
 
-#### Running scripts
+#### Running the tests against all the networks
+
+```
+> hivemind
+> ./bin/run_tests
+
+```
+
+### Running scripts
 Run a script that connect to the local network (on port 8545)
 
     hh run scripts/sample-script.js --network localhost

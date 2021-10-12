@@ -9,6 +9,9 @@ contract DummyVerifier {
 
     uint RECORDS_TREE_HEIGHT = 25;
     uint NULLIFIERS_TREE_HEIGHT = 256;
+    uint AAPTX_SIZE =  3000; // Must be the same as in the javascript testing code
+    uint N_INPUTS = 4; // Number of AAP inputs per transactions corresponding to a transaction of roughly 3 KB
+    uint N_OUTPUTS = 5; // Number of AAP outputs per transactions of roughly 3 KB
 
     function verify_empty(bytes memory chunk, bool merkle_trees_update, bool is_starkware) public returns (bool) {
         return true;
@@ -16,8 +19,7 @@ contract DummyVerifier {
 
     function verify(bytes memory chunk, bool merkle_trees_update, bool is_starkware) public returns (bool) {
         // Count the number of transactions
-        uint aaptx_size =  3000;
-        uint n_aaptx =  chunk.length / aaptx_size;
+        uint n_aaptx =  chunk.length / AAPTX_SIZE;
 
         // n_aaptx pairing check
         for (uint i=0;i<n_aaptx;i++){
@@ -45,7 +47,7 @@ contract DummyVerifier {
     }
 
     function update_nullifiers_tree() private  returns(bytes32) {
-        for (uint i=0; i< NULLIFIERS_TREE_HEIGHT;i++) {
+        for (uint i=0; i< NULLIFIERS_TREE_HEIGHT * N_INPUTS;i++) {
             // Compute blake2 hash
              string memory left = "a";
              string memory right = "b";
@@ -65,7 +67,7 @@ contract DummyVerifier {
      */
     function update_records_tree_batch(uint n_aaptx, bool is_starkware) private {
 
-        uint TOTAL_COST_BATCH_INSERTION = (3 * n_aaptx) / 2;
+        uint TOTAL_COST_BATCH_INSERTION = (3 * n_aaptx * N_OUTPUTS) / 2;
 
         for (uint i=0; i< TOTAL_COST_BATCH_INSERTION;i++) {
             // Computes rescue hash

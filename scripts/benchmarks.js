@@ -15,7 +15,7 @@ async function compute_gas_and_price(
     const tx = await fun_to_evaluate(chunk, merkle_trees_update, is_starkware);
     const txReceipt = await tx.wait();
 
-    const gasUsed = txReceipt.cumulativeGasUsed.toString();
+    const gasUsed = txReceipt.gasUsed.toString();
     const price = gasUsed * GAS_PRICE * 10**(-9) * ETH_PRICE_USD;
     return [gasUsed,price];
 }

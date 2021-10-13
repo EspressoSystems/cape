@@ -16,7 +16,6 @@
 
 pragma solidity ^0.5.2;
 
-
 contract Sponge {
     uint256 prime;
     uint256 r;
@@ -25,9 +24,12 @@ contract Sponge {
     uint256 outputSize;
     uint256 nRounds;
 
-    constructor (uint256 prime_, uint256 r_, uint256 c_, uint256 nRounds_)
-    public
-    {
+    constructor(
+        uint256 prime_,
+        uint256 r_,
+        uint256 c_,
+        uint256 nRounds_
+    ) public {
         prime = prime_;
         r = r_;
         c = c_;
@@ -37,23 +39,36 @@ contract Sponge {
     }
 
     function LoadAuxdata()
-    internal view
-    returns (uint256[] memory /*auxdata*/);
+        internal
+        view
+        returns (
+            uint256[] memory /*auxdata*/
+        );
 
-    function permutation_func(uint256[] memory /*auxdata*/, uint256[] memory /*elements*/)
-    internal view
-    returns (uint256[] memory /*hash_elements*/);
+    function permutation_func(
+        uint256[] memory, /*auxdata*/
+        uint256[] memory /*elements*/
+    )
+        internal
+        view
+        returns (
+            uint256[] memory /*hash_elements*/
+        );
 
     function sponge(uint256[] memory inputs)
-    internal view
-    returns (uint256[] memory outputElements)
+        internal
+        view
+        returns (uint256[] memory outputElements)
     {
         uint256 inputLength = inputs.length;
         for (uint256 i = 0; i < inputLength; i++) {
             require(inputs[i] < prime, "elements do not belong to the field");
         }
 
-        require(inputLength % r == 0, "Number of field elements is not divisible by r.");
+        require(
+            inputLength % r == 0,
+            "Number of field elements is not divisible by r."
+        );
 
         uint256[] memory state = new uint256[](m);
         for (uint256 i = 0; i < m; i++) {
@@ -76,10 +91,7 @@ contract Sponge {
         }
     }
 
-    function getParameters()
-    public view
-    returns (uint256[] memory status)
-    {
+    function getParameters() public view returns (uint256[] memory status) {
         status = new uint256[](4);
         status[0] = prime;
         status[1] = r;

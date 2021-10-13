@@ -1,8 +1,11 @@
 pragma solidity >=0.4.24;
 
 contract SimpleStorage {
-
-    event ValueChanged(address indexed author, string oldValue, string newValue);
+    event ValueChanged(
+        address indexed author,
+        string oldValue,
+        string newValue
+    );
 
     string _value;
 
@@ -11,7 +14,7 @@ contract SimpleStorage {
         _value = value;
     }
 
-    function getValue() view public returns (string memory) {
+    function getValue() public view returns (string memory) {
         return _value;
     }
 

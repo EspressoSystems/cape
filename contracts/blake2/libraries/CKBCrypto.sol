@@ -158,7 +158,10 @@ library CKBCrypto {
         // assert((data.length % 128) == 0);
         uint256 remainder = data.length % 128;
         if (0 != remainder) {
-            bytes memory fixed_data = abi.encodePacked(data, new bytes(128 - remainder));
+            bytes memory fixed_data = abi.encodePacked(
+                data,
+                new bytes(128 - remainder)
+            );
             update_loop(instance, fixed_data, data_len, true);
         } else {
             update_loop(instance, data, data_len, true);

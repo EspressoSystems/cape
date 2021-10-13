@@ -2,8 +2,7 @@
 pragma solidity ^0.8.0;
 
 contract ReadAAPTx {
-
-    uint public scratch;
+    uint256 public scratch;
 
     constructor() {}
 
@@ -22,7 +21,8 @@ contract ReadAAPTx {
         GroupProjective key;
     }
 
-    struct AuditMemo { // is Ciphertext
+    struct AuditMemo {
+        // is Ciphertext
         EncKey ephemeral;
         uint256[] data;
     }
@@ -50,7 +50,11 @@ contract ReadAAPTx {
         return x + y;
     }
 
-    function submitNullifiers(uint256[] calldata inputs_nullifiers) public view returns (uint) {
+    function submitNullifiers(uint256[] calldata inputs_nullifiers)
+        public
+        view
+        returns (uint256)
+    {
         return inputs_nullifiers.length;
     }
 

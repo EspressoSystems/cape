@@ -16,68 +16,72 @@
 
 pragma solidity ^0.5.2;
 
-
 contract Base {
     event LogString(string str);
 
     address payable internal operator;
-    uint256 constant internal MINIMUM_TIME_TO_REVEAL = 1 days;
-    uint256 constant internal TIME_TO_ALLOW_REVOKE = 7 days;
+    uint256 internal constant MINIMUM_TIME_TO_REVEAL = 1 days;
+    uint256 internal constant TIME_TO_ALLOW_REVOKE = 7 days;
     bool internal isRevokeStarted = false;
     uint256 internal revokeTime = 0; // The time from which we can revoke.
     bool internal active = true;
 
     // mapping: (address, commitment) -> time
     // Times from which the users may claim the reward.
-    mapping (address => mapping (bytes32 => uint256)) private reveal_timestamps;
+    mapping(address => mapping(bytes32 => uint256)) private reveal_timestamps;
 
-
-    constructor ()
-    internal
-    {
+    constructor() internal {
         operator = msg.sender;
     }
 
-    modifier onlyOperator()
-    {
+    modifier onlyOperator() {
         require(msg.sender == operator, "ONLY_OPERATOR");
         _; // The _; defines where the called function is executed.
     }
 
-    function register(bytes32 commitment)
-    public
-    {
-        require(reveal_timestamps[msg.sender][commitment] == 0, "Entry already registered.");
-        reveal_timestamps[msg.sender][commitment] = now + MINIMUM_TIME_TO_REVEAL;
+    function register(bytes32 commitment) public {
+        require(
+            reveal_timestamps[msg.sender][commitment] == 0,
+            "Entry already registered."
+        );
+        reveal_timestamps[msg.sender][commitment] =
+            now +
+            MINIMUM_TIME_TO_REVEAL;
     }
-
 
     /*
       Makes sure that the commitment was registered at least MINIMUM_TIME_TO_REVEAL before
       the current time.
     */
-    function verifyTimelyRegistration(bytes32 commitment)
-    internal view
-    {
-        uint256 registrationMaturationTime = reveal_timestamps[msg.sender][commitment];
-        require(registrationMaturationTime != 0, "Commitment is not registered.");
-        require(now >= registrationMaturationTime, "Time for reveal has not passed yet.");
+    function verifyTimelyRegistration(bytes32 commitment) internal view {
+        uint256 registrationMaturationTime = reveal_timestamps[msg.sender][
+            commitment
+        ];
+        require(
+            registrationMaturationTime != 0,
+            "Commitment is not registered."
+        );
+        require(
+            now >= registrationMaturationTime,
+            "Time for reveal has not passed yet."
+        );
     }
-
 
     /*
       WARNING: This function should only be used with call() and not transact().
       Creating a transaction that invokes this function might reveal the collision and make it
       subject to front-running.
     */
-    function calcCommitment(uint256[] memory firstInput, uint256[] memory secondInput)
-    public view
-    returns (bytes32 commitment)
-    {
+    function calcCommitment(
+        uint256[] memory firstInput,
+        uint256[] memory secondInput
+    ) public view returns (bytes32 commitment) {
         address sender = msg.sender;
         uint256 firstLength = firstInput.length;
         uint256 secondLength = secondInput.length;
-        uint256[] memory hash_elements = new uint256[](1 + firstLength + secondLength);
+        uint256[] memory hash_elements = new uint256[](
+            1 + firstLength + secondLength
+        );
         hash_elements[0] = uint256(sender);
         uint256 offset = 1;
         for (uint256 i = 0; i < firstLength; i++) {
@@ -94,13 +98,18 @@ contract Base {
         uint256[] memory firstInput,
         uint256[] memory secondInput,
         string memory solutionDescription,
-        string memory name)
-    public
-    {
-        require(active == true, "This challenge is no longer active. Thank you for participating.");
+        string memory name
+    ) public {
+        require(
+            active == true,
+            "This challenge is no longer active. Thank you for participating."
+        );
         require(firstInput.length > 0, "First input cannot be empty.");
         require(secondInput.length > 0, "Second input cannot be empty.");
-        require(firstInput.length == secondInput.length, "Input lengths are not equal.");
+        require(
+            firstInput.length == secondInput.length,
+            "Input lengths are not equal."
+        );
         uint256 inputLength = firstInput.length;
         bool sameInput = true;
         for (uint256 i = 0; i < inputLength; i++) {
@@ -112,7 +121,10 @@ contract Base {
         bool sameHash = true;
         uint256[] memory firstHash = applyHash(firstInput);
         uint256[] memory secondHash = applyHash(secondInput);
-        require(firstHash.length == secondHash.length, "Output lengths are not equal.");
+        require(
+            firstHash.length == secondHash.length,
+            "Output lengths are not equal."
+        );
         uint256 outputLength = firstHash.length;
         for (uint256 i = 0; i < outputLength; i++) {
             if (firstHash[i] != secondHash[i]) {
@@ -129,25 +141,20 @@ contract Base {
     }
 
     function applyHash(uint256[] memory elements)
-    public view
-    returns (uint256[] memory elementsHash)
+        public
+        view
+        returns (uint256[] memory elementsHash)
     {
         elementsHash = sponge(elements);
     }
 
-    function startRevoke()
-    public
-    onlyOperator()
-    {
+    function startRevoke() public onlyOperator {
         require(isRevokeStarted == false, "Revoke already started.");
         isRevokeStarted = true;
         revokeTime = now + TIME_TO_ALLOW_REVOKE;
     }
 
-    function revokeReward()
-    public
-    onlyOperator()
-    {
+    function revokeReward() public onlyOperator {
         require(isRevokeStarted == true, "Revoke not started yet.");
         require(now >= revokeTime, "Revoke time not passed.");
         active = false;
@@ -155,13 +162,11 @@ contract Base {
     }
 
     function sponge(uint256[] memory inputs)
-    internal view
-    returns (uint256[] memory outputElements);
+        internal
+        view
+        returns (uint256[] memory outputElements);
 
-    function getStatus()
-    public view
-    returns (bool[] memory status)
-    {
+    function getStatus() public view returns (bool[] memory status) {
         status = new bool[](2);
         status[0] = isRevokeStarted;
         status[1] = active;

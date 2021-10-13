@@ -1,8 +1,8 @@
 pub mod aap_jf;
 mod contract_group_operations;
 mod contract_read_aaptx;
-pub mod ethereum;
-mod set_merkle_tree;
+mod ethereum;
+mod nullifiers_merkle_tree;
 
 // TODO check which imports are really needed
 use ark_bn254::fq2::Fq2;

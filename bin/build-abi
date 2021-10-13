@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [ -d artifacts ]; then
+    echo "Removing artifacts"
+    rm -r artifacts
+fi
 echo "Compiling contracts ..."
 
 hardhat compile

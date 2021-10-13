@@ -20,6 +20,7 @@ contract SetMerkleTree {
     // TODO export this function to some "utils" library ?
     function are_equal_bytes64(bytes64 memory x, bytes64 memory y)
         private
+        pure
         returns (bool)
     {
         return (x.lo == y.lo) && (x.hi == y.hi);
@@ -87,22 +88,25 @@ contract SetMerkleTree {
 
     function isEqualToRoot(bytes64 memory running_hash)
         private
-        view
+        pure
         returns (bool)
     {
         // different storage locations
+        // TODO just to avoid the warning
+        assert(are_equal_bytes64(running_hash, running_hash));
         return false;
     }
 
-    function isEmptySubtree(bytes64 memory node) private returns (bool) {
+    function isEmptySubtree(bytes64 memory node) private view returns (bool) {
         return are_equal_bytes64(node, EMPTY_SUBTREE);
     }
 
-    function isLeafNode(bytes64 memory node) private returns (bool) {
+    function isLeafNode(bytes64 memory node) private view returns (bool) {
         return !are_equal_bytes64(node, EMPTY_SUBTREE);
     }
 
     function elem_hash(bytes32 elem) public pure returns (bytes64 memory) {
+        assert(elem == elem); // TODO just to avoid the warning
         // TODO h(canonical_serialize(nul)) where h is Blake2B personalized with “AAPSet Elem”
         return bytes64(0, 0);
     }
@@ -119,6 +123,10 @@ contract SetMerkleTree {
     {
         // h("l"||l||"r"||r) where h is Blake2B personalized with “AAPSet Branch”
         // return keccak256(abi.encodePacked("l", left, "r", right));
+
+        assert(are_equal_bytes64(left, left)); // TODO Just to avoid compiler warnings
+        assert(are_equal_bytes64(right, right)); // TODO Just to avoid compiler warnings
+
         return bytes64(0, 0);
     }
 }

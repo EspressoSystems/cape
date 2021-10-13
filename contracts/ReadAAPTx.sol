@@ -42,17 +42,17 @@ contract ReadAAPTx {
         AuxInfo aux_info;
     }
 
-    function readInt256(int256 x) public view returns (int256) {
+    function readInt256(int256 x) public pure returns (int256) {
         return x;
     }
 
-    function addBlsScalar(uint256 x, uint256 y) public view returns (uint256) {
+    function addBlsScalar(uint256 x, uint256 y) public pure returns (uint256) {
         return x + y;
     }
 
     function submitNullifiers(uint256[] calldata inputs_nullifiers)
         public
-        view
+        pure
         returns (uint256)
     {
         return inputs_nullifiers.length;

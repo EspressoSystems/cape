@@ -39,7 +39,7 @@ describe("Dummy Verifier", function () {
     });
 
     it("Works with merkle tree update (Starkware)", async function () {
-      const expected_gas_array = ["119424", "20004780", "19950832"];
+      const expected_gas_array = ["119726", "20007024", "19953065"];
 
       for (let i = 0; i < fun_to_eval.length; i++) {
         await check_gas(
@@ -53,7 +53,7 @@ describe("Dummy Verifier", function () {
     });
 
     it("Works with merkle tree update (NO Starkware)", async function () {
-      const expected_gas_array = ["119412", "22731172", "22677322"];
+      const expected_gas_array = ["121714", "22733356", "22679495"];
 
       for (let i = 0; i < fun_to_eval.length; i++) {
         await check_gas(
@@ -67,7 +67,7 @@ describe("Dummy Verifier", function () {
     });
 
     it("Works with without merkle tree update)", async function () {
-      const expected_gas_array = ["119400", "762237", "705267"];
+      const expected_gas_array = ["121702", "762259", "705278"];
 
       for (let i = 0; i < fun_to_eval.length; i++) {
         await check_gas(
@@ -81,7 +81,7 @@ describe("Dummy Verifier", function () {
     });
 
     it("Batch verifier is more efficient than simple verifier when there are enough transactions", async function () {
-      const expected_gas_array = ["167941", "1133090", "1007769"];
+      const expected_gas_array = ["170243", "1133123", "1007780"];
 
       const N_AAPTX = 3;
       const chunk = common.create_chunk(N_AAPTX);

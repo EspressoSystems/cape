@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd "$REPO_DIR/arbitrum"
+nix-shell --run "cd packages/arb-rpc-node/cmd/arb-dev-node && go run arb-dev-node.go $@"

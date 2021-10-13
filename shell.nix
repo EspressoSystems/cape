@@ -37,6 +37,7 @@ mkShell
     echo "Exporting all vars in .env file"
     set -a; source .env; set +a;
 
+    export REPO_DIR=$(pwd)
     export SOLC_VERSION=${mySolc.version}
     export SOLC_PATH=${mySolc}/bin/solc
     export PATH=$(pwd)/bin:$(pwd)/node_modules/.bin:$PATH

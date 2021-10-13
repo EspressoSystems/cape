@@ -292,8 +292,7 @@ Install dependencies
 
 Build and run `arb-dev-node` and keep it running
 
-    cd packages/arb-rpc-node/cmd/arb-dev-node
-    go run arb-dev-node.go
+    arb-dev-node
 
 Run scripts
 

@@ -1,3 +1,6 @@
+// TODO put correctly license
+// SPDX-License-Identifier: RANDOM_TEXT
+
 pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
@@ -37,7 +40,7 @@ library Rescue {
     function add_vectors(
         uint256[STATE_SIZE] memory v1,
         uint256[STATE_SIZE] memory v2
-    ) internal returns (uint256[STATE_SIZE] memory) {
+    ) internal pure returns (uint256[STATE_SIZE] memory) {
         uint256[STATE_SIZE] memory v;
 
         for (uint256 j = 0; j < STATE_SIZE; j++) {
@@ -52,7 +55,7 @@ library Rescue {
         uint256[STATE_SIZE * STATE_SIZE] memory MDS,
         uint256[STATE_SIZE] memory v,
         uint256[STATE_SIZE] memory c
-    ) private {
+    ) private pure {
         uint256[STATE_SIZE] memory res;
 
         for (uint256 i = 0; i < STATE_SIZE; i++) {
@@ -172,6 +175,7 @@ library Rescue {
     // Dummy version
     function perm(uint256[STATE_SIZE] memory input)
         internal
+        view
         returns (uint256[STATE_SIZE] memory)
     {
         uint256[STATE_SIZE * STATE_SIZE] memory MDS;
@@ -206,7 +210,7 @@ library Rescue {
         uint256 b,
         uint256 c,
         bool is_starkware
-    ) internal returns (uint256[STATE_SIZE] memory) {
+    ) internal view returns (uint256[STATE_SIZE] memory) {
         uint256[STATE_SIZE] memory input;
         uint256[STATE_SIZE] memory state;
 

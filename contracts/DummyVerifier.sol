@@ -11,12 +11,18 @@ contract DummyVerifier {
     uint256 AAPTX_SIZE = 3000; // Must be the same as in the javascript testing code
     uint256 N_INPUTS = 4; // Number of AAP inputs per transactions corresponding to a transaction of roughly 3 KB
     uint256 N_OUTPUTS = 5; // Number of AAP outputs per transactions of roughly 3 KB
+    uint256 dummy_var = 1; // Just to avoid compilers warnings
 
     function verify_empty(
         bytes memory chunk,
         bool merkle_trees_update,
         bool is_starkware
     ) public returns (bool) {
+        assert(chunk[0] >= 0); // Just to avoid compilers warnings
+        assert(merkle_trees_update == merkle_trees_update); // Just to avoid compilers warnings
+        assert(is_starkware == is_starkware);
+        dummy_var = 0; // Just to avoid compilers warnings
+
         return true;
     }
 
@@ -43,7 +49,7 @@ contract DummyVerifier {
         return true;
     }
 
-    function prepare_pcs_info(uint256 n_aaptx) private {
+    function prepare_pcs_info(uint256 n_aaptx) private view {
         // $n_aaptx$ multi-exp in G1 of size $c$ where c=32
         // (Empirically 29=<c<=36. See rust code call `prepare_pcs_info` in PlonkKzgSnark.batch_verify)
 
@@ -53,7 +59,7 @@ contract DummyVerifier {
         }
     }
 
-    function update_nullifiers_tree() private returns (bytes32) {
+    function update_nullifiers_tree() private view returns (bytes32) {
         for (uint256 i = 0; i < NULLIFIERS_TREE_HEIGHT * N_INPUTS; i++) {
             // Compute blake2 hash
             string memory left = "a";
@@ -61,6 +67,8 @@ contract DummyVerifier {
 
             CKBCrypto.digest(abi.encodePacked(left, right, new bytes(64)), 64);
         }
+
+        return 0;
     }
 
     /*
@@ -74,6 +82,7 @@ contract DummyVerifier {
      */
     function update_records_tree_batch(uint256 n_aaptx, bool is_starkware)
         private
+        view
     {
         uint256 TOTAL_COST_BATCH_INSERTION = (3 * n_aaptx * N_OUTPUTS) / 2;
 
@@ -94,6 +103,7 @@ contract DummyVerifier {
 
         // For the record tree we insert the records in batch
         update_records_tree_batch(n_aaptx, is_starkware);
+        dummy_var = 0; // Just to avoid compilers warnings
     }
 
     function batch_verify(
@@ -126,7 +136,7 @@ contract DummyVerifier {
         return true;
     }
 
-    function run_pairing_check() private {
+    function run_pairing_check() private view returns (bool) {
         Curve.G1Point memory g1 = Curve.P1();
         Curve.G2Point memory g2 = Curve.P2();
 
@@ -136,19 +146,23 @@ contract DummyVerifier {
         Curve.G2Point[] memory points2 = new Curve.G2Point[](1);
         points2[0] = g2;
         bool res = Curve.pairing(points1, points2);
+        return res;
     }
 
     // TODO use proper multiexp opcode
-    function run_multi_exp_g1(uint256 size) private {
+    function run_multi_exp_g1(uint256 size) private view {
         for (uint256 i = 0; i < size; i++) {
             // Group scalar multiplications
             Curve.G1Point memory g1 = Curve.P1();
             uint256 scalar1 = 545454; // TODO use bigger scalar
             Curve.G1Point memory p1 = Curve.g1mul(g1, scalar1);
 
+            assert(p1.X == p1.X); // Just to avoid compiler warning
+
             // (size-1) group additions
             if (i >= 1) {
                 Curve.G1Point memory p2 = Curve.g1add(g1, g1);
+                assert(p2.X == p2.X); // Just to avoid compiler warning
             }
         }
     }

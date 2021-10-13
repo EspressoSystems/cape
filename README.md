@@ -195,6 +195,9 @@ Check if all files are correctly formatted:
 
     treefmt --fail-on-change
 
+For big reformatting commits, add the revision to the `.git-blame-ignore-revs`
+file.
+
 ### Git hooks
 Pre-commit hooks are managed by nix. Edit `./nix/precommit.nix` to manage the
 hooks.

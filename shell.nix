@@ -43,6 +43,8 @@ mkShell
 
     # install pre-commit hooks
     ${pre-commit-check.shellHook}
+
+    git config --local blame.ignoreRevsFile .git-blame-ignore-revs
   ''
   + myRustShell.shellHook;
 }

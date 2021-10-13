@@ -10,6 +10,8 @@ contract NullifiersMerkleTree {
     bytes64 EMPTY_HASH = bytes64(0, 0);
     bytes64 EMPTY_SUBTREE = EMPTY_HASH; // TODO is this correct?
 
+    constructor() {}
+
     uint256 constant N = 512;
 
     struct bytes64 {
@@ -105,8 +107,8 @@ contract NullifiersMerkleTree {
         return !are_equal_bytes64(node, EMPTY_SUBTREE);
     }
 
-    function dummy(bool b) public returns (bool) {
-        return true;
+    function dummy(bool b) public pure returns (bool) {
+        return b;
     }
 
     function elem_hash(bytes memory elem) public pure returns (bool) {

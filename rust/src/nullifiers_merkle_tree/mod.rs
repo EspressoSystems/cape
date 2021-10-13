@@ -10,7 +10,6 @@ abigen!(
 );
 
 // nullifier is 32 byte
-#[warn(dead_code)]
 pub fn to_ethers(nullifier: Nullifier) -> Vec<u8> {
     let b = to_bytes!(&nullifier).expect("Failed to serialize ark type");
     b.try_into().expect("Failed to convert to byte array")
@@ -26,9 +25,9 @@ mod tests {
     use rand::SeedableRng;
     use rand_chacha::ChaChaRng;
     use std::path::Path;
+
     use zerok_lib;
 
-    #[tokio::test]
     async fn test_hash() {
         let client = get_funded_deployer().await.unwrap();
         let contract = deploy(
@@ -40,8 +39,7 @@ mod tests {
         let contract = NullifiersMerkleTree::new(contract.address(), client);
 
         async fn dummy<M: Middleware>(contract: &NullifiersMerkleTree<M>, v: bool) -> bool {
-            let res: bool = contract.dummy(v).call().await.unwrap();
-            res
+            contract.dummy(v).call().await.unwrap()
         }
 
         let res = dummy(&contract, false).await;

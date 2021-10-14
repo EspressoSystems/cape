@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
-import {CKBCrypto} from "./blake2/libraries/CKBCrypto.sol";
+import "./BLAKE2b/BLAKE2b.sol";
 
 contract NullifiersMerkleTree {
     bytes64 root;
@@ -114,9 +114,21 @@ contract NullifiersMerkleTree {
         return !are_equal_bytes64(node, EMPTY_SUBTREE());
     }
 
-    function elem_hash(bytes memory elem) public pure returns (bytes memory) {
-        // TODO h(canonical_serialize(nul)) where h is Blake2B personalized with “AAPSet Elem”
-        return elem;
+    function elem_hash(bytes memory input) public returns (uint64[8] memory) {
+        BLAKE2b blake = new BLAKE2b();
+        bytes memory persona = "AAPSet Elem";
+        console.log("inputs:");
+        console.logBytes(input);
+
+        uint64[8] memory res_u64 = blake.blake2b_full(
+            input,
+            "",
+            "",
+            persona,
+            64
+        );
+
+        return res_u64;
     }
 
     //    function leaf_hash(bytes32 elem) public pure returns (bytes memory) {

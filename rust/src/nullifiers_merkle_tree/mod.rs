@@ -1,3 +1,4 @@
+use byteorder::{BigEndian, WriteBytesExt};
 use ethers::prelude::abigen;
 use jf_txn::structs::Nullifier;
 use jf_utils::to_bytes;
@@ -11,11 +12,20 @@ abigen!(
 
 // nullifier is 32 byte
 pub fn to_ethers(nullifier: Nullifier) -> Vec<u8> {
-    let b = to_bytes!(&nullifier).expect("Failed to serialize ark type");
-    b.try_into().expect("Failed to convert to byte array")
+    zerok_lib::canonical::serialize(&nullifier).unwrap()
 }
 
 // hash is 64 byte
+
+pub fn convert_vec_u64_into_vec_u8(input: Vec<u64>) -> Vec<u8> {
+    let mut output: Vec<u8> = vec![];
+
+    for elem in input {
+        // TODO is LittleEndian correct?
+        output.write_u64::<BigEndian>(elem).unwrap();
+    }
+    output
+}
 
 #[cfg(test)]
 mod tests {
@@ -28,7 +38,7 @@ mod tests {
     use zerok_lib;
 
     #[tokio::test]
-    async fn test_hash() {
+    async fn test_blake2b() {
         let client = get_funded_deployer().await.unwrap();
         let contract = deploy(
             client.clone(),
@@ -42,27 +52,28 @@ mod tests {
         let mut prng = ChaChaRng::from_seed([0u8; 32]);
 
         let input = Nullifier::random_for_test(&mut prng);
+
         let input_ethers = to_ethers(input);
 
-        println!("input {:?}", input);
-        println!("input_ethers {:?}", input_ethers);
+        // println!("input {:?}", input);
+        // println!("input_ethers {:?}", input_ethers);
 
         let hash = zerok_lib::set_hash::elem_hash(input);
-        println!("hash {:?}", hash);
+        // println!("hash {:?}", hash);
 
-        let _hash_bytes: [u8; 64] = to_bytes!(&hash)
+        let hash_bytes: [u8; 64] = to_bytes!(&hash)
             .expect("Unable to serialize")
             .try_into()
             .expect("Unable to convert to array");
 
-        let _res: Vec<u8> = contract
+        let res_u64: Vec<u64> = contract
             .elem_hash(input_ethers)
             .call()
             .await
             .unwrap()
             .into();
-
-        //assert_eq!(res, hash_bytes);
+        let res_u8 = convert_vec_u64_into_vec_u8(res_u64);
+        assert_eq!(res_u8, hash_bytes);
     }
 
     fn test_merkle_tree_set(updates: Vec<u16>, checks: Vec<Result<u16, u8>>) {

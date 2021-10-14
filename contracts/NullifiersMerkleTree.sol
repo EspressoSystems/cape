@@ -6,17 +6,23 @@ import "hardhat/console.sol";
 contract NullifiersMerkleTree {
     bytes64 root;
 
-    // DeclarationError: Constants of non-value type not yet implemented.
-    bytes64 EMPTY_HASH = bytes64(0, 0);
-    bytes64 EMPTY_SUBTREE = EMPTY_HASH; // TODO is this correct?
+    uint256 constant N = 512;
 
     constructor() {}
-
-    uint256 constant N = 512;
 
     struct bytes64 {
         bytes32 hi;
         bytes32 lo;
+    }
+
+    // TODO probably not very efficient
+    function EMPTY_HASH() private pure returns (bytes64 memory) {
+        return bytes64(0, 0);
+    }
+
+    // TODO probably not very efficient
+    function EMPTY_SUBTREE() private pure returns (bytes64 memory) {
+        return bytes64(0, 0);
     }
 
     // TODO export this function to some "utils" library ?
@@ -99,29 +105,25 @@ contract NullifiersMerkleTree {
         return false;
     }
 
-    function isEmptySubtree(bytes64 memory node) private view returns (bool) {
-        return are_equal_bytes64(node, EMPTY_SUBTREE);
+    function isEmptySubtree(bytes64 memory node) private pure returns (bool) {
+        return are_equal_bytes64(node, EMPTY_SUBTREE());
     }
 
-    function isLeafNode(bytes64 memory node) private view returns (bool) {
-        return !are_equal_bytes64(node, EMPTY_SUBTREE);
+    function isLeafNode(bytes64 memory node) private pure returns (bool) {
+        return !are_equal_bytes64(node, EMPTY_SUBTREE());
     }
 
-    function dummy(bool b) public pure returns (bool) {
-        return b;
-    }
-
-    function elem_hash(bytes memory elem) public pure returns (bool) {
+    function elem_hash(bytes memory elem) public pure returns (bytes memory) {
         //assert(elem[0] == 0); // TODO just to avoid the warning
         // TODO h(canonical_serialize(nul)) where h is Blake2B personalized with “AAPSet Elem”
         //return elem;
-        return true;
+        return elem;
     }
 
-    // function leaf_hash(bytes32 elem) public pure returns (bytes memory) {
-    //     // TODO h(canonical_serialize(nul)) where h is Blake2B personalized with “AAPSet Leaf”
-    //     return keccak256(abi.encodePacked(elem));
-    // }
+    //    function leaf_hash(bytes32 elem) public pure returns (bytes memory) {
+    //        // TODO h(canonical_serialize(nul)) where h is Blake2B personalized with “AAPSet Leaf”
+    //        return keccak256(abi.encodePacked(elem));
+    //    }
 
     function branch_hash(bytes64 calldata left, bytes64 calldata right)
         public

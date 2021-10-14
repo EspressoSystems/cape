@@ -69,5 +69,6 @@ pub async fn deploy<C: 'static + Middleware>(client: Arc<C>, path: &Path) -> Res
         client.clone(),
     );
     let contract = factory.deploy(())?.send().await?;
+    println!("Contract deployed at address: {}", contract.address());
     Ok(contract)
 }

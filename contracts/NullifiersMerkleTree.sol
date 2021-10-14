@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
+import {CKBCrypto} from "./blake2/libraries/CKBCrypto.sol";
 
 contract NullifiersMerkleTree {
     bytes64 root;
@@ -114,9 +115,7 @@ contract NullifiersMerkleTree {
     }
 
     function elem_hash(bytes memory elem) public pure returns (bytes memory) {
-        //assert(elem[0] == 0); // TODO just to avoid the warning
         // TODO h(canonical_serialize(nul)) where h is Blake2B personalized with “AAPSet Elem”
-        //return elem;
         return elem;
     }
 

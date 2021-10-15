@@ -22,7 +22,7 @@ mod tests {
     #[tokio::test]
     async fn test_read_transfer_note_struct_in_contract() {
         let client = get_funded_deployer().await.unwrap();
-        let contract = deploy(client.clone(), Path::new("./contracts/ReadAAPTx"))
+        let contract = deploy(client.clone(), Path::new("./contracts/ReadAAPTx"), ())
             .await
             .unwrap();
         let contract = ReadAAPTx::new(contract.address(), client);

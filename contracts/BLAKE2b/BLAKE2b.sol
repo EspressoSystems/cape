@@ -1,5 +1,6 @@
 pragma solidity ^0.8.0;
 
+import "hardhat/console.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 import "./BLAKE2b_Constants.sol";
 
@@ -314,6 +315,34 @@ contract BLAKE2b is BLAKE2_Constants {
 
         init(ctx, outlen, key, formatInput(salt), formatInput(personalization));
         update(ctx, input);
+        finalize(ctx, out);
+        return out;
+    }
+
+    // TODO this function should not be here
+    // TODO or maybe make this function more generic
+    function blake2b_with_updates_branch(
+        bytes memory persona,
+        bytes calldata left,
+        bytes calldata right
+    ) public returns (uint64[8] memory) {
+        BLAKE2b.BLAKE2b_ctx memory ctx;
+        uint64[8] memory out;
+        uint64 outlen = 64;
+
+        init(ctx, outlen, "", formatInput(""), formatInput(persona));
+
+        bytes memory l_tag = abi.encodePacked("l");
+        console.log("l");
+        console.logBytes(l_tag);
+        bytes memory r_tag = abi.encodePacked("r");
+        console.log("r");
+        console.logBytes(r_tag);
+
+        update(ctx, l_tag);
+        update(ctx, left);
+        update(ctx, r_tag);
+        update(ctx, right);
         finalize(ctx, out);
         return out;
     }

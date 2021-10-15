@@ -1,7 +1,7 @@
 pub mod aap_jf;
 mod contract_group_operations;
 mod contract_read_aaptx;
-mod ethereum;
+pub mod ethereum;
 mod set_merkle_tree;
 
 // TODO check which imports are really needed

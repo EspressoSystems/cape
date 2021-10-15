@@ -67,7 +67,7 @@ mod tests {
     #[tokio::test]
     async fn test_add_mul_g1_group_elements_in_contract() {
         let client = get_funded_deployer().await.unwrap();
-        let contract = deploy(client.clone(), Path::new("./contracts/testBN254"))
+        let contract = deploy(client.clone(), Path::new("./contracts/testBN254"), ())
             .await
             .unwrap();
         let contract = TestBN254::new(contract.address(), client);
@@ -131,7 +131,7 @@ mod tests {
     #[tokio::test]
     async fn test_pairing_check_in_contract() {
         let client = get_funded_deployer().await.unwrap();
-        let contract = deploy(client.clone(), Path::new("./contracts/testBN254"))
+        let contract = deploy(client.clone(), Path::new("./contracts/testBN254"), ())
             .await
             .unwrap();
         let contract = TestBN254::new(contract.address(), client);

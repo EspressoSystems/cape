@@ -135,18 +135,37 @@ contract NullifiersMerkleTree {
     //        // TODO h(canonical_serialize(nul)) where h is Blake2B personalized with “AAPSet Leaf”
     //        return keccak256(abi.encodePacked(elem));
     //    }
-
-    function branch_hash(bytes64 calldata left, bytes64 calldata right)
+    function branch_hash(uint64[8] calldata left, uint64[8] calldata right)
         public
-        pure
-        returns (bytes64 memory)
+        returns (uint64[8] memory)
     {
         // h("l"||l||"r"||r) where h is Blake2B personalized with “AAPSet Branch”
-        // return keccak256(abi.encodePacked("l", left, "r", right));
+        BLAKE2b blake = new BLAKE2b();
+        bytes memory persona = "AAPSet Branch";
+        return blake.blake2b_full(pack(left, right), "", "", persona, 64);
+    }
 
-        assert(are_equal_bytes64(left, left)); // TODO Just to avoid compiler warnings
-        assert(are_equal_bytes64(right, right)); // TODO Just to avoid compiler warnings
+    // abi.encodePacked with uint64 arrays end up padded
+    function pack(uint64[8] calldata left, uint64[8] calldata right)
+        public
+        returns (bytes memory)
+    {
+        bytes memory data = abi.encodePacked("l");
 
-        return bytes64(0, 0);
+        for (uint256 i = 0; i < left.length; i++) {
+            data = abi.encodePacked(data, left[i]);
+        }
+
+        data = abi.encodePacked(data, "r");
+        for (uint256 i = 0; i < right.length; i++) {
+            data = abi.encodePacked(data, right[i]);
+        }
+
+        return data;
+    }
+
+    function test_pack_u64() public returns (bytes memory) {
+        uint64 u = 2 ^ 64;
+        return abi.encodePacked(u);
     }
 }

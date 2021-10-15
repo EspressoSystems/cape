@@ -131,18 +131,40 @@ contract NullifiersMerkleTree {
         return res_u64;
     }
 
-    //    function leaf_hash(bytes32 elem) public pure returns (bytes memory) {
-    //        // TODO h(canonical_serialize(nul)) where h is Blake2B personalized with “AAPSet Leaf”
-    //        return keccak256(abi.encodePacked(elem));
-    //    }
     function branch_hash(uint64[8] calldata left, uint64[8] calldata right)
         public
         returns (uint64[8] memory)
     {
-        // h("l"||l||"r"||r) where h is Blake2B personalized with “AAPSet Branch”
         BLAKE2b blake = new BLAKE2b();
         bytes memory persona = "AAPSet Branch";
         return blake.blake2b_full(pack(left, right), "", "", persona, 64);
+    }
+
+    //    function leaf_hash(bytes32 elem) public pure returns (bytes memory) {
+    //        // TODO h(canonical_serialize(nul)) where h is Blake2B personalized with “AAPSet Leaf”
+    //        return keccak256(abi.encodePacked(elem));
+    //    }
+
+    function branch_hash_with_updates(bytes calldata left, bytes calldata right)
+        public
+        returns (uint64[8] memory)
+    {
+        // h("l"||l||"r"||r) where h is Blake2B personalized with “AAPSet Branch”
+
+        BLAKE2b blake = new BLAKE2b();
+        console.log("left input");
+        console.logBytes(left);
+
+        console.log("right input");
+        console.logBytes(right);
+
+        uint64[8] memory res_u64 = blake.blake2b_with_updates_branch(
+            "AAPSet Branch",
+            left,
+            right
+        );
+
+        return res_u64;
     }
 
     // abi.encodePacked with uint64 arrays end up padded

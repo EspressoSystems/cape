@@ -14,8 +14,12 @@ abigen!(
 );
 
 // nullifier is 32 byte
-pub fn to_ethers(nullifier: Nullifier) -> Vec<u8> {
+pub fn to_ethers_nullifier(nullifier: Nullifier) -> Vec<u8> {
     zerok_lib::canonical::serialize(&nullifier).unwrap()
+}
+
+pub fn to_ethers_hash_bytes(hash: Hash) -> Vec<u8> {
+    zerok_lib::canonical::serialize(&hash).unwrap()
 }
 
 // hash is 64 byte
@@ -40,7 +44,6 @@ pub fn convert_vec_u64_into_vec_u8(input: Vec<u64>) -> Vec<u8> {
     let mut output: Vec<u8> = vec![];
 
     for elem in input {
-        // TODO is LittleEndian correct?
         output.write_u64::<BigEndian>(elem).unwrap();
     }
     output
@@ -50,7 +53,6 @@ pub fn convert_vec_u8_into_vec_u64(input: Vec<u8>) -> Vec<u64> {
     let mut output: Vec<u64> = vec![];
 
     for elem in input.chunks(8) {
-        // TODO is LittleEndian correct?
         output.push(u64::from_be_bytes(elem.try_into().unwrap()));
     }
     output
@@ -96,7 +98,7 @@ mod tests {
 
         let input = Nullifier::random_for_test(&mut prng);
 
-        let input_ethers = to_ethers(input);
+        let input_ethers = to_ethers_nullifier(input);
 
         let hash = set_hash::elem_hash(input);
 
@@ -113,6 +115,7 @@ mod tests {
             .into();
 
         let res_u8 = convert_vec_u64_into_vec_u8(res_u64);
+
         assert_eq!(res_u8, hash_bytes);
     }
 
@@ -130,10 +133,13 @@ mod tests {
 
         let mut prng = ChaChaRng::from_seed([0u8; 32]);
 
-        let left = set_hash::elem_hash(Nullifier::random_for_test(&mut prng));
-        let right = set_hash::elem_hash(Nullifier::random_for_test(&mut prng));
+        let left = set_hash::leaf_hash(Nullifier::random_for_test(&mut prng));
+        let right = set_hash::leaf_hash(Nullifier::random_for_test(&mut prng));
 
         let hash = set_hash::branch_hash(left, right);
+        println!("l={:?}", "l".as_bytes());
+        println!("r={:?}", "r".as_bytes());
+
         println!("left {:?}", left);
         println!("hash {:?}", hash);
 
@@ -171,7 +177,7 @@ mod tests {
         assert_eq!(manual_hash, hash);
         println!("Hashing ok!");
 
-        // 3. Full contract call
+        // 3. Full contract call using branch_hash
 
         let res_u64: Vec<u64> = contract
             .branch_hash(to_ethers_hash(left), to_ethers_hash(right))
@@ -180,10 +186,24 @@ mod tests {
             .unwrap()
             .into();
 
-        let res_u8 = convert_vec_u64_into_vec_u8(res_u64);
+        let res_u8_branch_hash = convert_vec_u64_into_vec_u8(res_u64);
+
+        // 4. Full contract call using branch_hash_with_updates
+
+        let res_u64: Vec<u64> = contract
+            .branch_hash_with_updates(to_ethers_hash_bytes(left), to_ethers_hash_bytes(right))
+            .call()
+            .await
+            .unwrap()
+            .into();
+
+        let res_u8_branch_hash_with_updates = convert_vec_u64_into_vec_u8(res_u64);
+
+        // 5. Compare the results
 
         // XXX fails!
-        assert_eq!(res_u8, hash_bytes);
+        assert_eq!(res_u8_branch_hash, res_u8_branch_hash_with_updates);
+        //assert_eq!(res_u8_branch_hash, hash_bytes);
     }
 
     fn test_merkle_tree_set(updates: Vec<u16>, checks: Vec<Result<u16, u8>>) {

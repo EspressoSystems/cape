@@ -1,5 +1,6 @@
 use byteorder::{BigEndian, WriteBytesExt};
 use jf_txn::structs::Nullifier;
+use jf_utils::to_bytes;
 use std::convert::TryInto;
 use zerok_lib::set_hash::Hash;
 
@@ -46,6 +47,17 @@ pub fn convert_vec_u8_into_vec_u64(input: Vec<u8>) -> Vec<u64> {
         output.push(u64::from_be_bytes(elem.try_into().unwrap()));
     }
     output
+}
+
+pub fn hash_to_bytes(hash: &Hash) -> Vec<u8> {
+    let res: Vec<u8> = to_bytes!(hash)
+        .expect("Unable to serialize")
+        .try_into()
+        .expect("Unable to convert to array");
+
+    assert_eq!(res.len(), 64);
+
+    res
 }
 
 #[cfg(test)]

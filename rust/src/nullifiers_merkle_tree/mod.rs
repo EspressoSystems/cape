@@ -16,12 +16,12 @@ mod tests {
     use jf_utils::to_bytes;
     use rand::SeedableRng;
     use rand_chacha::ChaChaRng;
-    use std::convert::TryInto;
     use std::path::Path;
     use zerok_lib::set_hash::Hash;
 
     use crate::nullifiers_merkle_tree::helpers::{
-        convert_vec_u64_into_vec_u8, to_ethers_hash, to_ethers_hash_bytes, to_ethers_nullifier,
+        convert_vec_u64_into_vec_u8, hash_to_bytes, to_ethers_hash, to_ethers_hash_bytes,
+        to_ethers_nullifier,
     };
     use jf_txn::structs::Nullifier;
     use zerok_lib::set_hash;
@@ -41,15 +41,10 @@ mod tests {
         let mut prng = ChaChaRng::from_seed([0u8; 32]);
 
         let input = Nullifier::random_for_test(&mut prng);
-
         let input_ethers = to_ethers_nullifier(input);
 
         let hash = set_hash::elem_hash(input);
-
-        let hash_bytes: [u8; 64] = to_bytes!(&hash)
-            .expect("Unable to serialize")
-            .try_into()
-            .expect("Unable to convert to array");
+        let hash_bytes = hash_to_bytes(&hash);
 
         let res_u64: Vec<u64> = contract
             .elem_hash(input_ethers)
@@ -87,10 +82,7 @@ mod tests {
         println!("left {:?}", left);
         println!("hash {:?}", hash);
 
-        let hash_bytes: [u8; 64] = to_bytes!(&hash)
-            .expect("Unable to serialize")
-            .try_into()
-            .expect("Unable to convert to array");
+        let hash_bytes = hash_to_bytes(&hash);
 
         // 1. Compare packing
 

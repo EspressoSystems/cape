@@ -20,14 +20,15 @@ mod tests {
     use zerok_lib::set_hash::Hash;
 
     use crate::nullifiers_merkle_tree::helpers::{
-        convert_vec_u64_into_vec_u8, hash_to_bytes, to_ethers_hash, to_ethers_hash_bytes,
-        to_ethers_nullifier,
+        blake2b_elem, convert_vec_u64_into_vec_u8, hash_to_bytes, to_ethers_hash,
+        to_ethers_hash_bytes, to_ethers_nullifier,
     };
     use jf_txn::structs::Nullifier;
     use zerok_lib::set_hash;
 
     #[tokio::test]
     async fn test_blake2b_elem() {
+        // TODO refactor creation of contract to avoid code duplication.
         let client = get_funded_deployer().await.unwrap();
         let contract = deploy(
             client.clone(),
@@ -82,7 +83,7 @@ mod tests {
         println!("left {:?}", left);
         println!("hash {:?}", hash);
 
-        let hash_bytes = hash_to_bytes(&hash);
+        let _hash_bytes = hash_to_bytes(&hash);
 
         // 1. Compare packing
 
@@ -99,7 +100,6 @@ mod tests {
             .await
             .unwrap();
 
-        // XXX fails!
         assert_eq!(solidity_packed, rust_packed);
         println!("Packing ok!");
 
@@ -138,9 +138,42 @@ mod tests {
 
         // 5. Compare the results
 
-        // XXX fails!
         assert_eq!(res_u8_branch_hash, res_u8_branch_hash_with_updates);
+        // TODO uncomment (test failing)
         //assert_eq!(res_u8_branch_hash, hash_bytes);
+    }
+
+    async fn check_hash_equality(size: usize, are_equal: bool) {
+        let client = get_funded_deployer().await.unwrap();
+        let contract = deploy(
+            client.clone(),
+            Path::new("./contracts/NullifiersMerkleTree"),
+        )
+        .await
+        .unwrap();
+
+        let contract = NullifiersMerkleTree::new(contract.address(), client);
+
+        let input: Vec<u8> = vec![3; size];
+        let rust_hash = blake2b_elem(&input);
+
+        let res_u64: Vec<u64> = contract.elem_hash(input).call().await.unwrap().into();
+
+        let solidity_hash = convert_vec_u64_into_vec_u8(res_u64);
+
+        assert_eq!(rust_hash == solidity_hash, are_equal);
+    }
+
+    #[tokio::test]
+    async fn test_showing_different_behaviour_between_blake2b_rust_and_blake2b_solidity() {
+        // This test shows that the implementations of blake2b in rust and solidity are not equivalent:
+        // They match when the size of the input is less or equal to 128 bytes and differ otherwise.
+
+        check_hash_equality(50, true).await;
+        check_hash_equality(60, true).await;
+        check_hash_equality(128, true).await;
+        check_hash_equality(129, false).await;
+        check_hash_equality(255, false).await;
     }
 
     fn test_merkle_tree_set(updates: Vec<u16>, checks: Vec<Result<u16, u8>>) {

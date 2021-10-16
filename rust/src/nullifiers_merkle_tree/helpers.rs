@@ -1,3 +1,4 @@
+use blake2::crypto_mac::Mac;
 use byteorder::{BigEndian, WriteBytesExt};
 use jf_txn::structs::Nullifier;
 use jf_utils::to_bytes;
@@ -58,6 +59,13 @@ pub fn hash_to_bytes(hash: &Hash) -> Vec<u8> {
     assert_eq!(res.len(), 64);
 
     res
+}
+
+pub fn blake2b_elem(input: &[u8]) -> Vec<u8> {
+    let mut hasher = blake2::Blake2b::with_params(&[], &[], "AAPSet Elem".as_bytes());
+    hasher.update(&input);
+    let hash = Hash::new(hasher.finalize().into_bytes());
+    hash_to_bytes(&hash)
 }
 
 #[cfg(test)]

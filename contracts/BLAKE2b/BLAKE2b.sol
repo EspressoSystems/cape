@@ -339,9 +339,9 @@ contract BLAKE2b is BLAKE2_Constants {
         console.log("r");
         console.logBytes(r_tag);
 
-        update(ctx, l_tag);
+        // update(ctx, l_tag); TODO: re-enable
         update(ctx, left);
-        update(ctx, r_tag);
+        // update(ctx, r_tag); TODO: re-enable
         update(ctx, right);
         finalize(ctx, out);
         return out;

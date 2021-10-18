@@ -37,7 +37,7 @@ async function print_report(title, fun_to_eval, fun_names, ...args) {
 async function main() {
   let fun_to_eval, fun_names;
 
-  const DPV = await ethers.getContractFactory("DummyVerifier");
+  const DPV = await ethers.getContractFactory("DummyValidator");
   const dpv = await DPV.deploy();
 
   // Polling interval in ms.

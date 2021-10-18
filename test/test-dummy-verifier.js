@@ -17,7 +17,7 @@ async function check_gas(
   expect(gasUsed).equal(expectedGasUsed);
 }
 
-describe("Dummy Verifier", function () {
+describe("Dummy Validator" + "", function () {
   describe("Should compute the gas fee", async function () {
     let owner, fun_to_eval;
 
@@ -27,7 +27,7 @@ describe("Dummy Verifier", function () {
     before(async function () {
       [owner] = await ethers.getSigners();
 
-      const DPV = await ethers.getContractFactory("DummyVerifier");
+      const DPV = await ethers.getContractFactory("DummyValidator");
       const dpv = await DPV.deploy();
 
       // Polling interval in ms.

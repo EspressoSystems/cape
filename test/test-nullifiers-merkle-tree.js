@@ -13,7 +13,7 @@ describe("Nullifiers Merkle tree", function () {
     let _res = await nf_merkle_tree.callStatic.elem_hash(10000);
   });
 
-  it("should compute the terminal node value", async function () {
+  it.skip("should compute the terminal node value", async function () {
     const [owner] = await ethers.getSigners();
 
     const Contract = await ethers.getContractFactory("NullifiersMerkleTree");

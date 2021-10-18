@@ -83,7 +83,7 @@ mod tests {
         println!("left {:?}", left);
         println!("hash {:?}", hash);
 
-        let _hash_bytes = hash_to_bytes(&hash);
+        let hash_bytes = hash_to_bytes(&hash);
 
         // 1. Compare packing
 
@@ -139,8 +139,7 @@ mod tests {
         // 5. Compare the results
 
         assert_eq!(res_u8_branch_hash, res_u8_branch_hash_with_updates);
-        // TODO uncomment (test failing)
-        //assert_eq!(res_u8_branch_hash, hash_bytes);
+        assert_eq!(res_u8_branch_hash, hash_bytes);
     }
 
     async fn check_hash_equality(size: usize, are_equal: bool) {

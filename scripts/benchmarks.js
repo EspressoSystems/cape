@@ -79,10 +79,7 @@ async function main() {
     false
   );
 
-  const Contract = await ethers.getContractFactory("NullifiersMerkleTree");
-  const contract = await Contract.deploy();
-
-  await contract.deployed();
+  const contract = await common.deployNullifierMerkleTreeContract();
 
   console.log(`Contract deployed at address ${contract.address}`);
 

@@ -1,29 +1,22 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
+const common = require("../lib/common");
 
 describe("Nullifiers Merkle tree", function () {
   it("should compute correctly the hash functions", async function () {
-    const [owner] = await ethers.getSigners();
-
-    const NullifiersMerkleTree = await ethers.getContractFactory(
-      "NullifiersMerkleTree"
-    );
-    const nf_merkle_tree = await NullifiersMerkleTree.deploy();
-    await nf_merkle_tree.deployed();
+    let nf_merkle_tree = await deployNullifierMerkleTreeContract();
     let _res = await nf_merkle_tree.callStatic.elem_hash(10000);
   });
 
-  it.skip("should compute the terminal node value", async function () {
-    const [owner] = await ethers.getSigners();
+  it("should compute the terminal node value", async function () {
+    const contract = await common.deployNullifierMerkleTreeContract();
 
-    const Contract = await ethers.getContractFactory("NullifiersMerkleTree");
-    const contract = await Contract.deploy();
-    await contract.deployed();
     // fails at
-    //    height=131 against geth
+    //    height=240 against geth
     //    heigth=131 against arbitrum dev node
     // but it's not entirely deterministic
-    for (let height = 130; height < 512; height++) {
+
+    for (let height = 230; height < 513; height++) {
       console.error("height", height);
       let tx = await contract.terminalNodeValueNonEmpty({
         isEmptySubtree: false,

@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 import "hardhat/console.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 import "./BLAKE2b_Constants.sol";
+import {helpers} from "../helpers.sol";
 
 contract BLAKE2b is BLAKE2_Constants {
     struct BLAKE2b_ctx {
@@ -67,159 +68,50 @@ contract BLAKE2b is BLAKE2_Constants {
         v[d] = vd;
     }
 
+    // From https://eips.ethereum.org/EIPS/eip-152
+    function F(
+        uint32 rounds,
+        bytes32[2] memory h,
+        bytes32[4] memory m,
+        bytes8[2] memory t,
+        bool f
+    ) public view returns (bytes32[2] memory) {
+        bytes32[2] memory output;
+
+        bytes memory args = abi.encodePacked(
+            rounds,
+            h[0],
+            h[1],
+            m[0],
+            m[1],
+            m[2],
+            m[3],
+            t[0],
+            t[1],
+            f
+        );
+
+        assembly {
+            if iszero(
+                staticcall(not(0), 0x09, add(args, 32), 0xd5, output, 0x40)
+            ) {
+                revert(0, 0)
+            }
+        }
+
+        return output;
+    }
+
     function compress(BLAKE2b_ctx memory ctx, bool last) internal {
-        //TODO: Look into storing these as uint256[4]
-        uint64[16] memory v;
-        uint64[16] memory m;
+        // Prepare call to precompiled function F
+        uint32 rounds = 12;
+        bytes32[2] memory h = helpers.Uint64ArrayToBytes32Array(ctx.h); // Should be ok
+        bytes32[4] memory m = helpers.Uint256ArrayToBytesArray(ctx.b); // Convert From 4 256bits to 16 64 bits
+        bytes8[2] memory t = helpers.Uint128ToBytes8(ctx.t); // Maybe it is ok
+        bool f = last; // Should be ok
 
-        for (uint256 i = 0; i < 8; i++) {
-            v[i] = ctx.h[i]; // v[:8] = h[:8]
-            v[i + 8] = IV[i]; // v[8:] = IV
-        }
-
-        //
-        v[12] = v[12] ^ uint64(ctx.t % 2**64); //Lower word of t
-        v[13] = v[13] ^ uint64(ctx.t / 2**64);
-
-        if (last) v[14] = ~v[14]; //Finalization flag
-
-        uint64 mi; //Temporary stack variable to decrease memory ops
-        uint256 b; // Input buffer
-
-        for (uint256 i = 0; i < 16; i++) {
-            //Operate 16 words at a time
-            uint256 k = i % 4; //Current buffer word
-            mi = 0;
-            if (k == 0) {
-                b = ctx.b[i / 4]; //Load relevant input into buffer
-            }
-
-            //Extract relevent input from buffer
-            assembly {
-                mi := and(
-                    div(b, exp(2, mul(64, sub(3, k)))),
-                    0xFFFFFFFFFFFFFFFF
-                )
-            }
-
-            //Flip endianness
-            m[i] = getWords(mi);
-        }
-
-        //Mix m
-
-        G(v, 0, 4, 8, 12, m[0], m[1]);
-        G(v, 1, 5, 9, 13, m[2], m[3]);
-        G(v, 2, 6, 10, 14, m[4], m[5]);
-        G(v, 3, 7, 11, 15, m[6], m[7]);
-        G(v, 0, 5, 10, 15, m[8], m[9]);
-        G(v, 1, 6, 11, 12, m[10], m[11]);
-        G(v, 2, 7, 8, 13, m[12], m[13]);
-        G(v, 3, 4, 9, 14, m[14], m[15]);
-
-        G(v, 0, 4, 8, 12, m[14], m[10]);
-        G(v, 1, 5, 9, 13, m[4], m[8]);
-        G(v, 2, 6, 10, 14, m[9], m[15]);
-        G(v, 3, 7, 11, 15, m[13], m[6]);
-        G(v, 0, 5, 10, 15, m[1], m[12]);
-        G(v, 1, 6, 11, 12, m[0], m[2]);
-        G(v, 2, 7, 8, 13, m[11], m[7]);
-        G(v, 3, 4, 9, 14, m[5], m[3]);
-
-        G(v, 0, 4, 8, 12, m[11], m[8]);
-        G(v, 1, 5, 9, 13, m[12], m[0]);
-        G(v, 2, 6, 10, 14, m[5], m[2]);
-        G(v, 3, 7, 11, 15, m[15], m[13]);
-        G(v, 0, 5, 10, 15, m[10], m[14]);
-        G(v, 1, 6, 11, 12, m[3], m[6]);
-        G(v, 2, 7, 8, 13, m[7], m[1]);
-        G(v, 3, 4, 9, 14, m[9], m[4]);
-
-        G(v, 0, 4, 8, 12, m[7], m[9]);
-        G(v, 1, 5, 9, 13, m[3], m[1]);
-        G(v, 2, 6, 10, 14, m[13], m[12]);
-        G(v, 3, 7, 11, 15, m[11], m[14]);
-        G(v, 0, 5, 10, 15, m[2], m[6]);
-        G(v, 1, 6, 11, 12, m[5], m[10]);
-        G(v, 2, 7, 8, 13, m[4], m[0]);
-        G(v, 3, 4, 9, 14, m[15], m[8]);
-
-        G(v, 0, 4, 8, 12, m[9], m[0]);
-        G(v, 1, 5, 9, 13, m[5], m[7]);
-        G(v, 2, 6, 10, 14, m[2], m[4]);
-        G(v, 3, 7, 11, 15, m[10], m[15]);
-        G(v, 0, 5, 10, 15, m[14], m[1]);
-        G(v, 1, 6, 11, 12, m[11], m[12]);
-        G(v, 2, 7, 8, 13, m[6], m[8]);
-        G(v, 3, 4, 9, 14, m[3], m[13]);
-
-        G(v, 0, 4, 8, 12, m[2], m[12]);
-        G(v, 1, 5, 9, 13, m[6], m[10]);
-        G(v, 2, 6, 10, 14, m[0], m[11]);
-        G(v, 3, 7, 11, 15, m[8], m[3]);
-        G(v, 0, 5, 10, 15, m[4], m[13]);
-        G(v, 1, 6, 11, 12, m[7], m[5]);
-        G(v, 2, 7, 8, 13, m[15], m[14]);
-        G(v, 3, 4, 9, 14, m[1], m[9]);
-
-        G(v, 0, 4, 8, 12, m[12], m[5]);
-        G(v, 1, 5, 9, 13, m[1], m[15]);
-        G(v, 2, 6, 10, 14, m[14], m[13]);
-        G(v, 3, 7, 11, 15, m[4], m[10]);
-        G(v, 0, 5, 10, 15, m[0], m[7]);
-        G(v, 1, 6, 11, 12, m[6], m[3]);
-        G(v, 2, 7, 8, 13, m[9], m[2]);
-        G(v, 3, 4, 9, 14, m[8], m[11]);
-
-        G(v, 0, 4, 8, 12, m[13], m[11]);
-        G(v, 1, 5, 9, 13, m[7], m[14]);
-        G(v, 2, 6, 10, 14, m[12], m[1]);
-        G(v, 3, 7, 11, 15, m[3], m[9]);
-        G(v, 0, 5, 10, 15, m[5], m[0]);
-        G(v, 1, 6, 11, 12, m[15], m[4]);
-        G(v, 2, 7, 8, 13, m[8], m[6]);
-        G(v, 3, 4, 9, 14, m[2], m[10]);
-
-        G(v, 0, 4, 8, 12, m[6], m[15]);
-        G(v, 1, 5, 9, 13, m[14], m[9]);
-        G(v, 2, 6, 10, 14, m[11], m[3]);
-        G(v, 3, 7, 11, 15, m[0], m[8]);
-        G(v, 0, 5, 10, 15, m[12], m[2]);
-        G(v, 1, 6, 11, 12, m[13], m[7]);
-        G(v, 2, 7, 8, 13, m[1], m[4]);
-        G(v, 3, 4, 9, 14, m[10], m[5]);
-
-        G(v, 0, 4, 8, 12, m[10], m[2]);
-        G(v, 1, 5, 9, 13, m[8], m[4]);
-        G(v, 2, 6, 10, 14, m[7], m[6]);
-        G(v, 3, 7, 11, 15, m[1], m[5]);
-        G(v, 0, 5, 10, 15, m[15], m[11]);
-        G(v, 1, 6, 11, 12, m[9], m[14]);
-        G(v, 2, 7, 8, 13, m[3], m[12]);
-        G(v, 3, 4, 9, 14, m[13], m[0]);
-
-        G(v, 0, 4, 8, 12, m[0], m[1]);
-        G(v, 1, 5, 9, 13, m[2], m[3]);
-        G(v, 2, 6, 10, 14, m[4], m[5]);
-        G(v, 3, 7, 11, 15, m[6], m[7]);
-        G(v, 0, 5, 10, 15, m[8], m[9]);
-        G(v, 1, 6, 11, 12, m[10], m[11]);
-        G(v, 2, 7, 8, 13, m[12], m[13]);
-        G(v, 3, 4, 9, 14, m[14], m[15]);
-
-        G(v, 0, 4, 8, 12, m[14], m[10]);
-        G(v, 1, 5, 9, 13, m[4], m[8]);
-        G(v, 2, 6, 10, 14, m[9], m[15]);
-        G(v, 3, 7, 11, 15, m[13], m[6]);
-        G(v, 0, 5, 10, 15, m[1], m[12]);
-        G(v, 1, 6, 11, 12, m[0], m[2]);
-        G(v, 2, 7, 8, 13, m[11], m[7]);
-        G(v, 3, 4, 9, 14, m[5], m[3]);
-
-        //XOR current state with both halves of v
-        for (uint256 i = 0; i < 8; ++i) {
-            ctx.h[i] = ctx.h[i] ^ v[i] ^ v[i + 8];
-        }
+        // Call precompiled function F
+        ctx.h = helpers.Bytes32ArrayToUint64Array(F(rounds, h, m, t, f));
     }
 
     function init(

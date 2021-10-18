@@ -22,17 +22,15 @@ describe("Nullifiers Merkle tree", function () {
     // fails at
     //    height=25 against geth
     //    heigth=32 against arbitrum dev node
-    for (let height = 20; height < 512; height++) {
+    // but it's not entirely deterministic
+    for (let height = 1; height < 512; height++) {
       console.error("height", height);
-      let res = await contract.callStatic.terminalNodeValueNonEmpty(
-        {
-          isEmptySubtree: false,
-          height: height,
-          elem: [0, 0, 0, 0, 0, 0, 0, 0],
-        }
-        // { gasLimit: 25_000_000 }
-      );
-      // console.error(res);
+      let tx = await contract.terminalNodeValueNonEmpty({
+        isEmptySubtree: false,
+        height: height,
+        elem: ethers.utils.randomBytes(32),
+      });
+      await tx.wait();
     }
   });
 });

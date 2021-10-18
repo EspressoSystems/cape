@@ -7,6 +7,8 @@ import "./BLAKE2b/BLAKE2b.sol";
 contract NullifiersMerkleTree {
     uint64[8] root;
 
+    BLAKE2b blake = new BLAKE2b();
+
     uint256 constant N = 512;
 
     // uint64[8] ZERO_HASH = [0, 0, 0, 0, 0, 0, 0, 0];
@@ -132,7 +134,6 @@ contract NullifiersMerkleTree {
     }
 
     function elem_hash(bytes memory input) public returns (uint64[8] memory) {
-        BLAKE2b blake = new BLAKE2b();
         bytes memory persona = "AAPSet Elem";
         console.log("inputs:");
         console.logBytes(input);
@@ -149,7 +150,6 @@ contract NullifiersMerkleTree {
     }
 
     function leaf_hash(bytes memory input) public returns (uint64[8] memory) {
-        BLAKE2b blake = new BLAKE2b();
         return blake.blake2b_full(input, "", "", "AAPSet Leaf", 64);
     }
 
@@ -157,7 +157,6 @@ contract NullifiersMerkleTree {
         public
         returns (uint64[8] memory)
     {
-        BLAKE2b blake = new BLAKE2b();
         bytes memory persona = "AAPSet Branch";
         return blake.blake2b_full(pack(left, right), "", "", persona, 64);
     }
@@ -173,7 +172,6 @@ contract NullifiersMerkleTree {
     {
         // h("l"||l||"r"||r) where h is Blake2B personalized with “AAPSet Branch”
 
-        BLAKE2b blake = new BLAKE2b();
         console.log("left input");
         console.logBytes(left);
 

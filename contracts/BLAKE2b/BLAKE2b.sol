@@ -3,7 +3,6 @@ pragma solidity ^0.8.0;
 import "hardhat/console.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 import "./BLAKE2b_Constants.sol";
-import {helpers} from "../helpers.sol";
 
 contract BLAKE2b is BLAKE2_Constants {
     struct BLAKE2b_ctx {
@@ -105,13 +104,13 @@ contract BLAKE2b is BLAKE2_Constants {
     function compress(BLAKE2b_ctx memory ctx, bool last) internal {
         // Prepare call to precompiled function F
         uint32 rounds = 12;
-        bytes32[2] memory h = helpers.Uint64ArrayToBytes32Array(ctx.h); // Should be ok
-        bytes32[4] memory m = helpers.Uint256ArrayToBytesArray(ctx.b); // Convert From 4 256bits to 16 64 bits
-        bytes8[2] memory t = helpers.Uint128ToBytes8(ctx.t); // Maybe it is ok
+        bytes32[2] memory h = Uint64ArrayToBytes32Array(ctx.h); // Should be ok
+        bytes32[4] memory m = Uint256ArrayToBytesArray(ctx.b); // Convert From 4 256bits to 16 64 bits
+        bytes8[2] memory t = Uint128ToBytes8(ctx.t); // Maybe it is ok
         bool f = last; // Should be ok
 
         // Call precompiled function F
-        ctx.h = helpers.Bytes32ArrayToUint64Array(F(rounds, h, m, t, f));
+        ctx.h = Bytes32ArrayToUint64Array(F(rounds, h, m, t, f));
     }
 
     function init(
@@ -301,5 +300,53 @@ contract BLAKE2b is BLAKE2_Constants {
                 bytes32(input[i] * 2**(64 * (3 - (i % 4))));
         }
         return result;
+    }
+
+    ///////////////////////////////////////////////////
+    // Helper functions to be moved to another file
+    //////////////////////////////////////////////////
+
+    function Uint64ToBytes(uint64 x) public pure returns (bytes memory c) {
+        bytes8 b = bytes8(x);
+        c = new bytes(8);
+        for (uint256 i = 0; i < 8; i++) {
+            c[i] = b[i];
+        }
+    }
+
+    function Uint64ArrayToBytes32Array(uint64[8] memory arr)
+        public
+        pure
+        returns (bytes32[2] memory c)
+    {
+        bytes32[2] memory c;
+        return c;
+    }
+
+    function Uint256ArrayToBytesArray(uint256[4] memory arr)
+        public
+        pure
+        returns (bytes32[4] memory c)
+    {
+        bytes32[4] memory c;
+        return c;
+    }
+
+    function Uint128ToBytes8(uint128 t)
+        public
+        pure
+        returns (bytes8[2] memory c)
+    {
+        bytes8[2] memory c;
+        return c;
+    }
+
+    function Bytes32ArrayToUint64Array(bytes32[2] memory arr)
+        public
+        pure
+        returns (uint64[8] memory c)
+    {
+        uint64[8] memory c;
+        return c;
     }
 }

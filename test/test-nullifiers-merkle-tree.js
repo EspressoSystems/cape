@@ -13,17 +13,17 @@ describe("Nullifiers Merkle tree", function () {
     let _res = await nf_merkle_tree.callStatic.elem_hash(10000);
   });
 
-  it.skip("should compute the terminal node value", async function () {
+  it("should compute the terminal node value", async function () {
     const [owner] = await ethers.getSigners();
 
     const Contract = await ethers.getContractFactory("NullifiersMerkleTree");
     const contract = await Contract.deploy();
     await contract.deployed();
     // fails at
-    //    height=25 against geth
-    //    heigth=32 against arbitrum dev node
+    //    height=131 against geth
+    //    heigth=131 against arbitrum dev node
     // but it's not entirely deterministic
-    for (let height = 1; height < 512; height++) {
+    for (let height = 130; height < 512; height++) {
       console.error("height", height);
       let tx = await contract.terminalNodeValueNonEmpty({
         isEmptySubtree: false,

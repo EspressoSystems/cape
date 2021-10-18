@@ -256,26 +256,12 @@ batch_verify:  2759316.285714286 gas  ------ 2084.7296774480005 USD
 > hardhat --network rinkeby run scripts/benchmarks.js
 ```
 
-## Arbitrum on Rinkeby
-
-To run the benchmarks against Arbitrum Rinkeby follow these steps:
-
-* Install [Metamask](https://metamask.io/) in your browser and copy the mnemonic.
-* Set the RINKEBY_MNEMONIC in the .env file.
-* Switch metamask to the rinkeby network.
-* Get some Rinkeby coins at the [MyCrypto faucet](https://app.mycrypto.com/faucet). You can also use the official [Rinkeby faucet](https://faucet.rinkeby.io) which is less stable but where you can get more coins at once.
-* Go to the [Arbitrum bridge](https://bridge.arbitrum.io/) and deposit your
- Rinkeby coins. Leave a bit for the ethereum gas fees. Wait a few minutes until
- your account is funded.
-* Run the following command
-```
-> hardhat --network arbitrum run scripts/benchmarks.js
-```
-
 You can check the deployment and transactions on Arbitrum for the contract
 at https://testnet.arbiscan.io/address/0x2FB18F4b4519a5fc792cb6508C6505675BA659E9.
 
 # AAP on Arbitrum (a.k.a AAPA)
+
+## Local
 
 Clone the arbitrum submodule (https://gitlab.com/translucence/arbitrum fork)
 
@@ -283,7 +269,7 @@ Clone the arbitrum submodule (https://gitlab.com/translucence/arbitrum fork)
     cd arbitrum
     nix-shell
 
-# Running local arb-dev-node (not officially supported!)
+### Running local arb-dev-node (not officially supported!)
 Install dependencies
 
     pip install -r requirements-dev.txt
@@ -306,6 +292,23 @@ Run tests
     hardhat --network arbitrum_dev test/test-dummy-verifier.js
 
 at the moment this will fail due to gas mismatch.
+
+## Arbitrum on Rinkeby
+
+To run the benchmarks against Arbitrum Rinkeby follow these steps:
+
+* Install [Metamask](https://metamask.io/) in your browser and copy the mnemonic.
+* Set the RINKEBY_MNEMONIC in the .env file.
+* Switch metamask to the rinkeby network.
+* Get some Rinkeby coins at the [MyCrypto faucet](https://app.mycrypto.com/faucet). You can also use the official [Rinkeby faucet](https://faucet.rinkeby.io) which is less stable but where you can get more coins at once.
+* Go to the [Arbitrum bridge](https://bridge.arbitrum.io/) and deposit your
+  Rinkeby coins. Leave a bit for the ethereum gas fees. Wait a few minutes until
+  your account is funded.
+* Run the following command
+```
+> hardhat --network arbitrum run scripts/benchmarks.js
+```
+
 
 ## Gas Reporter
 Set the env var `REPORT_GAS` to get extra output about the gas consumption of

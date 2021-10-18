@@ -34,4 +34,5 @@ geth --http --dev \
      --mine --maxpeers 0 --nodiscover \
     --allow-insecure-unlock \
     --password <(echo "") \
-    --datadir $DATA_DIR --unlock $ADDRESS_LIST
+    --datadir $DATA_DIR --unlock $ADDRESS_LIST \
+    --miner.gaslimit 30000000

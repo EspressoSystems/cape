@@ -304,6 +304,7 @@ contract BLAKE2b is BLAKE2_Constants {
 
     ///////////////////////////////////////////////////
     // Helper functions to be moved to another file
+    // However by doing so it seems to consume more gas
     //////////////////////////////////////////////////
 
     function Uint64ToBytes(uint64 x) public pure returns (bytes memory c) {

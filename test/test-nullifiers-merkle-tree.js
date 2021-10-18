@@ -4,7 +4,7 @@ const common = require("../lib/common");
 
 describe("Nullifiers Merkle tree", function () {
   it("should compute correctly the hash functions", async function () {
-    let nf_merkle_tree = await deployNullifierMerkleTreeContract();
+    let nf_merkle_tree = await common.deployNullifierMerkleTreeContract();
     let _res = await nf_merkle_tree.callStatic.elem_hash(10000);
   });
 
@@ -12,12 +12,12 @@ describe("Nullifiers Merkle tree", function () {
     const contract = await common.deployNullifierMerkleTreeContract();
 
     // fails at
-    //    height=240 against geth
-    //    heigth=131 against arbitrum dev node
+    //    height=262 against geth
+    //    heigth=? against arbitrum dev node
     // but it's not entirely deterministic
 
-    for (let height = 230; height < 513; height++) {
-      console.error("height", height);
+    for (let height = 262; height < 263; height++) {
+      //console.error("height", height);
       let tx = await contract.terminalNodeValueNonEmpty({
         isEmptySubtree: false,
         height: height,

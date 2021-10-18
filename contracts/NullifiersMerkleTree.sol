@@ -5,113 +5,130 @@ import "hardhat/console.sol";
 import "./BLAKE2b/BLAKE2b.sol";
 
 contract NullifiersMerkleTree {
-    bytes64 root;
+    uint64[8] root;
 
     uint256 constant N = 512;
 
+    // uint64[8] ZERO_HASH = [0, 0, 0, 0, 0, 0, 0, 0];
+    // uint64[8] EMPTY_SUBTREE = [0, 0, 0, 0, 0, 0, 0, 0];
+    uint64[8] EMPTY_HASH = [0, 0, 0, 0, 0, 0, 0, 0];
+
+    struct TerminalNode {
+        bool isEmptySubtree;
+        uint256 height;
+        bytes elem;
+    }
+
     constructor() {}
 
-    struct bytes64 {
-        bytes32 hi;
-        bytes32 lo;
+    function terminalNodeValue(TerminalNode memory node)
+        public
+        returns (uint64[8] memory)
+    {
+        if (node.isEmptySubtree) {
+            return EMPTY_HASH;
+        } else {
+            return terminalNodeValueNonEmpty(node);
+        }
     }
 
-    // TODO probably not very efficient
-    function EMPTY_HASH() private pure returns (bytes64 memory) {
-        return bytes64(0, 0);
+    function terminalNodeValueNonEmpty(TerminalNode memory node)
+        public
+        returns (uint64[8] memory)
+    {
+        uint64[8] memory element_hash = elem_hash(node.elem);
+        uint64[8] memory running_hash = leaf_hash(node.elem);
+
+        for (uint256 i = 0; i < node.height; i++) {
+            uint256 limb_idx = i / 64;
+            uint256 bit_idx = i % 64;
+            bool sib_is_left = ((element_hash[limb_idx] >> bit_idx) % 2) == 1;
+
+            if (sib_is_left) {
+                running_hash = branch_hash(EMPTY_HASH, running_hash);
+            } else {
+                running_hash = branch_hash(running_hash, EMPTY_HASH);
+            }
+        }
+        return running_hash;
     }
 
-    // TODO probably not very efficient
-    function EMPTY_SUBTREE() private pure returns (bytes64 memory) {
-        return bytes64(0, 0);
+    // TODO: could the blake2 contract function be view or pure?
+    function check(
+        uint64[8][] memory path,
+        TerminalNode memory terminal_node,
+        bytes memory elem
+    ) public returns (bool) {
+        if (path.length == 0) {
+            revert("Path has length zero");
+        }
+
+        uint64[8] memory element_hash = elem_hash(elem);
+        uint64[8] memory running_hash = terminalNodeValue(terminal_node);
+
+        // the path only goes until a terminal node is reached, so skip
+        // part of the bit-vec
+        uint256 start_bit = 256 - path.length;
+
+        // for (uint256 i = start_bit; i < elem_bit_vec.length; i++) {
+        for (uint256 i = start_bit; i < 256; i++) {
+            uint64[8] memory sib = path[i - start_bit];
+
+            uint256 outer_idx = i / 64;
+            uint256 inner_idx = i % 64;
+            bool sib_is_left = ((element_hash[outer_idx] >> inner_idx) % 2) ==
+                1;
+
+            uint64[8] memory left;
+            uint64[8] memory right;
+
+            if (sib_is_left) {
+                left = sib;
+                right = running_hash;
+            } else {
+                left = running_hash;
+                right = sib;
+            }
+            running_hash = branch_hash(left, right);
+        }
+
+        // uint64[8] memory terminal_node = path[path.length - 1];
+
+        if (isEqualToRoot(running_hash)) {
+            if (terminal_node.isEmptySubtree) {
+                return false;
+            } else {
+                // TODO is comparing the hashes acceptable?
+                return keccak256(terminal_node.elem) == keccak256(elem);
+            }
+        } else {
+            // console.log("Running Hash:");
+            // console.logBytes32(running_hash);
+            // console.log("root");
+            // console.logBytes32(root);
+            revert("Hash mismatch");
+        }
     }
 
-    // TODO export this function to some "utils" library ?
-    function are_equal_bytes64(bytes64 memory x, bytes64 memory y)
+    function arrayEqual(uint64[8] memory a, uint64[8] memory b)
         private
         pure
         returns (bool)
     {
-        return (x.lo == y.lo) && (x.hi == y.hi);
+        for (uint256 i = 0; i < 8; i++) {
+            if (a[i] != b[i]) {
+                return false;
+            }
+        }
+        return true;
     }
 
-    //   function check(bytes64[] calldata proof, bytes32 elem)
-    //        public
-    //        view
-    //        returns (bool)
-    //    {
-    //        if (proof.length == 0) {
-    //            revert("Proof has length zero");
-    //        }
-    //
-    //        bytes64 memory running_hash = proof[0]; // or -1?
-    //
-    //        bytes64 memory h = elem_hash(elem);
-    //        // bool[] elem_bit_vec = to_bits(elem_hash); // TODO to_bits
-    //
-    //        // the path only goes until a terminal node is reached, so skip
-    //        // part of the bit-vec
-    //        // uint256 start_bit = elem_bit_vec.length - proof.length;
-    //        uint256 start_bit = 256 - proof.length;
-    //
-    //        // for (uint256 i = start_bit; i < elem_bit_vec.length; i++) {
-    //        for (uint256 i = start_bit; i < 256; i++) {
-    //            console.log(i);
-    //            bytes32 sib = proof[i - start_bit];
-    //            // TODO all bits
-    //            bool sib_is_left = (uint256(h.hi) >> i) % 2 == 1;
-    //
-    //            bytes32 l;
-    //            bytes32 r;
-    //
-    //            if (sib_is_left) {
-    //                l = sib;
-    //                r = running_hash;
-    //            } else {
-    //                l = running_hash;
-    //                r = sib;
-    //            }
-    //            running_hash = branch_hash(l, r);
-    //        }
-    //
-    //        bytes64 memory terminal_node = proof[proof.length - 1];
-    //
-    //        if (isEqualToRoot(running_hash)) {
-    //            if (isEmptySubtree(terminal_node)) {
-    //                return false;
-    //            } else if (isLeafNode(terminal_node)) {
-    //                // TODO Need to have the value to compare it.
-    //                // return terminal_node = elem;
-    //                return true;
-    //            } else {
-    //                revert("Wrong type of terminal node");
-    //            }
-    //        } else {
-    //            // console.log("Running Hash:");
-    //            // console.logBytes32(running_hash);
-    //            // console.log("root");
-    //            // console.logBytes32(root);
-    //            revert("Hash mismatch");
-    //        }
-    //}
-
-    function isEqualToRoot(bytes64 memory running_hash)
+    function isEqualToRoot(uint64[8] memory running_hash)
         private
-        pure
+        view
         returns (bool)
     {
-        // different storage locations
-        // TODO just to avoid the warning
-        assert(are_equal_bytes64(running_hash, running_hash));
-        return false;
-    }
-
-    function isEmptySubtree(bytes64 memory node) private pure returns (bool) {
-        return are_equal_bytes64(node, EMPTY_SUBTREE());
-    }
-
-    function isLeafNode(bytes64 memory node) private pure returns (bool) {
-        return !are_equal_bytes64(node, EMPTY_SUBTREE());
+        return arrayEqual(running_hash, root);
     }
 
     function elem_hash(bytes memory input) public returns (uint64[8] memory) {
@@ -136,7 +153,7 @@ contract NullifiersMerkleTree {
         return blake.blake2b_full(input, "", "", "AAPSet Leaf", 64);
     }
 
-    function branch_hash(uint64[8] calldata left, uint64[8] calldata right)
+    function branch_hash(uint64[8] memory left, uint64[8] memory right)
         public
         returns (uint64[8] memory)
     {
@@ -150,7 +167,7 @@ contract NullifiersMerkleTree {
     //        return keccak256(abi.encodePacked(elem));
     //    }
 
-    function branch_hash_with_updates(bytes calldata left, bytes calldata right)
+    function branch_hash_with_updates(bytes memory left, bytes memory right)
         public
         returns (uint64[8] memory)
     {
@@ -173,7 +190,7 @@ contract NullifiersMerkleTree {
     }
 
     // abi.encodePacked with uint64 arrays end up padded
-    function pack(uint64[8] calldata left, uint64[8] calldata right)
+    function pack(uint64[8] memory left, uint64[8] memory right)
         public
         returns (bytes memory)
     {

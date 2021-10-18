@@ -13,11 +13,13 @@ mod tests {
     use super::*;
     use crate::ethereum::{deploy, get_funded_deployer};
     use blake2::crypto_mac::Mac;
+    use ethers::prelude::*;
     use jf_utils::to_bytes;
     use rand::SeedableRng;
     use rand_chacha::ChaChaRng;
+    use std::default::Default;
     use std::path::Path;
-    use zerok_lib::set_hash::Hash;
+    use zerok_lib::{set_hash::Hash, SetMerkleTree};
 
     use crate::nullifiers_merkle_tree::helpers::{
         blake2b_elem, convert_vec_u64_into_vec_u8, hash_to_bytes, to_ethers_hash,
@@ -206,6 +208,78 @@ mod tests {
         check_hash_equality(128, true).await;
         check_hash_equality(129, false).await;
         check_hash_equality(255, false).await;
+    }
+
+    #[tokio::test]
+    async fn test_terminal_node_value_empty() {
+        // TODO refactor creation of contract to avoid code duplication.
+        let client = get_funded_deployer().await.unwrap();
+        let contract = deploy(
+            client.clone(),
+            Path::new("./contracts/NullifiersMerkleTree"),
+        )
+        .await
+        .unwrap();
+
+        let contract = NullifiersMerkleTree::new(contract.address(), client);
+
+        // let rust_value = SetMerkleTerminalNode::EmptySubtree.value(); // .value() is private
+        let rust_value = SetMerkleTree::EmptySubtree.hash();
+        let ethers_node = TerminalNode {
+            is_empty_subtree: true,
+            height: U256::from(0),
+            elem: vec![],
+        };
+
+        let res: Vec<u64> = contract
+            .terminal_node_value(ethers_node)
+            .call()
+            .await
+            .unwrap()
+            .into();
+
+        assert_eq!(convert_vec_u64_into_vec_u8(res), hash_to_bytes(&rust_value));
+    }
+
+    #[tokio::test]
+    async fn test_terminal_node_value_non_empty() {
+        // TODO refactor creation of contract to avoid code duplication.
+        let client = get_funded_deployer().await.unwrap();
+        let contract = deploy(
+            client.clone(),
+            Path::new("./contracts/NullifiersMerkleTree"),
+        )
+        .await
+        .unwrap();
+
+        let contract = NullifiersMerkleTree::new(contract.address(), client);
+
+        let mut prng = ChaChaRng::from_seed([0u8; 32]);
+        let nullifier = Nullifier::random_for_test(&mut prng);
+
+        // let rust_value = SetMerkleTerminalNode::EmptySubtree.value(); // .value() is private
+        let mut tree = SetMerkleTree::default();
+        tree.insert(nullifier);
+        let ethers_node = TerminalNode {
+            is_empty_subtree: false,
+            height: U256::from(512),
+            elem: to_ethers_nullifier(nullifier),
+        };
+
+        println!("{:?}", tree);
+
+        // TODO Fails because it consumes too much gas.
+        // let res: Vec<u64> = contract
+        //     .terminal_node_value(ethers_node)
+        //     .call()
+        //     .await
+        //     .unwrap()
+        //     .into();
+
+        // assert_eq!(
+        //     convert_vec_u64_into_vec_u8(res),
+        //     hash_to_bytes(&tree.hash())
+        // );
     }
 
     fn test_merkle_tree_set(updates: Vec<u16>, checks: Vec<Result<u16, u8>>) {

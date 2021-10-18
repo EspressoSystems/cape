@@ -172,13 +172,14 @@ contract NullifiersMerkleTree {
         public
         returns (bytes memory)
     {
-        bytes memory data = abi.encodePacked("l");
+        // bytes memory data = abi.encodePacked("l"); // TODO: re-enable
+        bytes memory data = abi.encodePacked();
 
         for (uint256 i = 0; i < left.length; i++) {
             data = abi.encodePacked(data, left[i]);
         }
 
-        data = abi.encodePacked(data, "r");
+        // data = abi.encodePacked(data, "r"); // TODO: re-enable
         for (uint256 i = 0; i < right.length; i++) {
             data = abi.encodePacked(data, right[i]);
         }

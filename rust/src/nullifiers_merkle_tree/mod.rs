@@ -89,9 +89,9 @@ mod tests {
 
         // TODO check if it's really packed like this
         let mut rust_packed: Vec<u8> = Vec::new();
-        rust_packed.extend("l".as_bytes().iter());
+        // rust_packed.extend("l".as_bytes().iter()); // TODO: re-enable
         rust_packed.extend(to_bytes!(&left).unwrap());
-        rust_packed.extend("r".as_bytes().iter());
+        // rust_packed.extend("r".as_bytes().iter()); // TODO: re-enable
         rust_packed.extend(to_bytes!(&right).unwrap());
 
         let solidity_packed = contract

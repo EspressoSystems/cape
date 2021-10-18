@@ -131,6 +131,11 @@ contract NullifiersMerkleTree {
         return res_u64;
     }
 
+    function leaf_hash(bytes memory input) public returns (uint64[8] memory) {
+        BLAKE2b blake = new BLAKE2b();
+        return blake.blake2b_full(input, "", "", "AAPSet Leaf", 64);
+    }
+
     function branch_hash(uint64[8] calldata left, uint64[8] calldata right)
         public
         returns (uint64[8] memory)

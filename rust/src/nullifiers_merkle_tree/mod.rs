@@ -10,8 +10,8 @@ abigen!(
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::ethereum::{deploy, get_funded_deployer};
-    use crate::nullifiers_merkle_tree::NullifiersMerkleTree;
     use blake2::crypto_mac::Mac;
     use jf_utils::to_bytes;
     use rand::SeedableRng;
@@ -49,6 +49,39 @@ mod tests {
 
         let res_u64: Vec<u64> = contract
             .elem_hash(input_ethers)
+            .call()
+            .await
+            .unwrap()
+            .into();
+
+        let res_u8 = convert_vec_u64_into_vec_u8(res_u64);
+
+        assert_eq!(res_u8, hash_bytes);
+    }
+
+    #[tokio::test]
+    async fn test_blake2b_leaf() {
+        // TODO refactor creation of contract to avoid code duplication.
+        let client = get_funded_deployer().await.unwrap();
+        let contract = deploy(
+            client.clone(),
+            Path::new("./contracts/NullifiersMerkleTree"),
+        )
+        .await
+        .unwrap();
+
+        let contract = NullifiersMerkleTree::new(contract.address(), client);
+
+        let mut prng = ChaChaRng::from_seed([0u8; 32]);
+
+        let input = Nullifier::random_for_test(&mut prng);
+        let input_ethers = to_ethers_nullifier(input);
+
+        let hash = set_hash::leaf_hash(input);
+        let hash_bytes = hash_to_bytes(&hash);
+
+        let res_u64: Vec<u64> = contract
+            .leaf_hash(input_ethers)
             .call()
             .await
             .unwrap()

@@ -13,6 +13,7 @@ contract BLAKE2b is BLAKE2_Constants {
         uint256 outlen; //digest output size
     }
 
+    // TODO should this be removed?
     // Mixing Function
     function G(
         uint64[16] memory v,

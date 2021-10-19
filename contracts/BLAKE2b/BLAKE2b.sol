@@ -102,13 +102,34 @@ contract BLAKE2b is BLAKE2_Constants {
     }
 
     function compress(BLAKE2b_ctx memory ctx, bool last) internal {
+        // rounds - the number of rounds - 32-bit unsigned big-endian word
+        //
+        // h - the state vector - 8 unsigned 64-bit little-endian words
+        // m - the message block vector - 16 unsigned 64-bit little-endian words
+        // t_0, t_1 - offset counters - 2 unsigned 64-bit little-endian words
+        //
+        // f - the final block indicator flag - 8-bit word
+        // [4 bytes for rounds][64 bytes for h][128 bytes for m][8 bytes for t_0][8 bytes for t_1][1 byte for f]
+
         // Prepare call to precompiled function F
-        uint32 rounds = 12;
+        uint32 rounds = 12; // turned into big endian by abi.encodePacked
         bytes32[2] memory h = Uint64ArrayToBytes32Array(ctx.h); // Should be ok
         bytes32[4] memory m = Uint256ArrayToBytesArray(ctx.b); // Convert From 4 256bits to 16 64 bits
         bytes8[2] memory t = Uint128ToBytes8(ctx.t); // Maybe it is ok
         bool f = last; // Should be ok
 
+        // console.log("is last %s ", last);
+        // console.logBytes32(m[0]);
+        // console.log(ctx.b[0]);
+        // console.logBytes32(m[1]);
+        // console.log(ctx.b[1]);
+        // console.logBytes32(m[2]);
+        // console.log(ctx.b[2]);
+        // console.logBytes32(m[3]);
+        // console.log(ctx.b[3]);
+        // console.log("offset");
+        // console.logBytes8(t[0]);
+        // console.logBytes8(t[1]);
         // Call precompiled function F
         ctx.h = Bytes32ArrayToUint64Array(F(rounds, h, m, t, f));
     }
@@ -307,30 +328,50 @@ contract BLAKE2b is BLAKE2_Constants {
     // However by doing so it seems to consume more gas
     //////////////////////////////////////////////////
 
-    function Uint64ToBytes(uint64 x) public pure returns (bytes memory c) {
-        bytes8 b = bytes8(x);
-        c = new bytes(8);
-        for (uint256 i = 0; i < 8; i++) {
-            c[i] = b[i];
-        }
-    }
-
     function Uint64ArrayToBytes32Array(uint64[8] memory arr)
         public
         pure
         returns (bytes32[2] memory c)
     {
-        bytes32[2] memory c;
-        return c;
+        c[0] = BytesLib.toBytes32(
+            abi.encodePacked(
+                reverse64(arr[0]),
+                reverse64(arr[1]),
+                reverse64(arr[2]),
+                reverse64(arr[3])
+            ),
+            0
+        );
+        c[1] = BytesLib.toBytes32(
+            abi.encodePacked(
+                reverse64(arr[4]),
+                reverse64(arr[5]),
+                reverse64(arr[6]),
+                reverse64(arr[7])
+            ),
+            0
+        );
     }
 
+    // m - the message block vector - 16 unsigned 64-bit little-endian words
     function Uint256ArrayToBytesArray(uint256[4] memory arr)
         public
-        pure
+        view
         returns (bytes32[4] memory c)
     {
-        bytes32[4] memory c;
-        return c;
+        for (uint256 i = 0; i < 4; i++) {
+            uint256 x = arr[i];
+
+            c[i] = BytesLib.toBytes32(
+                abi.encodePacked(
+                    reverse64(uint64(x >> 196)),
+                    reverse64(uint64(x >> 128)),
+                    reverse64(uint64(x >> 64)),
+                    reverse64(uint64(x >> 0))
+                ),
+                0
+            );
+        }
     }
 
     function Uint128ToBytes8(uint128 t)
@@ -338,8 +379,8 @@ contract BLAKE2b is BLAKE2_Constants {
         pure
         returns (bytes8[2] memory c)
     {
-        bytes8[2] memory c;
-        return c;
+        c[0] = bytes8(reverse64(uint64(t >> 64)));
+        c[1] = bytes8(reverse64(uint64(t)));
     }
 
     function Bytes32ArrayToUint64Array(bytes32[2] memory arr)
@@ -347,7 +388,132 @@ contract BLAKE2b is BLAKE2_Constants {
         pure
         returns (uint64[8] memory c)
     {
-        uint64[8] memory c;
-        return c;
+        bytes memory as_bytes = abi.encodePacked(arr);
+        for (uint256 i = 0; i < 8; i++) {
+            // TODO do we need to revers the endianness here too?
+            c[i] = BytesLib.toUint64(as_bytes, 8 * i);
+        }
+    }
+
+    // The endian reversal function are from
+    //     https://ethereum.stackexchange.com/a/83627
+    // overloading with the argument types did not work as expected, hence the many names.
+
+    function reverse256(uint256 input) internal pure returns (uint256 v) {
+        v = input;
+
+        // swap bytes
+        v =
+            ((v &
+                0xFF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00) >>
+                8) |
+            ((v &
+                0x00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF) <<
+                8);
+
+        // swap 2-byte long pairs
+        v =
+            ((v &
+                0xFFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000) >>
+                16) |
+            ((v &
+                0x0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF) <<
+                16);
+
+        // swap 4-byte long pairs
+        v =
+            ((v &
+                0xFFFFFFFF00000000FFFFFFFF00000000FFFFFFFF00000000FFFFFFFF00000000) >>
+                32) |
+            ((v &
+                0x00000000FFFFFFFF00000000FFFFFFFF00000000FFFFFFFF00000000FFFFFFFF) <<
+                32);
+
+        // swap 8-byte long pairs
+        v =
+            ((v &
+                0xFFFFFFFFFFFFFFFF0000000000000000FFFFFFFFFFFFFFFF0000000000000000) >>
+                64) |
+            ((v &
+                0x0000000000000000FFFFFFFFFFFFFFFF0000000000000000FFFFFFFFFFFFFFFF) <<
+                64);
+
+        // swap 16-byte long pairs
+        v = (v >> 128) | (v << 128);
+    }
+
+    function reverse128(uint128 input) internal pure returns (uint128 v) {
+        v = input;
+
+        // swap bytes
+        v =
+            ((v & 0xFF00FF00FF00FF00FF00FF00FF00FF00) >> 8) |
+            ((v & 0x00FF00FF00FF00FF00FF00FF00FF00FF) << 8);
+
+        // swap 2-byte long pairs
+        v =
+            ((v & 0xFFFF0000FFFF0000FFFF0000FFFF0000) >> 16) |
+            ((v & 0x0000FFFF0000FFFF0000FFFF0000FFFF) << 16);
+
+        // swap 4-byte long pairs
+        v =
+            ((v & 0xFFFFFFFF00000000FFFFFFFF00000000) >> 32) |
+            ((v & 0x00000000FFFFFFFF00000000FFFFFFFF) << 32);
+
+        // swap 8-byte long pairs
+        v = (v >> 64) | (v << 64);
+    }
+
+    function reverse64(uint64 input) internal pure returns (uint64 v) {
+        v = input;
+
+        // swap bytes
+        v = ((v & 0xFF00FF00FF00FF00) >> 8) | ((v & 0x00FF00FF00FF00FF) << 8);
+
+        // swap 2-byte long pairs
+        v = ((v & 0xFFFF0000FFFF0000) >> 16) | ((v & 0x0000FFFF0000FFFF) << 16);
+
+        // swap 4-byte long pairs
+        v = (v >> 32) | (v << 32);
+    }
+
+    function reverse64Array(uint64[8] memory input)
+        internal
+        pure
+        returns (uint64[8] memory out)
+    {
+        for (uint256 i = 0; i < input.length; i++) {
+            out[i] = reverse64(input[i]);
+        }
+    }
+
+    function reverse128Array(uint128[2] memory input)
+        internal
+        pure
+        returns (uint128[2] memory out)
+    {
+        for (uint256 i = 0; i < input.length; i++) {
+            out[i] = reverse128(input[i]);
+        }
+    }
+
+    function reverse256Array(uint256[4] memory input)
+        internal
+        pure
+        returns (uint256[4] memory out)
+    {
+        for (uint256 i = 0; i < input.length; i++) {
+            out[i] = reverse256(input[i]);
+        }
+    }
+
+    // just for checking during development
+    function endian(uint256 input) public view returns (bytes32 c) {
+        return bytes32(reverse256(input));
+    }
+
+    // just for checking during development
+    function encodePacked(uint256 input) public view returns (bytes memory) {
+        return abi.encodePacked(input);
     }
 }

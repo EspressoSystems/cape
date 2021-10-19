@@ -398,25 +398,25 @@ contract BLAKE2b is BLAKE2_Constants {
     }
 
     // m - the message block vector - 16 unsigned 64-bit little-endian words
-    function Uint256ArrayToBytesArray(uint256[4] memory arr)
-        public
-        view
-        returns (bytes32[4] memory c)
-    {
-        for (uint256 i = 0; i < 4; i++) {
-            uint256 x = arr[i];
-
-            c[i] = BytesLib.toBytes32(
-                abi.encodePacked(
-                    reverse64(uint64(x >> 196)),
-                    reverse64(uint64(x >> 128)),
-                    reverse64(uint64(x >> 64)),
-                    reverse64(uint64(x >> 0))
-                ),
-                0
-            );
-        }
-    }
+    //    function Uint256ArrayToBytesArray(uint256[4] memory arr)
+    //        public
+    //        view
+    //        returns (bytes32[4] memory c)
+    //    {
+    //        for (uint256 i = 0; i < 4; i++) {
+    //            uint256 x = arr[i];
+    //
+    //            c[i] = BytesLib.toBytes32(
+    //                abi.encodePacked(
+    //                    reverse64(uint64(x >> 196)),
+    //                    reverse64(uint64(x >> 128)),
+    //                    reverse64(uint64(x >> 64)),
+    //                    reverse64(uint64(x >> 0))
+    //                ),
+    //                0
+    //            );
+    //        }
+    //    }
 
     function Uint128ToBytes8(uint128 t)
         public

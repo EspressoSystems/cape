@@ -114,8 +114,8 @@ contract BLAKE2b is BLAKE2_Constants {
 
         // Prepare call to precompiled function F
         uint32 rounds = 12; // turned into big endian by abi.encodePacked
-        bytes32[2] memory h = Uint64ArrayToBytes32Array(ctx.h); // Should be ok
-        bytes32[4] memory m = Uint256ArrayToBytesArray(ctx.b); // Convert From 4 256bits to 16 64 bits
+        bytes32[2] memory h = Uint64Array8ToBytes32Array2(ctx.h); // Should be ok
+        bytes32[4] memory m = convert_buffer_to_message(ctx.b); // Convert From 4 256bits to 16 64 bits
         bytes8[2] memory t = Uint128ToBytes8(ctx.t); // Maybe it is ok
         bool f = last; // Should be ok
 
@@ -329,7 +329,7 @@ contract BLAKE2b is BLAKE2_Constants {
     // However by doing so it seems to consume more gas
     //////////////////////////////////////////////////
 
-    function Uint64ArrayToBytes32Array(uint64[8] memory arr)
+    function Uint64Array8ToBytes32Array2(uint64[8] memory arr)
         public
         pure
         returns (bytes32[2] memory c)
@@ -349,6 +349,49 @@ contract BLAKE2b is BLAKE2_Constants {
                 reverse64(arr[5]),
                 reverse64(arr[6]),
                 reverse64(arr[7])
+            ),
+            0
+        );
+    }
+
+    function Uint64Array16ToBytes32Array4(uint64[16] memory arr)
+        public
+        pure
+        returns (bytes32[4] memory c)
+    {
+        c[0] = BytesLib.toBytes32(
+            abi.encodePacked(
+                reverse64(arr[0]),
+                reverse64(arr[1]),
+                reverse64(arr[2]),
+                reverse64(arr[3])
+            ),
+            0
+        );
+        c[1] = BytesLib.toBytes32(
+            abi.encodePacked(
+                reverse64(arr[4]),
+                reverse64(arr[5]),
+                reverse64(arr[6]),
+                reverse64(arr[7])
+            ),
+            0
+        );
+        c[2] = BytesLib.toBytes32(
+            abi.encodePacked(
+                reverse64(arr[8]),
+                reverse64(arr[9]),
+                reverse64(arr[10]),
+                reverse64(arr[11])
+            ),
+            0
+        );
+        c[3] = BytesLib.toBytes32(
+            abi.encodePacked(
+                reverse64(arr[12]),
+                reverse64(arr[13]),
+                reverse64(arr[14]),
+                reverse64(arr[15])
             ),
             0
         );
@@ -516,5 +559,38 @@ contract BLAKE2b is BLAKE2_Constants {
     // just for checking during development
     function encodePacked(uint256 input) public view returns (bytes memory) {
         return abi.encodePacked(input);
+    }
+
+    /// Implements the conversion from buffer `b` to message `m` of the compression function
+    /// between lines https://github.com/ConsenSys/Project-Alchemy/blob/9812c33c24a49448660d4a2d226caa80ac982102/contracts/BLAKE2b/BLAKE2b.sol#L71
+    /// and https://github.com/ConsenSys/Project-Alchemy/blob/9812c33c24a49448660d4a2d226caa80ac982102/contracts/BLAKE2b/BLAKE2b.sol#L85
+    function convert_buffer_to_message(uint256[4] memory b_arr)
+        public
+        returns (bytes32[4] memory c)
+    {
+        uint64[16] memory m;
+        uint64 mi; //Temporary stack variable to decrease memory ops
+        uint256 b; // Input buffer
+
+        for (uint256 i = 0; i < 16; i++) {
+            //Operate 16 words at a time
+            uint256 k = i % 4; //Current buffer word
+            mi = 0;
+            if (k == 0) {
+                b = b_arr[i / 4]; //Load relevant input into buffer
+            }
+
+            //Extract relevent input from buffer
+            assembly {
+                mi := and(
+                    div(b, exp(2, mul(64, sub(3, k)))),
+                    0xFFFFFFFFFFFFFFFF
+                )
+            }
+
+            //Flip endianness
+            m[i] = getWords(mi);
+        }
+        return Uint64Array16ToBytes32Array4(m);
     }
 }

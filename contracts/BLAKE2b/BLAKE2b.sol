@@ -381,7 +381,7 @@ contract BLAKE2b is BLAKE2_Constants {
 
     //bytes -> uint64[2]
     function formatInput(bytes memory input)
-        private
+        public
         returns (uint64[2] memory output)
     {
         for (uint256 i = 0; i < input.length; i++) {
@@ -399,7 +399,7 @@ contract BLAKE2b is BLAKE2_Constants {
     }
 
     function formatOutput(uint64[8] memory input)
-        private
+        public
         returns (bytes32[2] memory)
     {
         bytes32[2] memory result;

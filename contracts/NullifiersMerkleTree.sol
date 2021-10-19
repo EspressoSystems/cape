@@ -211,4 +211,25 @@ contract NullifiersMerkleTree {
         uint64 u = 2 ^ 64;
         return abi.encodePacked(u);
     }
+
+    function formatInput(bytes memory input)
+        public
+        returns (uint64[2] memory output)
+    {
+        return blake.formatInput(input);
+    }
+
+    function formatOutput(uint64[8] memory input)
+        public
+        returns (bytes32[2] memory)
+    {
+        return blake.formatOutput(input);
+    }
+
+    function sendDataOnly(uint64[8] memory input)
+        public
+        returns (uint64[8] memory)
+    {
+        return input;
+    }
 }

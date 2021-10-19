@@ -19,11 +19,12 @@ describe("Nullifiers Merkle tree", function () {
     const Contract = await ethers.getContractFactory("NullifiersMerkleTree");
     const contract = await Contract.deploy();
     await contract.deployed();
+    contract.provider.pollingInterval = 20;
     // fails at
-    //    height=131 against geth
-    //    heigth=131 against arbitrum dev node
+    //    height=147 against geth
+    //    heigth=147 against arbitrum dev node
     // but it's not entirely deterministic
-    for (let height = 130; height < 512; height++) {
+    for (let height = 146; height < 512; height += 1) {
       console.error("height", height);
       let tx = await contract.terminalNodeValueNonEmpty({
         isEmptySubtree: false,

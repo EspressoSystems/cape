@@ -81,10 +81,29 @@ async function main() {
 
   const Contract = await ethers.getContractFactory("NullifiersMerkleTree");
   const contract = await Contract.deploy();
+  contract.provider.pollingInterval = 20;
 
   await contract.deployed();
 
   console.log(`Contract deployed at address ${contract.address}`);
+
+  const randHash = () =>
+    Array(8)
+      .fill()
+      .map((_) => BigNumber.from(utils.randomBytes(8)));
+
+  fun_names = ["sendDataOnly"];
+  fun_to_eval = fun_names.map((name) => contract[name]);
+  await print_report("Blake2", fun_to_eval, fun_names, randHash());
+
+  fun_names = ["formatInput"];
+  fun_to_eval = fun_names.map((name) => contract[name]);
+  const persona = utils.hexlify(utils.toUtf8Bytes("AAPSet Branch"));
+  await print_report("Blake2", fun_to_eval, fun_names, persona);
+
+  fun_names = ["formatOutput"];
+  fun_to_eval = fun_names.map((name) => contract[name]);
+  await print_report("Blake2", fun_to_eval, fun_names, randHash());
 
   fun_names = ["elem_hash", "leaf_hash"];
   fun_to_eval = fun_names.map((name) => contract[name]);
@@ -94,13 +113,9 @@ async function main() {
 
   fun_names = ["branch_hash"];
   fun_to_eval = fun_names.map((name) => contract[name]);
-  const randHash = () =>
-    Array(8)
-      .fill()
-      .map((_) => BigNumber.from(utils.randomBytes(8)));
+
   const left = randHash();
   const right = randHash();
-
   await print_report("Blake2", fun_to_eval, fun_names, left, right);
 
   fun_names = ["terminalNodeValueNonEmpty"];

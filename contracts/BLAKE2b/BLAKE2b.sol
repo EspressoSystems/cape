@@ -357,25 +357,26 @@ contract BLAKE2b is BLAKE2_Constants {
 
     // Utility functions
 
-    //Flips endianness of words
-    function getWords(uint64 a) private returns (uint64 b) {
-        return
-            ((a & MASK_0) / SHIFT_0) ^
-            ((a & MASK_1) / SHIFT_1) ^
-            ((a & MASK_2) / SHIFT_2) ^
-            ((a & MASK_3) / SHIFT_3) ^
-            ((a & MASK_4) * SHIFT_3) ^
-            ((a & MASK_5) * SHIFT_2) ^
-            ((a & MASK_6) * SHIFT_1) ^
-            ((a & MASK_7) * SHIFT_0);
+    //https://ethereum.stackexchange.com/questions/83626/how-to-reverse-byte-order-in-uint256-or-bytes32
+    function getWords(uint64 input) internal pure returns (uint64 v) {
+        v = input;
+
+        // swap bytes
+        v = ((v & 0xFF00FF00FF00FF00) >> 8) | ((v & 0x00FF00FF00FF00FF) << 8);
+
+        // swap 2-byte long pairs
+        v = ((v & 0xFFFF0000FFFF0000) >> 16) | ((v & 0x0000FFFF0000FFFF) << 16);
+
+        // swap 4-byte long pairs
+        v = (v >> 32) | (v << 32);
     }
 
-    function shift_right(uint64 a, uint256 shift) private returns (uint64 b) {
-        return uint64(a / 2**shift);
+    function shift_right(uint64 a, uint256 shift) private returns (uint64) {
+        return a >> shift;
     }
 
     function shift_left(uint64 a, uint256 shift) private returns (uint64) {
-        return uint64((a * 2**shift) % (2**64));
+        return a << shift;
     }
 
     //bytes -> uint64[2]

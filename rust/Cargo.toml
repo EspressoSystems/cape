@@ -7,7 +7,9 @@ edition = "2018"
 doctest = false
 
 [dependencies]
-ethers = { git = "https://github.com/gakonst/ethers-rs" }
+ethers.git = "https://github.com/gakonst/ethers-rs"
+ethers.rev = "071a41605ba2a9bffbf618921534ba5e0121f9d8"
+# ethers.rev = "fb4d9a9ef1cc9df340023d61a6885693a6a6fcf5" # NOTE: breaks compiliation
 
 jf-txn.git = "ssh://git@gitlab.com/translucence/crypto/jellyfish.git"
 jf-txn.rev = "6c88a961f6ad142501e577d91dbf39f5c58bc1f6"

@@ -87,46 +87,35 @@ async function main() {
 
   console.log(`Contract deployed at address ${contract.address}`);
 
-  const randHash = () =>
-    Array(8)
-      .fill()
-      .map((_) => BigNumber.from(utils.randomBytes(8)));
+  // TODO uncomment
 
-  fun_names = ["sendDataOnly"];
-  fun_to_eval = fun_names.map((name) => contract[name]);
-  await print_report("Blake2", fun_to_eval, fun_names, randHash());
+  // const randHash = () =>
+  //   Array(4)
+  //     .fill()
+  //     .map((_) => BigNumber.from(utils.randomBytes(4)));
+  //
+  // fun_names = ["elem_hash", "leaf_hash"];
+  // fun_to_eval = fun_names.map((name) => contract[name]);
+  //
+  // const nullifier = utils.randomBytes(32);
+  // await print_report("elem_hash, leaf_hash", fun_to_eval, fun_names, nullifier);
 
-  fun_names = ["formatInput"];
-  fun_to_eval = fun_names.map((name) => contract[name]);
-  const persona = utils.hexlify(utils.toUtf8Bytes("AAPSet Branch"));
-  await print_report("Blake2", fun_to_eval, fun_names, persona);
+  // fun_names = ["branch_hash"];
+  // fun_to_eval = fun_names.map((name) => contract[name]);
 
-  fun_names = ["formatOutput"];
-  fun_to_eval = fun_names.map((name) => contract[name]);
-  await print_report("Blake2", fun_to_eval, fun_names, randHash());
+  // const left = randHash();
+  // const right = randHash();
+  // await print_report("Blake2", fun_to_eval, fun_names, left, right);
 
-  fun_names = ["elem_hash", "leaf_hash"];
-  fun_to_eval = fun_names.map((name) => contract[name]);
-
-  const nullifier = utils.randomBytes(32);
-  await print_report("Blake2", fun_to_eval, fun_names, nullifier);
-
-  fun_names = ["branch_hash"];
-  fun_to_eval = fun_names.map((name) => contract[name]);
-
-  const left = randHash();
-  const right = randHash();
-  await print_report("Blake2", fun_to_eval, fun_names, left, right);
-
-  fun_names = ["terminalNodeValueNonEmpty"];
-  fun_to_eval = fun_names.map((name) => contract[name]);
-  const height = 10;
-  const node = {
-    isEmptySubtree: false,
-    height,
-    elem: nullifier,
-  };
-  await print_report(`Blake2 (height=${height})`, fun_to_eval, fun_names, node);
+  // fun_names = ["terminalNodeValueNonEmpty"];
+  // fun_to_eval = fun_names.map((name) => contract[name]);
+  // const height = 10;
+  // const node = {
+  //   isEmptySubtree: false,
+  //   height,
+  //   elem: nullifier,
+  // };
+  // await print_report(`Blake2 (height=${height})`, fun_to_eval, fun_names, node);
 }
 
 // We recommend this pattern to be able to use async/await everywhere

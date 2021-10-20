@@ -6,7 +6,7 @@ import {Rescue} from "./Rescue.sol";
 
 contract DummyValidator {
     uint256 RECORDS_TREE_HEIGHT = 25;
-    uint256 NULLIFIERS_TREE_HEIGHT = 256; // TODO Change to 512
+    uint256 NULLIFIERS_TREE_HEIGHT = 256;
     uint256 AAPTX_SIZE = 3000; // Must be the same as in the javascript testing code
     uint256 N_INPUTS = 4; // Number of AAP inputs per transactions corresponding to a transaction of roughly 3 KB
     uint256 N_OUTPUTS = 5; // Number of AAP outputs per transactions of roughly 3 KB
@@ -63,8 +63,7 @@ contract DummyValidator {
             // Compute blake2 hash
             string memory left = "a";
             string memory right = "b";
-
-            return keccak256(abi.encodePacked(left, right, new bytes(64)));
+            keccak256(abi.encodePacked(left, right, new bytes(64)));
         }
 
         return 0;

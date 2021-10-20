@@ -43,10 +43,8 @@ contract NullifiersMerkleTree {
         for (uint256 i = 0; i < node.height; i++) {
             uint256 limb_idx = i / 64;
             uint256 bit_idx = i % 64;
-            // TODO uncomment
-            // bool sib_is_left = ((element_hash[limb_idx] >> bit_idx) % 2) == 1;
-            // TODO comment
-            bool sib_is_left = true;
+            uint8 c = uint8((element_hash[limb_idx] >> bit_idx));
+            bool sib_is_left = (c % 2) == 1;
 
             if (sib_is_left) {
                 running_hash = branch_hash(EMPTY_HASH, running_hash);
@@ -71,19 +69,16 @@ contract NullifiersMerkleTree {
 
         // the path only goes until a terminal node is reached, so skip
         // part of the bit-vec
-        uint256 start_bit = 256 - path.length;
+        uint256 start_bit = N - path.length;
 
-        // for (uint256 i = start_bit; i < elem_bit_vec.length; i++) {
-        for (uint256 i = start_bit; i < 256; i++) {
+        for (uint256 i = start_bit; i < N; i++) {
             bytes32 sib = path[i - start_bit];
 
-            uint256 outer_idx = i / 64;
+            uint256 outer_idx = i / 64; // TODO 64 ?
             uint256 inner_idx = i % 64;
-            // TODO uncomment
-            //bool sib_is_left = ((element_hash[outer_idx] >> inner_idx) % 2) ==
-            //    1;
-            // TODO comment
-            bool sib_is_left = false;
+
+            uint8 c = uint8(element_hash[outer_idx] >> inner_idx);
+            bool sib_is_left = (c % 2) == 1;
 
             bytes32 left;
             bytes32 right;
@@ -98,7 +93,7 @@ contract NullifiersMerkleTree {
             running_hash = branch_hash(left, right);
         }
 
-        // uint64[8] memory terminal_node = path[path.length - 1];
+        // TerminalNode memory terminal_node = path[path.length - 1]; // TODO do we need this?
 
         if (isEqualToRoot(running_hash)) {
             if (terminal_node.isEmptySubtree) {
@@ -116,17 +111,8 @@ contract NullifiersMerkleTree {
         }
     }
 
-    function arrayEqual(bytes32 a, bytes32 b) private pure returns (bool) {
-        for (uint256 i = 0; i < 8; i++) {
-            if (a[i] != b[i]) {
-                return false;
-            }
-        }
-        return true;
-    }
-
     function isEqualToRoot(bytes32 running_hash) private view returns (bool) {
-        return arrayEqual(running_hash, root);
+        return running_hash == root;
     }
 
     function elem_hash(bytes memory input) public view returns (bytes32) {
@@ -152,50 +138,4 @@ contract NullifiersMerkleTree {
         bytes memory domain_sep = "AAPSet Branch";
         return keccak256(abi.encodePacked(domain_sep, "l", left, "r", right));
     }
-
-    // abi.encodePacked with uint64 arrays end up padded
-    //    function pack(uint64[8] memory left, uint64[8] memory right)
-    //        public
-    //        returns (bytes memory)
-    //    {
-    //        // bytes memory data = abi.encodePacked("l"); // TODO: re-enable
-    //        bytes memory data = abi.encodePacked();
-    //
-    //        for (uint256 i = 0; i < left.length; i++) {
-    //            data = abi.encodePacked(data, left[i]);
-    //        }
-    //
-    //        // data = abi.encodePacked(data, "r"); // TODO: re-enable
-    //        for (uint256 i = 0; i < right.length; i++) {
-    //            data = abi.encodePacked(data, right[i]);
-    //        }
-    //
-    //        return data;
-    //    }
-    //
-    //    function test_pack_u64() public returns (bytes memory) {
-    //        uint64 u = 2 ^ 64;
-    //        return abi.encodePacked(u);
-    //    }
-    //
-    //    function formatInput(bytes memory input)
-    //        public
-    //        returns (uint64[2] memory output)
-    //    {
-    //        return blake.formatInput(input);
-    //    }
-    //
-    //    function formatOutput(uint64[8] memory input)
-    //        public
-    //        returns (bytes32[2] memory)
-    //    {
-    //        return blake.formatOutput(input);
-    //    }
-    //
-    //    function sendDataOnly(uint64[8] memory input)
-    //        public
-    //        returns (uint64[8] memory)
-    //    {
-    //        return input;
-    //    }
 }

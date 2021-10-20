@@ -12,7 +12,6 @@ abigen!(
 mod tests {
     use super::*;
     use crate::ethereum::{deploy, get_funded_deployer};
-    use blake2::crypto_mac::Mac;
     use ethers::prelude::*;
     use jf_utils::to_bytes;
     use rand::SeedableRng;
@@ -22,8 +21,8 @@ mod tests {
     use zerok_lib::{set_hash::Hash, SetMerkleTree};
 
     use crate::nullifiers_merkle_tree::helpers::{
-        blake2b_elem, convert_vec_u64_into_vec_u8, hash_to_bytes, to_ethers_hash,
-        to_ethers_hash_bytes, to_ethers_nullifier,
+        convert_vec_u64_into_vec_u8, hash_to_bytes, to_ethers_hash, to_ethers_hash_bytes,
+        to_ethers_nullifier,
     };
     use jf_txn::structs::Nullifier;
     use zerok_lib::set_hash;
@@ -141,12 +140,12 @@ mod tests {
         // 2. Compare hashing
 
         // Manually hash with blake2 lib
-        let mut hasher = blake2::Blake2b::with_params(&[], &[], "AAPSet Branch".as_bytes());
-        hasher.update(&rust_packed);
-        let manual_hash = Hash::new(hasher.finalize().into_bytes());
+        // let mut hasher = blake2::Blake2b::with_params(&[], &[], "AAPSet Branch".as_bytes());
+        // hasher.update(&rust_packed);
+        // let manual_hash = Hash::new(hasher.finalize().into_bytes());
 
-        assert_eq!(manual_hash, hash);
-        println!("Hashing ok!");
+        // assert_eq!(manual_hash, hash);
+        // println!("Hashing ok!");
 
         // 3. Full contract call using branch_hash
 
@@ -175,39 +174,6 @@ mod tests {
 
         assert_eq!(res_u8_branch_hash, res_u8_branch_hash_with_updates);
         assert_eq!(res_u8_branch_hash, hash_bytes);
-    }
-
-    async fn check_hash_equality(size: usize, are_equal: bool) {
-        let client = get_funded_deployer().await.unwrap();
-        let contract = deploy(
-            client.clone(),
-            Path::new("./contracts/NullifiersMerkleTree"),
-        )
-        .await
-        .unwrap();
-
-        let contract = NullifiersMerkleTree::new(contract.address(), client);
-
-        let input: Vec<u8> = vec![3; size];
-        let rust_hash = blake2b_elem(&input);
-
-        let res_u64: Vec<u64> = contract.elem_hash(input).call().await.unwrap().into();
-
-        let solidity_hash = convert_vec_u64_into_vec_u8(res_u64);
-
-        assert_eq!(rust_hash == solidity_hash, are_equal);
-    }
-
-    #[tokio::test]
-    async fn test_showing_different_behaviour_between_blake2b_rust_and_blake2b_solidity() {
-        // This test shows that the implementations of blake2b in rust and solidity are not equivalent:
-        // They match when the size of the input is less or equal to 128 bytes and differ otherwise.
-
-        check_hash_equality(50, true).await;
-        check_hash_equality(60, true).await;
-        check_hash_equality(128, true).await;
-        check_hash_equality(129, false).await;
-        check_hash_equality(255, false).await;
     }
 
     #[tokio::test]

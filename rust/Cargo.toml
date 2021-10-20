@@ -10,14 +10,18 @@ doctest = false
 ethers.git = "https://github.com/gakonst/ethers-rs"
 ethers.rev = "071a41605ba2a9bffbf618921534ba5e0121f9d8"
 # ethers.rev = "fb4d9a9ef1cc9df340023d61a6885693a6a6fcf5" # NOTE: breaks compiliation
-
 jf-txn.git = "ssh://git@gitlab.com/translucence/crypto/jellyfish.git"
 jf-txn.rev = "6c88a961f6ad142501e577d91dbf39f5c58bc1f6"
 jf-utils.git = "ssh://git@gitlab.com/translucence/crypto/jellyfish.git"
 jf-utils.rev = "6c88a961f6ad142501e577d91dbf39f5c58bc1f6"
 
 zerok_lib.git = "ssh://git@gitlab.com/translucence/systems/system.git"
-zerok_lib.rev = "cfc5d7a8b09adcfee1134153fe658587b3c7cdbd" # disable branch tags in branch hash
+zerok_lib.rev = "1a76733a1397390065cd13243e035f4249fc17b5" # use keccak256 hash function
+
+# TODO: remove
+# keeping this here because will likely require more hacking
+# [patch."ssh://git@gitlab.com/translucence/systems/system.git"]
+# zerok_lib = { path = "../../system/zerok/zerok_lib" }
 
 itertools = "0.10.1" # needed for jf-txn to compile
 ark-std = "0.3.0"
@@ -38,6 +42,7 @@ rand_chacha = "0.3.1"
 hex-literal = "0.3.1"
 byteorder = "1.4.3"
 blake2 = "0.9.1"
+tiny-keccak = { version = "2.0.2", features = ["keccak"] }
 
 [dev-dependencies]
 proptest = "1.0.0"

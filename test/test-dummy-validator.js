@@ -39,7 +39,7 @@ describe("Dummy Validator" + "", function () {
     });
 
     it("Works with merkle tree update (Starkware)", async function () {
-      const expected_gas_array = ["119726", "20007024", "19953065"];
+      const expected_gas_array = ["119726", "4289598", "4232849"];
 
       for (let i = 0; i < fun_to_eval.length; i++) {
         await check_gas(
@@ -53,7 +53,7 @@ describe("Dummy Validator" + "", function () {
     });
 
     it("Works with merkle tree update (NO Starkware)", async function () {
-      const expected_gas_array = ["121714", "22733356", "22679495"];
+      const expected_gas_array = ["121714", "6527852", "6471202"];
 
       for (let i = 0; i < fun_to_eval.length; i++) {
         await check_gas(

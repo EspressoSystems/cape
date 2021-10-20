@@ -2,7 +2,6 @@
 pragma solidity ^0.8.0;
 
 import {Curve} from "./BN254.sol";
-import {CKBCrypto} from "./blake2/libraries/CKBCrypto.sol";
 import {Rescue} from "./Rescue.sol";
 
 contract DummyValidator {
@@ -65,7 +64,7 @@ contract DummyValidator {
             string memory left = "a";
             string memory right = "b";
 
-            CKBCrypto.digest(abi.encodePacked(left, right, new bytes(64)), 64);
+            return keccak256(abi.encodePacked(left, right, new bytes(64)));
         }
 
         return 0;

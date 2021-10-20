@@ -13,6 +13,7 @@ describe("Nullifiers Merkle tree", function () {
     let _res = await nf_merkle_tree.callStatic.elem_hash(10000);
   });
 
+  // TODO unskip this test
   it.skip("should compute the terminal node value", async function () {
     const [owner] = await ethers.getSigners();
 

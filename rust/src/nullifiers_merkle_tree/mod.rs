@@ -34,6 +34,7 @@ mod tests {
         let contract = deploy(
             client.clone(),
             Path::new("./contracts/NullifiersMerkleTree"),
+            (),
         )
         .await
         .unwrap();
@@ -65,6 +66,7 @@ mod tests {
         let contract = deploy(
             client.clone(),
             Path::new("./contracts/NullifiersMerkleTree"),
+            (),
         )
         .await
         .unwrap();
@@ -95,6 +97,7 @@ mod tests {
         let contract = deploy(
             client.clone(),
             Path::new("./contracts/NullifiersMerkleTree"),
+            (),
         )
         .await
         .unwrap();
@@ -135,6 +138,7 @@ mod tests {
         let contract = deploy(
             client.clone(),
             Path::new("./contracts/NullifiersMerkleTree"),
+            (),
         )
         .await
         .unwrap();
@@ -165,6 +169,7 @@ mod tests {
         let contract = deploy(
             client.clone(),
             Path::new("./contracts/NullifiersMerkleTree"),
+            (),
         )
         .await
         .unwrap();
@@ -184,18 +189,14 @@ mod tests {
 
         println!("{:?}", tree);
 
-        let _res: Vec<u8> = contract
+        let res: Vec<u8> = contract
             .terminal_node_value(ethers_node)
             .call()
             .await
             .unwrap()
             .into();
 
-        // TODO uncomment
-        // assert_eq!(
-        //     res,
-        //     hash_to_bytes(&tree.hash())
-        // );
+        assert_eq!(res, hash_to_bytes(&tree.hash()));
     }
 
     fn test_merkle_tree_set(updates: Vec<u16>, checks: Vec<Result<u16, u8>>) {

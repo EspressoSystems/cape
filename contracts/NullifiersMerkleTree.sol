@@ -32,6 +32,19 @@ contract NullifiersMerkleTree {
         }
     }
 
+    function to_bool_array(bytes32 as_bytes)
+        public
+        view
+        returns (bool[N] memory bitvec)
+    {
+        for (uint256 i = 0; i < N; i++) {
+            uint256 byte_idx = i / 8;
+            bytes1 b = as_bytes[byte_idx];
+            uint8 shift = 7 - uint8(i % 8);
+            bitvec[i] = uint8(b >> shift) % 2 == 1;
+        }
+    }
+
     function terminalNodeValueNonEmpty(TerminalNode memory node)
         public
         view
@@ -40,11 +53,10 @@ contract NullifiersMerkleTree {
         bytes32 element_hash = elem_hash(node.elem);
         bytes32 running_hash = leaf_hash(node.elem);
 
+        bool[256] memory sibblings = to_bool_array(element_hash);
+
         for (uint256 i = 0; i < node.height; i++) {
-            uint256 limb_idx = i / 64;
-            uint256 bit_idx = i % 64;
-            uint8 c = uint8((element_hash[limb_idx] >> bit_idx));
-            bool sib_is_left = (c % 2) == 1;
+            bool sib_is_left = sibblings[i];
 
             if (sib_is_left) {
                 running_hash = branch_hash(EMPTY_HASH, running_hash);

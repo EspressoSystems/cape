@@ -40,9 +40,8 @@ contract NullifiersMerkleTree {
         for (uint256 i = 0; i < N; i++) {
             uint256 byte_idx = i / 8;
             bytes1 b = as_bytes[byte_idx];
-            uint8 shift = 7 - uint8(i % 8);
-            uint256 target_index = (i / 8) * 8 + 8 - (i % 8) - 1; // Each chunk of eight bits must be reversed
-            bitvec[target_index] = uint8(b >> shift) % 2 == 1;
+            uint8 shift = uint8(i % 8);
+            bitvec[i] = uint8(b >> shift) % 2 == 1;
         }
     }
 

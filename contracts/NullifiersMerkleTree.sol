@@ -141,21 +141,6 @@ contract NullifiersMerkleTree {
         bytes32 running_hash = leaf_hash(node.elem);
 
         bool[256] memory sibblings = to_bool_array(element_hash);
-        string memory bits = "";
-        for (uint256 j = 0; j < 256; j++) {
-            if (j % 8 == 0) {
-                bits = string(abi.encodePacked(bits, " "));
-            }
-
-            if (sibblings[j]) {
-                bits = string(abi.encodePacked(bits, "1"));
-            } else {
-                bits = string(abi.encodePacked(bits, "0"));
-            }
-        }
-
-        console.log("Hola");
-        console.log(bits);
 
         for (uint256 i = 0; i < node.height; i++) {
             bool sib_is_left = sibblings[i];

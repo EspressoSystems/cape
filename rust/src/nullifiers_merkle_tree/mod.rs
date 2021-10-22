@@ -11,7 +11,7 @@ abigen!(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ethereum::{deploy, get_funded_deployer};
+    use crate::ethereum;
     use ethers::prelude::*;
 
     use rand::SeedableRng;
@@ -27,20 +27,23 @@ mod tests {
     use std::convert::TryInto;
     use zerok_lib::set_hash;
 
-    #[tokio::test]
-    async fn test_keccak_elem() {
-        // TODO refactor creation of contract to avoid code duplication.
-        let client = get_funded_deployer().await.unwrap();
-        let contract = deploy(
+    async fn get_contract() -> NullifiersMerkleTree<
+        SignerMiddleware<Provider<Http>, Wallet<ethers::core::k256::ecdsa::SigningKey>>,
+    > {
+        let client = ethereum::get_funded_deployer().await.unwrap();
+        let contract = ethereum::deploy(
             client.clone(),
             Path::new("./contracts/NullifiersMerkleTree"),
             (),
         )
         .await
         .unwrap();
+        NullifiersMerkleTree::new(contract.address(), client)
+    }
 
-        let contract = NullifiersMerkleTree::new(contract.address(), client);
-
+    #[tokio::test]
+    async fn test_keccak_elem() {
+        let contract = get_contract().await;
         let mut prng = ChaChaRng::from_seed([0u8; 32]);
 
         let input = Nullifier::random_for_test(&mut prng);
@@ -61,17 +64,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_keccak_leaf() {
-        // TODO refactor creation of contract to avoid code duplication.
-        let client = get_funded_deployer().await.unwrap();
-        let contract = deploy(
-            client.clone(),
-            Path::new("./contracts/NullifiersMerkleTree"),
-            (),
-        )
-        .await
-        .unwrap();
-
-        let contract = NullifiersMerkleTree::new(contract.address(), client);
+        let contract = get_contract().await;
 
         let mut prng = ChaChaRng::from_seed([0u8; 32]);
 
@@ -93,16 +86,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_keccak_branch() {
-        let client = get_funded_deployer().await.unwrap();
-        let contract = deploy(
-            client.clone(),
-            Path::new("./contracts/NullifiersMerkleTree"),
-            (),
-        )
-        .await
-        .unwrap();
-
-        let contract = NullifiersMerkleTree::new(contract.address(), client);
+        let contract = get_contract().await;
 
         let mut prng = ChaChaRng::from_seed([0u8; 32]);
 
@@ -133,17 +117,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_terminal_node_value_empty() {
-        // TODO refactor creation of contract to avoid code duplication.
-        let client = get_funded_deployer().await.unwrap();
-        let contract = deploy(
-            client.clone(),
-            Path::new("./contracts/NullifiersMerkleTree"),
-            (),
-        )
-        .await
-        .unwrap();
-
-        let contract = NullifiersMerkleTree::new(contract.address(), client);
+        let contract = get_contract().await;
 
         let rust_value = SetMerkleTree::EmptySubtree.hash();
         let ethers_node = TerminalNode {
@@ -164,17 +138,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_terminal_node_value_non_empty() {
-        // TODO refactor creation of contract to avoid code duplication.
-        let client = get_funded_deployer().await.unwrap();
-        let contract = deploy(
-            client.clone(),
-            Path::new("./contracts/NullifiersMerkleTree"),
-            (),
-        )
-        .await
-        .unwrap();
-
-        let contract = NullifiersMerkleTree::new(contract.address(), client);
+        let contract = get_contract().await;
 
         let mut prng = ChaChaRng::from_seed([0u8; 32]);
         let nullifier = Nullifier::random_for_test(&mut prng);

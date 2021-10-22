@@ -16,13 +16,8 @@ jf-utils.git = "ssh://git@gitlab.com/translucence/crypto/jellyfish.git"
 jf-utils.rev = "6c88a961f6ad142501e577d91dbf39f5c58bc1f6"
 
 zerok_lib.git = "ssh://git@gitlab.com/translucence/systems/system.git"
-zerok_lib.rev = "b53f5d83a01724f9e54043a9d96d592f65296f94" # Make SetMerkleTerminalNode::value() public
-
-# TODO: remove
-# keeping this here because will likely require more hacking
-# [patch."ssh://git@gitlab.com/translucence/systems/system.git"]
-# zerok_lib = { path = "../../system/zerok/zerok_lib" }
-
+zerok_lib.rev = "30202069dc2faeee85da4f86748056e0b733475b" # Make proof.path public
+#
 itertools = "0.10.1" # needed for jf-txn to compile
 ark-std = "0.3.0"
 serde_json = "1.0.67"
@@ -44,3 +39,8 @@ tiny-keccak = { version = "2.0.2", features = ["keccak"] }
 
 [dev-dependencies]
 proptest = "1.0.0"
+
+# TODO: remove
+# keeping this here because will likely require more hacking
+# [patch."ssh://git@gitlab.com/translucence/systems/system.git"]
+# zerok_lib = { path = "../../system/zerok/zerok_lib" }

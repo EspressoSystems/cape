@@ -34,14 +34,15 @@ contract NullifiersMerkleTree {
 
     function to_bool_array(bytes32 as_bytes)
         public
-        view
+        pure
         returns (bool[N] memory bitvec)
     {
         for (uint256 i = 0; i < N; i++) {
             uint256 byte_idx = i / 8;
             bytes1 b = as_bytes[byte_idx];
             uint8 shift = 7 - uint8(i % 8);
-            bitvec[i] = uint8(b >> shift) % 2 == 1;
+            uint256 target_index = (i / 8) * 8 + 8 - (i % 8) - 1; // Each chunk of eight bits must be reversed
+            bitvec[target_index] = uint8(b >> shift) % 2 == 1;
         }
     }
 
@@ -54,6 +55,21 @@ contract NullifiersMerkleTree {
         bytes32 running_hash = leaf_hash(node.elem);
 
         bool[256] memory sibblings = to_bool_array(element_hash);
+        string memory bits = "";
+        for (uint256 j = 0; j < 256; j++) {
+            if (j % 8 == 0) {
+                bits = string(abi.encodePacked(bits, " "));
+            }
+
+            if (sibblings[j]) {
+                bits = string(abi.encodePacked(bits, "1"));
+            } else {
+                bits = string(abi.encodePacked(bits, "0"));
+            }
+        }
+
+        console.log("Hola");
+        console.log(bits);
 
         for (uint256 i = 0; i < node.height; i++) {
             bool sib_is_left = sibblings[i];

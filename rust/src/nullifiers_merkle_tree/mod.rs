@@ -26,6 +26,7 @@ mod tests {
     use jf_txn::structs::Nullifier;
     use std::convert::TryInto;
     use zerok_lib::set_hash;
+    use zerok_lib::SetMerkleTerminalNode::Leaf;
 
     #[tokio::test]
     async fn test_keccak_elem() {
@@ -179,15 +180,17 @@ mod tests {
         let mut prng = ChaChaRng::from_seed([0u8; 32]);
         let nullifier = Nullifier::random_for_test(&mut prng);
 
-        let mut tree = SetMerkleTree::default();
-        tree.insert(nullifier);
         let ethers_node = TerminalNode {
             is_empty_subtree: false,
             height: U256::from(256),
             elem: to_ethers_nullifier(nullifier),
         };
 
-        println!("{:?}", tree);
+        let terminal_node = Leaf {
+            height: 256,
+            elem: nullifier,
+        };
+        let terminal_node_value = terminal_node.value();
 
         let res: Vec<u8> = contract
             .terminal_node_value(ethers_node)
@@ -196,7 +199,7 @@ mod tests {
             .unwrap()
             .into();
 
-        assert_eq!(res, hash_to_bytes(&tree.hash()));
+        assert_eq!(res, hash_to_bytes(&terminal_node_value));
     }
 
     fn test_merkle_tree_set(updates: Vec<u16>, checks: Vec<Result<u16, u8>>) {

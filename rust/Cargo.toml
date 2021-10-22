@@ -9,14 +9,14 @@ doctest = false
 [dependencies]
 ethers.git = "https://github.com/gakonst/ethers-rs"
 ethers.rev = "071a41605ba2a9bffbf618921534ba5e0121f9d8"
-# ethers.rev = "fb4d9a9ef1cc9df340023d61a6885693a6a6fcf5" # NOTE: breaks compiliation
+# ethers.rev = "fb4d9a9ef1cc9df340023d61a6885693a6a6fcf5" # NOTE: breaks compilation
 jf-txn.git = "ssh://git@gitlab.com/translucence/crypto/jellyfish.git"
 jf-txn.rev = "6c88a961f6ad142501e577d91dbf39f5c58bc1f6"
 jf-utils.git = "ssh://git@gitlab.com/translucence/crypto/jellyfish.git"
 jf-utils.rev = "6c88a961f6ad142501e577d91dbf39f5c58bc1f6"
 
 zerok_lib.git = "ssh://git@gitlab.com/translucence/systems/system.git"
-zerok_lib.rev = "1a76733a1397390065cd13243e035f4249fc17b5" # use keccak256 hash function
+zerok_lib.rev = "b53f5d83a01724f9e54043a9d96d592f65296f94" # Make SetMerkleTerminalNode::value() public
 
 # TODO: remove
 # keeping this here because will likely require more hacking

@@ -34,7 +34,7 @@ describe("Nullifiers Merkle tree", function () {
       const bytes = Array(32).fill(0);
       bytes[31] = 1;
       expected = Array(256).fill(false);
-      expected[255] = true;
+      expected[248] = true;
       expect(await contract.to_bool_array(bytes)).to.deep.equal(expected);
     });
 
@@ -42,7 +42,7 @@ describe("Nullifiers Merkle tree", function () {
       const bytes = Array(32).fill(0);
       bytes[0] = 128;
       expected = Array(256).fill(false);
-      expected[0] = true;
+      expected[7] = true;
       expect(await contract.to_bool_array(bytes)).to.deep.equal(expected);
     });
 
@@ -50,7 +50,7 @@ describe("Nullifiers Merkle tree", function () {
       const bytes = Array(32).fill(0);
       bytes[0] = 64;
       expected = Array(256).fill(false);
-      expected[1] = true;
+      expected[6] = true;
       expect(await contract.to_bool_array(bytes)).to.deep.equal(expected);
     });
 
@@ -58,7 +58,7 @@ describe("Nullifiers Merkle tree", function () {
       const bytes = Array(32).fill(0);
       bytes[1] = 128;
       expected = Array(256).fill(false);
-      expected[8] = true;
+      expected[15] = true;
       expect(await contract.to_bool_array(bytes)).to.deep.equal(expected);
     });
 
@@ -68,9 +68,16 @@ describe("Nullifiers Merkle tree", function () {
       for (const byte of bytes) {
         const bits = byte.toString(2).padStart(8, "0");
         const arr = Array.from(bits).map((s) => Boolean(Number(s)));
-        bytes_as_bits.push(arr);
+        // Reverse the order of the bits
+        let arr_rev = [];
+        for (j = 0; j < 8; j++) {
+          arr_rev[j] = arr[7 - j];
+        }
+
+        bytes_as_bits.push(arr_rev);
       }
       const bits = [].concat(...bytes_as_bits);
+
       expect(await contract.to_bool_array(bytes)).to.deep.equal(bits);
     });
   });

@@ -286,6 +286,38 @@ mod tests {
         assert_eq!(res, MembershipCheckResult::RootMismatch);
     }
 
+    #[tokio::test]
+    async fn test_set_merkle_lw_multi_insert() {
+        let contract = get_contract().await;
+
+        let mut prng = ChaChaRng::from_seed([0u8; 32]);
+        const N: usize = 2;
+        let mut t = zerok_lib::SetMerkleTree::default();
+        let mut nullifiers = vec![];
+        for _ in 0..N {
+            let null = Nullifier::random_for_test(&mut prng);
+            nullifiers.push(null);
+        }
+
+        for i in 0..N {
+            let null = nullifiers[i];
+            t.insert(null);
+
+            contract
+                .insert(to_ethers_nullifier(null))
+                .legacy()
+                .send()
+                .await
+                .unwrap();
+        }
+
+        // Compare roots
+        let root = t.hash();
+        let root_contract: Vec<u8> = contract.get_root_value().call().await.unwrap().into();
+
+        assert_eq!(hash_to_bytes(&root), root_contract);
+    }
+
     // #[tokio::test]
     // async fn test_is_elem_not_in_set_non_empty() {
     //     let contract = get_contract().await;

@@ -15,7 +15,7 @@ describe("Nullifiers Merkle tree", function () {
     let _res = await contract.callStatic.elem_hash(10000);
   });
 
-  describe("bitvec", function () {
+  describe.skip("bitvec", function () {
     it("works for zeros", async function () {
       const bytes = Array(32).fill(0);
       expect(await contract.to_bool_array(bytes)).to.deep.equal(
@@ -80,6 +80,14 @@ describe("Nullifiers Merkle tree", function () {
 
       expect(await contract.to_bool_array(bytes)).to.deep.equal(bits);
     });
+  });
+
+  it("allows to insert nullifiers in the tree", async function () {
+    let tx = await contract.insert(ethers.utils.randomBytes(32));
+    const txReceipt = await tx.wait();
+
+    const gasUsed = txReceipt.gasUsed.toString();
+    console.log("gas used: " + gasUsed);
   });
 
   // TODO unskip this test

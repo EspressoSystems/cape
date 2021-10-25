@@ -16,3 +16,8 @@ cache
 # rust
 Cargo.lock
 target/
+
+# python / brownie
+build/
+__pycache__/
+*.py[cod]

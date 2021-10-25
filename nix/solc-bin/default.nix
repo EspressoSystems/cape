@@ -24,6 +24,9 @@ stdenv.mkDerivation {
 
   installPhase = ''
     install -Dm755 $src $out/bin/solc
+
+    # Also expose solc-vA.B.C for tools that rely on the version scheme
+    ln -s $out/bin/{solc,solc-v${version}}
   '';
 
   meta = with lib; {

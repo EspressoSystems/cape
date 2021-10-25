@@ -233,6 +233,37 @@ in the nix-shell development environment.
 
 Use any poetry command e. g. `poetry add --dev ipython` to add packages.
 
+### Interacting with contracts from python
+The ethereum development suite [eth-brownie](https://eth-brownie.readthedocs.io)
+provides some interactive tools and makes it convenient to test the contracts
+with python code.
+
+#### Usage
+Note: brownie currently only works with the hardhat node (but not with the geth
+node). If the geth node is running it will try to connect to it and hang. If
+brownie doesn't find something listening on port 8545 it will try starting a
+node and connect to that instead.
+
+Optionally start a hardhat node in a separate terminal
+
+    hardhat node
+
+Run an interactive console
+
+    brownie console
+    >>> dir()
+    >>> help(Greeter.deploy)
+    >>> contract = Greeter.deploy("Hi!", {'from': accounts[0]})
+    >>> contract.greet()
+    'Hi!'
+
+To run the python tests in [./test](./test) run
+
+    brownie test --network hardhat
+
+This will start a hardhat node and run the tests against it. If there is already
+a node running on `host:port` brownie will try to connect to that instead.
+
 # Benchmarks
 
 The smart contract `DummyVerifier.sol` simulates the most expensive (in gas) operations of an AAP verifier.

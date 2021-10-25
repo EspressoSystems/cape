@@ -8,11 +8,14 @@ let
 
   pre-commit-check = pkgs.callPackage ./nix/precommit.nix { };
   mySolc = pkgs.callPackage ./nix/solc-bin { version = "0.8.4"; };
+  pythonEnv = pkgs.poetry2nix.mkPoetryEnv {
+    projectDir = ./.;
+    overrides = pkgs.poetry2nix.overrides.withDefaults
+      (import ./nix/poetryOverrides.nix { inherit pkgs; });
+  };
   myPython = with pkgs; [
     poetry
-    (poetry2nix.mkPoetryEnv {
-      projectDir = ./.;
-    })
+    pythonEnv
   ];
   myRustShell = import ./rust/shell.nix { inherit pkgs; };
 in
@@ -35,6 +38,11 @@ mkShell
   ++ myPython
   ++ myRustShell.buildInputs;
 
+  SOLCX_BINARY_PATH = "${mySolc}/bin";
+  SOLC_VERSION = mySolc.version;
+  SOLC_PATH = "${mySolc}/bin/solc";
+  SOLC_OPTIMIZER_RUNS = "1000";
+
   shellHook = ''
 
     if [ ! -f .env ]; then
@@ -45,8 +53,6 @@ mkShell
     echo "Exporting all vars in .env file"
     set -a; source .env; set +a;
 
-    export SOLC_VERSION=${mySolc.version}
-    export SOLC_PATH=${mySolc}/bin/solc
     export PATH=$(pwd)/bin:$(pwd)/node_modules/.bin:$PATH
 
     # install pre-commit hooks

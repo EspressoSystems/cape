@@ -3,9 +3,7 @@ pragma solidity ^0.8.0;
 
 import {Curve as C} from "./BN254.sol";
 
-contract TestBN254 {
-    using C for *;
-
+contract testBN254 {
     constructor() public {}
 
     // TODO can we avoid duplicating C. everywhere?

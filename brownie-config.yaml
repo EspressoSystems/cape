@@ -1,0 +1,18 @@
+project_structure:
+    # match hardhat
+    tests: test
+
+compiler:
+    solc:
+        version: ${SOLC_VERSION}
+        optimizer:
+            enabled: true
+            runs: ${SOLC_OPTIMIZER_RUNS}
+
+        # To find hardhat's console.log
+        remappings:
+          - hardhat=node_modules/hardhat/
+networks:
+    default: hardhat
+    development:
+        gas_price: 2_000_000_000

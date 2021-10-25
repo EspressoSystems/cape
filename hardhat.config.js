@@ -96,7 +96,7 @@ module.exports = {
     settings: {
       optimizer: {
         enabled: true,
-        runs: 1000,
+        runs: Number(process.env.SOLC_OPTIMIZER_RUNS),
       },
     },
   },

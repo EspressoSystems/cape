@@ -12,6 +12,9 @@ contract DummyValidator {
     uint256 N_OUTPUTS = 5; // Number of AAP outputs per transactions of roughly 3 KB
     uint256 dummy_var = 1; // Just to avoid compilers warnings
 
+    // Store directly the nullifiers to test for non membership and insert
+    mapping(bytes => bool) nullifiers_store;
+
     function verify_empty(
         bytes memory chunk,
         bool merkle_trees_update,
@@ -162,6 +165,25 @@ contract DummyValidator {
                 Curve.G1Point memory p2 = Curve.g1add(g1, g1);
                 assert(p2.X == p2.X); // Just to avoid compiler warning
             }
+        }
+    }
+
+    ////////////////////// Nullifiers handling experiments /////////////////////////////////////////////////////////////
+
+    /// Dummy function which purpose is to measure how much gas is needed to send the nullifiers non-membership proofs to the contract
+    function multi_insert(
+        bytes32[] calldata path,
+        bytes[] calldata nullifiers,
+        bytes32 new_root
+    ) public {}
+
+    /// Dummy function which purpose is to measure how much gas is needed to send the nullifiers non-membership proofs to the contract
+    function nullifier_check_insert(bytes[] calldata nullifiers) public {
+        bytes memory nullifier_to_check;
+        for (uint256 i = 0; i < nullifiers.length; i++) {
+            nullifier_to_check = nullifiers[i];
+            assert(!nullifiers_store[nullifier_to_check]);
+            nullifiers_store[nullifier_to_check] = true;
         }
     }
 }

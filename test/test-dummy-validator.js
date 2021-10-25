@@ -38,7 +38,7 @@ describe("Dummy Validator" + "", function () {
       fun_to_eval = [dpv.verify_empty, dpv.verify, dpv.batch_verify];
     });
 
-    it("Works with merkle tree update (Starkware)", async function () {
+    it.skip("Works with merkle tree update (Starkware)", async function () {
       const expected_gas_array = ["119726", "8436088", "8380305"];
 
       for (let i = 0; i < fun_to_eval.length; i++) {
@@ -52,7 +52,7 @@ describe("Dummy Validator" + "", function () {
       }
     });
 
-    it("Works with merkle tree update (NO Starkware)", async function () {
+    it.skip("Works with merkle tree update (NO Starkware)", async function () {
       const expected_gas_array = ["121714", "10843220", "10787535"];
 
       for (let i = 0; i < fun_to_eval.length; i++) {
@@ -66,7 +66,7 @@ describe("Dummy Validator" + "", function () {
       }
     });
 
-    it("Works with without merkle tree update)", async function () {
+    it.skip("Works with without merkle tree update)", async function () {
       const expected_gas_array = ["121702", "762259", "705278"];
 
       for (let i = 0; i < fun_to_eval.length; i++) {
@@ -80,7 +80,7 @@ describe("Dummy Validator" + "", function () {
       }
     });
 
-    it("Batch verifier is more efficient than simple verifier when there are enough transactions", async function () {
+    it.skip("Batch verifier is more efficient than simple verifier when there are enough transactions", async function () {
       const expected_gas_array = ["170243", "1133123", "1007780"];
 
       const N_AAPTX = 3;
@@ -99,6 +99,68 @@ describe("Dummy Validator" + "", function () {
       // Batch verification is faster than simple verification
       expect(parseInt(expected_gas_array[2])).lt(
         parseInt(expected_gas_array[1])
+      );
+    });
+
+    it("measures how much it costs to send the nullifiers proofs to the smart contract in order to update the Merkle root", async function () {
+      const DPV = await ethers.getContractFactory("DummyValidator");
+      const dpv = await DPV.deploy();
+
+      // Polling interval in ms.
+      dpv.provider.pollingInterval = 20;
+
+      await dpv.deployed();
+
+      let N_NULLIFIERS = 4; // Equal to the number of inputs
+      let NULLIFIERS_MERKLE_TREE_HEIGHT = 256;
+
+      let hash_value = ethers.utils.randomBytes(32);
+
+      let nullifiers_proofs = [];
+      for (let i = 0; i < N_NULLIFIERS * NULLIFIERS_MERKLE_TREE_HEIGHT; i++) {
+        nullifiers_proofs.push(hash_value);
+      }
+
+      let nullifiers = [];
+      for (let i = 0; i < N_NULLIFIERS; i++) {
+        nullifiers.push(hash_value);
+      }
+
+      let new_root = hash_value;
+
+      let tx = await dpv.multi_insert(nullifiers_proofs, nullifiers, new_root);
+      const txReceipt = await tx.wait();
+
+      const gasUsed = txReceipt.gasUsed;
+
+      expect(gasUsed).gt(500000);
+    });
+
+    it("measures how much it costs to store directly the list of nullifiers inside the contract", async function () {
+      const DPV = await ethers.getContractFactory("DummyValidator");
+      const dpv = await DPV.deploy();
+
+      // Polling interval in ms.
+      dpv.provider.pollingInterval = 20;
+
+      await dpv.deployed();
+
+      let N_NULLIFIERS = 4; // Equal to the number of inputs
+
+      let nullifiers = [];
+      for (let i = 0; i < N_NULLIFIERS; i++) {
+        let value = ethers.utils.randomBytes(32);
+        nullifiers.push(value);
+      }
+
+      let tx = await dpv.nullifier_check_insert(nullifiers);
+      let txReceipt = await tx.wait();
+      const gasUsed = txReceipt.gasUsed;
+      expect(gasUsed).lt(120000);
+
+      // The transaction is reverted because the nullifiers are already inserted
+      await expect(dpv.nullifier_check_insert(nullifiers)).to.be.revertedWith(
+        ""
       );
     });
   });

@@ -12,10 +12,12 @@ mkShell {
     pkgconfig
     openssl
 
-    rustc
-    cargo
+    # from oxalica rust overlay
+    rust-bin.stable.latest.default
+
     cargo-edit
     cargo-watch
+
   ] ++ lib.optionals stdenv.isDarwin [
     # required to compile ethers-rs
     darwin.apple_sdk.frameworks.Security

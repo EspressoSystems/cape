@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+make-doc
+lint-ci
+cape-test-geth
+brownie test --network hardhat
+
+echo Ok!

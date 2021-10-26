@@ -13,6 +13,7 @@ compiler:
     remappings:
       - "hardhat=node_modules/hardhat"
       - "@openzeppelin=node_modules/@openzeppelin"
+      - "solidity-bytes-utils=node_modules/solidity-bytes-utils"
 
 networks:
   default: hardhat

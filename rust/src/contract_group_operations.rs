@@ -1,8 +1,9 @@
 use ethers::prelude::U256;
 
-use crate::types::{G1Point, G2Point};
-
-use crate::{G1Ark, G1Ethers, G2Ark, G2Ethers};
+use crate::{
+    types::{G1Point, G2Point},
+    G1Ark, G1Ethers, G2Ark, G2Ethers,
+};
 
 impl From<G1Ark> for G1Point {
     fn from(point: G1Ark) -> Self {
@@ -52,17 +53,27 @@ mod tests {
 
     use crate::{
         ethereum::{deploy, get_funded_deployer},
+        to_ethers,
         types::TestBN254,
         G1Affine, G1Ark, G1Projective, G2Affine, G2Ark, G2Projective, Zero,
     };
+    use ark_bn254::Fr;
     use ark_ec::AffineCurve;
 
+    use anyhow::Result;
+    use ark_ff::PrimeField;
     use ark_std::UniformRand;
-    use ethers::prelude::Middleware;
+    use ethers::{
+        core::k256::ecdsa::SigningKey,
+        prelude::{Http, Middleware, Provider, SignerMiddleware, Wallet},
+    };
+    use itertools::Itertools;
+    use jf_utils::to_bytes;
+
     use std::{ops::Neg, path::Path};
 
-    #[tokio::test]
-    async fn test_add_mul_g1_group_elements_in_contract() {
+    async fn deploy_contract(
+    ) -> Result<TestBN254<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>> {
         let client = get_funded_deployer().await.unwrap();
         let contract = deploy(
             client.clone(),
@@ -71,7 +82,12 @@ mod tests {
         )
         .await
         .unwrap();
-        let contract = TestBN254::new(contract.address(), client);
+        Ok(TestBN254::new(contract.address(), client))
+    }
+
+    #[tokio::test]
+    async fn test_add_mul_g1_group_elements_in_contract() {
+        let contract = deploy_contract().await.unwrap();
 
         async fn add<M: Middleware>(contract: &TestBN254<M>, a: G1Affine, b: G1Affine) -> G1Affine {
             let res: G1Point = contract
@@ -131,15 +147,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_pairing_check_in_contract() {
-        let client = get_funded_deployer().await.unwrap();
-        let contract = deploy(
-            client.clone(),
-            Path::new("../artifacts/contracts/TestBN254.sol/TestBN254"),
-            (),
-        )
-        .await
-        .unwrap();
-        let contract = TestBN254::new(contract.address(), client);
+        let contract = deploy_contract().await.unwrap();
 
         async fn pairing_check<M: Middleware>(
             contract: &TestBN254<M>,
@@ -200,5 +208,73 @@ mod tests {
             pairing_check(&contract, &[g1_a, g1_b], &[g2_a, g2_b]).await,
             false
         );
+    }
+
+    #[tokio::test]
+    async fn test_g1_neg() {
+        let contract = deploy_contract().await.unwrap();
+        let mut rng = ark_std::test_rng();
+        let p: G1Affine = G1Projective::rand(&mut rng).into();
+        let ret: G1Point = contract
+            .g_1_neg(G1Ark(p).into())
+            .call()
+            .await
+            .unwrap()
+            .into();
+        assert_eq!(ret, G1Ark(p.neg()).into());
+    }
+
+    #[tokio::test]
+    async fn test_is_y_negative() {
+        let contract = deploy_contract().await.unwrap();
+        let mut rng = ark_std::test_rng();
+
+        for _ in 0..10 {
+            let p: G1Affine = G1Projective::rand(&mut rng).into();
+            let evm_is_negative: bool = contract
+                .is_y_negative(G1Ark(p).into())
+                .call()
+                .await
+                .unwrap();
+            let p_ark = G1Ark(p.neg()).0;
+            // https://github.com/arkworks-rs/algebra/blob/98f43af6cb0a4620b78dbb3f46d3c2794bbfc66f/ec/src/models/short_weierstrass_jacobian.rs#L776
+            let ark_is_positive = p_ark.y > -p_ark.y;
+            assert_eq!(evm_is_negative, !ark_is_positive);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_from_le_bytes_mod_order() {
+        async fn convert<M: Middleware>(contract: &TestBN254<M>, le_bytes: &[u8]) -> U256 {
+            let res: U256 = contract
+                .from_le_bytes_mod_order(le_bytes.to_vec().into())
+                .call()
+                .await
+                .unwrap();
+            res
+        }
+
+        let contract = deploy_contract().await.unwrap();
+
+        // works for zero
+        let zeroes: Vec<u8> = vec![48; 0];
+        let expected = to_ethers(Fr::from_le_bytes_mod_order(&zeroes));
+        let result = convert(&contract, &zeroes).await;
+        assert_eq!(expected, result);
+
+        let mut rng = ark_std::test_rng();
+
+        // works for a random field element
+        let rnd_field_elem = Fr::rand(&mut rng);
+        let rnd_bytes = to_bytes!(&rnd_field_elem).unwrap();
+        let expected = to_ethers(Fr::from_le_bytes_mod_order(&rnd_bytes));
+        let result = convert(&contract, &rnd_bytes).await;
+        assert_eq!(expected, result);
+
+        // works for a random 48 bytes
+        let rnd_bytes = (0..48).map(|_| u8::rand(&mut rng)).collect_vec();
+        let expected = to_ethers(Fr::from_le_bytes_mod_order(&rnd_bytes));
+        let result = convert(&contract, &rnd_bytes).await;
+        assert_eq!(expected, result);
     }
 }

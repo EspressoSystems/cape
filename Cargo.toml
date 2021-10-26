@@ -4,4 +4,3 @@ members = [
     "rust",
     "doc/workflow",
 ]
-

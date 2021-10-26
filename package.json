@@ -45,6 +45,7 @@
     "prettier-plugin-solidity": "^1.0.0-beta.19",
     "solc-0.8": "npm:solc@^0.8.10",
     "solhint": "^3.3.6",
+    "solidity-bytes-utils": "0.8.0",
     "solidity-docgen": "^0.5.16",
     "sort-package-json": "^1.53.1",
     "ts-node": "^10.4.0",

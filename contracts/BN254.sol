@@ -16,8 +16,9 @@ library Curve {
     // p = p(u) = 36u^4 + 36u^3 + 24u^2 + 6u + 1
     uint256 internal constant FIELD_ORDER =
         0x30644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd47;
+    uint256 internal constant Y_ZERO_THRESHOLD = FIELD_ORDER / 2;
 
-    // Number of elements in the field (often called `q`)
+    // Number of elements in the field (often called `q` or `Modulus`)
     // n = n(u) = 36u^4 + 36u^3 + 18u^2 + 6u + 1
     uint256 internal constant GEN_ORDER =
         0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001;
@@ -162,7 +163,7 @@ library Curve {
     /// @return the negation of p, i.e. p.add(p.negate()) should be zero.
     function g1neg(G1Point memory p) internal returns (G1Point memory) {
         // The prime q in the base field F_q for G1
-        uint256 q = 21888242871839275222246405745257275088696311157297823662689037894645226208583;
+        uint256 q = FIELD_ORDER;
         if (p.X == 0 && p.Y == 0) return G1Point(0, 0);
         return G1Point(p.X, q - (p.Y % q));
     }
@@ -258,5 +259,31 @@ library Curve {
         }
         require(success);
         return out[0] != 0;
+    }
+
+    /* solhint-enable */
+
+    function fromLeBytesModOrder(bytes memory leBytes)
+        internal
+        pure
+        returns (uint256 ret)
+    {
+        // TODO: Can likely be gas optimized by copying the first 31 bytes directly.
+        for (uint256 i = 0; i < leBytes.length; i++) {
+            ret = mulmod(ret, 256, GEN_ORDER);
+            ret = addmod(
+                ret,
+                uint256(uint8(leBytes[leBytes.length - 1 - i])),
+                GEN_ORDER
+            );
+        }
+    }
+
+    function isYNegative(G1Point memory point) internal pure returns (bool) {
+        return point.Y > Y_ZERO_THRESHOLD;
+    }
+
+    function isZero(G1Point memory point) internal pure returns (bool) {
+        return point.X == 0 && point.Y == 0;
     }
 }

@@ -9,6 +9,10 @@ abigen!(
     "../artifacts/contracts/TestRecordsMerkleTree.sol/TestRecordsMerkleTree/abi.json",
     event_derives(serde::Deserialize, serde::Serialize);
 
+    TestTranscript,
+    "../artifacts/contracts/TestTranscript.sol/TestTranscript/abi.json",
+    event_derives(serde::Deserialize, serde::Serialize);
+
     Greeter,
     "../artifacts/contracts/Greeter.sol/Greeter/abi.json",
     event_derives(serde::Deserialize, serde::Serialize);

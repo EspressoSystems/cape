@@ -12,6 +12,8 @@ mkShell {
     pkgconfig
     openssl
 
+    curl
+
     rustc
     cargo
     cargo-edit

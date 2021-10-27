@@ -3,6 +3,7 @@ lockfileVersion: 5.3
 specifiers:
   '@nomiclabs/hardhat-ethers': ^2.0.2
   '@nomiclabs/hardhat-waffle': ^2.0.1
+  '@openzeppelin/contracts': ^4.3.2
   '@summa-tx/memview-sol': ^2.0.0
   async: ^3.2.1
   async-child-process: ^1.1.1
@@ -18,6 +19,7 @@ specifiers:
   random-seed: ^0.3.0
 
 dependencies:
+  '@openzeppelin/contracts': 4.3.2
   '@summa-tx/memview-sol': 2.0.0
   async: 3.2.1
   async-child-process: 1.1.1
@@ -554,6 +556,10 @@ packages:
       ethers: 5.4.7
       hardhat: 2.6.4
     dev: true
+
+  /@openzeppelin/contracts/4.3.2:
+    resolution: {integrity: sha512-AybF1cesONZStg5kWf6ao9OlqTZuPqddvprc0ky7lrUVOjXeKpmQ2Y9FK+6ygxasb+4aic4O5pneFBfwVsRRRg==}
+    dev: false
 
   /@resolver-engine/core/0.3.3:
     resolution: {integrity: sha512-eB8nEbKDJJBi5p5SrvrvILn4a0h42bKtbCTri3ZxCGt6UvoQyp7HnGOfki944bUjBSHKK3RvgfViHn+kqdXtnQ==}

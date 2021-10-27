@@ -12,6 +12,7 @@
     "prettier-plugin-solidity": "^1.0.0-beta.18"
   },
   "dependencies": {
+    "@openzeppelin/contracts": "^4.3.2",
     "@summa-tx/memview-sol": "^2.0.0",
     "async": "^3.2.1",
     "async-child-process": "^1.1.1",

@@ -1,26 +1,41 @@
 const { ethers } = require("hardhat");
 const common = require("../lib/common");
+const bigDecimal = require("js-big-decimal");
 
 const N_AAPTX = 1;
 
-const GAS_PRICE = 223; // See https://legacy.ethgasstation.info/calculatorTxV.php
-const ETH_PRICE_USD = 3388;
+const ETH_PRICE_USD = 3962;
 
 async function compute_gas_and_price(
+  owner,
   fun_to_evaluate,
   chunk,
   merkle_trees_update,
   is_starkware
 ) {
+  // Balance before
+  let balance_before = await owner.getBalance();
+
   const tx = await fun_to_evaluate(chunk, merkle_trees_update, is_starkware);
   const txReceipt = await tx.wait();
-
   const gasUsed = txReceipt.gasUsed.toString();
-  const price = gasUsed * GAS_PRICE * 10 ** -9 * ETH_PRICE_USD;
+
+  // Balance after
+  let balance_after = await owner.getBalance();
+  let wei_cost = BigInt(balance_before) - BigInt(balance_after);
+
+  const WEI_PER_ETH = 10 ** 18;
+  const wei_cost_big_decimal = new bigDecimal(wei_cost.toString());
+  const eth_price_usd_big_decimal = new bigDecimal(ETH_PRICE_USD.toString());
+  const wei_per_eth_big_decimal = new bigDecimal(WEI_PER_ETH.toString());
+  const price = wei_cost_big_decimal
+    .multiply(eth_price_usd_big_decimal)
+    .divide(wei_per_eth_big_decimal);
   return [gasUsed, price];
 }
 
 async function print_report(
+  owner,
   title,
   fun_to_eval,
   fun_names,
@@ -33,13 +48,15 @@ async function print_report(
     let res;
     try {
       res = await compute_gas_and_price(
+        owner,
         fun_to_eval[i],
         chunk,
         merkle_tree_update,
         is_starkware
       );
       let gas = res[0] / N_AAPTX;
-      let price = res[1] / N_AAPTX;
+      let N_APPTX_BIG_DECIMAL = new bigDecimal(N_AAPTX);
+      let price = res[1].divide(N_APPTX_BIG_DECIMAL).getValue();
       console.log(
         fun_names[i] + ":  " + gas + " gas  ------ " + price + " USD "
       );
@@ -51,6 +68,7 @@ async function print_report(
 }
 
 async function main() {
+  const [owner] = await ethers.getSigners();
   let fun_to_eval, fun_names;
 
   const DPV = await ethers.getContractFactory("DummyVerifier");
@@ -69,6 +87,7 @@ async function main() {
   const chunk = common.create_chunk(N_AAPTX);
 
   await print_report(
+    owner,
     "NO Merkle tree update",
     fun_to_eval,
     fun_names,
@@ -78,6 +97,7 @@ async function main() {
   );
 
   await print_report(
+    owner,
     "Merkle tree update (Starkware)",
     fun_to_eval,
     fun_names,
@@ -87,6 +107,7 @@ async function main() {
   );
 
   await print_report(
+    owner,
     "Merkle tree update (NO Starkware)",
     fun_to_eval,
     fun_names,

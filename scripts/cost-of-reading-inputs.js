@@ -1,8 +1,5 @@
 const { ethers } = require("hardhat");
 const common = require("../lib/common");
-const bigDecimal = require("js-big-decimal");
-
-const N_AAPTX = 1;
 
 async function print_report(
   owner,
@@ -24,9 +21,9 @@ async function print_report(
         merkle_tree_update,
         is_starkware
       );
-      let gas = res[0] / N_AAPTX;
-      let N_APPTX_BIG_DECIMAL = new bigDecimal(N_AAPTX);
-      let price = res[1].divide(N_APPTX_BIG_DECIMAL).getValue();
+      let gas = res[0];
+
+      let price = res[1].getValue();
       console.log(
         fun_names[i] + ":  " + gas + " gas  ------ " + price + " USD "
       );
@@ -51,40 +48,23 @@ async function main() {
 
   console.log("Contract deployed at address " + dpv.address);
 
-  fun_to_eval = [dpv.verify_empty, dpv.verify, dpv.batch_verify];
-  fun_names = ["verify_empty", "verify", "batch_verify"];
+  fun_to_eval = [dpv.verify_empty];
+  fun_names = ["verify_empty"];
 
-  const chunk = common.create_chunk(N_AAPTX);
+  const N_APPT_TX_MAX = 10;
+  for (let i = 1; i < N_APPT_TX_MAX; i++) {
+    const chunk = common.create_chunk(i);
 
-  await print_report(
-    owner,
-    "NO Merkle tree update",
-    fun_to_eval,
-    fun_names,
-    chunk,
-    false,
-    false
-  );
-
-  await print_report(
-    owner,
-    "Merkle tree update (Starkware)",
-    fun_to_eval,
-    fun_names,
-    chunk,
-    true,
-    true
-  );
-
-  await print_report(
-    owner,
-    "Merkle tree update (NO Starkware)",
-    fun_to_eval,
-    fun_names,
-    chunk,
-    true,
-    false
-  );
+    await print_report(
+      owner,
+      "Empty inputs",
+      fun_to_eval,
+      fun_names,
+      chunk,
+      false,
+      false
+    );
+  }
 }
 
 // We recommend this pattern to be able to use async/await everywhere

@@ -16,6 +16,7 @@
     "@summa-tx/memview-sol": "^2.0.0",
     "async": "^3.2.1",
     "async-child-process": "^1.1.1",
+    "js-big-decimal": "^1.3.4",
     "noble-bls12-381": "^0.14.1",
     "random-seed": "^0.3.0"
   },

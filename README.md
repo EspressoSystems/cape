@@ -256,6 +256,11 @@ batch_verify:  2759316.285714286 gas  ------ 2084.7296774480005 USD
 > hardhat --network rinkeby run scripts/benchmarks.js
 ```
 
+## Goerli
+- Similar to Rinkeby section (replace RINKEBY with GOERLI) and use `--network goerli`.
+- Faucets: [Simple](https://goerli-faucet.slock.it),
+  [Social](https://faucet.goerli.mudit.blog/).
+
 ## Arbitrum on Rinkeby
 
 To run the benchmarks against Arbitrum Rinkeby follow these steps:

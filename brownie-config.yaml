@@ -9,9 +9,11 @@ compiler:
             enabled: true
             runs: ${SOLC_OPTIMIZER_RUNS}
 
-        # To find hardhat's console.log
+        # Enable brownie to find installed contracts
         remappings:
-          - hardhat=node_modules/hardhat/
+          - "hardhat=node_modules/hardhat"
+          - "@openzeppelin=node_modules/@openzeppelin"
+
 networks:
     default: hardhat
     development:

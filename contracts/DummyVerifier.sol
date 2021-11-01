@@ -2,12 +2,11 @@
 pragma solidity ^0.8.0;
 
 import {Curve} from "./BN254.sol";
-import {CKBCrypto} from "./blake2/libraries/CKBCrypto.sol";
 import {Rescue} from "./Rescue.sol";
+import "./NullifiersStore.sol";
 
-contract DummyVerifier {
+contract DummyVerifier is NullifiersStore {
     uint256 RECORDS_TREE_HEIGHT = 25;
-    uint256 NULLIFIERS_TREE_HEIGHT = 256;
     uint256 AAPTX_SIZE = 3000; // Must be the same as in the javascript testing code
     uint256 N_INPUTS = 4; // Number of AAP inputs per transactions corresponding to a transaction of roughly 3 KB
     uint256 N_OUTPUTS = 5; // Number of AAP outputs per transactions of roughly 3 KB
@@ -53,13 +52,10 @@ contract DummyVerifier {
         }
     }
 
-    function update_nullifiers_tree() private returns (bytes32) {
-        for (uint256 i = 0; i < NULLIFIERS_TREE_HEIGHT * N_INPUTS; i++) {
-            // Compute blake2 hash
-            string memory left = "a";
-            string memory right = "b";
-
-            CKBCrypto.digest(abi.encodePacked(left, right, new bytes(64)), 64);
+    function insert_nullifiers() private returns (bytes32) {
+        bytes memory nullifier = "a857857";
+        for (uint256 i = 0; i < N_INPUTS; i++) {
+            insert_nullifier(nullifier);
         }
     }
 
@@ -89,7 +85,7 @@ contract DummyVerifier {
     function update_merkle_trees(uint256 n_aaptx, bool is_starkware) public {
         // For the nullifier tree we insert the leaves one by one
         for (uint256 i = 0; i < n_aaptx; i++) {
-            update_nullifiers_tree();
+            insert_nullifiers();
         }
 
         // For the record tree we insert the records in batch

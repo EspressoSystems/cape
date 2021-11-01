@@ -2,20 +2,22 @@
 
 with pkgs;
 
+let
+  stableToolchain = rust-bin.stable."1.56.0".minimal.override {
+    extensions = [ "clippy" "llvm-tools-preview" ];
+  };
+in
 mkShell {
 
   buildInputs = [
-
-    rustfmt
-    clippy
 
     pkgconfig
     openssl
 
     curl
 
-    rustc
-    cargo
+    stableToolchain
+
     cargo-edit
     cargo-watch
   ] ++ lib.optionals stdenv.isDarwin [

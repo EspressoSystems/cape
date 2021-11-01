@@ -1,9 +1,14 @@
-with import ./nix/nixpkgs.nix { };
-
 let
-  pre-commit-check = callPackage ./nix/precommit.nix { };
-  mySolc = callPackage ./nix/solc-bin { version = "0.8.4"; };
-  myPython = [
+  basePkgs = import ./nix/nixpkgs.nix { };
+
+  rust_overlay = with basePkgs; import (fetchFromGitHub
+    (lib.importJSON ./nix/oxalica_rust_overlay.json));
+
+  pkgs = import ./nix/nixpkgs.nix { overlays = [ rust_overlay ]; };
+
+  pre-commit-check = pkgs.callPackage ./nix/precommit.nix { };
+  mySolc = pkgs.callPackage ./nix/solc-bin { version = "0.8.4"; };
+  myPython = with pkgs; [
     poetry
     (poetry2nix.mkPoetryEnv {
       projectDir = ./.;
@@ -11,6 +16,7 @@ let
   ];
   myRustShell = import ./rust/shell.nix { inherit pkgs; };
 in
+with pkgs;
 mkShell
 {
   buildInputs = [

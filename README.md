@@ -15,6 +15,8 @@ To update the pinned version of `nixpkgs` run `nix/update-nix`, optionally passi
 revision as arguments. The default is: `nix/update-nix nixos master`. Make sure to commit any changed
 files in the `./nix` directory afterwards.
 
+The rust overlay can be updated by running `nix/update-rust-overlay`.
+
 ### Environment
 #### 1. Activate the nix environment
 The [direnv](https://direnv.net/) shell extension can be used to activate the environment.

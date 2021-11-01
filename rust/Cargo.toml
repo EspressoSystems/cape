@@ -8,7 +8,7 @@ doctest = false
 
 [dependencies]
 ethers.git = "https://github.com/gakonst/ethers-rs"
-ethers.rev = "071a41605ba2a9bffbf618921534ba5e0121f9d8"
+ethers.rev = "4123823383728037b23c18038f9a107902d67756" # before ethers-solc changes
 
 jf-txn = { git = "ssh://git@gitlab.com/translucence/crypto/jellyfish.git" } # latest
 jf-utils = { git = "ssh://git@gitlab.com/translucence/crypto/jellyfish.git" } # latest

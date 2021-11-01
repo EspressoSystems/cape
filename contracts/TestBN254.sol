@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import {Curve as C} from "./BN254.sol";
 
-contract testBN254 {
+contract TestBN254 {
     using C for *;
 
     constructor() public {}

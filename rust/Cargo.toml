@@ -12,7 +12,7 @@ ethers.rev = "071a41605ba2a9bffbf618921534ba5e0121f9d8"
 
 jf-txn = { git = "ssh://git@gitlab.com/translucence/crypto/jellyfish.git" } # latest
 jf-utils = { git = "ssh://git@gitlab.com/translucence/crypto/jellyfish.git" } # latest
-zerok_lib = { git = "ssh://git@gitlab.com/translucence/systems/system.git", rev = "cb3d74f565bd4695a44a3bd7d92070e0b998bf44"  } # TODO change with git path
+
 itertools = "0.10.1" # needed for jf-txn to compile
 ark-std = "0.3.0"
 serde_json = "1.0.67"

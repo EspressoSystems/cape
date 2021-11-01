@@ -14,13 +14,11 @@ async function print_report(
   for (let i = 0; i < fun_to_eval.length; i++) {
     let res;
     try {
-      res = await common.compute_gas_and_price(
-        owner,
-        fun_to_eval[i],
+      res = await common.compute_gas_and_price(owner, fun_to_eval[i], [
         chunk,
         merkle_tree_update,
-        is_starkware
-      );
+        is_starkware,
+      ]);
       let gas = res[0];
 
       let price = res[1].getValue();

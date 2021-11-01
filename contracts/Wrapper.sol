@@ -15,26 +15,26 @@ contract Wrapper {
     }
 
     function credit_erc20_balance(
-        address erc20_token,
-        uint256 amount,
-        address recipient
+        address _erc20_token,
+        uint256 _amount,
+        address _recipient
     ) private {}
 
     function gen_asset_type_erc20(
-        address erc20_token,
-        string calldata sponsor,
-        Policy calldata policy
+        address _erc20_token,
+        string calldata _sponsor,
+        Policy calldata _policy
     ) public {}
 
     function withdraw(
-        address recipient,
-        address erc20_token,
-        uint256 amount
+        address _recipient,
+        address _erc20_token,
+        uint256 _amount
     ) public {}
 
     function wrap_erc20_token(
-        AssetType memory asset_type,
-        AssetRecord memory record,
-        address sender
+        AssetType memory _asset_type,
+        AssetRecord memory _record,
+        address _sender
     ) public {}
 }

@@ -73,7 +73,6 @@ module.exports = {
 
     local: {
       url: "http://localhost:8545",
-      gasPrice: 300_000,
     },
     arbitrum: {
       url: `https://rinkeby.arbitrum.io/rpc`,

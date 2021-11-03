@@ -177,7 +177,12 @@ Instead of running `geth` and `build-abi` one can also just run
 From the root directory of the repo checkout. This will also recompile the
 contracts when there are changes to any of the contract files.
 
-To recompile all contracts, first remove all the artifacts and the cache
+To recompile all contracts
+
+    hardhat compile --force
+
+When removing or renaming contracts it can be useful to first remove the
+artifacts directory and the compilation cache with
 
     hardhat clean
 

@@ -4,12 +4,16 @@ set -euo pipefail
 NUM_KEYS=2
 DATA_DIR="$(mktemp -d -t "aap-ethereum-data-XXXXXXXX")"
 
-trap cleanup 0
+trap "exit" INT TERM
+trap cleanup EXIT
 cleanup(){
+    echo "Cleaning up geth node"
     if [ -d $DATA_DIR ]; then
         echo "Removing geth data dir $DATA_DIR"
         rm -r $DATA_DIR
     fi
+    # kill the geth child process
+    kill $(jobs -p) 2> /dev/null
 }
 
 echo "Using keystore dir $DATA_DIR"
@@ -34,4 +38,5 @@ geth --http --dev \
      --mine --maxpeers 0 --nodiscover \
     --allow-insecure-unlock \
     --password <(echo "") \
-    --datadir $DATA_DIR --unlock $ADDRESS_LIST
+    --datadir $DATA_DIR --unlock $ADDRESS_LIST \
+    "$@"

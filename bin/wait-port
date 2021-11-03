@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+RPC_PORT=${1:-8545}
+
+while ! nc -z localhost $RPC_PORT 2>&1; do
+  echo "Waiting for port $RPC_PORT ..."
+  sleep 1
+done

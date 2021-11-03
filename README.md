@@ -42,21 +42,45 @@ Install the node dependencies with pnpm
     pnpm i
 
 Also run this command after pulling in changes that modify `pnpm-lock.yaml`.
-### Run
-Run the command
+
+### Development
+To start the background services to support interactive development run the command
 
     hivemind
 
-to start all background services. For the time being this is just running `geth` with default configuration.
+For the time being this is a `geth` node and a contract compilation watcher.
 
-To add additional processes add lines to `Procfile` and (if desired) scripts to run in the `./bin` directory.
+To add additional processes add lines to `Procfile` and (if desired) scripts to
+run in the `./bin` directory.
 
 ### Testing (Javascript)
-We support running against a go-ethereum (geth) or hardhat (shortcut `hh`) node running on `localhost:8545`.
+We support running against a go-ethereum (`geth`) or hardhat (shortcut `hh`) node
+running on `localhost:8545`.
+
+The simplest way to run all the tests against a nodes is to use the scripts
+
+    aape-test-geth
+    aape-test-hardhat
+
+These scripts will
+
+1. Start a corresponding node if nothing is found to be listening on the
+   configured port (default: `8545`).
+2. Run the tests.
+3. Shut down the node (if it was started in 1.)
+
+Note that running `js` tests against the `hardhat node` may take several
+minutes.
+
+The port of the node can be changed with `RPC_PORT`. For example,
+
+    env RPC_PORT=8877 aape-test-geth
+
+To run all the tests against both nodes
+
+    aape-test-all
 
 #### Testing against go-ethereum node
-We use a [patched version](https://gitlab.com/translucence/go-ethereum) of geth
-that enables `EIP-2537` (BLS precompiles).
 
 Start the geth chain in separate terminal
 
@@ -69,8 +93,8 @@ When running tests against geth
 - Failing `require` statements are shown in the`geth` console log.
 
 #### Testing against hardhat node
-The hardhat node enables `EIP-2537` (BLS precompiles) via monkeypatching in `hardhat.config.js`.
-This may cause undesirable effects with some hardhat features but so far we have not found any.
+You can choose to let hardhat start a hardhat node automatically or start a node
+yourself and let hardhat connect to it.
 
 ##### Separate hardhat node
 Start the hardhat node in separate terminal
@@ -92,16 +116,8 @@ It's also possible to run the hardhat node and tests in one command
 - The `console.log` statements are shown in in the terminal.
 - Failing `require` statements are shown in human readable form in the terminal.
 
-#### Running the tests against all the networks
-
-```
-> hivemind
-> ./bin/run_tests
-
-```
-
 ### Running scripts
-Run a script that connect to the local network (on port 8545)
+Run a script that connects to the local network (on port 8545)
 
     hh run scripts/sample-script.js --network localhost
 
@@ -132,8 +148,6 @@ solc-select do not have such a fallback mechanisms.
 # Rust client
 
 All the rust code can be found in the `rust` directory.
-
-**Note that this directory has its own `shell.nix` file.**
 
 ## Development
 ### go-ethereum / geth
@@ -166,7 +180,6 @@ This will also recompile the contracts when there are changes to any of the cont
 ### Rust
 Watch directory and run tests on changes:
 
-    cd rust
     cargo watch -x test
 
 If some compilation error occurs, delete the files generated previously (from the root of theproject):
@@ -175,14 +188,10 @@ If some compilation error occurs, delete the files generated previously (from th
 
 ### Examples
 
-Remember to "cd" into `rust` directory and launch the shell:
+Generate a `jf_txn::transfer::TransferNote` and save it to a file `my_note.bin`.
+Building with the `--release` flag make this a lot faster.
 
-    cd rust
-    nix-shell
-
-Generate a `jf_txn::transfer::TransferNote` and save it to a file `my_note.bin`:
-
-    cargo run -p aap-rust-sandbox --example create_note
+    cargo run -p aap-rust-sandbox --example create_note --release
 
 Load the file:
 
@@ -319,3 +328,14 @@ Set the env var `REPORT_GAS` to get extra output about the gas consumption of
 contract functions called in the tests.
 
     env REPORT_GAS=1 hh test
+
+## CI
+To locally spin up a docker container like the one used in the CI
+
+    docker run \
+        -v $SSH_AUTH_SOCK:/ssh-agent \
+        -e SSH_AUTH_SOCK=/ssh-agent \
+        -v $(pwd):/code -it lnl7/nix
+
+The code in the current directory will be at `/code`. You may have to delete the
+`./node_modules` directory with root permissions afterwards.

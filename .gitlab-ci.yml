@@ -1,0 +1,13 @@
+# Override git urls to use ci-job-token
+before_script:
+  - git config --global url."https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/".insteadOf git://gitlab.com
+  - git config --global url."https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/".insteadOf ssh://git@gitlab.com
+  - echo ""
+
+test:
+  stage: test
+  tags:
+    - docker
+  image: lnl7/nix
+  script:
+    - nix-shell --run aape-test-geth

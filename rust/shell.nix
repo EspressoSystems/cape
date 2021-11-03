@@ -4,7 +4,7 @@ with pkgs;
 
 let
   stableToolchain = rust-bin.stable."1.56.0".minimal.override {
-    extensions = [ "clippy" "llvm-tools-preview" ];
+    extensions = [ "rustfmt" "clippy" "llvm-tools-preview" ];
   };
 in
 mkShell {

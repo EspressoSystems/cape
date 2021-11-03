@@ -4,7 +4,7 @@ use crate::{G1Ark, G1Ethers, G2Ark, G2Ethers};
 
 abigen!(
     TestBN254,
-    "./contracts/TestBN254/abi.json",
+    "rust/contracts/TestBN254/abi.json",
     event_derives(serde::Deserialize, serde::Serialize)
 );
 

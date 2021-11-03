@@ -9,7 +9,7 @@
 // //   contract events: (not used here)
 // abigen!(
 //     ReadAAPTx,
-//     "./contracts/ReadAAPTx/abi.json",
+//     "./rust/contracts/ReadAAPTx/abi.json",
 //     event_derives(serde::Deserialize, serde::Serialize)
 // );
 

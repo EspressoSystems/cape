@@ -5,7 +5,7 @@ use std::path::Path;
 
 abigen!(
     Greeter,
-    "./contracts/Greeter/abi.json",
+    "rust/contracts/Greeter/abi.json",
     event_derives(serde::Deserialize, serde::Serialize)
 );
 

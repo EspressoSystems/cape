@@ -4,14 +4,6 @@ const {
   TASK_COMPILE_SOLIDITY_GET_SOLC_BUILD,
 } = require("hardhat/builtin-tasks/task-names");
 
-const Common = require("@ethereumjs/common").default;
-const forCustomChain = Common.forCustomChain;
-Common.forCustomChain = (...args) => {
-  const common = forCustomChain(...args);
-  common._eips = [2537];
-  return common;
-};
-
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
 task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
@@ -71,9 +63,11 @@ module.exports = {
       accounts: { mnemonic: process.env.GOERLI_MNEMONIC },
     },
 
-    local: {
-      url: "http://localhost:8545",
+    localhost: {
+      url: `http://localhost:${process.env.RPC_PORT || 8545}`,
+      timeout: 120000, // when running against hardhat, some tests are very slow
     },
+
     arbitrum: {
       url: `https://rinkeby.arbitrum.io/rpc`,
       gasPrice: 1_000_000_000,
@@ -112,6 +106,6 @@ module.exports = {
     onlyCalledMethods: false,
   },
   mocha: {
-    timeout: 120000,
+    timeout: 300000,
   },
 };

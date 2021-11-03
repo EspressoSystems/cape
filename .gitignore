@@ -12,3 +12,7 @@ cache
 
 # prevent our formatters from formatting code in submodule
 /arbitrum
+
+# rust
+Cargo.lock
+target/

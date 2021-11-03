@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+RPC_PORT=${RPC_PORT:-8545}
+node_pid=""
+
+# kill background processes on exit, from https://stackoverflow.com/a/2173421
+trap "exit" INT TERM
+trap cleanup EXIT
+function cleanup(){
+   if [[ $node_pid ]]; then
+     echo "Sending HUP signal to run-geth: $node_pid"
+     kill -HUP $node_pid
+   fi
+}
+
+echo "Ensuring all node dependencies are installed"
+pnpm i
+
+echo "Compile contracts and generate ABI artifacts"
+build-abi
+
+if is-listening $RPC_PORT; then
+   echo "Using node running at $RPC_PORT"
+else
+   echo "Starting geth node"
+   run-geth --verbosity 0 --http.port $RPC_PORT &
+   node_pid=$!
+   wait-port $RPC_PORT
+fi
+
+echo "Running rust tests against geth backend"
+env RPC_URL=http://localhost:$RPC_PORT cargo test
+
+echo "Running js tests against geth backend"
+env RPC_PORT=$RPC_PORT hardhat test
+
+echo "All tests passed!"

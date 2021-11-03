@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+RPC_PORT=${1:-8545}
+nc -z localhost $RPC_PORT 2>&1

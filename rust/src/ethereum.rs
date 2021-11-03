@@ -1,11 +1,23 @@
 #![cfg_attr(debug_assertions, allow(dead_code))]
 use anyhow::Result;
-use ethers::{abi::Tokenize, core::k256::ecdsa::SigningKey, prelude::*, utils::CompiledContract};
-use std::{convert::TryFrom, fs, path::Path, sync::Arc, time::Duration};
+use ethers::{
+    abi::{Abi, Tokenize},
+    core::k256::ecdsa::SigningKey,
+    prelude::{
+        Bytes, Contract, ContractFactory, Http, LocalWallet, Middleware, Provider, Signer,
+        SignerMiddleware, TransactionRequest, Wallet,
+    },
+};
+use std::{convert::TryFrom, env, fs, path::Path, sync::Arc, time::Duration};
 
 pub async fn get_funded_deployer(
 ) -> Result<Arc<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>> {
-    let provider = Provider::<Http>::try_from("http://localhost:8545")
+    let rpc_url = match env::var("RPC_URL") {
+        Ok(val) => val,
+        Err(_e) => "http://localhost:8545".to_string(),
+    };
+
+    let provider = Provider::<Http>::try_from(rpc_url)
         .expect("could not instantiate HTTP Provider")
         .interval(Duration::from_millis(100u64));
 
@@ -30,7 +42,7 @@ pub async fn get_funded_deployer(
     )))
 }
 
-async fn load_contract(path: &Path) -> Result<CompiledContract> {
+async fn load_contract(path: &Path) -> Result<(Abi, Bytes)> {
     let abi_path = path.join("abi.json");
     let bin_path = path.join("bin.txt");
 
@@ -52,11 +64,7 @@ async fn load_contract(path: &Path) -> Result<CompiledContract> {
     }
     .into();
 
-    Ok(CompiledContract {
-        abi,
-        bytecode,
-        runtime_bytecode: Default::default(),
-    })
+    Ok((abi, bytecode))
 }
 
 // TODO: why do we need 'static ?
@@ -66,12 +74,8 @@ pub async fn deploy<C: 'static + Middleware, T: Tokenize>(
     path: &Path,
     constructor_args: T,
 ) -> Result<Contract<C>> {
-    let contract = load_contract(path).await?;
-    let factory = ContractFactory::new(
-        contract.abi.clone(),
-        contract.bytecode.clone(),
-        client.clone(),
-    );
+    let (abi, bytecode) = load_contract(path).await?;
+    let factory = ContractFactory::new(abi.clone(), bytecode.clone(), client.clone());
     let contract = factory
         .deploy(constructor_args)?
         .legacy() // XXX This is required!

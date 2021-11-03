@@ -9,7 +9,7 @@
 // //   contract events: (not used here)
 // abigen!(
 //     ReadAAPTx,
-//     "./rust/contracts/ReadAAPTx/abi.json",
+//     "./artifacts/contracts/ReadAAPTx.sol/ReadAAPTx/abi.json",
 //     event_derives(serde::Deserialize, serde::Serialize)
 // );
 
@@ -25,9 +25,13 @@
 //     #[tokio::test]
 //     async fn test_read_transfer_note_struct_in_contract() {
 //         let client = get_funded_deployer().await.unwrap();
-//         let contract = deploy(client.clone(), Path::new("./contracts/ReadAAPTx"), ())
-//             .await
-//             .unwrap();
+//         let contract = deploy(
+//             client.clone(),
+//             Path::new("../artifacts/contracts/ReadAAPTx.sol/ReadAAPTx"),
+//             (),
+//         )
+//         .await
+//         .unwrap();
 //         let contract = ReadAAPTx::new(contract.address(), client);
 
 //         let one = U256::one();

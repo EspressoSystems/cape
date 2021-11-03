@@ -5,7 +5,7 @@ use std::path::Path;
 
 abigen!(
     Greeter,
-    "rust/contracts/Greeter/abi.json",
+    "artifacts/contracts/Greeter.sol/Greeter/abi.json",
     event_derives(serde::Deserialize, serde::Serialize)
 );
 
@@ -14,7 +14,7 @@ async fn deploy_contract() -> Result<Greeter<SignerMiddleware<Provider<Http>, Wa
     let client = get_funded_deployer().await.unwrap();
     let contract = deploy(
         client.clone(),
-        Path::new("./contracts/Greeter"),
+        Path::new("../artifacts/contracts/Greeter.sol/Greeter"),
         ("Initial Greeting".to_string(),),
     )
     .await

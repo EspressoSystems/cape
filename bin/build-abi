@@ -5,11 +5,11 @@ echo "Compiling contracts ..."
 
 hardhat compile
 
-out_base_dir="rust/contracts"
-mkdir -p "$out_base_dir"
+# for recursive globbing
+shopt -s globstar
 
 # For each solidity file (or its artifact output directory)
-for directory in artifacts/contracts/*.sol; do
+for directory in artifacts/**/*.sol; do
 
     # For each contract in the solidity file
     for combined in $directory/*.json; do
@@ -21,14 +21,12 @@ for directory in artifacts/contracts/*.sol; do
         basename_json="${combined##*/}"
         basename="${basename_json/%.json}"
 
-        # Note: Currently wouldn't work if two solidity files contained a
-        # contract with the same name.
+        outdir="$directory/$basename"
 
-        outdir="$out_base_dir/$basename"
         echo "$combined -> $outdir"
         mkdir -p "$outdir"
 
-        # extract .abi field and write to rust/contracts/$CONTRACT.json
+        # extract .abi and .bytecode fields
         cat "$combined" | jq -r .abi > "$outdir/abi.json"
         cat "$combined" | jq -r .bytecode > "$outdir/bin.txt"
     done

@@ -4,7 +4,7 @@ use crate::{G1Ark, G1Ethers, G2Ark, G2Ethers};
 
 abigen!(
     TestBN254,
-    "rust/contracts/TestBN254/abi.json",
+    "artifacts/contracts/TestBN254.sol/TestBN254/abi.json",
     event_derives(serde::Deserialize, serde::Serialize)
 );
 
@@ -67,9 +67,13 @@ mod tests {
     #[tokio::test]
     async fn test_add_mul_g1_group_elements_in_contract() {
         let client = get_funded_deployer().await.unwrap();
-        let contract = deploy(client.clone(), Path::new("./contracts/TestBN254"), ())
-            .await
-            .unwrap();
+        let contract = deploy(
+            client.clone(),
+            Path::new("../artifacts/contracts/TestBN254.sol/TestBN254"),
+            (),
+        )
+        .await
+        .unwrap();
         let contract = TestBN254::new(contract.address(), client);
 
         async fn add<M: Middleware>(contract: &TestBN254<M>, a: G1Affine, b: G1Affine) -> G1Affine {
@@ -131,9 +135,13 @@ mod tests {
     #[tokio::test]
     async fn test_pairing_check_in_contract() {
         let client = get_funded_deployer().await.unwrap();
-        let contract = deploy(client.clone(), Path::new("./contracts/TestBN254"), ())
-            .await
-            .unwrap();
+        let contract = deploy(
+            client.clone(),
+            Path::new("../artifacts/contracts/TestBN254.sol/TestBN254"),
+            (),
+        )
+        .await
+        .unwrap();
         let contract = TestBN254::new(contract.address(), client);
 
         async fn pairing_check<M: Middleware>(

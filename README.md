@@ -174,17 +174,17 @@ Instead of running `geth` and `build-abi` one can also just run
 
     hivemind
 
-From the root directory of the repo checkout.
-This will also recompile the contracts when there are changes to any of the contract files.
+From the root directory of the repo checkout. This will also recompile the
+contracts when there are changes to any of the contract files.
+
+To recompile all contracts, first remove all the artifacts and the cache
+
+    hardhat clean
 
 ### Rust
 Watch directory and run tests on changes:
 
     cargo watch -x test
-
-If some compilation error occurs, delete the files generated previously (from the root of theproject):
-
-    rm -R artifacts rust/contracts
 
 ### Examples
 

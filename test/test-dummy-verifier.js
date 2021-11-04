@@ -6,10 +6,9 @@ async function check_gas(
   fun_to_evaluate,
   chunk,
   merkle_trees_update,
-  is_starkware,
   expected_gas_str
 ) {
-  const tx = await fun_to_evaluate(chunk, merkle_trees_update, is_starkware);
+  const tx = await fun_to_evaluate(chunk, merkle_trees_update);
   const txReceipt = await tx.wait();
 
   const gasUsed = txReceipt.gasUsed.toString();
@@ -38,62 +37,30 @@ describe("Dummy Verifier", function () {
       fun_to_eval = [dpv.verify_empty, dpv.verify, dpv.batch_verify];
     });
 
-    it("Works with merkle tree update (Starkware)", async function () {
-      const expected_gas_array = ["119481", "4338307", "4244569"];
+    it("Works with merkle tree update", async function () {
+      const expected_gas_array = ["119317", "7058643", "6965094"];
 
       for (let i = 0; i < fun_to_eval.length; i++) {
-        await check_gas(
-          fun_to_eval[i],
-          chunk,
-          true,
-          true,
-          expected_gas_array[i]
-        );
+        await check_gas(fun_to_eval[i], chunk, true, expected_gas_array[i]);
       }
     });
 
-    it("Works with merkle tree update (NO Starkware)", async function () {
-      const expected_gas_array = ["119469", "6539630", "6482991"];
+    it("Works with without merkle tree update", async function () {
+      const expected_gas_array = ["119305", "762077", "705172"];
 
       for (let i = 0; i < fun_to_eval.length; i++) {
-        await check_gas(
-          fun_to_eval[i],
-          chunk,
-          true,
-          false,
-          expected_gas_array[i]
-        );
-      }
-    });
-
-    it("Works with without merkle tree update)", async function () {
-      const expected_gas_array = ["119457", "762249", "705279"];
-
-      for (let i = 0; i < fun_to_eval.length; i++) {
-        await check_gas(
-          fun_to_eval[i],
-          chunk,
-          false,
-          false,
-          expected_gas_array[i]
-        );
+        await check_gas(fun_to_eval[i], chunk, false, expected_gas_array[i]);
       }
     });
 
     it("Batch verifier is more efficient than simple verifier when there are enough transactions", async function () {
-      const expected_gas_array = ["167998", "1133102", "1007781"];
+      const expected_gas_array = ["167846", "1132930", "1007674"];
 
       const N_AAPTX = 3;
       const chunk = common.create_chunk(N_AAPTX);
 
       for (let i = 0; i < fun_to_eval.length; i++) {
-        await check_gas(
-          fun_to_eval[i],
-          chunk,
-          false,
-          false,
-          expected_gas_array[i]
-        );
+        await check_gas(fun_to_eval[i], chunk, false, expected_gas_array[i]);
       }
 
       // Batch verification is faster than simple verification

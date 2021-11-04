@@ -2,28 +2,26 @@
 pragma solidity ^0.8.0;
 
 import {Curve} from "./BN254.sol";
-import {Rescue} from "./Rescue.sol";
 import "./NullifiersStore.sol";
+import "./RecordsMerkleTree.sol";
 
-contract DummyVerifier is NullifiersStore {
+contract DummyVerifier is NullifiersStore, RecordsMerkleTree {
     uint256 RECORDS_TREE_HEIGHT = 25;
     uint256 AAPTX_SIZE = 3000; // Must be the same as in the javascript testing code
     uint256 N_INPUTS = 4; // Number of AAP inputs per transactions corresponding to a transaction of roughly 3 KB
     uint256 N_OUTPUTS = 5; // Number of AAP outputs per transactions of roughly 3 KB
 
-    function verify_empty(
-        bytes memory chunk,
-        bool merkle_trees_update,
-        bool is_starkware
-    ) public returns (bool) {
+    function verify_empty(bytes memory chunk, bool merkle_trees_update)
+        public
+        returns (bool)
+    {
         return true;
     }
 
-    function verify(
-        bytes memory chunk,
-        bool merkle_trees_update,
-        bool is_starkware
-    ) public returns (bool) {
+    function verify(bytes memory chunk, bool merkle_trees_update)
+        public
+        returns (bool)
+    {
         // Count the number of transactions
         uint256 n_aaptx = chunk.length / AAPTX_SIZE;
 
@@ -36,7 +34,7 @@ contract DummyVerifier is NullifiersStore {
         prepare_pcs_info(n_aaptx);
 
         if (merkle_trees_update) {
-            update_merkle_trees(n_aaptx, is_starkware);
+            update_merkle_trees(n_aaptx);
         }
 
         return true;
@@ -68,9 +66,7 @@ contract DummyVerifier is NullifiersStore {
         The cost is N + N/3 + N/9 + ... + N/(3^H) which tends to 1.5 N when N grows.
         So we approximate the cost of inserting N elements  in the tree by the cost of computing 1.5 N rescue hash functions.
      */
-    function update_records_tree_batch(uint256 n_aaptx, bool is_starkware)
-        private
-    {
+    function update_records_tree_batch(uint256 n_aaptx) private {
         uint256 TOTAL_COST_BATCH_INSERTION = (3 * n_aaptx * N_OUTPUTS) / 2;
 
         for (uint256 i = 0; i < TOTAL_COST_BATCH_INSERTION; i++) {
@@ -78,25 +74,24 @@ contract DummyVerifier is NullifiersStore {
             uint256 a = 7878754242;
             uint256 b = 468777777777776575;
             uint256 c = 87875474574;
-            Rescue.hash(a, b, c, is_starkware);
+            Rescue.hash(a, b, c);
         }
     }
 
-    function update_merkle_trees(uint256 n_aaptx, bool is_starkware) public {
+    function update_merkle_trees(uint256 n_aaptx) public {
         // For the nullifier tree we insert the leaves one by one
         for (uint256 i = 0; i < n_aaptx; i++) {
             insert_nullifiers();
         }
 
         // For the record tree we insert the records in batch
-        update_records_tree_batch(n_aaptx, is_starkware);
+        update_records_tree_batch(n_aaptx);
     }
 
-    function batch_verify(
-        bytes memory chunk,
-        bool merkle_trees_update,
-        bool is_starkware
-    ) public returns (bool) {
+    function batch_verify(bytes memory chunk, bool merkle_trees_update)
+        public
+        returns (bool)
+    {
         // Count the number of transactions
         uint256 aaptx_size = 3000;
         uint256 n_aaptx = chunk.length / aaptx_size;
@@ -116,7 +111,7 @@ contract DummyVerifier is NullifiersStore {
         prepare_pcs_info(n_aaptx);
 
         if (merkle_trees_update) {
-            update_merkle_trees(n_aaptx, is_starkware);
+            update_merkle_trees(n_aaptx);
         }
 
         return true;

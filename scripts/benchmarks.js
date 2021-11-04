@@ -10,17 +10,15 @@ async function print_report(
   fun_to_eval,
   fun_names,
   chunk,
-  merkle_tree_update,
-  is_starkware
+  merkle_tree_update
 ) {
-  console.log("**** " + title + "****");
+  console.log("**** " + title + " ****");
   for (let i = 0; i < fun_to_eval.length; i++) {
     let res;
     try {
       res = await common.compute_gas_and_price(owner, fun_to_eval[i], [
         chunk,
         merkle_tree_update,
-        is_starkware,
       ]);
       let gas = res[0] / N_AAPTX;
       let N_APPTX_BIG_DECIMAL = new bigDecimal(N_AAPTX);
@@ -66,22 +64,11 @@ async function main() {
 
   await print_report(
     owner,
-    "Merkle tree update (Starkware)",
+    "Merkle tree update",
     fun_to_eval,
     fun_names,
     chunk,
-    true,
     true
-  );
-
-  await print_report(
-    owner,
-    "Merkle tree update (NO Starkware)",
-    fun_to_eval,
-    fun_names,
-    chunk,
-    true,
-    false
   );
 }
 

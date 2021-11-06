@@ -18,9 +18,9 @@
 
 
 * **Gas cost**
-  * As shown experimentally the plonk verifier [consumes a lot of gas](https://gitlab.com/translucence/aap-on-ethereum/-/issues/17#note_679729222). Potential alternatives to overcome this difficulty are
+  * As shown experimentally the plonk verifier [consumes a lot of gas](https://gitlab.com/translucence/cap-on-ethereum/cape/-/issues/17#note_679729222). Potential alternatives to overcome this difficulty are
     * Use recursive snarks as in [AZTEC 2.0](https://hackmd.io/@aztec-network/ByzgNxBfd).
-    * Use aggregated snarks. However we are still limited by the AAP transaction size that [is still relatively big even without the proof](https://gitlab.com/translucence/aap-on-ethereum/-/issues/18#aggregated-snarks).
+    * Use aggregated snarks. However we are still limited by the AAP transaction size that [is still relatively big even without the proof](https://gitlab.com/translucence/cap-on-ethereum/cape/-/issues/18#aggregated-snarks).
     * Use of TEE approaches such as [Intel SGX enclaves](https://github.com/apache/incubator-teaclave-sgx-sdk).
-    * Use of EVM compatible platforms that have [better gas cost efficiency](https://gitlab.com/translucence/aap-on-ethereum/-/issues/23#note_686615980).
+    * Use of EVM compatible platforms that have [better gas cost efficiency](https://gitlab.com/translucence/cap-on-ethereum/cape/-/issues/23#note_686615980).
     * [Optimistic rollup approach such as Arbitrum](https://github.com/OffchainLabs/arbitrum).

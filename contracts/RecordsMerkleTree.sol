@@ -131,30 +131,23 @@ contract RecordsMerkleTree is Rescue {
         uint256[] memory _frontier,
         Node[MAX_NUMBER_NODES] memory nodes
     ) private returns (uint256) {
-        uint256 index_nodes_array = 0;
-
         // Set the first node to the NULL node
         Node memory NULL_NODE = Node(0, 0, 0, 0);
-        nodes[index_nodes_array] = NULL_NODE;
+        nodes[0] = NULL_NODE;
 
         // Insert the leaf
-        Node memory leaf_node = Node(_frontier[0], 0, 0, 0);
+        nodes[LEAF_INDEX] = Node(_frontier[0], 0, 0, 0);
 
-        index_nodes_array += 1;
-        nodes[LEAF_INDEX] = leaf_node;
-
-        // Now we process the siblings of the leaf
-        index_nodes_array += 1;
-        uint256 index_first_sibling = index_nodes_array;
+        // Insert the siblings
+        uint256 index_first_sibling = 2;
         nodes[index_first_sibling] = Node(_frontier[1], 0, 0, 0);
-
-        index_nodes_array += 1;
-        uint256 index_second_sibling = index_nodes_array;
+        uint256 index_second_sibling = 3;
         nodes[index_second_sibling] = Node(_frontier[2], 0, 0, 0);
 
         uint256 pos_sibling = _frontier[3];
 
         // We process the nodes of the Merkle path
+        uint256 index_nodes_array = 4;
         uint256 index_frontier = 4;
         uint256 index_hole_node = LEAF_INDEX;
         uint256 frontier_len = _frontier.length; // TODO This should be constant

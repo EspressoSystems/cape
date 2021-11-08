@@ -141,8 +141,7 @@ contract RecordsMerkleTree is Rescue {
         Node memory leaf_node = Node(_frontier[0], 0, 0, 0);
 
         index_nodes_array += 1;
-        uint256 index_leaf = LEAF_INDEX;
-        nodes[index_leaf] = leaf_node;
+        nodes[LEAF_INDEX] = leaf_node;
 
         // Now we process the siblings of the leaf
         index_nodes_array += 1;
@@ -157,7 +156,7 @@ contract RecordsMerkleTree is Rescue {
 
         // We process the nodes of the Merkle path
         uint256 index_frontier = 4;
-        uint256 index_hole_node = index_leaf;
+        uint256 index_hole_node = LEAF_INDEX;
         uint256 frontier_len = _frontier.length; // TODO This should be constant
         while (index_frontier < frontier_len) {
             index_nodes_array += 1;

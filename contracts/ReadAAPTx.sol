@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
-contract ReadAAPTx {
+contract ReadCAPTx {
     uint256 public scratch;
 
     constructor() {}

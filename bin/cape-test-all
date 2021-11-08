@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-aape-test-geth
-aape-test-hardhat
+cape-test-geth
+cape-test-hardhat

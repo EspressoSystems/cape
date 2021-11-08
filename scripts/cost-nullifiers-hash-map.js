@@ -21,15 +21,15 @@ async function print_report(owner, title, fun_to_eval, args) {
 async function main() {
   const [owner] = await ethers.getSigners();
 
-  const AAPE = await ethers.getContractFactory("TestAAPE");
-  const aape = await AAPE.deploy();
+  const CAPE = await ethers.getContractFactory("TestCAPE");
+  const cape = await CAPE.deploy();
 
   // Polling interval in ms.
-  aape.provider.pollingInterval = 20;
+  cape.provider.pollingInterval = 20;
 
-  await aape.deployed();
+  await cape.deployed();
 
-  console.log("Contract deployed at address " + aape.address);
+  console.log("Contract deployed at address " + cape.address);
 
   const NUM_MAX_NULLIFIERS = 10_000;
 
@@ -38,19 +38,19 @@ async function main() {
     for (let j = 0; j < i; j++) {
       // Insert nullifiers
       let nullifier = ethers.utils.randomBytes(32);
-      await aape._insertNullifier(nullifier);
+      await cape._insertNullifier(nullifier);
     }
 
     // Measure how much it costs to check for membership
     let title = "Check for nullifiers. HASHMAP SIZE = " + i + " ";
     let test_nullifier = ethers.utils.randomBytes(32);
-    await print_report(owner, title, aape._hasNullifierAlreadyBeenPublished, [
+    await print_report(owner, title, cape._hasNullifierAlreadyBeenPublished, [
       test_nullifier,
     ]);
 
     title = "Insert a nullifier. HASHMAP SIZE = " + i + " ";
     test_nullifier = ethers.utils.randomBytes(32);
-    await print_report(owner, title, aape._insertNullifier, [test_nullifier]);
+    await print_report(owner, title, cape._insertNullifier, [test_nullifier]);
   }
 }
 

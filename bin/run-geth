@@ -2,7 +2,7 @@
 set -euo pipefail
 
 NUM_KEYS=2
-DATA_DIR="$(mktemp -d -t "aap-ethereum-data-XXXXXXXX")"
+DATA_DIR="$(mktemp -d -t "cap-ethereum-data-XXXXXXXX")"
 
 trap "exit" INT TERM
 trap cleanup EXIT

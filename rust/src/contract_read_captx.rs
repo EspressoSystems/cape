@@ -4,12 +4,12 @@
 // use ethers::prelude::abigen;
 
 // // Create rust structs for
-// //   contract: ReadAAPTx
+// //   contract: ReadCAPTx
 // //   contract structs: TransferNote, AuditMemo...
 // //   contract events: (not used here)
 // abigen!(
-//     ReadAAPTx,
-//     "./artifacts/contracts/ReadAAPTx.sol/ReadAAPTx/abi.json",
+//     ReadCAPTx,
+//     "./artifacts/contracts/ReadCAPTx.sol/ReadCAPTx/abi.json",
 //     event_derives(serde::Deserialize, serde::Serialize)
 // );
 
@@ -27,12 +27,12 @@
 //         let client = get_funded_deployer().await.unwrap();
 //         let contract = deploy(
 //             client.clone(),
-//             Path::new("../artifacts/contracts/ReadAAPTx.sol/ReadAAPTx"),
+//             Path::new("../artifacts/contracts/ReadCAPTx.sol/ReadCAPTx"),
 //             (),
 //         )
 //         .await
 //         .unwrap();
-//         let contract = ReadAAPTx::new(contract.address(), client);
+//         let contract = ReadCAPTx::new(contract.address(), client);
 
 //         let one = U256::one();
 //         let zero = U256::zero();

@@ -1,5 +1,5 @@
 [package]
-name = "aap-rust-sandbox"
+name = "cap-rust-sandbox"
 version = "0.1.0"
 edition = "2018"
 

@@ -1,6 +1,6 @@
-pub mod aap_jf;
+pub mod cap_jf;
 mod contract_group_operations;
-mod contract_read_aaptx;
+mod contract_read_captx;
 pub mod ethereum;
 pub mod helpers;
 mod records_merkle_tree;

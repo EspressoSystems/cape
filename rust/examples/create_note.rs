@@ -1,5 +1,5 @@
-use aap_rust_sandbox::aap_jf::create_test_anon_xfr_2in_6out;
 use ark_serialize::CanonicalSerialize;
+use cap_rust_sandbox::cap_jf::create_test_anon_xfr_2in_6out;
 use std::fs;
 
 fn main() {

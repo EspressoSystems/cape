@@ -7,9 +7,9 @@ import "./RecordsMerkleTree.sol";
 
 contract DummyVerifier is NullifiersStore, RecordsMerkleTree {
     uint256 internal constant RECORDS_TREE_HEIGHT = 25;
-    uint256 internal constant AAPTX_SIZE = 3000; // Must be the same as in the javascript testing code
-    uint256 internal constant N_INPUTS = 4; // Number of AAP inputs per transactions corresponding to a transaction of roughly 3 KB
-    uint256 internal constant N_OUTPUTS = 5; // Number of AAP outputs per transactions of roughly 3 KB
+    uint256 internal constant CAPTX_SIZE = 3000; // Must be the same as in the javascript testing code
+    uint256 internal constant N_INPUTS = 4; // Number of CAP inputs per transactions corresponding to a transaction of roughly 3 KB
+    uint256 internal constant N_OUTPUTS = 5; // Number of CAP outputs per transactions of roughly 3 KB
 
     /* solhint-enable */
 
@@ -25,29 +25,29 @@ contract DummyVerifier is NullifiersStore, RecordsMerkleTree {
         returns (bool)
     {
         // Count the number of transactions
-        uint256 nAaptx = chunk.length / AAPTX_SIZE;
+        uint256 nCaptx = chunk.length / CAPTX_SIZE;
 
-        // nAaptx pairing check
-        for (uint256 i = 0; i < nAaptx; i++) {
+        // nCaptx pairing check
+        for (uint256 i = 0; i < nCaptx; i++) {
             runPairingCheck();
         }
 
         // Cost of prepare_pcs_info
-        preparePcsInfo(nAaptx);
+        preparePcsInfo(nCaptx);
 
         if (merkleTreesUpdate) {
-            updateMerkleTrees(nAaptx);
+            updateMerkleTrees(nCaptx);
         }
 
         return true;
     }
 
-    function preparePcsInfo(uint256 nAaptx) private {
-        // $nAaptx$ multi-exp in G1 of size $c$ where c=32
+    function preparePcsInfo(uint256 nCaptx) private {
+        // $nCaptx$ multi-exp in G1 of size $c$ where c=32
         // (Empirically 29=<c<=36. See rust code call `prepare_pcs_info` in PlonkKzgSnark.batch_verify)
 
         uint256 c = 32;
-        for (uint256 i = 0; i < nAaptx; i++) {
+        for (uint256 i = 0; i < nCaptx; i++) {
             runMultiExpG1(c);
         }
     }
@@ -68,8 +68,8 @@ contract DummyVerifier is NullifiersStore, RecordsMerkleTree {
         The cost is N + N/3 + N/9 + ... + N/(3^H) which tends to 1.5 N when N grows.
         So we approximate the cost of inserting N elements  in the tree by the cost of computing 1.5 N rescue hash functions.
      */
-    function updateRecordsTreeBatch(uint256 nAaptx) private {
-        uint256 totalCostBatchInsertion = (3 * nAaptx * N_OUTPUTS) / 2;
+    function updateRecordsTreeBatch(uint256 nCaptx) private {
+        uint256 totalCostBatchInsertion = (3 * nCaptx * N_OUTPUTS) / 2;
 
         for (uint256 i = 0; i < totalCostBatchInsertion; i++) {
             // Computes rescue hash
@@ -80,14 +80,14 @@ contract DummyVerifier is NullifiersStore, RecordsMerkleTree {
         }
     }
 
-    function updateMerkleTrees(uint256 nAaptx) public {
+    function updateMerkleTrees(uint256 nCaptx) public {
         // For the nullifier tree we insert the leaves one by one
-        for (uint256 i = 0; i < nAaptx; i++) {
+        for (uint256 i = 0; i < nCaptx; i++) {
             insertNullifiers();
         }
 
         // For the record tree we insert the records in batch
-        updateRecordsTreeBatch(nAaptx);
+        updateRecordsTreeBatch(nCaptx);
     }
 
     function batchVerify(bytes memory chunk, bool merkleTreesUpdate)
@@ -95,25 +95,25 @@ contract DummyVerifier is NullifiersStore, RecordsMerkleTree {
         returns (bool)
     {
         // Count the number of transactions
-        uint256 aaptxSize = 3000;
-        uint256 nAaptx = chunk.length / aaptxSize;
+        uint256 captxSize = 3000;
+        uint256 nCaptx = chunk.length / captxSize;
 
         // We lower bound the complexity by
         // 1 pairing check
-        // 2  multi exp in G1 of size $nAaptx$ (See rust code PlonkKzgSnark.batch_verify)
-        // Cost of preparePcsInfo(nAaptx)
+        // 2  multi exp in G1 of size $nCaptx$ (See rust code PlonkKzgSnark.batch_verify)
+        // Cost of preparePcsInfo(nCaptx)
 
-        // 2 multi exp in G1 of size $nAaptx$
-        runMultiExpG1(nAaptx);
-        runMultiExpG1(nAaptx);
+        // 2 multi exp in G1 of size $nCaptx$
+        runMultiExpG1(nCaptx);
+        runMultiExpG1(nCaptx);
 
         // 1 pairing check
         runPairingCheck();
 
-        preparePcsInfo(nAaptx);
+        preparePcsInfo(nCaptx);
 
         if (merkleTreesUpdate) {
-            updateMerkleTrees(nAaptx);
+            updateMerkleTrees(nCaptx);
         }
 
         return true;

@@ -4,12 +4,12 @@ pragma solidity ^0.8.0;
 import "./Wrapper.sol";
 import "./NullifiersStore.sol";
 
-contract AAPE is NullifiersStore, Wrapper {
-    struct AAPTransaction {
+contract CAPE is NullifiersStore, Wrapper {
+    struct CAPTransaction {
         bool field; // TODO
     }
 
-    function validateAndApply(AAPTransaction[] calldata _block) public {}
+    function validateAndApply(CAPTransaction[] calldata _block) public {}
 
     function processERC20Deposits(
         AssetType memory _assetType,
@@ -19,11 +19,11 @@ contract AAPE is NullifiersStore, Wrapper {
 
     function insertRecord(AssetRecord memory _record) internal {}
 
-    function processStandardTransaction(AAPTransaction memory _transaction)
+    function processStandardTransaction(CAPTransaction memory _transaction)
         internal
     {}
 
-    function processBurnTransaction(AAPTransaction memory _transaction)
+    function processBurnTransaction(CAPTransaction memory _transaction)
         internal
     {}
 }

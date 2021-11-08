@@ -1,9 +1,9 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
-import "./AAPE.sol";
+import "./CAPE.sol";
 
-contract TestAAPE is AAPE {
+contract TestCAPE is CAPE {
     function _hasNullifierAlreadyBeenPublished(bytes memory _nullifier)
         public
         returns (bool)

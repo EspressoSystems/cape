@@ -2,7 +2,7 @@ const { ethers } = require("hardhat");
 const common = require("../lib/common");
 const bigDecimal = require("js-big-decimal");
 
-const N_AAPTX = 1;
+const N_CAPTX = 1;
 
 async function print_report(
   owner,
@@ -20,8 +20,8 @@ async function print_report(
         chunk,
         merkle_tree_update,
       ]);
-      let gas = res[0] / N_AAPTX;
-      let N_APPTX_BIG_DECIMAL = new bigDecimal(N_AAPTX);
+      let gas = res[0] / N_CAPTX;
+      let N_APPTX_BIG_DECIMAL = new bigDecimal(N_CAPTX);
       let price = res[1].divide(N_APPTX_BIG_DECIMAL).getValue();
       console.log(
         fun_names[i] + ":  " + gas + " gas  ------ " + price + " USD "
@@ -50,7 +50,7 @@ async function main() {
   fun_to_eval = [dpv.verifyEmpty, dpv.verify, dpv.batchVerify];
   fun_names = ["verifyEmpty", "verify", "batchVerify"];
 
-  const chunk = common.create_chunk(N_AAPTX);
+  const chunk = common.create_chunk(N_CAPTX);
 
   await print_report(
     owner,

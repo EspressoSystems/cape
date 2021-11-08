@@ -21,7 +21,7 @@
     "noble-bls12-381": "^0.14.1",
     "random-seed": "^0.3.0"
   },
-  "name": "aap-on-ethereum",
+  "name": "cap-on-ethereum",
   "description": "### Obtaining the source code Check out the source with submodules by running",
   "version": "1.0.0",
   "main": "hardhat.config.js",
@@ -38,12 +38,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@gitlab.com/translucence/aap-on-ethereum.git"
+    "url": "git+ssh://git@gitlab.com/translucence/cap-on-ethereum.git"
   },
   "author": "Translucence Research Institute",
   "license": "ISC",
   "bugs": {
-    "url": "https://gitlab.com/translucence/aap-on-ethereum/issues"
+    "url": "https://gitlab.com/translucence/cap-on-ethereum/issues"
   },
-  "homepage": "https://gitlab.com/translucence/aap-on-ethereum#readme"
+  "homepage": "https://gitlab.com/translucence/cap-on-ethereum#readme"
 }

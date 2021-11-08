@@ -1,7 +1,7 @@
-# AAP on Ethereum
+# CAP on Ethereum
 ### Obtaining the source code
 
-    git clone  git@gitlab.com:translucence/aap-on-ethereum
+    git clone  git@gitlab.com:translucence/cap-on-ethereum
 
 ### Dependencies
 Install the [nix](https://nixos.org) package manager to provide dependencies with
@@ -59,8 +59,8 @@ running on `localhost:8545`.
 
 The simplest way to run all the tests against a nodes is to use the scripts
 
-    aape-test-geth
-    aape-test-hardhat
+    cape-test-geth
+    cape-test-hardhat
 
 These scripts will
 
@@ -74,11 +74,11 @@ minutes.
 
 The port of the node can be changed with `RPC_PORT`. For example,
 
-    env RPC_PORT=8877 aape-test-geth
+    env RPC_PORT=8877 cape-test-geth
 
 To run all the tests against both nodes
 
-    aape-test-all
+    cape-test-all
 
 #### Testing against go-ethereum node
 
@@ -163,7 +163,7 @@ uses `make-genesis-block` and `hdwallet-derive` could be useful.
 ### Ethereum contracts
 Compile the contracts to extract the abi for the ethers abigen (workflow to be
 improved!).
-Run the following command from the root of the `aap-on-ethereum` checkout:
+Run the following command from the root of the `cap-on-ethereum` checkout:
 
     build-abi
 
@@ -207,11 +207,11 @@ watch -x test`).
 Generate a `jf_txn::transfer::TransferNote` and save it to a file `my_note.bin`.
 Building with the `--release` flag make this a lot faster.
 
-    cargo run -p aap-rust-sandbox --example create_note --release
+    cargo run -p cap-rust-sandbox --example create_note --release
 
 Load the file:
 
-    cargo run -p aap-rust-sandbox --example read_note
+    cargo run -p cap-rust-sandbox --example read_note
 
 ### Linting
 Lint the solidity code using `solhint` by running
@@ -283,10 +283,10 @@ a node running on `host:port` brownie will try to connect to that instead.
 
 # Benchmarks
 
-The smart contract `DummyVerifier.sol` simulates the most expensive (in gas) operations of an AAP verifier.
+The smart contract `DummyVerifier.sol` simulates the most expensive (in gas) operations of an CAP verifier.
 
 Our "implementation" of the Rescue permutation function is less performant than [Starkware's one](https://etherscan.io/address/0x7B6fc6b18A20823c3d3663E58AB2Af8D780D0AFe#code) .
-We provide here the gas and usd cost for one AAP transaction.
+We provide here the gas and usd cost for one CAP transaction.
 
 ## Local network
 
@@ -344,7 +344,7 @@ To run the benchmarks against Arbitrum Rinkeby follow these steps:
 You can check the deployment and transactions on Arbitrum for the contract
 at https://testnet.arbiscan.io/address/0x2FB18F4b4519a5fc792cb6508C6505675BA659E9.
 
-# AAP on Arbitrum (a.k.a AAPA)
+# CAP on Arbitrum (a.k.a CAPA)
 
 Clone the arbitrum submodule (https://gitlab.com/translucence/arbitrum fork)
 

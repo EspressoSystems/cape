@@ -11,4 +11,4 @@ test:
   image: lnl7/nix
   script:
     - nix-shell --run "pnpm i && lint-solidity"
-    - nix-shell --run aape-test-geth
+    - nix-shell --run cape-test-geth

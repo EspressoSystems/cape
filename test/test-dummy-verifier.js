@@ -2,20 +2,6 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 const common = require("../lib/common");
 
-async function check_gas(
-  fun_to_evaluate,
-  chunk,
-  merkle_trees_update,
-  expected_gas_str
-) {
-  const tx = await fun_to_evaluate(chunk, merkle_trees_update);
-  const txReceipt = await tx.wait();
-
-  const gasUsed = txReceipt.gasUsed.toString();
-  const expectedGasUsed = ethers.BigNumber.from(expected_gas_str);
-  expect(gasUsed).equal(expectedGasUsed);
-}
-
 describe("Dummy Verifier", function () {
   describe("Should compute the gas fee", async function () {
     let owner, fun_to_eval;
@@ -34,39 +20,42 @@ describe("Dummy Verifier", function () {
 
       await dpv.deployed();
 
-      fun_to_eval = [dpv.verify_empty, dpv.verify, dpv.batch_verify];
+      fun_to_eval = [dpv.verifyEmpty, dpv.verify, dpv.batchVerify];
     });
 
-    it("Works with merkle tree update", async function () {
-      const expected_gas_array = ["119317", "7058643", "6965094"];
-
-      for (let i = 0; i < fun_to_eval.length; i++) {
-        await check_gas(fun_to_eval[i], chunk, true, expected_gas_array[i]);
+    async function check_actual_gas(chunk, merkle_trees_update) {
+      const gas = [];
+      for (const fun of fun_to_eval) {
+        const tx = await fun(chunk, merkle_trees_update);
+        const txReceipt = await tx.wait();
+        gas.push(txReceipt.gasUsed.toString());
       }
+      return gas;
+    }
+
+    it("Works with merkle tree update", async function () {
+      const expected_gas = ["119329", "7051382", "6959977"];
+      const actual_gas = await check_actual_gas(chunk, true);
+      expect(actual_gas).to.deep.equal(expected_gas);
     });
 
     it("Works with without merkle tree update", async function () {
-      const expected_gas_array = ["119305", "762077", "705172"];
-
-      for (let i = 0; i < fun_to_eval.length; i++) {
-        await check_gas(fun_to_eval[i], chunk, false, expected_gas_array[i]);
-      }
+      const expected_gas = ["119317", "759922", "705161"];
+      const actual_gas = await check_actual_gas(chunk, false);
+      expect(actual_gas).to.deep.equal(expected_gas);
     });
 
     it("Batch verifier is more efficient than simple verifier when there are enough transactions", async function () {
-      const expected_gas_array = ["167846", "1132930", "1007674"];
+      const expected_gas = ["167870", "10295854", "10173003"];
 
       const N_AAPTX = 3;
       const chunk = common.create_chunk(N_AAPTX);
 
-      for (let i = 0; i < fun_to_eval.length; i++) {
-        await check_gas(fun_to_eval[i], chunk, false, expected_gas_array[i]);
-      }
+      const actual_gas = await check_actual_gas(chunk, true);
+      expect(actual_gas).to.deep.equal(expected_gas);
 
       // Batch verification is faster than simple verification
-      expect(parseInt(expected_gas_array[2])).lt(
-        parseInt(expected_gas_array[1])
-      );
+      expect(parseInt(expected_gas[2])).lt(parseInt(expected_gas[1]));
     });
   });
 });

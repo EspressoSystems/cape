@@ -28,18 +28,18 @@ contract ReadAAPTx {
     }
 
     struct AuxInfo {
-        uint256 merkle_root;
+        uint256 merkleRoot;
         uint256 fee;
-        uint256 valid_until;
-        GroupProjective txn_memo_ver_key;
+        uint256 validUntil;
+        GroupProjective txnMemoVerKey;
     }
 
     struct TransferNote {
-        uint256[] input_nullifiers;
-        uint256[] output_commitments;
+        uint256[] inputNullifiers;
+        uint256[] outputCommitments;
         TransferValidityProof proof;
-        AuditMemo audit_memo;
-        AuxInfo aux_info;
+        AuditMemo auditMemo;
+        AuxInfo auxInfo;
     }
 
     function readInt256(int256 x) public view returns (int256) {
@@ -50,15 +50,15 @@ contract ReadAAPTx {
         return x + y;
     }
 
-    function submitNullifiers(uint256[] calldata inputs_nullifiers)
+    function submitNullifiers(uint256[] calldata inputsNullifiers)
         public
         view
         returns (uint256)
     {
-        return inputs_nullifiers.length;
+        return inputsNullifiers.length;
     }
 
     function submitTransferNote(TransferNote calldata note) public {
-        scratch = note.input_nullifiers[0];
+        scratch = note.inputNullifiers[0];
     }
 }

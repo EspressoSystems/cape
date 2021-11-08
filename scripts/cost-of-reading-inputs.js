@@ -7,8 +7,7 @@ async function print_report(
   fun_to_eval,
   fun_names,
   chunk,
-  merkle_tree_update,
-  is_starkware
+  merkle_tree_update
 ) {
   console.log("**** " + title + "****");
   for (let i = 0; i < fun_to_eval.length; i++) {
@@ -17,7 +16,6 @@ async function print_report(
       res = await common.compute_gas_and_price(owner, fun_to_eval[i], [
         chunk,
         merkle_tree_update,
-        is_starkware,
       ]);
       let gas = res[0];
 
@@ -46,8 +44,8 @@ async function main() {
 
   console.log("Contract deployed at address " + dpv.address);
 
-  fun_to_eval = [dpv.verify_empty];
-  fun_names = ["verify_empty"];
+  fun_to_eval = [dpv.verifyEmpty];
+  fun_names = ["verifyEmpty"];
 
   const N_APPT_TX_MAX = 10;
   for (let i = 1; i < N_APPT_TX_MAX; i++) {
@@ -59,7 +57,6 @@ async function main() {
       fun_to_eval,
       fun_names,
       chunk,
-      false,
       false
     );
   }

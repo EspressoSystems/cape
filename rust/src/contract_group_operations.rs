@@ -78,7 +78,7 @@ mod tests {
 
         async fn add<M: Middleware>(contract: &TestBN254<M>, a: G1Affine, b: G1Affine) -> G1Affine {
             let res: G1Point = contract
-                .g_1add(G1Ark(a).into(), G1Ark(b).into())
+                .g_1_add(G1Ark(a).into(), G1Ark(b).into())
                 .call()
                 .await
                 .unwrap()
@@ -107,7 +107,7 @@ mod tests {
 
         async fn mul<M: Middleware>(contract: &TestBN254<M>, a: G1Affine, s: U256) -> G1Affine {
             let res: G1Point = contract
-                .g_1mul(G1Ark(a).into(), s)
+                .g_1_mul(G1Ark(a).into(), s)
                 .call()
                 .await
                 .unwrap()

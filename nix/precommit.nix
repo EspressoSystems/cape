@@ -15,5 +15,9 @@ nix-pre-commit-hooks.run {
       enable = true;
       entry = "treefmt";
     };
+    lint-solidity = {
+      enable = true;
+      entry = "lint-solidity";
+    };
   };
 }

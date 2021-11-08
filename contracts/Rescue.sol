@@ -6,13 +6,15 @@ contract Rescue {
     /// The constants are obtained from the Sage script
     /// https://gitlab.com/translucence/crypto/marvellous/-/blob/b0885058f0348171befcf6cf30533812c9f49e15/rescue254.sage
 
-    uint256 constant N_ROUNDS = 12;
-    uint256 constant STATE_SIZE = 4;
-    uint256 constant SCHEDULED_KEY_SIZE = (2 * N_ROUNDS + 1) * STATE_SIZE;
-    uint256 constant MDS_SIZE = STATE_SIZE * STATE_SIZE;
+    uint256 internal constant N_ROUNDS = 12;
+    uint256 internal constant STATE_SIZE = 4;
+    uint256 internal constant SCHEDULED_KEY_SIZE =
+        (2 * N_ROUNDS + 1) * STATE_SIZE;
+    uint256 internal constant MDS_SIZE = STATE_SIZE * STATE_SIZE;
 
     // Obtained by running KeyScheduling([0,0,0,0]). See Algorithm 2 of AT specification document.
-    uint256[SCHEDULED_KEY_SIZE] SCHEDULED_KEY = [
+    // solhint-disable-next-line var-name-mixedcase
+    uint256[SCHEDULED_KEY_SIZE] internal SCHEDULED_KEY = [
         // Init key injection
         14613516837064033601098425266946467918409544647446217386229959902054563533267,
         376600575581954944138907282479272751264978206975465380433764825531344567663,
@@ -140,7 +142,8 @@ contract Rescue {
         18665277628144856329335676361545218245401014824195451740181902217370165017984
     ];
 
-    uint256[MDS_SIZE] MDS = [
+    // solhint-disable-next-line var-name-mixedcase
+    uint256[MDS_SIZE] internal MDS = [
         21888242871839275222246405745257275088548364400416034343698204186575808479992,
         21888242871839275222246405745257275088548364400416034343698204186575806058117,
         21888242871839275222246405745257275088548364400416034343698204186575491214367,
@@ -167,7 +170,7 @@ contract Rescue {
     uint256 internal constant ALPHA_INV =
         17510594297471420177797124596205820070838691520332827474958563349260646796493;
 
-    function exp_mod(
+    function expMod(
         uint256 base,
         uint256 e,
         uint256 m
@@ -191,7 +194,7 @@ contract Rescue {
     }
 
     // TODO make something more efficient
-    function add_vectors(
+    function addVectors(
         uint256[STATE_SIZE] memory v1,
         uint256[STATE_SIZE] memory v2
     ) internal returns (uint256[STATE_SIZE] memory) {
@@ -206,11 +209,11 @@ contract Rescue {
 
     // MDS is hardcoded
     // TODO optimize (see Starkware or hard code matrix operations + assembly)
-    function linear_op(
+    function linearOp(
         uint256[STATE_SIZE] memory state,
         uint256[STATE_SIZE] memory key
     ) private returns (uint256[STATE_SIZE] memory) {
-        uint256[STATE_SIZE] memory new_state = [uint256(0), 0, 0, 0];
+        uint256[STATE_SIZE] memory newState = [uint256(0), 0, 0, 0];
 
         // TODO remove loop to save gas?
         // Matrix multiplication
@@ -223,13 +226,13 @@ contract Rescue {
                     PRIME
                 );
             }
-            new_state[i] = sum;
+            newState[i] = sum;
         }
 
         // Add constant
-        new_state = add_vectors(new_state, key);
+        newState = addVectors(newState, key);
 
-        return new_state;
+        return newState;
     }
 
     // Computes the Rescue permutation on some input
@@ -239,7 +242,7 @@ contract Rescue {
     function perm(
         uint256[STATE_SIZE] memory input // TODO this should be made private/internal
     ) public returns (uint256[STATE_SIZE] memory) {
-        uint256[STATE_SIZE] memory key_0 = [
+        uint256[STATE_SIZE] memory key0 = [
             SCHEDULED_KEY[0],
             SCHEDULED_KEY[1],
             SCHEDULED_KEY[2],
@@ -247,31 +250,31 @@ contract Rescue {
         ];
 
         // S = m + k[0]
-        uint256[STATE_SIZE] memory S = add_vectors(input, key_0);
+        uint256[STATE_SIZE] memory S = addVectors(input, key0); // solhint-disable-line var-name-mixedcase
 
         // Main loop
         for (uint256 i = 1; i < 2 * N_ROUNDS + 1; i++) {
             if ((i - 1) % 2 == 0) {
                 // TODO avoid code duplication?
-                S[0] = exp_mod(S[0], ALPHA_INV, PRIME);
-                S[1] = exp_mod(S[1], ALPHA_INV, PRIME);
-                S[2] = exp_mod(S[2], ALPHA_INV, PRIME);
-                S[3] = exp_mod(S[3], ALPHA_INV, PRIME);
+                S[0] = expMod(S[0], ALPHA_INV, PRIME);
+                S[1] = expMod(S[1], ALPHA_INV, PRIME);
+                S[2] = expMod(S[2], ALPHA_INV, PRIME);
+                S[3] = expMod(S[3], ALPHA_INV, PRIME);
             } else {
                 // TODO avoid code duplication?
-                S[0] = exp_mod(S[0], ALPHA, PRIME);
-                S[1] = exp_mod(S[1], ALPHA, PRIME);
-                S[2] = exp_mod(S[2], ALPHA, PRIME);
-                S[3] = exp_mod(S[3], ALPHA, PRIME);
+                S[0] = expMod(S[0], ALPHA, PRIME);
+                S[1] = expMod(S[1], ALPHA, PRIME);
+                S[2] = expMod(S[2], ALPHA, PRIME);
+                S[3] = expMod(S[3], ALPHA, PRIME);
             }
 
-            uint256[STATE_SIZE] memory key_i = [
+            uint256[STATE_SIZE] memory keyI = [
                 SCHEDULED_KEY[i * STATE_SIZE],
                 SCHEDULED_KEY[i * STATE_SIZE + 1],
                 SCHEDULED_KEY[i * STATE_SIZE + 2],
                 SCHEDULED_KEY[i * STATE_SIZE + 3]
             ];
-            S = linear_op(S, key_i);
+            S = linearOp(S, keyI);
         }
         return S;
     }

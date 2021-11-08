@@ -38,22 +38,19 @@ async function main() {
     for (let j = 0; j < i; j++) {
       // Insert nullifiers
       let nullifier = ethers.utils.randomBytes(32);
-      await aape._insert_nullifier(nullifier);
+      await aape._insertNullifier(nullifier);
     }
 
     // Measure how much it costs to check for membership
     let title = "Check for nullifiers. HASHMAP SIZE = " + i + " ";
     let test_nullifier = ethers.utils.randomBytes(32);
-    await print_report(
-      owner,
-      title,
-      aape._has_nullifier_already_been_published,
-      [test_nullifier]
-    );
+    await print_report(owner, title, aape._hasNullifierAlreadyBeenPublished, [
+      test_nullifier,
+    ]);
 
     title = "Insert a nullifier. HASHMAP SIZE = " + i + " ";
     test_nullifier = ethers.utils.randomBytes(32);
-    await print_report(owner, title, aape._insert_nullifier, [test_nullifier]);
+    await print_report(owner, title, aape._insertNullifier, [test_nullifier]);
   }
 }
 

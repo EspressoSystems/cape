@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+exec solhint -w 0 'contracts/**/*.sol'

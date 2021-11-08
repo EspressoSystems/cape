@@ -47,8 +47,8 @@ async function main() {
 
   console.log("Contract deployed at address " + dpv.address);
 
-  fun_to_eval = [dpv.verify_empty, dpv.verify, dpv.batch_verify];
-  fun_names = ["verify_empty", "verify", "batch_verify"];
+  fun_to_eval = [dpv.verifyEmpty, dpv.verify, dpv.batchVerify];
+  fun_names = ["verifyEmpty", "verify", "batchVerify"];
 
   const chunk = common.create_chunk(N_AAPTX);
 

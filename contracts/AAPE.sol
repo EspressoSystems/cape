@@ -9,21 +9,21 @@ contract AAPE is NullifiersStore, Wrapper {
         bool field; // TODO
     }
 
-    function validate_and_apply(AAPTransaction[] calldata _block) public {}
+    function validateAndApply(AAPTransaction[] calldata _block) public {}
 
-    function process_erc20_deposits(
-        AssetType memory _asset_type,
+    function processERC20Deposits(
+        AssetType memory _assetType,
         uint256 _amount,
         address _sender
     ) private {}
 
-    function insert_record(AssetRecord memory _record) internal {}
+    function insertRecord(AssetRecord memory _record) internal {}
 
-    function process_standard_transaction(AAPTransaction memory _transaction)
+    function processStandardTransaction(AAPTransaction memory _transaction)
         internal
     {}
 
-    function process_burn_transaction(AAPTransaction memory _transaction)
+    function processBurnTransaction(AAPTransaction memory _transaction)
         internal
     {}
 }

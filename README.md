@@ -187,11 +187,22 @@ artifacts directory and the compilation cache with
     hardhat clean
 
 ### Rust
-Watch directory and run tests on changes:
+To run the rust tests
 
-    cargo watch -x test
+    cargo test
 
-### Examples
+Note that this requires compiled solidity contracts and a running geth node. For
+development it's convenient to keep `hivemind` running in a separate terminal
+for that purpose.
+
+To watch the rust files and compile on changes
+
+    cargo watch
+
+The command (`check` by default) can be changed with `-x` (for example `cargo
+watch -x test`).
+
+#### Examples
 
 Generate a `jf_txn::transfer::TransferNote` and save it to a file `my_note.bin`.
 Building with the `--release` flag make this a lot faster.
@@ -202,6 +213,12 @@ Load the file:
 
     cargo run -p aap-rust-sandbox --example read_note
 
+### Linting
+Lint the solidity code using `solhint` by running
+
+    lint-solidity
+
+This runs also as part of the pre-commit hook.
 ### Formatting
 Format all the source files with their respective formatters:
 

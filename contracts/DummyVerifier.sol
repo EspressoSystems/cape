@@ -6,54 +6,56 @@ import "./NullifiersStore.sol";
 import "./RecordsMerkleTree.sol";
 
 contract DummyVerifier is NullifiersStore, RecordsMerkleTree {
-    uint256 RECORDS_TREE_HEIGHT = 25;
-    uint256 AAPTX_SIZE = 3000; // Must be the same as in the javascript testing code
-    uint256 N_INPUTS = 4; // Number of AAP inputs per transactions corresponding to a transaction of roughly 3 KB
-    uint256 N_OUTPUTS = 5; // Number of AAP outputs per transactions of roughly 3 KB
+    uint256 internal constant RECORDS_TREE_HEIGHT = 25;
+    uint256 internal constant AAPTX_SIZE = 3000; // Must be the same as in the javascript testing code
+    uint256 internal constant N_INPUTS = 4; // Number of AAP inputs per transactions corresponding to a transaction of roughly 3 KB
+    uint256 internal constant N_OUTPUTS = 5; // Number of AAP outputs per transactions of roughly 3 KB
 
-    function verify_empty(bytes memory chunk, bool merkle_trees_update)
-        public
-        returns (bool)
-    {
+    /* solhint-enable */
+
+    function verifyEmpty(
+        bytes memory chunk, // solhint-disable-line no-unused-vars
+        bool merkleTreesUpdate // solhint-disable-line no-unused-vars
+    ) public returns (bool) {
         return true;
     }
 
-    function verify(bytes memory chunk, bool merkle_trees_update)
+    function verify(bytes memory chunk, bool merkleTreesUpdate)
         public
         returns (bool)
     {
         // Count the number of transactions
-        uint256 n_aaptx = chunk.length / AAPTX_SIZE;
+        uint256 nAaptx = chunk.length / AAPTX_SIZE;
 
-        // n_aaptx pairing check
-        for (uint256 i = 0; i < n_aaptx; i++) {
-            run_pairing_check();
+        // nAaptx pairing check
+        for (uint256 i = 0; i < nAaptx; i++) {
+            runPairingCheck();
         }
 
         // Cost of prepare_pcs_info
-        prepare_pcs_info(n_aaptx);
+        preparePcsInfo(nAaptx);
 
-        if (merkle_trees_update) {
-            update_merkle_trees(n_aaptx);
+        if (merkleTreesUpdate) {
+            updateMerkleTrees(nAaptx);
         }
 
         return true;
     }
 
-    function prepare_pcs_info(uint256 n_aaptx) private {
-        // $n_aaptx$ multi-exp in G1 of size $c$ where c=32
+    function preparePcsInfo(uint256 nAaptx) private {
+        // $nAaptx$ multi-exp in G1 of size $c$ where c=32
         // (Empirically 29=<c<=36. See rust code call `prepare_pcs_info` in PlonkKzgSnark.batch_verify)
 
         uint256 c = 32;
-        for (uint256 i = 0; i < n_aaptx; i++) {
-            run_multi_exp_g1(c);
+        for (uint256 i = 0; i < nAaptx; i++) {
+            runMultiExpG1(c);
         }
     }
 
-    function insert_nullifiers() private returns (bytes32) {
+    function insertNullifiers() private returns (bytes32) {
         bytes memory nullifier = "a857857";
         for (uint256 i = 0; i < N_INPUTS; i++) {
-            insert_nullifier(nullifier);
+            insertNullifier(nullifier);
         }
     }
 
@@ -66,10 +68,10 @@ contract DummyVerifier is NullifiersStore, RecordsMerkleTree {
         The cost is N + N/3 + N/9 + ... + N/(3^H) which tends to 1.5 N when N grows.
         So we approximate the cost of inserting N elements  in the tree by the cost of computing 1.5 N rescue hash functions.
      */
-    function update_records_tree_batch(uint256 n_aaptx) private {
-        uint256 TOTAL_COST_BATCH_INSERTION = (3 * n_aaptx * N_OUTPUTS) / 2;
+    function updateRecordsTreeBatch(uint256 nAaptx) private {
+        uint256 totalCostBatchInsertion = (3 * nAaptx * N_OUTPUTS) / 2;
 
-        for (uint256 i = 0; i < TOTAL_COST_BATCH_INSERTION; i++) {
+        for (uint256 i = 0; i < totalCostBatchInsertion; i++) {
             // Computes rescue hash
             uint256 a = 7878754242;
             uint256 b = 468777777777776575;
@@ -78,46 +80,46 @@ contract DummyVerifier is NullifiersStore, RecordsMerkleTree {
         }
     }
 
-    function update_merkle_trees(uint256 n_aaptx) public {
+    function updateMerkleTrees(uint256 nAaptx) public {
         // For the nullifier tree we insert the leaves one by one
-        for (uint256 i = 0; i < n_aaptx; i++) {
-            insert_nullifiers();
+        for (uint256 i = 0; i < nAaptx; i++) {
+            insertNullifiers();
         }
 
         // For the record tree we insert the records in batch
-        update_records_tree_batch(n_aaptx);
+        updateRecordsTreeBatch(nAaptx);
     }
 
-    function batch_verify(bytes memory chunk, bool merkle_trees_update)
+    function batchVerify(bytes memory chunk, bool merkleTreesUpdate)
         public
         returns (bool)
     {
         // Count the number of transactions
-        uint256 aaptx_size = 3000;
-        uint256 n_aaptx = chunk.length / aaptx_size;
+        uint256 aaptxSize = 3000;
+        uint256 nAaptx = chunk.length / aaptxSize;
 
         // We lower bound the complexity by
         // 1 pairing check
-        // 2  multi exp in G1 of size $n_aaptx$ (See rust code PlonkKzgSnark.batch_verify)
-        // Cost of prepare_pcs_info(n_aaptx)
+        // 2  multi exp in G1 of size $nAaptx$ (See rust code PlonkKzgSnark.batch_verify)
+        // Cost of preparePcsInfo(nAaptx)
 
-        // 2 multi exp in G1 of size $n_aaptx$
-        run_multi_exp_g1(n_aaptx);
-        run_multi_exp_g1(n_aaptx);
+        // 2 multi exp in G1 of size $nAaptx$
+        runMultiExpG1(nAaptx);
+        runMultiExpG1(nAaptx);
 
         // 1 pairing check
-        run_pairing_check();
+        runPairingCheck();
 
-        prepare_pcs_info(n_aaptx);
+        preparePcsInfo(nAaptx);
 
-        if (merkle_trees_update) {
-            update_merkle_trees(n_aaptx);
+        if (merkleTreesUpdate) {
+            updateMerkleTrees(nAaptx);
         }
 
         return true;
     }
 
-    function run_pairing_check() private {
+    function runPairingCheck() private {
         Curve.G1Point memory g1 = Curve.P1();
         Curve.G2Point memory g2 = Curve.P2();
 
@@ -126,20 +128,20 @@ contract DummyVerifier is NullifiersStore, RecordsMerkleTree {
 
         Curve.G2Point[] memory points2 = new Curve.G2Point[](1);
         points2[0] = g2;
-        bool res = Curve.pairing(points1, points2);
+        bool res = Curve.pairing(points1, points2); // solhint-disable-line no-unused-vars
     }
 
     // TODO use proper multiexp opcode
-    function run_multi_exp_g1(uint256 size) private {
+    function runMultiExpG1(uint256 size) private {
         for (uint256 i = 0; i < size; i++) {
             // Group scalar multiplications
             Curve.G1Point memory g1 = Curve.P1();
             uint256 scalar1 = 545454; // TODO use bigger scalar
-            Curve.G1Point memory p1 = Curve.g1mul(g1, scalar1);
+            Curve.G1Point memory p1 = Curve.g1mul(g1, scalar1); // solhint-disable-line no-unused-vars
 
             // (size-1) group additions
             if (i >= 1) {
-                Curve.G1Point memory p2 = Curve.g1add(g1, g1);
+                Curve.G1Point memory p2 = Curve.g1add(g1, g1); // solhint-disable-line no-unused-vars
             }
         }
     }

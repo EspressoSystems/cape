@@ -14,26 +14,26 @@ contract Wrapper {
         bool field; // TODO
     }
 
-    function credit_erc20_balance(
-        address _erc20_token,
+    function creditERC20Balance(
+        address _erc20Token,
         uint256 _amount,
         address _recipient
     ) private {}
 
-    function gen_asset_type_erc20(
-        address _erc20_token,
+    function genAssetTypeERC20(
+        address _erc20Token,
         string calldata _sponsor,
         Policy calldata _policy
     ) public {}
 
     function withdraw(
         address _recipient,
-        address _erc20_token,
+        address _erc20Token,
         uint256 _amount
     ) public {}
 
-    function wrap_erc20_token(
-        AssetType memory _asset_type,
+    function wrapERC20Token(
+        AssetType memory _assetType,
         AssetRecord memory _record,
         address _sender
     ) public {}

@@ -67,7 +67,7 @@ pub(crate) async fn get_contract_records_merkle_tree() -> TestRecordsMerkleTree<
 /// * `frontier` - frontier to be flattened
 /// * `returns` - flattened frontier. If the frontier is empty, returns an empty vector.
 ///
-// TODO improve return the array of siblings and the array of 0,1,3 value (positions) to save space
+// TODO improve return the array of siblings and the array of 0,1,3 value (positions) to save space. Actually the uid should be enough.
 fn flatten_frontier(frontier: &MerkleFrontier<Fr254>, uid: u64) -> Vec<Fr254> {
     match frontier {
         MerkleFrontier::Proof(lap) => {
@@ -144,7 +144,8 @@ mod tests {
         mt.push(elem2);
         mt.push(elem3);
         let frontier = mt.frontier();
-        let flattened_frontier = flatten_frontier(&frontier, 2);
+        let uid = 3;
+        let flattened_frontier = flatten_frontier(&frontier, uid);
 
         let (merkle_path_nodes, leaf) = match frontier {
             MerkleFrontier::Proof(lap) => (lap.path.nodes, lap.leaf.0),
@@ -152,7 +153,7 @@ mod tests {
         };
 
         let expected_flattened_frontier: Vec<Fr254> = vec![
-            compute_hash_leaf(leaf, 2),
+            compute_hash_leaf(leaf, uid),
             merkle_path_nodes[0].sibling1.to_scalar(),
             merkle_path_nodes[0].sibling2.to_scalar(),
             Fr254::from(2),

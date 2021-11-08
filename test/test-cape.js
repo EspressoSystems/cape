@@ -64,7 +64,7 @@ describe("CAPE", function () {
       let null2 = ethers.utils.randomBytes(32);
 
       await cape._insertNullifier(null2);
-      
+
       expected_new_commitment = ethers.utils.keccak256(
         encoder.encode(["bytes32", "bytes32"], [new_commitment, null2])
       );

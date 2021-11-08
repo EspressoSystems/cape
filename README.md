@@ -1,9 +1,11 @@
 # CAP on Ethereum
+
 ### Obtaining the source code
 
     git clone  git@gitlab.com:translucence/cap-on-ethereum
 
 ### Dependencies
+
 Install the [nix](https://nixos.org) package manager to provide dependencies with
 correct versions. Installation instructions can be found [here](https://nixos.org/download.html).
 If in a rush, running the following command and following the on-screen instructions should
@@ -18,7 +20,9 @@ files in the `./nix` directory afterwards.
 The rust overlay can be updated by running `nix/update-rust-overlay`.
 
 ### Environment
+
 #### 1. Activate the nix environment
+
 The [direnv](https://direnv.net/) shell extension can be used to activate the environment.
 Note that it direnv needs to be [hooked](https://direnv.net/docs/hook.html) into the shell to function.
 
@@ -37,6 +41,7 @@ temporarily disable `direnv` and manually enter a nix shell run
     nix-shell
 
 #### 2. Install nodejs dependencies
+
 Install the node dependencies with pnpm
 
     pnpm i
@@ -44,6 +49,7 @@ Install the node dependencies with pnpm
 Also run this command after pulling in changes that modify `pnpm-lock.yaml`.
 
 ### Development
+
 To start the background services to support interactive development run the command
 
     hivemind
@@ -54,6 +60,7 @@ To add additional processes add lines to `Procfile` and (if desired) scripts to
 run in the `./bin` directory.
 
 ### Testing (Javascript)
+
 We support running against a go-ethereum (`geth`) or hardhat (shortcut `hh`) node
 running on `localhost:8545`.
 
@@ -93,10 +100,12 @@ When running tests against geth
 - Failing `require` statements are shown in the`geth` console log.
 
 #### Testing against hardhat node
+
 You can choose to let hardhat start a hardhat node automatically or start a node
 yourself and let hardhat connect to it.
 
 ##### Separate hardhat node
+
 Start the hardhat node in separate terminal
 
     hh node
@@ -108,6 +117,7 @@ When running tests against this hardhat node
 - Failing `require` statements are shown in human readable form in the terminal running the node.
 
 ##### Hardhat node integrated in test command
+
 It's also possible to run the hardhat node and tests in one command
 
     hh --network hardhat test
@@ -117,17 +127,20 @@ It's also possible to run the hardhat node and tests in one command
 - Failing `require` statements are shown in human readable form in the terminal.
 
 ### Running scripts
+
 Run a script that connects to the local network (on port 8545)
 
     hh run scripts/sample-script.js --network localhost
 
 #### Precompiled solidity binaries
+
 Hardhat is configured to use the solc binary installed with nix (see
 [nix/solc-bin/default.nix](nix/solc-bin/default.nix)) if matches the version
 number. If hardhat downloads and uses another binary a warning is printed the
 console.
 
 ##### Details
+
 The binaries used by hardhat, brownie, solc-select, ... from
 https://solc-bin.ethereum.org/linux-amd64/list.json underwent a change in build
 process from v0.7.5 to v0.7.6 ([this
@@ -150,7 +163,9 @@ solc-select do not have such a fallback mechanisms.
 All the rust code can be found in the `rust` directory.
 
 ## Development
+
 ### go-ethereum / geth
+
 Run a geth node (in a separate terminal, from anywhere):
 
     run-geth
@@ -161,6 +176,7 @@ If time permits replacing the `run-geth` bash script with a python script that
 uses `make-genesis-block` and `hdwallet-derive` could be useful.
 
 ### Ethereum contracts
+
 Compile the contracts to extract the abi for the ethers abigen (workflow to be
 improved!).
 Run the following command from the root of the `cap-on-ethereum` checkout:
@@ -187,6 +203,7 @@ artifacts directory and the compilation cache with
     hardhat clean
 
 ### Rust
+
 To run the rust tests
 
     cargo test
@@ -199,8 +216,7 @@ To watch the rust files and compile on changes
 
     cargo watch
 
-The command (`check` by default) can be changed with `-x` (for example `cargo
-watch -x test`).
+The command (`check` by default) can be changed with `-x` (for example `cargo watch -x test`).
 
 #### Examples
 
@@ -214,12 +230,15 @@ Load the file:
     cargo run -p cap-rust-sandbox --example read_note
 
 ### Linting
+
 Lint the solidity code using `solhint` by running
 
     lint-solidity
 
 This runs also as part of the pre-commit hook.
+
 ### Formatting
+
 Format all the source files with their respective formatters:
 
     treefmt
@@ -232,30 +251,35 @@ For big reformatting commits, add the revision to the `.git-blame-ignore-revs`
 file.
 
 ### Git hooks
+
 Pre-commit hooks are managed by nix. Edit `./nix/precommit.nix` to manage the
 hooks.
 
 ## Ethereum key management
+
 The keys are derived from the mnemonic in the `TEST_MNEMONIC` env var.
 
 - Hardhat has builtin mnemonic support.
 - For geth we start an ephemeral chain but specify a `--keystore` location and
-load the addresses into it inside the `bin/run-geth` script.
+  load the addresses into it inside the `bin/run-geth` script.
 - A simple python utility to derive keys can be found in `bin/hdwallet-derive`.
   For description of the arguments run `hdwallet-derive --help`.
 
 ## Python tools
+
 We are using `poetry` for python dependencies and `poetry2nix` to integrate them
 in the nix-shell development environment.
 
 Use any poetry command e. g. `poetry add --dev ipython` to add packages.
 
 ### Interacting with contracts from python
+
 The ethereum development suite [eth-brownie](https://eth-brownie.readthedocs.io)
 provides some interactive tools and makes it convenient to test the contracts
 with python code.
 
 #### Usage
+
 Note: brownie currently only works with the hardhat node (but not with the geth
 node). If the geth node is running it will try to connect to it and hang. If
 brownie doesn't find something listening on port 8545 it will try starting a
@@ -312,15 +336,17 @@ batch_verify:  2759316.285714286 gas  ------ 2084.7296774480005 USD
 
 ## Rinkeby
 
-* Set the RINKEBY_URL in the .env file. A project can be created at
+- Set the RINKEBY_URL in the .env file. A project can be created at
   https://infura.io/dashboard/ethereum.
-* Set the RINKEBY_MNEMONIC in the .env file.
-* Run the following command
+- Set the RINKEBY_MNEMONIC in the .env file.
+- Run the following command
+
 ```
 > hardhat --network rinkeby run scripts/benchmarks.js
 ```
 
 ## Goerli
+
 - Similar to Rinkeby section (replace RINKEBY with GOERLI) and use `--network goerli`.
 - Faucets: [Simple](https://goerli-faucet.slock.it),
   [Social](https://faucet.goerli.mudit.blog/).
@@ -329,14 +355,15 @@ batch_verify:  2759316.285714286 gas  ------ 2084.7296774480005 USD
 
 To run the benchmarks against Arbitrum Rinkeby follow these steps:
 
-* Install [Metamask](https://metamask.io/) in your browser and copy the mnemonic.
-* Set the RINKEBY_MNEMONIC in the .env file.
-* Switch metamask to the rinkeby network.
-* Get some Rinkeby coins at the [MyCrypto faucet](https://app.mycrypto.com/faucet). You can also use the official [Rinkeby faucet](https://faucet.rinkeby.io) which is less stable but where you can get more coins at once.
-* Go to the [Arbitrum bridge](https://bridge.arbitrum.io/) and deposit your
- Rinkeby coins. Leave a bit for the ethereum gas fees. Wait a few minutes until
- your account is funded.
-* Run the following command
+- Install [Metamask](https://metamask.io/) in your browser and copy the mnemonic.
+- Set the RINKEBY_MNEMONIC in the .env file.
+- Switch metamask to the rinkeby network.
+- Get some Rinkeby coins at the [MyCrypto faucet](https://app.mycrypto.com/faucet). You can also use the official [Rinkeby faucet](https://faucet.rinkeby.io) which is less stable but where you can get more coins at once.
+- Go to the [Arbitrum bridge](https://bridge.arbitrum.io/) and deposit your
+  Rinkeby coins. Leave a bit for the ethereum gas fees. Wait a few minutes until
+  your account is funded.
+- Run the following command
+
 ```
 > hardhat --network arbitrum run scripts/benchmarks.js
 ```
@@ -353,6 +380,7 @@ Clone the arbitrum submodule (https://gitlab.com/translucence/arbitrum fork)
     nix-shell
 
 # Running local arb-dev-node (not officially supported!)
+
 Install dependencies
 
     pip install -r requirements-dev.txt
@@ -377,12 +405,14 @@ Run tests
 at the moment this will fail due to gas mismatch.
 
 ## Gas Reporter
+
 Set the env var `REPORT_GAS` to get extra output about the gas consumption of
 contract functions called in the tests.
 
     env REPORT_GAS=1 hh test
 
 ## CI
+
 To locally spin up a docker container like the one used in the CI
 
     docker run \
@@ -394,6 +424,7 @@ The code in the current directory will be at `/code`. You may have to delete the
 `./node_modules` directory with root permissions afterwards.
 
 ## Documentation
+
 Extracting documentation from the solidity source is done using a javascript
 tool called `solidity-docgen`.
 
@@ -402,3 +433,7 @@ To generate the documentation run
     solidity-docgen --solc-module solc-0.8 -o ./doc
 
 The generated files can be found in the `./doc` folder.
+
+### Ethereum Asset (Un)Wrapping Workflow
+
+Documentation about wrapping and unwrapping ERC20 tokens into and out of CAPE is described in `./doc/contracts/lib.rs::test`.

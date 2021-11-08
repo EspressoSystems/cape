@@ -4,8 +4,6 @@ includes = ["**/*.nix"]
 
 [formatter.rust]
 command = "rustfmt"
-work-dir = "rust"
-options = ["--edition", "2018"]
 includes = ["**/*.rs"]
 
 [formatter.python]

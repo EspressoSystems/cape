@@ -1,0 +1,9 @@
+edition = "2018"
+reorder_imports = true
+use_try_shorthand = true
+use_field_init_shorthand = true
+# condense_wildcard_suffixes = true
+# imports_granularity = "Crate"
+# wrap_comments = true
+# normalize_comments = true
+# match_block_trailing_comma = true

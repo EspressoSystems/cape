@@ -355,7 +355,7 @@ We are investigating why some of these transactions revert.
 
 Run tests
 
-    hardhat --network arbitrum_dev test/test-dummy-verifier.js
+    hardhat --network arbitrum_dev test/test-dummy-cape-contract.js
 
 at the moment this will fail due to gas mismatch.
 

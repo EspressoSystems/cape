@@ -5,7 +5,7 @@ import {Curve} from "./BN254.sol";
 import "./NullifiersStore.sol";
 import "./RecordsMerkleTree.sol";
 
-contract DummyVerifier is NullifiersStore, RecordsMerkleTree {
+contract DummyCAPE is NullifiersStore, RecordsMerkleTree {
     uint256 RECORDS_TREE_HEIGHT = 25;
     uint256 AAPTX_SIZE = 3000; // Must be the same as in the javascript testing code
     uint256 N_INPUTS = 4; // Number of AAP inputs per transactions corresponding to a transaction of roughly 3 KB
@@ -34,7 +34,7 @@ contract DummyVerifier is NullifiersStore, RecordsMerkleTree {
         prepare_pcs_info(n_aaptx);
 
         if (merkle_trees_update) {
-            update_merkle_trees(n_aaptx);
+            update_data_structures(n_aaptx);
         }
 
         return true;
@@ -78,7 +78,7 @@ contract DummyVerifier is NullifiersStore, RecordsMerkleTree {
         }
     }
 
-    function update_merkle_trees(uint256 n_aaptx) public {
+    function update_data_structures(uint256 n_aaptx) public {
         // For the nullifier tree we insert the leaves one by one
         for (uint256 i = 0; i < n_aaptx; i++) {
             insert_nullifiers();
@@ -111,7 +111,7 @@ contract DummyVerifier is NullifiersStore, RecordsMerkleTree {
         prepare_pcs_info(n_aaptx);
 
         if (merkle_trees_update) {
-            update_merkle_trees(n_aaptx);
+            update_data_structures(n_aaptx);
         }
 
         return true;

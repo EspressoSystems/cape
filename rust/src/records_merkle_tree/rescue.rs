@@ -2,21 +2,21 @@ use ethers::prelude::abigen;
 
 abigen!(
     RecordsMerkleTree,
-    "artifacts/contracts/RecordsMerkleTree.sol/RecordsMerkleTree/abi.json",
+    "artifacts/contracts/TestRecordsMerkleTree.sol/TestRecordsMerkleTree/abi.json",
     event_derives(serde::Deserialize, serde::Serialize)
 );
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::ethereum;
+
     use crate::helpers::{convert_fr254_to_u256, convert_u256_to_bytes_le};
     use ark_ed_on_bn254::Fq as Fr254;
     use ark_ff::{BigInteger, PrimeField, UniformRand, Zero};
     use ethers::prelude::*;
     use jf_rescue::Permutation;
     use std::default::Default;
-    use std::path::Path;
+
+    use crate::records_merkle_tree::get_contract_records_merkle_tree;
 
     // From jellyfish rescue/src/lib.rs
     // hash output on vector [0, 0, 0, 0]
@@ -40,20 +40,6 @@ mod tests {
         ],
     ];
 
-    async fn get_contract() -> RecordsMerkleTree<
-        SignerMiddleware<Provider<Http>, Wallet<ethers::core::k256::ecdsa::SigningKey>>,
-    > {
-        let client = ethereum::get_funded_deployer().await.unwrap();
-        let contract = ethereum::deploy(
-            client.clone(),
-            Path::new("../artifacts/contracts/RecordsMerkleTree.sol/RecordsMerkleTree"),
-            (),
-        )
-        .await
-        .unwrap();
-        RecordsMerkleTree::new(contract.address(), client)
-    }
-
     #[test]
     fn test_rescue_sponge_jellyfish() {
         let rescue = Permutation::default();
@@ -69,7 +55,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_rescue_hash_function_solidity_for_zero_vector_input() {
-        let contract = get_contract().await;
+        let contract = get_contract_records_merkle_tree().await;
 
         let res: U256 = contract
             .hash(U256::from(0), U256::from(0), U256::from(0))
@@ -83,7 +69,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_rescue_hash_function_solidity_on_random_inputs() {
-        let contract = get_contract().await;
+        let contract = get_contract_records_merkle_tree().await;
 
         let rescue = Permutation::default();
         let mut rng = ark_std::test_rng();

@@ -143,21 +143,22 @@ mod tests {
     use itertools::Itertools;
     use jf_primitives::merkle_tree::{MerkleTree, NodeValue};
 
-    // TODO strangely this function does not work. The assert_eq! never raise any error...
-    // async fn compare_roots(
-    //     mt: &MerkleTree<Fr254>,
-    //     contract: &TestRecordsMerkleTree<
-    //         SignerMiddleware<Provider<Http>, Wallet<ethers::core::k256::ecdsa::SigningKey>>,
-    //     >,
-    // ) {
-    //     let root_fr254 = mt.commitment().root_value;
-    //     let root_value_u256 = contract.get_root_value().call().await.unwrap();
-    //
-    //     assert_eq!(
-    //         convert_u256_to_bytes_le(root_value_u256).as_slice(),
-    //         root_fr254.to_scalar().into_repr().to_bytes_le()
-    //     );
-    // }
+    async fn compare_roots(
+        mt: &MerkleTree<Fr254>,
+        contract: &TestRecordsMerkleTree<
+            SignerMiddleware<Provider<Http>, Wallet<ethers::core::k256::ecdsa::SigningKey>>,
+        >,
+        should_be_equal: bool,
+    ) {
+        let root_fr254 = mt.commitment().root_value;
+        let root_value_u256 = contract.get_root_value().call().await.unwrap();
+
+        assert_eq!(
+            should_be_equal,
+            (convert_u256_to_bytes_le(root_value_u256).as_slice()
+                == root_fr254.to_scalar().into_repr().to_bytes_le())
+        );
+    }
 
     #[test]
     fn test_jellyfish_records_merkle_tree() {
@@ -337,25 +338,11 @@ mod tests {
             .await
             .unwrap();
 
-        // TODO refactor into compare_roots(). Note that it is not so easy that as apparently
-        // putting this code into an async function does not allow to catch errors...
-        let root_fr254 = mt.commitment().root_value;
-        let root_value_u256 = contract.get_root_value().call().await.unwrap();
+        compare_roots(&mt, &contract, true).await;
 
-        assert_eq!(
-            convert_u256_to_bytes_le(root_value_u256).as_slice(),
-            root_fr254.to_scalar().into_repr().to_bytes_le()
-        );
-
-        mt.push(Fr254::from(7878));
         // Insert another element into the Jellyfish Merkle tree to check that roots are differents
-        let root_fr254 = mt.commitment().root_value;
-        let root_value_u256 = contract.get_root_value().call().await.unwrap();
-
-        assert!(
-            convert_u256_to_bytes_le(root_value_u256).as_slice()
-                != root_fr254.to_scalar().into_repr().to_bytes_le()
-        );
+        mt.push(Fr254::from(7878));
+        compare_roots(&mt, &contract, false).await;
     }
 
     #[tokio::test]
@@ -413,19 +400,10 @@ mod tests {
             .await
             .unwrap();
 
-        // TODO refactor into compare_roots(). Note that it is not so easy that as apparently
-        // putting this code into an async function does not allow to catch errors...
-        let root_fr254 = mt.commitment().root_value;
-        let root_value_u256 = contract.get_root_value().call().await.unwrap();
-
-        // Roots are different because no element was inserted
-        assert!(
-            convert_u256_to_bytes_le(root_value_u256).as_slice()
-                != root_fr254.to_scalar().into_repr().to_bytes_le()
-        );
+        // Roots are different
+        compare_roots(&mt, &contract, false).await;
 
         // Now we insert the elements into the smart contract
-
         let elem5_u256 = convert_fr254_to_u256(elem5);
         let elem6_u256 = convert_fr254_to_u256(elem6);
         let elements_u256 = vec![elem5_u256, elem6_u256];

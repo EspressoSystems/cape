@@ -92,7 +92,7 @@ contract RecordsMerkleTree is Rescue {
         console.log("frontier_root_value %s", frontier_root_value);
 
         // Compute the number of leaves from the frontier represented as nodes
-        uint256 expected_num_leaves = 0;
+        uint256 num_leaves_from_frontier = 0;
 
         uint256 index = root_index;
         Node memory node = nodes[root_index];
@@ -105,11 +105,11 @@ contract RecordsMerkleTree is Rescue {
                 index = node.left;
             }
             if (!is_null(nodes[node.middle])) {
-                expected_num_leaves += power_of_three * 1;
+                num_leaves_from_frontier += power_of_three * 1;
                 index = node.middle;
             }
             if (!is_null(nodes[node.right])) {
-                expected_num_leaves += power_of_three * 2;
+                num_leaves_from_frontier += power_of_three * 2;
                 index = node.right;
             }
             power_of_three /= 3;
@@ -117,14 +117,14 @@ contract RecordsMerkleTree is Rescue {
             node = nodes[index];
         }
 
-        expected_num_leaves += 1;
+        num_leaves_from_frontier += 1;
 
-        console.log("expected_number_of_leaves: %s", expected_num_leaves);
+        console.log("expected_number_of_leaves: %s", num_leaves_from_frontier);
         console.log("num_leaves: %s", num_leaves);
 
         return
             (frontier_root_value == root_value) &&
-            (expected_num_leaves == num_leaves);
+            (num_leaves_from_frontier == num_leaves);
     }
 
     function build_tree_from_frontier(

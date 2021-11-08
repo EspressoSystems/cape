@@ -5,7 +5,9 @@ use ethers::prelude::abigen;
 use crate::ethereum;
 use ark_ed_on_bn254::Fq as Fr254;
 use ethers::prelude::*;
-use jf_primitives::merkle_tree::{MerkleFrontier, NodePos, NodeValue};
+use jf_primitives::merkle_tree::{
+    MerkleFrontier, MerkleLeaf, MerkleLeafProof, MerklePath, MerklePathNode, NodePos, NodeValue,
+};
 use jf_rescue::Permutation;
 use jf_rescue::RescueParameter;
 use std::path::Path;
@@ -68,6 +70,7 @@ pub(crate) async fn get_contract_records_merkle_tree() -> TestRecordsMerkleTree<
 /// * `returns` - flattened frontier. If the frontier is empty, returns an empty vector.
 ///
 // TODO improve return the array of siblings and the array of 0,1,3 value (positions) to save space. Actually the uid should be enough.
+// TODO the uid can be deduced from the frontier (path)
 fn flatten_frontier(frontier: &MerkleFrontier<Fr254>, uid: u64) -> Vec<Fr254> {
     match frontier {
         MerkleFrontier::Proof(lap) => {
@@ -88,6 +91,44 @@ fn flatten_frontier(frontier: &MerkleFrontier<Fr254>, uid: u64) -> Vec<Fr254> {
             res
         }
         _ => vec![],
+    }
+}
+
+/// Parse the flattened frontier in order to create a "real" frontier.
+/// This function is here for testing and documenting purpose.
+/// The smart contract somehow follows some similar logic in order to create the tree structure from the flattened frontier.
+/// * `flattened_frontier` - flat representation of the frontier
+/// * `returns` - structured representation of the frontier
+fn parse_flattened_frontier(flattened_frontier: &[Fr254]) -> MerkleFrontier<Fr254> {
+    if flattened_frontier.is_empty() {
+        MerkleFrontier::Empty { height: 0 }
+    } else {
+        let mut nodes: Vec<MerklePathNode<Fr254>> = vec![];
+
+        let mut i = 1;
+        while i < flattened_frontier.len() {
+            let pos = if flattened_frontier[i + 2] == Fr254::from(0) {
+                NodePos::Left
+            } else if flattened_frontier[i + 2] == Fr254::from(1) {
+                NodePos::Middle
+            } else if flattened_frontier[i + 2] == Fr254::from(2) {
+                NodePos::Right
+            } else {
+                NodePos::Left // Should not happen
+            };
+
+            let node = MerklePathNode::new(
+                pos,
+                NodeValue::from_scalar(flattened_frontier[i]),
+                NodeValue::from_scalar(flattened_frontier[i + 1]),
+            );
+            nodes.push(node.clone());
+            i = i + 3;
+        }
+        MerkleFrontier::Proof(MerkleLeafProof {
+            leaf: MerkleLeaf(flattened_frontier[0]),
+            path: MerklePath { nodes },
+        })
     }
 }
 
@@ -144,10 +185,10 @@ mod tests {
         mt.push(elem2);
         mt.push(elem3);
         let frontier = mt.frontier();
-        let uid = 3;
+        let uid = 2;
         let flattened_frontier = flatten_frontier(&frontier, uid);
 
-        let (merkle_path_nodes, leaf) = match frontier {
+        let (merkle_path_nodes, leaf) = match frontier.clone() {
             MerkleFrontier::Proof(lap) => (lap.path.nodes, lap.leaf.0),
             _ => (vec![], Fr254::from(0)),
         };
@@ -168,6 +209,43 @@ mod tests {
         let expected_len = usize::from(HEIGHT * 3 + 1);
         assert_eq!(flattened_frontier.len(), expected_len);
         assert_eq!(expected_flattened_frontier, flattened_frontier);
+
+        // Test the reverse operation of flattening
+        let HEIGHT: u8 = 3;
+        let mut mt = MerkleTree::<Fr254>::new(HEIGHT).unwrap();
+
+        let frontier = mt.frontier();
+        let flattened_frontier = flatten_frontier(&frontier, 0);
+
+        // When the frontier is empty the flattened frontier is empty as well
+        assert_eq!(flattened_frontier, vec![]);
+
+        let elem1 = Fr254::from(5);
+        let elem2 = Fr254::from(6);
+        mt.push(elem1);
+        mt.push(elem2);
+        let frontier = mt.frontier();
+        let uid = 1;
+
+        // Check the parsing of flattened frontier
+        // Only the paths obtained from the flattened frontier and the original frontier are the same
+        // as in the case of the flatten frontier we have the hash of the leaf
+        // ie. v = H(0,l,uid) instead of the value of the leaf `l`.
+        let flattened_frontier = flatten_frontier(&frontier, uid);
+        let frontier_from_flattened_frontier =
+            parse_flattened_frontier(flattened_frontier.as_slice());
+
+        let merkle_path_from_flattened = match frontier_from_flattened_frontier {
+            MerkleFrontier::Proof(lap) => lap.path.nodes,
+            _ => vec![],
+        };
+
+        let merkle_path_from_frontier = match frontier {
+            MerkleFrontier::Proof(lap) => lap.path.nodes,
+            _ => vec![],
+        };
+
+        assert_eq!(merkle_path_from_flattened, merkle_path_from_frontier);
     }
 
     #[tokio::test]

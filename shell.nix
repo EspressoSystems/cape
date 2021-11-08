@@ -17,7 +17,28 @@ let
     poetry
     pythonEnv
   ];
-  myRustShell = import ./rust/shell.nix { inherit pkgs; };
+
+  stableToolchain = pkgs.rust-bin.stable."1.56.0".minimal.override {
+    extensions = [ "rustfmt" "clippy" "llvm-tools-preview" ];
+  };
+  rustDeps = with pkgs; [
+    pkgconfig
+    openssl
+
+    curl
+
+    stableToolchain
+
+    cargo-edit
+    cargo-watch
+  ] ++ lib.optionals stdenv.isDarwin [
+    # required to compile ethers-rs
+    darwin.apple_sdk.frameworks.Security
+    darwin.apple_sdk.frameworks.CoreFoundation
+
+    # https://github.com/NixOS/nixpkgs/issues/126182
+    libiconv
+  ];
 in
 with pkgs;
 mkShell
@@ -36,7 +57,11 @@ mkShell
     cacert
   ]
   ++ myPython
-  ++ myRustShell.buildInputs;
+  ++ rustDeps;
+
+  RUST_SRC_PATH = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
+  RUST_BACKTRACE = 1;
+  RUST_LOG = "info";
 
   SOLCX_BINARY_PATH = "${mySolc}/bin";
   SOLC_VERSION = mySolc.version;
@@ -59,6 +84,5 @@ mkShell
     ${pre-commit-check.shellHook}
 
     git config --local blame.ignoreRevsFile .git-blame-ignore-revs
-  ''
-  + myRustShell.shellHook;
+  '';
 }

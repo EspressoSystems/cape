@@ -15,6 +15,12 @@ contract RecordsMerkleTree is Rescue {
         uint256 right; // Pointer (index) to the right child
     }
 
+    enum Position {
+        LEFT,
+        MIDDLE,
+        RIGHT
+    }
+
     // TODO index value of array should be u64 or u32
 
     uint256 constant MAX_NUMBER_NODES = 100; // TODO precise number depending on tree height
@@ -44,38 +50,28 @@ contract RecordsMerkleTree is Rescue {
 
     // Create the new "hole node" that points to the children already inserted in the array
     function create_hole_node(
-        uint256 index_nodes_array,
-        Node[MAX_NUMBER_NODES] memory nodes,
-        uint256 index_hole_node,
-        uint256 index_first_sibling,
-        uint256 index_second_sibling,
-        uint256 pos_sibling
-    ) private {
-        if (pos_sibling == 0) {
-            // TODO use constants for LEFT=0, MIDDLE=1, RIGHT=2
-            nodes[index_nodes_array] = Node(
-                0,
-                index_hole_node,
-                index_first_sibling,
-                index_second_sibling
-            );
+        uint256 hole_node,
+        uint256 first_sibling,
+        uint256 second_sibling,
+        Position pos_sibling
+    ) private returns (Node memory) {
+        uint256 left;
+        uint256 middle;
+        uint256 right;
+        if (pos_sibling == Position.LEFT) {
+            left = hole_node;
+            middle = first_sibling;
+            right = second_sibling;
+        } else if (pos_sibling == Position.MIDDLE) {
+            left = first_sibling;
+            middle = hole_node;
+            right = second_sibling;
+        } else if (pos_sibling == Position.RIGHT) {
+            left = first_sibling;
+            middle = second_sibling;
+            right = hole_node;
         }
-        if (pos_sibling == 1) {
-            nodes[index_nodes_array] = Node(
-                0,
-                index_first_sibling,
-                index_hole_node,
-                index_second_sibling
-            );
-        }
-        if (pos_sibling == 2) {
-            nodes[index_nodes_array] = Node(
-                0,
-                index_first_sibling,
-                index_second_sibling,
-                index_hole_node
-            );
-        }
+        return Node(0, left, middle, right);
     }
 
     /// Checks that the frontier represented as a tree resolves to the right root and number of leaves
@@ -144,7 +140,7 @@ contract RecordsMerkleTree is Rescue {
         uint256 index_second_sibling = 3;
         nodes[index_second_sibling] = Node(_frontier[2], 0, 0, 0);
 
-        uint256 pos_sibling = _frontier[3];
+        Position pos_sibling = Position(_frontier[3]);
 
         // We process the nodes of the Merkle path
         uint256 index_nodes_array = 3;
@@ -153,9 +149,7 @@ contract RecordsMerkleTree is Rescue {
         uint256 frontier_len = _frontier.length; // TODO This should be constant
         while (index_frontier < frontier_len) {
             index_nodes_array += 1;
-            create_hole_node(
-                index_nodes_array,
-                nodes,
+            nodes[index_nodes_array] = create_hole_node(
                 index_hole_node,
                 index_first_sibling,
                 index_second_sibling,
@@ -184,7 +178,7 @@ contract RecordsMerkleTree is Rescue {
                 0
             );
 
-            pos_sibling = _frontier[index_frontier + 2];
+            pos_sibling = Position(_frontier[index_frontier + 2]);
 
             // Move forward
             index_frontier = index_frontier + 3;
@@ -192,9 +186,7 @@ contract RecordsMerkleTree is Rescue {
 
         // Add the root node
         index_nodes_array += 1;
-        create_hole_node(
-            index_nodes_array,
-            nodes,
+        nodes[index_nodes_array] = create_hole_node(
             index_hole_node,
             index_first_sibling,
             index_second_sibling,

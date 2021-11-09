@@ -141,6 +141,7 @@ mod tests {
     use ark_ed_on_bn254::Fq as Fr254;
     use ark_ff::BigInteger;
     use ark_ff::PrimeField;
+    use ark_std::UniformRand;
 
     use itertools::Itertools;
     use jf_primitives::merkle_tree::{MerkleTree, NodeValue};
@@ -349,19 +350,17 @@ mod tests {
     #[tokio::test]
     async fn test_update_records_merkle_tree() {
         // Check that we can insert values in the Merkle tree
-        let height = 5;
+        let height = 4;
         let contract = get_contract_records_merkle_tree(height).await;
         let mut mt = MerkleTree::<Fr254>::new(height).unwrap();
-        let elem1 = Fr254::from(3);
-        let elem2 = Fr254::from(17);
-        let elem3 = Fr254::from(22);
-        let elem4 = Fr254::from(78787);
 
-        // In order to get the frontier
-        mt.push(elem1);
-        mt.push(elem2);
-        mt.push(elem3);
-        mt.push(elem4);
+        // Insert several elements
+        let mut rng = ark_std::test_rng();
+
+        for _ in 0..10 {
+            let elem = Fr254::rand(&mut rng);
+            mt.push(elem.clone());
+        }
 
         let frontier_fr254 = mt.frontier();
         // TODO compute the position
@@ -384,11 +383,6 @@ mod tests {
             .await
             .unwrap();
 
-        let elem5 = Fr254::from(875421);
-        let elem6 = Fr254::from(3331);
-        mt.push(elem5);
-        mt.push(elem6);
-
         // Do not insert any element yet into the records merkle tree of the smart contract
         contract
             .test_update_records_merkle_tree(frontier_u256.clone(), vec![])
@@ -399,13 +393,21 @@ mod tests {
             .await
             .unwrap();
 
-        // Roots are different
+        // Roots are the same
+        compare_roots(&mt, &contract, true).await;
+
+        // After insertion into the Jellyfish Merkle tree roots are different
+        let elem1 = Fr254::from(875421);
+        let elem2 = Fr254::from(3331);
+        mt.push(elem1);
+        //mt.push(elem2);
+
         compare_roots(&mt, &contract, false).await;
 
         // Now we insert the elements into the smart contract
-        let elem5_u256 = convert_fr254_to_u256(elem5);
-        let elem6_u256 = convert_fr254_to_u256(elem6);
-        let elements_u256 = vec![elem5_u256, elem6_u256];
+        let elem1_u256 = convert_fr254_to_u256(elem1);
+        //let elem2_u256 = convert_fr254_to_u256(elem2);
+        let elements_u256 = vec![elem1_u256]; //, elem2_u256];
 
         contract
             .test_update_records_merkle_tree(frontier_u256, elements_u256)
@@ -418,6 +420,6 @@ mod tests {
 
         // Roots are the same
         // TODO uncomment
-        //compare_roots(&mt, &contract, true).await;
+        compare_roots(&mt, &contract, true).await;
     }
 }

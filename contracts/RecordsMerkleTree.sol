@@ -205,6 +205,56 @@ contract RecordsMerkleTree is Rescue {
         return indexNodesArray;
     }
 
+    function nextNodeIndex(
+        Node[MAX_NUMBER_NODES] memory nodes,
+        uint256 nodeIndex,
+        uint256 pos
+    ) private returns (uint256) {
+        uint256 nextNodeIndex;
+
+        if (pos == LEFT) {
+            nextNodeIndex = nodes[nodeIndex].left;
+        }
+
+        if (pos == MIDDLE) {
+            nextNodeIndex = nodes[nodeIndex].middle;
+        }
+
+        if (pos == RIGHT) {
+            nextNodeIndex = nodes[nodeIndex].right;
+        }
+
+        return nextNodeIndex;
+    }
+
+    // Update the child of a node based on the position (which child to select)
+    // and an index to the new child.
+    function updateChildNode(
+        Node[MAX_NUMBER_NODES] memory nodes,
+        uint256 nodeIndex,
+        uint256 newChildIndex,
+        uint256 pos
+    ) private {
+        // Get the node
+        Node memory node = nodes[nodeIndex];
+
+        // Update the node
+        if (pos == LEFT) {
+            node.left = newChildIndex;
+        }
+        if (pos == MIDDLE) {
+            node.middle = newChildIndex;
+        }
+        if (pos == RIGHT) {
+            node.right = newChildIndex;
+        }
+
+        // Reinsert the node into the array
+        nodes[nodeIndex] = node;
+
+        console.log("Child %s of node with index %s updated.", pos, nodeIndex);
+    }
+
     function pushElement(
         Node[MAX_NUMBER_NODES] memory nodes,
         uint256 rootIndex,
@@ -216,61 +266,55 @@ contract RecordsMerkleTree is Rescue {
         // Get the position of the leaf from the smart contract state
         uint256 leafPos = numLeaves;
         uint256 branchIndex = 0;
-        Node memory currentNode = nodes[rootIndex];
+        uint256 currentNodeIndex = rootIndex;
+        uint256 previousNodeIndex = rootIndex;
 
         // Go down inside the tree until finding the first terminal node.
         console.log("Going down until finding a terminal node");
         uint256 pos = leafPos;
-        while (!isTerminal(currentNode)) {
+        uint256 localPos = 0;
+        while (!isNull(nodes[currentNodeIndex])) {
             // TODO avoid this logic duplication?
             uint256 divisor = 3**(height - branchIndex - 1);
-            uint256 localPos = pos / divisor;
+            localPos = pos / divisor;
             pos = pos % divisor;
 
+            console.log("currentNodeIndex: %s", currentNodeIndex);
+            console.log("previousNodeIndex: %s", previousNodeIndex);
             console.log("localPos: %s", localPos);
+            previousNodeIndex = currentNodeIndex;
+            currentNodeIndex = nextNodeIndex(nodes, currentNodeIndex, localPos);
 
-            if (localPos == LEFT) {
-                currentNode = nodes[currentNode.left];
+            if (isNull(nodes[currentNodeIndex])) {
+                console.log(
+                    "Node with index %s is terminal.",
+                    currentNodeIndex
+                );
+                console.log("Previous node index is %s", previousNodeIndex);
             }
-
-            if (localPos == MIDDLE) {
-                currentNode = nodes[currentNode.middle];
-            }
-
-            if (localPos == RIGHT) {
-                currentNode = nodes[currentNode.right];
-            }
-
             branchIndex += 1;
         }
 
         uint256 newNodeIndex = rootIndex + 1;
 
         // Create new nodes until completing the path one level above the leaf level
+        // Always inserting to the left
         console.log("Create new nodes");
-        while (branchIndex < height - 2) {
-            // TODO check
+        // TODO test case to enter in this loop
+        while (branchIndex < height - 1) {
             Node memory newNode = Node(0, 0, 0, 0);
             nodes[newNodeIndex] = newNode;
 
             // TODO avoid this logic duplication?
             uint256 divisor = 3**(height - branchIndex - 1);
-            uint256 localPos = pos / divisor;
+            localPos = pos / divisor;
             pos = pos % divisor;
 
             console.log("localPos: %s", localPos);
-            // TODO refactor this logic
-            if (localPos == LEFT) {
-                currentNode.left = newNodeIndex;
-            }
-            if (localPos == MIDDLE) {
-                currentNode.middle = newNodeIndex;
-            }
-            if (localPos == RIGHT) {
-                currentNode.right = newNodeIndex;
-            }
 
-            currentNode = newNode;
+            updateChildNode(nodes, previousNodeIndex, newNodeIndex, localPos);
+
+            previousNodeIndex = newNodeIndex;
             newNodeIndex += 1;
             branchIndex += 1;
         }
@@ -279,20 +323,26 @@ contract RecordsMerkleTree is Rescue {
         // Remember position is computed with the remainder
         console.log("adding the leaf");
 
-        uint256 leafValueHash = hash(EMPTY_NODE_VALUE, element, numLeaves);
+        uint256 leafValueHash = hash(EMPTY_NODE_VALUE, numLeaves, element);
         Node memory leafNode = Node(leafValueHash, 0, 0, 0);
         nodes[newNodeIndex] = leafNode;
         // Now we use pos because this is the last step, must be a number n in [0,1,2]
 
-        if (pos == LEFT) {
-            currentNode.left = newNodeIndex;
-        }
-        if (pos == MIDDLE) {
-            currentNode.middle = newNodeIndex;
-        }
-        if (pos == RIGHT) {
-            currentNode.right = newNodeIndex;
-        }
+        console.log("Leaf level position: %s", localPos);
+        console.log("The leaf index is %s.", newNodeIndex);
+
+        updateChildNode(nodes, previousNodeIndex, newNodeIndex, localPos);
+
+        console.log(
+            "The children ids of the previous node with id %s are:",
+            previousNodeIndex
+        );
+        console.log(
+            "[%s,%s,%s]",
+            nodes[previousNodeIndex].left,
+            nodes[previousNodeIndex].middle,
+            nodes[previousNodeIndex].right
+        );
 
         // Increment the number of leaves
         numLeaves += 1;

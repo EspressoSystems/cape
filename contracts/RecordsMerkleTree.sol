@@ -17,63 +17,63 @@ contract RecordsMerkleTree is Rescue {
 
     // TODO index value of array should be u64 or u32
 
-    uint256 constant MAX_NUMBER_NODES = 100; // TODO precise number depending on tree height
-    uint256 constant EMPTY_NODE_INDEX = 0;
-    uint256 constant EMPTY_NODE_VALUE = 0;
-    uint64 constant HEIGHT = 25; // TODO set this value with the constructor
+    uint256 public constant MAX_NUMBER_NODES = 100; // TODO precise number depending on tree height
+    uint256 public constant EMPTY_NODE_INDEX = 0;
+    uint256 public constant EMPTY_NODE_VALUE = 0;
+    uint64 public constant HEIGHT = 25; // TODO set this value with the constructor
 
-    uint256 constant LEAF_INDEX = 1;
+    uint256 public constant LEAF_INDEX = 1;
 
-    uint256 internal root_value;
-    uint64 internal num_leaves;
+    uint256 internal rootValue;
+    uint64 internal numLeaves;
 
     constructor() {
-        root_value = EMPTY_NODE_VALUE;
+        rootValue = EMPTY_NODE_VALUE;
     }
 
-    function is_terminal(Node memory node) private returns (bool) {
+    function isTerminal(Node memory node) private returns (bool) {
         return
             (node.left == EMPTY_NODE_INDEX) &&
             (node.middle == EMPTY_NODE_INDEX) &&
             (node.right == EMPTY_NODE_INDEX);
     }
 
-    function is_null(Node memory node) private returns (bool) {
-        return (node.val == EMPTY_NODE_VALUE && is_terminal(node));
+    function isNull(Node memory node) private returns (bool) {
+        return (node.val == EMPTY_NODE_VALUE && isTerminal(node));
     }
 
     // Create the new "hole node" that points to the children already inserted in the array
-    function create_hole_node(
-        uint256 index_nodes_array,
+    function createHoleNode(
+        uint256 indexNodesArray,
         Node[MAX_NUMBER_NODES] memory nodes,
-        uint256 index_hole_node,
-        uint256 index_first_sibling,
-        uint256 index_second_sibling,
-        uint256 pos_sibling
+        uint256 indexHoleNode,
+        uint256 indexFirstSibling,
+        uint256 indexSecondSibling,
+        uint256 posSibling
     ) private {
-        if (pos_sibling == 0) {
+        if (posSibling == 0) {
             // TODO use constants for LEFT=0, MIDDLE=1, RIGHT=2
-            nodes[index_nodes_array] = Node(
+            nodes[indexNodesArray] = Node(
                 0,
-                index_hole_node,
-                index_first_sibling,
-                index_second_sibling
+                indexHoleNode,
+                indexFirstSibling,
+                indexSecondSibling
             );
         }
-        if (pos_sibling == 1) {
-            nodes[index_nodes_array] = Node(
+        if (posSibling == 1) {
+            nodes[indexNodesArray] = Node(
                 0,
-                index_first_sibling,
-                index_hole_node,
-                index_second_sibling
+                indexFirstSibling,
+                indexHoleNode,
+                indexSecondSibling
             );
         }
-        if (pos_sibling == 2) {
-            nodes[index_nodes_array] = Node(
+        if (posSibling == 2) {
+            nodes[indexNodesArray] = Node(
                 0,
-                index_first_sibling,
-                index_second_sibling,
-                index_hole_node
+                indexFirstSibling,
+                indexSecondSibling,
+                indexHoleNode
             );
         }
     }
@@ -81,168 +81,162 @@ contract RecordsMerkleTree is Rescue {
     /// Checks that the frontier represented as a tree resolves to the right root and number of leaves
     /// @param nodes array of nodes obtained from the frontier
     /// @return true if the tree resolves to right root_value and num_leaves
-    function check_frontier(
+    function checkFrontier(
         Node[MAX_NUMBER_NODES] memory nodes,
-        uint256 root_index
+        uint256 rootIndex
     ) private returns (bool) {
         // Compute the root value of the frontier
-        uint256 frontier_root_value = compute_root_value(nodes, root_index);
+        uint256 frontierRootValue = computeRootValue(nodes, rootIndex);
 
-        console.log("root_value %s", root_value);
-        console.log("frontier_root_value %s", frontier_root_value);
+        console.log("root_value %s", rootValue);
+        console.log("frontier_root_value %s", frontierRootValue);
 
         // Compute the number of leaves from the frontier represented as nodes
-        uint256 num_leaves_from_frontier = 0;
+        uint256 numLeavesFromFrontier = 0;
 
-        uint256 index = root_index;
-        Node memory node = nodes[root_index];
+        uint256 index = rootIndex;
+        Node memory node = nodes[rootIndex];
 
         // We are done when we reach the leaf. The leaf index is LEAF_INDEX.
         // See function build_tree_from_frontier.
-        uint256 power_of_three = 3**(HEIGHT - 1);
+        uint256 powerOfThree = 3**(HEIGHT - 1);
         while (index != LEAF_INDEX) {
-            if (!is_null(nodes[node.left])) {
+            if (!isNull(nodes[node.left])) {
                 index = node.left;
             }
-            if (!is_null(nodes[node.middle])) {
-                num_leaves_from_frontier += power_of_three * 1;
+            if (!isNull(nodes[node.middle])) {
+                numLeavesFromFrontier += powerOfThree * 1;
                 index = node.middle;
             }
-            if (!is_null(nodes[node.right])) {
-                num_leaves_from_frontier += power_of_three * 2;
+            if (!isNull(nodes[node.right])) {
+                numLeavesFromFrontier += powerOfThree * 2;
                 index = node.right;
             }
-            power_of_three /= 3;
+            powerOfThree /= 3;
             console.log("index: %s", index);
             node = nodes[index];
         }
 
-        num_leaves_from_frontier += 1;
+        numLeavesFromFrontier += 1;
 
-        console.log("expected_number_of_leaves: %s", num_leaves_from_frontier);
-        console.log("num_leaves: %s", num_leaves);
+        console.log("expected_number_of_leaves: %s", numLeavesFromFrontier);
+        console.log("num_leaves: %s", numLeaves);
 
         return
-            (frontier_root_value == root_value) &&
-            (num_leaves_from_frontier == num_leaves);
+            (frontierRootValue == rootValue) &&
+            (numLeavesFromFrontier == numLeaves);
     }
 
-    function build_tree_from_frontier(
+    function buildTreeFromFrontier(
         uint256[] memory _frontier,
         Node[MAX_NUMBER_NODES] memory nodes
     ) private returns (uint256) {
         // Set the first node to the NULL node
-        Node memory NULL_NODE = Node(0, 0, 0, 0);
-        nodes[0] = NULL_NODE;
+        nodes[0] = Node(0, 0, 0, 0); // N
 
         // Insert the leaf
         nodes[LEAF_INDEX] = Node(_frontier[0], 0, 0, 0);
 
         // Insert the siblings
-        uint256 index_first_sibling = 2;
-        nodes[index_first_sibling] = Node(_frontier[1], 0, 0, 0);
-        uint256 index_second_sibling = 3;
-        nodes[index_second_sibling] = Node(_frontier[2], 0, 0, 0);
+        uint256 indexFirstSibling = 2;
+        nodes[indexFirstSibling] = Node(_frontier[1], 0, 0, 0);
+        uint256 indexSecondSibling = 3;
+        nodes[indexSecondSibling] = Node(_frontier[2], 0, 0, 0);
 
-        uint256 pos_sibling = _frontier[3];
+        uint256 posSibling = _frontier[3];
 
         // We process the nodes of the Merkle path
-        uint256 index_nodes_array = 3;
-        uint256 index_frontier = 4;
-        uint256 index_hole_node = LEAF_INDEX;
-        uint256 frontier_len = _frontier.length; // TODO This should be constant
-        while (index_frontier < frontier_len) {
-            index_nodes_array += 1;
-            create_hole_node(
-                index_nodes_array,
+        uint256 indexNodesArray = 3;
+        uint256 indexFrontier = 4;
+        uint256 indexHoleNode = LEAF_INDEX;
+        uint256 frontierLen = _frontier.length; // TODO This should be constant
+        while (indexFrontier < frontierLen) {
+            indexNodesArray += 1;
+            createHoleNode(
+                indexNodesArray,
                 nodes,
-                index_hole_node,
-                index_first_sibling,
-                index_second_sibling,
-                pos_sibling
+                indexHoleNode,
+                indexFirstSibling,
+                indexSecondSibling,
+                posSibling
             );
 
             // Update the index of the hole node for the next iteration
-            index_hole_node = index_nodes_array;
+            indexHoleNode = indexNodesArray;
 
             // Create the siblings of the "hole node". These siblings have no children
-            index_nodes_array += 1;
-            index_first_sibling = index_nodes_array;
-            nodes[index_first_sibling] = Node(
-                _frontier[index_frontier],
+            indexNodesArray += 1;
+            indexFirstSibling = indexNodesArray;
+            nodes[indexFirstSibling] = Node(_frontier[indexFrontier], 0, 0, 0);
+
+            indexNodesArray += 1;
+            indexSecondSibling = indexNodesArray;
+            nodes[indexSecondSibling] = Node(
+                _frontier[indexFrontier + 1],
                 0,
                 0,
                 0
             );
 
-            index_nodes_array += 1;
-            index_second_sibling = index_nodes_array;
-            nodes[index_second_sibling] = Node(
-                _frontier[index_frontier + 1],
-                0,
-                0,
-                0
-            );
-
-            pos_sibling = _frontier[index_frontier + 2];
+            posSibling = _frontier[indexFrontier + 2];
 
             // Move forward
-            index_frontier = index_frontier + 3;
+            indexFrontier = indexFrontier + 3;
         }
 
         // Add the root node
-        index_nodes_array += 1;
-        create_hole_node(
-            index_nodes_array,
+        indexNodesArray += 1;
+        createHoleNode(
+            indexNodesArray,
             nodes,
-            index_hole_node,
-            index_first_sibling,
-            index_second_sibling,
-            pos_sibling
+            indexHoleNode,
+            indexFirstSibling,
+            indexSecondSibling,
+            posSibling
         );
 
-        return index_nodes_array;
+        return indexNodesArray;
     }
 
     // TODO document, in particular how the _frontier is built
-    function update_records_merkle_tree(
+    function updateRecordsMerkleTree(
         uint256[] memory _frontier,
         uint256[] memory _elements
     ) internal {
         Node[MAX_NUMBER_NODES] memory nodes;
 
-        uint256 root_index = build_tree_from_frontier(_frontier, nodes);
-        bool is_frontier_valid = check_frontier(nodes, root_index);
-        require(
-            is_frontier_valid,
-            "The frontier is not consistent with the root value and/or number of leaves."
-        );
+        uint256 rootIndex = buildTreeFromFrontier(_frontier, nodes);
+        bool isFrontierValid = checkFrontier(nodes, rootIndex);
+        require(isFrontierValid, "Frontier not consistent state.");
 
         /// Insert the new elements ///
         // TODO
+        if (_elements.length == 0) {
+            console.log("empty");
+        }
 
         //// Compute the root hash value ////
-        root_value = compute_root_value(nodes, root_index);
+        rootValue = computeRootValue(nodes, rootIndex);
     }
 
-    function get_root_value() public view returns (uint256) {
-        return root_value;
+    function getRootValue() public view returns (uint256) {
+        return rootValue;
     }
 
-    function compute_root_value(
+    function computeRootValue(
         Node[MAX_NUMBER_NODES] memory nodes,
-        uint256 root_node_pos
+        uint256 rootNodePos
     ) private returns (uint256) {
         // If the root node has no children return its value
-        Node memory root_node = nodes[root_node_pos];
-        if (is_terminal(root_node)) {
-            return root_node.val;
+        Node memory rootNode = nodes[rootNodePos];
+        if (isTerminal(rootNode)) {
+            return rootNode.val;
         } else {
-            uint256 val_left = compute_root_value(nodes, root_node.left);
-            uint256 val_middle = compute_root_value(nodes, root_node.middle);
-            uint256 val_right = compute_root_value(nodes, root_node.right);
+            uint256 valLeft = computeRootValue(nodes, rootNode.left);
+            uint256 valMiddle = computeRootValue(nodes, rootNode.middle);
+            uint256 valRight = computeRootValue(nodes, rootNode.right);
 
-            return hash(val_left, val_middle, val_right);
+            return hash(valLeft, valMiddle, valRight);
         }
     }
 }

@@ -40,7 +40,6 @@ describe("CAPE", function () {
       expect(await cape._insertNullifier(elem1)).not.to.throw;
 
       expect(await cape._insertNullifier(elem2)).not.to.throw;
-
     });
 
     it("updates the commitment to the set of nullifiers correctly.", async function () {

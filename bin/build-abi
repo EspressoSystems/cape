@@ -8,6 +8,9 @@ hardhat compile
 # for recursive globbing
 shopt -s globstar
 
+# glob empty if no match, avoid matches like "*.sol"
+shopt -s nullglob
+
 # For each solidity file (or its artifact output directory)
 for directory in artifacts/**/*.sol; do
 

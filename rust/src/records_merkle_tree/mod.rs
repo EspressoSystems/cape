@@ -350,14 +350,15 @@ mod tests {
     #[tokio::test]
     async fn test_update_records_merkle_tree() {
         // Check that we can insert values in the Merkle tree
-        let height = 4;
+        let height = 25;
         let contract = get_contract_records_merkle_tree(height).await;
         let mut mt = MerkleTree::<Fr254>::new(height).unwrap();
 
         // Insert several elements
         let mut rng = ark_std::test_rng();
 
-        for _ in 0..10 {
+        let n_leaves_before = 10; // TODO Try with different values
+        for _ in 0..n_leaves_before {
             let elem = Fr254::rand(&mut rng);
             mt.push(elem.clone());
         }
@@ -397,20 +398,20 @@ mod tests {
         compare_roots(&mt, &contract, true).await;
 
         // After insertion into the Jellyfish Merkle tree roots are different
-        let elem1 = Fr254::from(875421);
-        let elem2 = Fr254::from(3331);
-        mt.push(elem1);
-        //mt.push(elem2);
+        let n_leaves_after = 1; // TODO try with different values
+        let mut elems_u256 = vec![];
+        for _ in 0..n_leaves_after {
+            let elem = Fr254::rand(&mut rng);
+            let elem_u256 = convert_fr254_to_u256(elem);
+            elems_u256.push(elem_u256);
+            mt.push(elem.clone());
+        }
 
         compare_roots(&mt, &contract, false).await;
 
         // Now we insert the elements into the smart contract
-        let elem1_u256 = convert_fr254_to_u256(elem1);
-        //let elem2_u256 = convert_fr254_to_u256(elem2);
-        let elements_u256 = vec![elem1_u256]; //, elem2_u256];
-
         contract
-            .test_update_records_merkle_tree(frontier_u256, elements_u256)
+            .test_update_records_merkle_tree(frontier_u256, elems_u256)
             .legacy()
             .send()
             .await

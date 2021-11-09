@@ -255,11 +255,21 @@ contract RecordsMerkleTree is Rescue {
         console.log("Child %s of node with index %s updated.", pos, nodeIndex);
     }
 
+    // TODO is it possible to create a data structure for handling the nodes array and tracking the maximum index at
+    // TODO the same time? Tracking maxIndex outside the "nodes collection" is error prone.
+
+    /// Insert an element into the tree in the position num_leaves
+    /// @param nodes array of nodes
+    /// @param rootIndex index of the root node
+    /// @param maxIndex index of the latest element inserted in the nodes array
+    /// @param element value of the element to insert into the tree
+    /// @return updated value of maxIndex
     function pushElement(
         Node[MAX_NUMBER_NODES] memory nodes,
         uint256 rootIndex,
+        uint256 maxIndex,
         uint256 element
-    ) private {
+    ) private returns (uint256) {
         console.log("num_leaves: %s", numLeaves);
         console.log("element: %s", element);
 
@@ -295,15 +305,16 @@ contract RecordsMerkleTree is Rescue {
             branchIndex += 1;
         }
 
-        uint256 newNodeIndex = rootIndex + 1;
+        // maxIndex tracks the index of the last element inserted in the tree
+        uint256 newNodeIndex = maxIndex + 1;
 
         // Create new nodes until completing the path one level above the leaf level
         // Always inserting to the left
         console.log("Create new nodes");
         // TODO test case to enter in this loop
         while (branchIndex < height - 1) {
-            Node memory newNode = Node(0, 0, 0, 0);
-            nodes[newNodeIndex] = newNode;
+            // New node
+            nodes[newNodeIndex] = Node(0, 0, 0, 0);
 
             // TODO avoid this logic duplication?
             uint256 divisor = 3**(height - branchIndex - 1);
@@ -323,10 +334,13 @@ contract RecordsMerkleTree is Rescue {
         // Remember position is computed with the remainder
         console.log("adding the leaf");
 
-        uint256 leafValueHash = hash(EMPTY_NODE_VALUE, numLeaves, element);
-        Node memory leafNode = Node(leafValueHash, 0, 0, 0);
-        nodes[newNodeIndex] = leafNode;
-        // Now we use pos because this is the last step, must be a number n in [0,1,2]
+        // Leaf node where the value is hash(0,numLeaves,element)
+        nodes[newNodeIndex] = Node(
+            hash(EMPTY_NODE_VALUE, numLeaves, element),
+            0,
+            0,
+            0
+        );
 
         console.log("Leaf level position: %s", localPos);
         console.log("The leaf index is %s.", newNodeIndex);
@@ -346,6 +360,9 @@ contract RecordsMerkleTree is Rescue {
 
         // Increment the number of leaves
         numLeaves += 1;
+
+        // Return the new value of maxIndex
+        return newNodeIndex;
     }
 
     // TODO document, in particular how the _frontier is built
@@ -357,11 +374,14 @@ contract RecordsMerkleTree is Rescue {
 
         uint256 rootIndex = buildTreeFromFrontier(_frontier, nodes);
         bool isFrontierValid = checkFrontier(nodes, rootIndex);
-        require(isFrontierValid, "Frontier not consistent state.");
+        require(isFrontierValid, "Frontier not consistent w/ state");
 
         /// Insert the new elements ///
+
+        // maxIndex tracks the index of the last element inserted in the tree
+        uint256 maxIndex = rootIndex;
         for (uint256 i = 0; i < _elements.length; i++) {
-            pushElement(nodes, rootIndex, _elements[i]);
+            maxIndex = pushElement(nodes, rootIndex, maxIndex, _elements[i]);
         }
 
         //// Compute the root hash value ////

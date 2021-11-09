@@ -257,7 +257,7 @@ mod tests {
     async fn test_check_frontier() {
         // TODO edge case: empty tree
 
-        let height: u8 = 3;
+        let height: u8 = 7;
         let contract = get_contract_records_merkle_tree(height).await;
 
         let mut mt = MerkleTree::<Fr254>::new(height).unwrap();
@@ -347,17 +347,19 @@ mod tests {
         compare_roots(&mt, &contract, false).await;
     }
 
-    #[tokio::test]
-    async fn test_update_records_merkle_tree() {
+    async fn check_update_records_merkle_tree(
+        height: u8,
+        n_leaves_before: u32,
+        n_leaves_after: u32,
+    ) {
         // Check that we can insert values in the Merkle tree
-        let height = 25;
+
         let contract = get_contract_records_merkle_tree(height).await;
         let mut mt = MerkleTree::<Fr254>::new(height).unwrap();
 
         // Insert several elements
         let mut rng = ark_std::test_rng();
 
-        let n_leaves_before = 10; // TODO Try with different values
         for _ in 0..n_leaves_before {
             let elem = Fr254::rand(&mut rng);
             mt.push(elem.clone());
@@ -398,7 +400,6 @@ mod tests {
         compare_roots(&mt, &contract, true).await;
 
         // After insertion into the Jellyfish Merkle tree roots are different
-        let n_leaves_after = 1; // TODO try with different values
         let mut elems_u256 = vec![];
         for _ in 0..n_leaves_after {
             let elem = Fr254::rand(&mut rng);
@@ -422,5 +423,11 @@ mod tests {
         // Roots are the same
         // TODO uncomment
         compare_roots(&mt, &contract, true).await;
+    }
+
+    #[tokio::test]
+    async fn test_update_records_merkle_tree() {
+        check_update_records_merkle_tree(4, 10, 1);
+        check_update_records_merkle_tree(4, 10, 2);
     }
 }

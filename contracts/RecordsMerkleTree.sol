@@ -147,7 +147,7 @@ contract RecordsMerkleTree is Rescue {
         uint256 pos_sibling = _frontier[3];
 
         // We process the nodes of the Merkle path
-        uint256 index_nodes_array = 4;
+        uint256 index_nodes_array = 3;
         uint256 index_frontier = 4;
         uint256 index_hole_node = LEAF_INDEX;
         uint256 frontier_len = _frontier.length; // TODO This should be constant

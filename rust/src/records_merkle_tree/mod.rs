@@ -351,7 +351,7 @@ mod tests {
         let contract = get_contract_records_merkle_tree().await;
 
         // TODO make height part of the constructor of the contract
-        let HEIGHT = 25;
+        let HEIGHT = 5; // TODO change to 25. Or even better get from the contract
         let mut mt = MerkleTree::<Fr254>::new(HEIGHT).unwrap();
         let elem1 = Fr254::from(3);
         let elem2 = Fr254::from(17);
@@ -416,5 +416,8 @@ mod tests {
             .unwrap()
             .await
             .unwrap();
+
+        // Roots are the same
+        compare_roots(&mt, &contract, true).await;
     }
 }

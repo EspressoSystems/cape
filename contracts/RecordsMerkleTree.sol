@@ -20,15 +20,20 @@ contract RecordsMerkleTree is Rescue {
     uint256 public constant MAX_NUMBER_NODES = 100; // TODO precise number depending on tree height
     uint256 public constant EMPTY_NODE_INDEX = 0;
     uint256 public constant EMPTY_NODE_VALUE = 0;
-    uint64 public constant HEIGHT = 25; // TODO set this value with the constructor
+    uint64 public constant HEIGHT = 5; // TODO set this value with the constructor
 
     uint256 public constant LEAF_INDEX = 1;
+
+    uint256 public constant LEFT = 0; // TODO use uint8 ?
+    uint256 public constant MIDDLE = 1;
+    uint256 public constant RIGHT = 2;
 
     uint256 internal rootValue;
     uint64 internal numLeaves;
 
     constructor() {
         rootValue = EMPTY_NODE_VALUE;
+        numLeaves = 0;
     }
 
     function isTerminal(Node memory node) private returns (bool) {
@@ -38,6 +43,7 @@ contract RecordsMerkleTree is Rescue {
             (node.right == EMPTY_NODE_INDEX);
     }
 
+    // TODO save gas using comparison against a constant node value Node(0,0,0,0)?
     function isNull(Node memory node) private returns (bool) {
         return (node.val == EMPTY_NODE_VALUE && isTerminal(node));
     }
@@ -198,6 +204,99 @@ contract RecordsMerkleTree is Rescue {
         return indexNodesArray;
     }
 
+    function pushElement(
+        Node[MAX_NUMBER_NODES] memory nodes,
+        uint256 rootIndex,
+        uint256 element
+    ) private {
+        console.log("num_leaves: %s", numLeaves);
+        console.log("element: %s", element);
+
+        // Get the position of the leaf from the smart contract state
+        uint256 leafPos = numLeaves;
+        uint256 branchIndex = 0;
+        Node memory currentNode = nodes[rootIndex];
+
+        // Go down inside the tree until finding the first terminal node.
+        console.log("Going down until finding a terminal node");
+        uint256 pos = leafPos;
+        while (!isTerminal(currentNode)) {
+            // TODO avoid this logic duplication?
+            uint256 divisor = 3**(HEIGHT - branchIndex - 1);
+            uint256 localPos = pos / divisor;
+            pos = pos % divisor;
+
+            console.log("localPos: %s", localPos);
+
+            if (localPos == LEFT) {
+                currentNode = nodes[currentNode.left];
+            }
+
+            if (localPos == MIDDLE) {
+                currentNode = nodes[currentNode.middle];
+            }
+
+            if (localPos == RIGHT) {
+                currentNode = nodes[currentNode.right];
+            }
+
+            branchIndex += 1;
+        }
+
+        uint256 newNodeIndex = rootIndex + 1;
+
+        // Create new nodes until completing the path one level above the leaf level
+        console.log("Create new nodes");
+        while (branchIndex < HEIGHT - 2) {
+            // TODO check
+            Node memory newNode = Node(0, 0, 0, 0);
+            nodes[newNodeIndex] = newNode;
+
+            // TODO avoid this logic duplication?
+            uint256 divisor = 3**(HEIGHT - branchIndex - 1);
+            uint256 localPos = pos / divisor;
+            pos = pos % divisor;
+
+            console.log("localPos: %s", localPos);
+            // TODO refactor this logic
+            if (localPos == LEFT) {
+                currentNode.left = newNodeIndex;
+            }
+            if (localPos == MIDDLE) {
+                currentNode.middle = newNodeIndex;
+            }
+            if (localPos == RIGHT) {
+                currentNode.right = newNodeIndex;
+            }
+
+            currentNode = newNode;
+            newNodeIndex += 1;
+            branchIndex += 1;
+        }
+
+        // The last node contains the leaf value (compute the hash)
+        // Remember position is computed with the remainder
+        console.log("adding the leaf");
+
+        uint256 leafValueHash = hash(EMPTY_NODE_VALUE, element, numLeaves);
+        Node memory leafNode = Node(leafValueHash, 0, 0, 0);
+        nodes[newNodeIndex] = leafNode;
+        // Now we use pos because this is the last step, must be a number n in [0,1,2]
+
+        if (pos == LEFT) {
+            currentNode.left = newNodeIndex;
+        }
+        if (pos == MIDDLE) {
+            currentNode.middle = newNodeIndex;
+        }
+        if (pos == RIGHT) {
+            currentNode.right = newNodeIndex;
+        }
+
+        // Increment the number of leaves
+        numLeaves += 1;
+    }
+
     // TODO document, in particular how the _frontier is built
     function updateRecordsMerkleTree(
         uint256[] memory _frontier,
@@ -210,9 +309,8 @@ contract RecordsMerkleTree is Rescue {
         require(isFrontierValid, "Frontier not consistent state.");
 
         /// Insert the new elements ///
-        // TODO
-        if (_elements.length == 0) {
-            console.log("empty");
+        for (uint256 i = 0; i < _elements.length; i++) {
+            pushElement(nodes, rootIndex, _elements[i]);
         }
 
         //// Compute the root hash value ////

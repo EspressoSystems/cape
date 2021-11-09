@@ -6,6 +6,8 @@ import "./Rescue.sol";
 import "./RecordsMerkleTree.sol";
 
 contract TestRecordsMerkleTree is RecordsMerkleTree {
+    constructor(uint64 _height) public RecordsMerkleTree(_height) {}
+
     function testUpdateRecordsMerkleTree(
         uint256[] memory _frontier,
         uint256[] memory _elements

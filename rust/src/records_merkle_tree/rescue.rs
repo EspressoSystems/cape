@@ -55,7 +55,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_rescue_hash_function_solidity_for_zero_vector_input() {
-        let contract = get_contract_records_merkle_tree().await;
+        let contract = get_contract_records_merkle_tree(5).await;
 
         let res: U256 = contract
             .hash(U256::from(0), U256::from(0), U256::from(0))
@@ -69,7 +69,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_rescue_hash_function_solidity_on_random_inputs() {
-        let contract = get_contract_records_merkle_tree().await;
+        let contract = get_contract_records_merkle_tree(5).await;
 
         let rescue = Permutation::default();
         let mut rng = ark_std::test_rng();

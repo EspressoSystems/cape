@@ -20,7 +20,6 @@ contract RecordsMerkleTree is Rescue {
     uint256 public constant MAX_NUMBER_NODES = 100; // TODO precise number depending on tree height
     uint256 public constant EMPTY_NODE_INDEX = 0;
     uint256 public constant EMPTY_NODE_VALUE = 0;
-    uint64 public constant HEIGHT = 5; // TODO set this value with the constructor
 
     uint256 public constant LEAF_INDEX = 1;
 
@@ -30,10 +29,12 @@ contract RecordsMerkleTree is Rescue {
 
     uint256 internal rootValue;
     uint64 internal numLeaves;
+    uint64 internal height;
 
-    constructor() {
+    constructor(uint64 _height) {
         rootValue = EMPTY_NODE_VALUE;
         numLeaves = 0;
+        height = _height;
     }
 
     function isTerminal(Node memory node) private returns (bool) {
@@ -105,7 +106,7 @@ contract RecordsMerkleTree is Rescue {
 
         // We are done when we reach the leaf. The leaf index is LEAF_INDEX.
         // See function build_tree_from_frontier.
-        uint256 powerOfThree = 3**(HEIGHT - 1);
+        uint256 powerOfThree = 3**(height - 1);
         while (index != LEAF_INDEX) {
             if (!isNull(nodes[node.left])) {
                 index = node.left;
@@ -222,7 +223,7 @@ contract RecordsMerkleTree is Rescue {
         uint256 pos = leafPos;
         while (!isTerminal(currentNode)) {
             // TODO avoid this logic duplication?
-            uint256 divisor = 3**(HEIGHT - branchIndex - 1);
+            uint256 divisor = 3**(height - branchIndex - 1);
             uint256 localPos = pos / divisor;
             pos = pos % divisor;
 
@@ -247,13 +248,13 @@ contract RecordsMerkleTree is Rescue {
 
         // Create new nodes until completing the path one level above the leaf level
         console.log("Create new nodes");
-        while (branchIndex < HEIGHT - 2) {
+        while (branchIndex < height - 2) {
             // TODO check
             Node memory newNode = Node(0, 0, 0, 0);
             nodes[newNodeIndex] = newNode;
 
             // TODO avoid this logic duplication?
-            uint256 divisor = 3**(HEIGHT - branchIndex - 1);
+            uint256 divisor = 3**(height - branchIndex - 1);
             uint256 localPos = pos / divisor;
             pos = pos % divisor;
 

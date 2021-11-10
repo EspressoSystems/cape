@@ -282,6 +282,7 @@ contract RecordsMerkleTree is Rescue {
         uint256 maxIndex,
         uint256 element
     ) private returns (uint256) {
+        console.log("height: %s", height);
         console.log("num_leaves: %s", numLeaves);
         console.log("element: %s", element);
 
@@ -310,6 +311,7 @@ contract RecordsMerkleTree is Rescue {
             console.log("currentNodeIndex: %s", currentNodeIndex);
             console.log("previousNodeIndex: %s", previousNodeIndex);
             console.log("localPos: %s", localPos);
+
             previousNodeIndex = currentNodeIndex;
             currentNodeIndex = nextNodeIndex(nodes, currentNodeIndex, localPos);
 
@@ -319,6 +321,14 @@ contract RecordsMerkleTree is Rescue {
                     currentNodeIndex
                 );
                 console.log("Previous node index is %s", previousNodeIndex);
+
+                // Update previousNode pointer and localPos
+                if (branchIndex < height - 1) {
+                    previousNodeIndex = currentNodeIndex;
+                    // TODO avoid this logic duplication?
+                    uint256 divisor = 3**(height - branchIndex - 1);
+                    localPos = pos / divisor;
+                }
             }
             branchIndex += 1;
         }
@@ -331,11 +341,7 @@ contract RecordsMerkleTree is Rescue {
         console.log("Create new nodes");
         console.log("branchIndex: %s", branchIndex);
 
-        while (branchIndex < height) {
-            // In the case of extending the branch the previous node is the current node
-            // which has been computed before exiting the previous loop
-            previousNodeIndex = currentNodeIndex;
-
+        while (branchIndex < height - 1) {
             // New node
             console.log("Adding new node with index: %s", newNodeIndex);
             console.log("branchIndex: %s", branchIndex);

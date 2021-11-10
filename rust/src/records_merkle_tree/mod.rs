@@ -435,8 +435,6 @@ mod tests {
         check_update_records_merkle_tree(4, 10, 2).await;
         check_update_records_merkle_tree(3, 4, 0).await;
         check_update_records_merkle_tree(3, 18, 1).await;
-
-        // TODO uncomment. These tests are failing for now
-        //check_update_records_merkle_tree(4, 10, 3).await;
+        check_update_records_merkle_tree(3, 10, 3).await;
     }
 }

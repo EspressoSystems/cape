@@ -392,3 +392,14 @@ To locally spin up a docker container like the one used in the CI
 
 The code in the current directory will be at `/code`. You may have to delete the
 `./node_modules` directory with root permissions afterwards.
+
+## Documentation
+Extracting documentation from the solidity source is done using a javascript tool called `solidity-docgen`
+If it run it, it should generate documentation into the `/doc` directory
+
+Example:
+```bash
+pnpm install
+solidity-docgen --solc-module solc-0.8 -o ./doc
+```
+

@@ -12,3 +12,7 @@ test:
   script:
     - nix-shell --run "pnpm i && lint-solidity"
     - nix-shell --run cape-test-geth
+    - nix-shell --run "pnpm i && solidity-docgen --solc-module solc-0.8 -o ./doc"
+  artifacts:
+    paths:
+      - doc

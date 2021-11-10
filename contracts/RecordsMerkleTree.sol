@@ -259,7 +259,12 @@ contract RecordsMerkleTree is Rescue {
         // Reinsert the node into the array
         nodes[nodeIndex] = node;
 
-        console.log("Child %s of node with index %s updated.", pos, nodeIndex);
+        console.log(
+            "Child with index %s and position %s of node with index %s updated.",
+            newChildIndex,
+            pos,
+            nodeIndex
+        );
     }
 
     // TODO is it possible to create a data structure for handling the nodes array and tracking the maximum index at
@@ -291,11 +296,17 @@ contract RecordsMerkleTree is Rescue {
         uint256 pos = leafPos;
         uint256 localPos = 0;
         while (!isNull(nodes[currentNodeIndex])) {
+            console.log(
+                "Going down one position from node with index %s",
+                currentNodeIndex
+            );
+
             // TODO avoid this logic duplication?
             uint256 divisor = 3**(height - branchIndex - 1);
             localPos = pos / divisor;
             pos = pos % divisor;
 
+            console.log("branchIndex: %s", branchIndex);
             console.log("currentNodeIndex: %s", currentNodeIndex);
             console.log("previousNodeIndex: %s", previousNodeIndex);
             console.log("localPos: %s", localPos);
@@ -318,9 +329,16 @@ contract RecordsMerkleTree is Rescue {
         // Create new nodes until completing the path one level above the leaf level
         // Always inserting to the left
         console.log("Create new nodes");
-        // TODO test case to enter in this loop
-        while (branchIndex < height - 1) {
+        console.log("branchIndex: %s", branchIndex);
+
+        while (branchIndex < height) {
+            // In the case of extending the branch the previous node is the current node
+            // which has been computed before exiting the previous loop
+            previousNodeIndex = currentNodeIndex;
+
             // New node
+            console.log("Adding new node with index: %s", newNodeIndex);
+            console.log("branchIndex: %s", branchIndex);
             nodes[newNodeIndex] = Node(0, 0, 0, 0);
 
             // TODO avoid this logic duplication?

@@ -409,7 +409,11 @@ mod tests {
             mt.push(elem.clone());
         }
 
-        compare_roots(&mt, &contract, false).await;
+        if n_leaves_after > 0 {
+            compare_roots(&mt, &contract, false).await;
+        } else {
+            compare_roots(&mt, &contract, true).await;
+        }
 
         // Now we insert the elements into the smart contract
         contract
@@ -422,7 +426,6 @@ mod tests {
             .unwrap();
 
         // Roots are the same
-        // TODO uncomment
         compare_roots(&mt, &contract, true).await;
     }
 
@@ -430,9 +433,10 @@ mod tests {
     async fn test_update_records_merkle_tree() {
         check_update_records_merkle_tree(4, 10, 1).await;
         check_update_records_merkle_tree(4, 10, 2).await;
+        check_update_records_merkle_tree(3, 4, 0).await;
+        check_update_records_merkle_tree(3, 18, 1).await;
 
         // TODO uncomment. These tests are failing for now
-        // check_update_records_merkle_tree(4, 9, 1).await;
-        // check_update_records_merkle_tree(4, 10, 3).await;
+        //check_update_records_merkle_tree(4, 10, 3).await;
     }
 }

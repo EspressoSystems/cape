@@ -7,10 +7,10 @@ stdenv.mkDerivation {
   src =
     let
       platform_id = if stdenv.isLinux then "linux-amd64" else "macosx-amd64";
-      build_list = lib.importJSON (fetchurl (lib.importJSON ./sources.json)."${platform_id}");
+      build_list = lib.importJSON (./. + "/list-${platform_id}.json");
       build = lib.findSingle (x: x.version == version)
-        (throw "not found")
-        (throw "found multiple")
+        (throw "version not found")
+        (throw "found multiple matching versions")
         build_list.builds;
     in
     fetchurl {

@@ -394,12 +394,11 @@ The code in the current directory will be at `/code`. You may have to delete the
 `./node_modules` directory with root permissions afterwards.
 
 ## Documentation
-Extracting documentation from the solidity source is done using a javascript tool called `solidity-docgen`
-If it run it, it should generate documentation into the `/doc` directory
+Extracting documentation from the solidity source is done using a javascript
+tool called `solidity-docgen`.
 
-Example:
-```bash
-pnpm install
-solidity-docgen --solc-module solc-0.8 -o ./doc
-```
+To generate the documentation run
 
+    solidity-docgen --solc-module solc-0.8 -o ./doc
+
+The generated files can be found in the `./doc` folder.

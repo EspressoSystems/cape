@@ -253,24 +253,18 @@ mod tests {
         assert_eq!(merkle_path_from_flattened, merkle_path_from_frontier);
     }
 
-    #[tokio::test]
-    async fn test_check_frontier() {
-        // TODO edge case: empty tree
-
-        let height: u8 = 7;
+    async fn check_check_frontier(n_leaves_before: u8, height: u8) {
         let contract = get_contract_records_merkle_tree(height).await;
 
         let mut mt = MerkleTree::<Fr254>::new(height).unwrap();
-        let elem1 = Fr254::from(3);
-        let elem2 = Fr254::from(17);
-        let elem3 = Fr254::from(22);
-        let elem4 = Fr254::from(78787);
 
-        // In order to get the frontier
-        mt.push(elem1);
-        mt.push(elem2);
-        mt.push(elem3);
-        mt.push(elem4);
+        // Insert several elements
+        let mut rng = ark_std::test_rng();
+
+        for _ in 0..n_leaves_before {
+            let elem = Fr254::rand(&mut rng);
+            mt.push(elem.clone());
+        }
 
         let root_fr254 = mt.commitment().root_value.to_scalar();
         let num_leaves = mt.commitment().num_leaves;
@@ -286,7 +280,7 @@ mod tests {
             .unwrap();
 
         let frontier_fr254 = mt.frontier();
-        // TODO compute the position
+
         let frontier_u256 = flatten_frontier(&frontier_fr254, num_leaves - 1)
             .iter()
             .map(|v| convert_fr254_to_u256(*v))
@@ -314,7 +308,7 @@ mod tests {
         assert!(receipt.is_err()); // TODO add a test like this in ethereum_test?
 
         // Wrong number of leaves
-        let wrong_number_of_leaves = num_leaves - 1;
+        let wrong_number_of_leaves = 33;
         contract
             .test_set_root_and_num_leaves(root_u256, wrong_number_of_leaves)
             .legacy()
@@ -347,6 +341,14 @@ mod tests {
         compare_roots(&mt, &contract, false).await;
     }
 
+    #[tokio::test]
+    async fn test_check_frontier() {
+        // TODO edge case: empty tree
+        check_check_frontier(1, 3).await;
+        check_check_frontier(2, 5).await;
+        check_check_frontier(3, 7).await;
+    }
+
     async fn check_update_records_merkle_tree(
         height: u8,
         n_leaves_before: u32,
@@ -366,7 +368,7 @@ mod tests {
         }
 
         let frontier_fr254 = mt.frontier();
-        // TODO compute the position
+
         let root_fr254 = mt.commitment().root_value.to_scalar();
         let num_leaves = mt.commitment().num_leaves;
         let root_u256 = convert_fr254_to_u256(root_fr254);
@@ -376,7 +378,6 @@ mod tests {
             .map(|v| convert_fr254_to_u256(*v))
             .collect_vec();
 
-        // TODO when inserting logic works
         contract
             .test_set_root_and_num_leaves(root_u256, num_leaves)
             .legacy()
@@ -431,7 +432,7 @@ mod tests {
         check_update_records_merkle_tree(4, 10, 2).await;
 
         // TODO uncomment. These tests are failing for now
-        // check_update_records_merkle_tree(4, 10, 3).await;
         // check_update_records_merkle_tree(4, 9, 1).await;
+        // check_update_records_merkle_tree(4, 10, 3).await;
     }
 }

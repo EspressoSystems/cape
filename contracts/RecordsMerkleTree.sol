@@ -101,29 +101,36 @@ contract RecordsMerkleTree is Rescue {
         // Compute the number of leaves from the frontier represented as nodes
         uint256 numLeavesFromFrontier = 0;
 
-        uint256 index = rootIndex;
+        uint256 branchIndex = 0;
+        uint256 nodeIndex = rootIndex;
         Node memory node = nodes[rootIndex];
 
         // We are done when we reach the leaf. The leaf index is LEAF_INDEX.
-        // See function build_tree_from_frontier.
+        // See function buildTreeFromFrontier.
         uint256 powerOfThree = 3**(height - 1);
-        while (index != LEAF_INDEX) {
-            if (!isNull(nodes[node.left])) {
-                index = node.left;
+        while (branchIndex < height) {
+            console.log("powerOfThree: %s", powerOfThree);
+            if (!isNull(nodes[node.left]) && isNull(nodes[node.middle])) {
+                nodeIndex = node.left;
+                console.log("LEFT");
             }
-            if (!isNull(nodes[node.middle])) {
+            if (!isNull(nodes[node.middle]) && isNull(nodes[node.right])) {
                 numLeavesFromFrontier += powerOfThree * 1;
-                index = node.middle;
+                nodeIndex = node.middle;
+                console.log("MIDDLE");
             }
             if (!isNull(nodes[node.right])) {
                 numLeavesFromFrontier += powerOfThree * 2;
-                index = node.right;
+                nodeIndex = node.right;
+                console.log("RIGHT");
             }
             powerOfThree /= 3;
-            console.log("index: %s", index);
-            node = nodes[index];
+            console.log("index: %s", nodeIndex);
+            branchIndex += 1;
+            node = nodes[nodeIndex];
         }
 
+        // The previous loop computes the index of the leaf.
         numLeavesFromFrontier += 1;
 
         console.log("expected_number_of_leaves: %s", numLeavesFromFrontier);
@@ -139,7 +146,7 @@ contract RecordsMerkleTree is Rescue {
         Node[MAX_NUMBER_NODES] memory nodes
     ) private returns (uint256) {
         // Set the first node to the NULL node
-        nodes[0] = Node(0, 0, 0, 0); // N
+        nodes[0] = Node(0, 0, 0, 0);
 
         // Insert the leaf
         nodes[LEAF_INDEX] = Node(_frontier[0], 0, 0, 0);

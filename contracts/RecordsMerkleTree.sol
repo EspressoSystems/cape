@@ -15,6 +15,12 @@ contract RecordsMerkleTree is Rescue {
         uint256 right; // Pointer (index) to the right child
     }
 
+    enum Position {
+        LEFT,
+        MIDDLE,
+        RIGHT
+    }
+
     // TODO index value of array should be u64 or u32
 
     uint256 public constant MAX_NUMBER_NODES = 100; // TODO precise number depending on tree height
@@ -22,10 +28,6 @@ contract RecordsMerkleTree is Rescue {
     uint256 public constant EMPTY_NODE_VALUE = 0;
 
     uint256 public constant LEAF_INDEX = 1;
-
-    uint256 public constant LEFT = 0; // TODO use uint8 ?
-    uint256 public constant MIDDLE = 1;
-    uint256 public constant RIGHT = 2;
 
     uint256 internal rootValue;
     uint64 internal numLeaves;
@@ -50,7 +52,7 @@ contract RecordsMerkleTree is Rescue {
     }
 
     // Create the new "hole node" that points to the children already inserted in the array
-    function createHoleNode(uint256 cursor, uint256 posSibling)
+    function createHoleNode(uint256 cursor, Position posSibling)
         private
         returns (Node memory)
     {
@@ -58,19 +60,25 @@ contract RecordsMerkleTree is Rescue {
         uint256 indexFirstSibling = cursor - 2;
         uint256 indexSecondSibling = cursor - 1;
 
-        if (posSibling == 0) {
-            // TODO use constants for LEFT=0, MIDDLE=1, RIGHT=2
-            return
-                Node(0, indexHoleNode, indexFirstSibling, indexSecondSibling);
+        uint256 left;
+        uint256 middle;
+        uint256 right;
+
+        if (posSibling == Position.LEFT) {
+            left = indexHoleNode;
+            middle = indexFirstSibling;
+            right = indexSecondSibling;
+        } else if (posSibling == Position.MIDDLE) {
+            left = indexFirstSibling;
+            middle = indexHoleNode;
+            right = indexSecondSibling;
+        } else if (posSibling == Position.RIGHT) {
+            left = indexFirstSibling;
+            middle = indexSecondSibling;
+            right = indexHoleNode;
         }
-        if (posSibling == 1) {
-            return
-                Node(0, indexFirstSibling, indexHoleNode, indexSecondSibling);
-        }
-        if (posSibling == 2) {
-            return
-                Node(0, indexFirstSibling, indexSecondSibling, indexHoleNode);
-        }
+
+        return Node(0, left, middle, right);
     }
 
     /// Checks that the frontier represented as a tree resolves to the right root and number of leaves
@@ -147,7 +155,10 @@ contract RecordsMerkleTree is Rescue {
         uint256 cursor = 4;
         uint256 frontierLen = _frontier.length; // TODO This should be constant
         while (cursor < frontierLen) {
-            nodes[cursor] = createHoleNode(cursor, _frontier[cursor - 1]);
+            nodes[cursor] = createHoleNode(
+                cursor,
+                Position(_frontier[cursor - 1])
+            );
 
             // Create the siblings of the "hole node". These siblings have no children
             nodes[cursor + 1] = Node(_frontier[cursor], 0, 0, 0);
@@ -158,7 +169,7 @@ contract RecordsMerkleTree is Rescue {
         }
 
         // Add the root node
-        nodes[cursor] = createHoleNode(cursor, _frontier[cursor - 1]);
+        nodes[cursor] = createHoleNode(cursor, Position(_frontier[cursor - 1]));
 
         return cursor;
     }
@@ -166,19 +177,15 @@ contract RecordsMerkleTree is Rescue {
     function nextNodeIndex(
         Node[MAX_NUMBER_NODES] memory nodes,
         uint256 nodeIndex,
-        uint256 pos
+        Position pos
     ) private returns (uint256) {
         uint256 nextNodeIndex;
 
-        if (pos == LEFT) {
+        if (pos == Position.LEFT) {
             nextNodeIndex = nodes[nodeIndex].left;
-        }
-
-        if (pos == MIDDLE) {
+        } else if (pos == Position.MIDDLE) {
             nextNodeIndex = nodes[nodeIndex].middle;
-        }
-
-        if (pos == RIGHT) {
+        } else if (pos == Position.RIGHT) {
             nextNodeIndex = nodes[nodeIndex].right;
         }
 
@@ -191,26 +198,24 @@ contract RecordsMerkleTree is Rescue {
         Node[MAX_NUMBER_NODES] memory nodes,
         uint256 nodeIndex,
         uint256 newChildIndex,
-        uint256 pos
+        Position pos
     ) private {
         // Get the node
         Node memory node = nodes[nodeIndex];
 
         // Update the node
-        if (pos == LEFT) {
+        if (pos == Position.LEFT) {
             node.left = newChildIndex;
-        }
-        if (pos == MIDDLE) {
+        } else if (pos == Position.MIDDLE) {
             node.middle = newChildIndex;
-        }
-        if (pos == RIGHT) {
+        } else if (pos == Position.RIGHT) {
             node.right = newChildIndex;
         }
 
         console.log(
             "Child with index %s and position %s of node with index %s updated.",
             newChildIndex,
-            pos,
+            uint256(pos),
             nodeIndex
         );
     }
@@ -261,7 +266,11 @@ contract RecordsMerkleTree is Rescue {
             console.log("localPos: %s", localPos);
 
             previousNodeIndex = currentNodeIndex;
-            currentNodeIndex = nextNodeIndex(nodes, currentNodeIndex, localPos);
+            currentNodeIndex = nextNodeIndex(
+                nodes,
+                currentNodeIndex,
+                Position(localPos)
+            );
 
             if (isNull(nodes[currentNodeIndex])) {
                 console.log(
@@ -302,7 +311,12 @@ contract RecordsMerkleTree is Rescue {
 
             console.log("localPos: %s", localPos);
 
-            updateChildNode(nodes, previousNodeIndex, newNodeIndex, localPos);
+            updateChildNode(
+                nodes,
+                previousNodeIndex,
+                newNodeIndex,
+                Position(localPos)
+            );
 
             previousNodeIndex = newNodeIndex;
             newNodeIndex += 1;
@@ -324,7 +338,12 @@ contract RecordsMerkleTree is Rescue {
         console.log("Leaf level position: %s", localPos);
         console.log("The leaf index is %s.", newNodeIndex);
 
-        updateChildNode(nodes, previousNodeIndex, newNodeIndex, localPos);
+        updateChildNode(
+            nodes,
+            previousNodeIndex,
+            newNodeIndex,
+            Position(localPos)
+        );
 
         console.log(
             "The children ids of the previous node with id %s are:",

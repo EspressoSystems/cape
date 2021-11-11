@@ -103,7 +103,9 @@ module.exports = {
   gasReporter: {
     enabled: process.env.REPORT_GAS ? true : false,
     showMethodSig: true,
-    onlyCalledMethods: false,
+    currency: "USD",
+    gasPrice: 205,
+    onlyCalledMethods: true,
   },
   mocha: {
     timeout: 300000,

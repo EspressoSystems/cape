@@ -9,7 +9,7 @@ describe("Records Merkle Tree Profiling", function () {
       [owner] = await ethers.getSigners();
 
       const RMT = await ethers.getContractFactory("TestRecordsMerkleTree");
-      let TREE_HEIGHT = 20;
+      TREE_HEIGHT = 20;
       rmt_contract = await RMT.deploy(TREE_HEIGHT);
 
       // Polling interval in ms.
@@ -103,6 +103,8 @@ describe("Records Merkle Tree Profiling", function () {
       );
       const txReceipt = await tx.wait();
       let gasUsed = txReceipt.gasUsed;
+      console.log("Tree height:" + TREE_HEIGHT.toString());
+      console.log("Number of records: " + elems.length.toString());
       console.log("testUpdateRecordsMerkleTree: " + gasUsed.toString());
       expect(gasUsed).lt(20_000_000);
     });

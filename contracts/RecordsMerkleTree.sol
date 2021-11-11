@@ -256,9 +256,6 @@ contract RecordsMerkleTree is Rescue {
             node.right = newChildIndex;
         }
 
-        // Reinsert the node into the array
-        nodes[nodeIndex] = node;
-
         console.log(
             "Child with index %s and position %s of node with index %s updated.",
             newChildIndex,

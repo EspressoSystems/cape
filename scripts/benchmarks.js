@@ -58,7 +58,6 @@ async function main() {
     fun_to_eval,
     fun_names,
     chunk,
-    false,
     false
   );
 

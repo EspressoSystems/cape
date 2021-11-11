@@ -23,11 +23,8 @@ contract RecordsMerkleTree is Rescue {
 
     // TODO index value of array should be u64 or u32
 
-    uint256 public constant MAX_NUMBER_NODES = 100; // TODO precise number depending on tree height
     uint256 public constant EMPTY_NODE_INDEX = 0;
     uint256 public constant EMPTY_NODE_VALUE = 0;
-
-    uint256 public constant LEAF_INDEX = 1;
 
     uint256 internal rootValue;
     uint64 internal numLeaves;
@@ -84,10 +81,10 @@ contract RecordsMerkleTree is Rescue {
     /// Checks that the frontier represented as a tree resolves to the right root and number of leaves
     /// @param nodes array of nodes obtained from the frontier
     /// @return true if the tree resolves to right root_value and num_leaves
-    function checkFrontier(
-        Node[MAX_NUMBER_NODES] memory nodes,
-        uint256 rootIndex
-    ) private returns (bool) {
+    function checkFrontier(Node[] memory nodes, uint256 rootIndex)
+        private
+        returns (bool)
+    {
         // Compute the root value of the frontier
         uint256 frontierRootValue = computeRootValue(nodes, rootIndex);
 
@@ -139,7 +136,7 @@ contract RecordsMerkleTree is Rescue {
 
     function buildTreeFromFrontier(
         uint256[] memory _frontier,
-        Node[MAX_NUMBER_NODES] memory nodes
+        Node[] memory nodes
     ) private returns (uint256) {
         // Set the first node to the NULL node
         nodes[0] = Node(0, 0, 0, 0);
@@ -170,13 +167,15 @@ contract RecordsMerkleTree is Rescue {
         }
 
         // Add the root node
+        console.log("cursor: %s", cursor);
+        console.log("max number of nodes: %s", nodes.length);
         nodes[cursor] = createHoleNode(cursor, Position(_frontier[cursor - 1]));
 
         return cursor;
     }
 
     function nextNodeIndex(
-        Node[MAX_NUMBER_NODES] memory nodes,
+        Node[] memory nodes,
         uint256 nodeIndex,
         Position pos
     ) private returns (uint256) {
@@ -196,7 +195,7 @@ contract RecordsMerkleTree is Rescue {
     // Update the child of a node based on the position (which child to select)
     // and an index to the new child.
     function updateChildNode(
-        Node[MAX_NUMBER_NODES] memory nodes,
+        Node[] memory nodes,
         uint256 nodeIndex,
         uint256 newChildIndex,
         Position pos
@@ -231,7 +230,7 @@ contract RecordsMerkleTree is Rescue {
     /// @param element value of the element to insert into the tree
     /// @return updated value of maxIndex
     function pushElement(
-        Node[MAX_NUMBER_NODES] memory nodes,
+        Node[] memory nodes,
         uint256 rootIndex,
         uint256 maxIndex,
         uint256 element
@@ -366,12 +365,15 @@ contract RecordsMerkleTree is Rescue {
 
     // TODO document, in particular how the _frontier is built
     function updateRecordsMerkleTree(
-        uint256[] memory _frontier,
-        uint256[] memory _elements
+        uint256[] memory frontier,
+        uint256[] memory elements
     ) internal {
-        Node[MAX_NUMBER_NODES] memory nodes;
+        // The total number of nodes is bounded by 3*height+1 + 3*N*height = 3*(N+1)*height + 1
+        // where N is the number of new records
+        uint256 numElements = elements.length;
+        Node[] memory nodes = new Node[](3 * (numElements + 1) * height + 2);
 
-        uint256 rootIndex = buildTreeFromFrontier(_frontier, nodes);
+        uint256 rootIndex = buildTreeFromFrontier(frontier, nodes);
         bool isFrontierValid = checkFrontier(nodes, rootIndex);
         require(isFrontierValid, "Frontier not consistent w/ state");
 
@@ -379,8 +381,8 @@ contract RecordsMerkleTree is Rescue {
 
         // maxIndex tracks the index of the last element inserted in the tree
         uint256 maxIndex = rootIndex;
-        for (uint256 i = 0; i < _elements.length; i++) {
-            maxIndex = pushElement(nodes, rootIndex, maxIndex, _elements[i]);
+        for (uint256 i = 0; i < elements.length; i++) {
+            maxIndex = pushElement(nodes, rootIndex, maxIndex, elements[i]);
         }
 
         //// Compute the root hash value ////
@@ -391,10 +393,10 @@ contract RecordsMerkleTree is Rescue {
         return rootValue;
     }
 
-    function computeRootValue(
-        Node[MAX_NUMBER_NODES] memory nodes,
-        uint256 rootNodePos
-    ) private returns (uint256) {
+    function computeRootValue(Node[] memory nodes, uint256 rootNodePos)
+        private
+        returns (uint256)
+    {
         // If the root node has no children return its value
         Node memory rootNode = nodes[rootNodePos];
         if (isTerminal(rootNode)) {

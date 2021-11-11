@@ -51,37 +51,23 @@ contract RecordsMerkleTree is Rescue {
 
     // Create the new "hole node" that points to the children already inserted in the array
     function createHoleNode(
-        uint256 indexNodesArray,
-        Node[MAX_NUMBER_NODES] memory nodes,
         uint256 indexHoleNode,
         uint256 indexFirstSibling,
         uint256 indexSecondSibling,
         uint256 posSibling
-    ) private {
+    ) private returns (Node memory) {
         if (posSibling == 0) {
             // TODO use constants for LEFT=0, MIDDLE=1, RIGHT=2
-            nodes[indexNodesArray] = Node(
-                0,
-                indexHoleNode,
-                indexFirstSibling,
-                indexSecondSibling
-            );
+            return
+                Node(0, indexHoleNode, indexFirstSibling, indexSecondSibling);
         }
         if (posSibling == 1) {
-            nodes[indexNodesArray] = Node(
-                0,
-                indexFirstSibling,
-                indexHoleNode,
-                indexSecondSibling
-            );
+            return
+                Node(0, indexFirstSibling, indexHoleNode, indexSecondSibling);
         }
         if (posSibling == 2) {
-            nodes[indexNodesArray] = Node(
-                0,
-                indexFirstSibling,
-                indexSecondSibling,
-                indexHoleNode
-            );
+            return
+                Node(0, indexFirstSibling, indexSecondSibling, indexHoleNode);
         }
     }
 
@@ -149,67 +135,40 @@ contract RecordsMerkleTree is Rescue {
         nodes[0] = Node(0, 0, 0, 0);
 
         // Insert the leaf
-        nodes[LEAF_INDEX] = Node(_frontier[0], 0, 0, 0);
+        nodes[1] = Node(_frontier[0], 0, 0, 0);
 
         // Insert the siblings
-        uint256 indexFirstSibling = 2;
-        nodes[indexFirstSibling] = Node(_frontier[1], 0, 0, 0);
-        uint256 indexSecondSibling = 3;
-        nodes[indexSecondSibling] = Node(_frontier[2], 0, 0, 0);
-
-        uint256 posSibling = _frontier[3];
+        nodes[2] = Node(_frontier[1], 0, 0, 0);
+        nodes[3] = Node(_frontier[2], 0, 0, 0);
 
         // We process the nodes of the Merkle path
-        uint256 indexNodesArray = 3;
-        uint256 indexFrontier = 4;
-        uint256 indexHoleNode = LEAF_INDEX;
+        uint256 cursor = 4;
         uint256 frontierLen = _frontier.length; // TODO This should be constant
-        while (indexFrontier < frontierLen) {
-            indexNodesArray += 1;
-            createHoleNode(
-                indexNodesArray,
-                nodes,
-                indexHoleNode,
-                indexFirstSibling,
-                indexSecondSibling,
-                posSibling
+        while (cursor < frontierLen) {
+            nodes[cursor] = createHoleNode(
+                cursor - 3,
+                cursor - 2,
+                cursor - 1,
+                _frontier[cursor - 1]
             );
-
-            // Update the index of the hole node for the next iteration
-            indexHoleNode = indexNodesArray;
 
             // Create the siblings of the "hole node". These siblings have no children
-            indexNodesArray += 1;
-            indexFirstSibling = indexNodesArray;
-            nodes[indexFirstSibling] = Node(_frontier[indexFrontier], 0, 0, 0);
-
-            indexNodesArray += 1;
-            indexSecondSibling = indexNodesArray;
-            nodes[indexSecondSibling] = Node(
-                _frontier[indexFrontier + 1],
-                0,
-                0,
-                0
-            );
-
-            posSibling = _frontier[indexFrontier + 2];
+            nodes[cursor + 1] = Node(_frontier[cursor], 0, 0, 0);
+            nodes[cursor + 2] = Node(_frontier[cursor + 1], 0, 0, 0);
 
             // Move forward
-            indexFrontier = indexFrontier + 3;
+            cursor += 3;
         }
 
         // Add the root node
-        indexNodesArray += 1;
-        createHoleNode(
-            indexNodesArray,
-            nodes,
-            indexHoleNode,
-            indexFirstSibling,
-            indexSecondSibling,
-            posSibling
+        nodes[cursor] = createHoleNode(
+            cursor - 3,
+            cursor - 2,
+            cursor - 1,
+            _frontier[cursor - 1]
         );
 
-        return indexNodesArray;
+        return cursor;
     }
 
     function nextNodeIndex(

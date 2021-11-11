@@ -2,6 +2,6 @@
 
 members = [
     "rust",
-    "doc/contracts",
+    "doc/workflow",
 ]
 

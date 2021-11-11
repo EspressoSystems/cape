@@ -430,10 +430,10 @@ tool called `solidity-docgen`.
 
 To generate the documentation run
 
-    solidity-docgen --solc-module solc-0.8 -o ./doc
+    solidity-docgen --solc-module solc-0.8 -o ./doc/contracts
 
-The generated files can be found in the `./doc` folder.
+The generated files can be found in the `./doc/contracts` folder.
 
 ### Ethereum Asset (Un)Wrapping Workflow
 
-Documentation about wrapping and unwrapping ERC20 tokens into and out of CAPE is described in `./doc/contracts/lib.rs::test`.
+Documentation about wrapping and unwrapping ERC20 tokens into and out of CAPE is described in `./doc/workflow/lib.rs::test`.

@@ -378,6 +378,11 @@ mod tests {
             .map(|v| convert_fr254_to_u256(*v))
             .collect_vec();
 
+        println!("frontier_u256: {:?}", frontier_u256);
+
+        println!("root_u256: {}", root_u256);
+        println!("num_leaves: {}", num_leaves);
+
         contract
             .test_set_root_and_num_leaves(root_u256, num_leaves)
             .legacy()
@@ -441,7 +446,7 @@ mod tests {
             }
         }
 
-        for height in [25] {
+        for height in [4, 10, 15] {
             check_update_records_merkle_tree(height, 1, 3).await;
         }
     }

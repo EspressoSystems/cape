@@ -88,8 +88,8 @@ contract RecordsMerkleTree is Rescue {
         // Compute the root value of the frontier
         uint256 frontierRootValue = computeRootValue(nodes, rootIndex);
 
-        console.log("root_value %s", rootValue);
-        console.log("frontier_root_value %s", frontierRootValue);
+        //console.log("root_value %s", rootValue);
+        //console.log("frontier_root_value %s", frontierRootValue);
 
         // Compute the number of leaves from the frontier represented as nodes
         uint256 numLeavesFromFrontier = 0;
@@ -102,23 +102,23 @@ contract RecordsMerkleTree is Rescue {
         // See function buildTreeFromFrontier.
         uint256 powerOfThree = 3**(height - 1);
         while (branchIndex < height) {
-            console.log("powerOfThree: %s", powerOfThree);
+            //console.log("powerOfThree: %s", powerOfThree);
             if (!isNull(nodes[node.left]) && isNull(nodes[node.middle])) {
                 nodeIndex = node.left;
-                console.log("LEFT");
+                //console.log("LEFT");
             }
             if (!isNull(nodes[node.middle]) && isNull(nodes[node.right])) {
                 numLeavesFromFrontier += powerOfThree * 1;
                 nodeIndex = node.middle;
-                console.log("MIDDLE");
+                //console.log("MIDDLE");
             }
             if (!isNull(nodes[node.right])) {
                 numLeavesFromFrontier += powerOfThree * 2;
                 nodeIndex = node.right;
-                console.log("RIGHT");
+                //console.log("RIGHT");
             }
             powerOfThree /= 3;
-            console.log("index: %s", nodeIndex);
+            //console.log("index: %s", nodeIndex);
             branchIndex += 1;
             node = nodes[nodeIndex];
         }
@@ -126,8 +126,8 @@ contract RecordsMerkleTree is Rescue {
         // The previous loop computes the index of the leaf.
         numLeavesFromFrontier += 1;
 
-        console.log("expected_number_of_leaves: %s", numLeavesFromFrontier);
-        console.log("num_leaves: %s", numLeaves);
+        //console.log("expected_number_of_leaves: %s", numLeavesFromFrontier);
+        //console.log("num_leaves: %s", numLeaves);
 
         return
             (frontierRootValue == rootValue) &&
@@ -167,8 +167,8 @@ contract RecordsMerkleTree is Rescue {
         }
 
         // Add the root node
-        console.log("cursor: %s", cursor);
-        console.log("max number of nodes: %s", nodes.length);
+        //console.log("cursor: %s", cursor);
+        //console.log("max number of nodes: %s", nodes.length);
         nodes[cursor] = createHoleNode(cursor, Position(_frontier[cursor - 1]));
 
         return cursor;
@@ -212,12 +212,12 @@ contract RecordsMerkleTree is Rescue {
             node.right = newChildIndex;
         }
 
-        console.log(
-            "Child with index %s and position %s of node with index %s updated.",
-            newChildIndex,
-            uint256(pos),
-            nodeIndex
-        );
+        //console.log(
+        //    "Child with index %s and position %s of node with index %s updated.",
+        //    newChildIndex,
+        //    uint256(pos),
+        //    nodeIndex
+        //);
     }
 
     // TODO is it possible to create a data structure for handling the nodes array and tracking the maximum index at
@@ -235,9 +235,9 @@ contract RecordsMerkleTree is Rescue {
         uint256 maxIndex,
         uint256 element
     ) private returns (uint256) {
-        console.log("height: %s", height);
-        console.log("num_leaves: %s", numLeaves);
-        console.log("element: %s", element);
+        //console.log("height: %s", height);
+        //console.log("num_leaves: %s", numLeaves);
+        //console.log("element: %s", element);
 
         // Get the position of the leaf from the smart contract state
         uint256 leafPos = numLeaves;
@@ -246,24 +246,24 @@ contract RecordsMerkleTree is Rescue {
         uint256 previousNodeIndex = rootIndex;
 
         // Go down inside the tree until finding the first terminal node.
-        console.log("Going down until finding a terminal node");
+        //console.log("Going down until finding a terminal node");
         uint256 pos = leafPos;
         uint256 localPos = 0;
         while (!isNull(nodes[currentNodeIndex])) {
-            console.log(
-                "Going down one position from node with index %s",
-                currentNodeIndex
-            );
+            //console.log(
+            //    "Going down one position from node with index %s",
+            //    currentNodeIndex
+            //);
 
             // TODO avoid this logic duplication?
             uint256 divisor = 3**(height - branchIndex - 1);
             localPos = pos / divisor;
             pos = pos % divisor;
 
-            console.log("branchIndex: %s", branchIndex);
-            console.log("currentNodeIndex: %s", currentNodeIndex);
-            console.log("previousNodeIndex: %s", previousNodeIndex);
-            console.log("localPos: %s", localPos);
+            //console.log("branchIndex: %s", branchIndex);
+            //console.log("currentNodeIndex: %s", currentNodeIndex);
+            //console.log("previousNodeIndex: %s", previousNodeIndex);
+            //console.log("localPos: %s", localPos);
 
             previousNodeIndex = currentNodeIndex;
             currentNodeIndex = nextNodeIndex(
@@ -273,11 +273,11 @@ contract RecordsMerkleTree is Rescue {
             );
 
             if (isNull(nodes[currentNodeIndex])) {
-                console.log(
-                    "Node with index %s is terminal.",
-                    currentNodeIndex
-                );
-                console.log("Previous node index is %s", previousNodeIndex);
+                //console.log(
+                //    "Node with index %s is terminal.",
+                //    currentNodeIndex
+                //);
+                //console.log("Previous node index is %s", previousNodeIndex);
 
                 // Update previousNode pointer and localPos
                 if (branchIndex < height - 1) {
@@ -295,13 +295,13 @@ contract RecordsMerkleTree is Rescue {
 
         // Create new nodes until completing the path one level above the leaf level
         // Always inserting to the left
-        console.log("Create new nodes");
-        console.log("branchIndex: %s", branchIndex);
+        //console.log("Create new nodes");
+        //console.log("branchIndex: %s", branchIndex);
 
         while (branchIndex < height - 1) {
             // New node
-            console.log("Adding new node with index: %s", newNodeIndex);
-            console.log("branchIndex: %s", branchIndex);
+            //console.log("Adding new node with index: %s", newNodeIndex);
+            //console.log("branchIndex: %s", branchIndex);
             nodes[newNodeIndex] = Node(0, 0, 0, 0);
 
             // TODO avoid this logic duplication?
@@ -309,7 +309,7 @@ contract RecordsMerkleTree is Rescue {
             localPos = pos / divisor;
             pos = pos % divisor;
 
-            console.log("localPos: %s", localPos);
+            //console.log("localPos: %s", localPos);
 
             updateChildNode(
                 nodes,
@@ -325,7 +325,7 @@ contract RecordsMerkleTree is Rescue {
 
         // The last node contains the leaf value (compute the hash)
         // Remember position is computed with the remainder
-        console.log("adding the leaf");
+        //console.log("adding the leaf");
 
         // Leaf node where the value is hash(0,numLeaves,element)
         nodes[newNodeIndex] = Node(
@@ -335,8 +335,8 @@ contract RecordsMerkleTree is Rescue {
             0
         );
 
-        console.log("Leaf level position: %s", localPos);
-        console.log("The leaf index is %s.", newNodeIndex);
+        //console.log("Leaf level position: %s", localPos);
+        //console.log("The leaf index is %s.", newNodeIndex);
 
         updateChildNode(
             nodes,
@@ -345,16 +345,16 @@ contract RecordsMerkleTree is Rescue {
             Position(localPos)
         );
 
-        console.log(
-            "The children ids of the previous node with id %s are:",
-            previousNodeIndex
-        );
-        console.log(
-            "[%s,%s,%s]",
-            nodes[previousNodeIndex].left,
-            nodes[previousNodeIndex].middle,
-            nodes[previousNodeIndex].right
-        );
+        //console.log(
+        //    "The children ids of the previous node with id %s are:",
+        //    previousNodeIndex
+        //);
+        //console.log(
+        //    "[%s,%s,%s]",
+        //    nodes[previousNodeIndex].left,
+        //    nodes[previousNodeIndex].middle,
+        //    nodes[previousNodeIndex].right
+        //);
 
         // Increment the number of leaves
         numLeaves += 1;

@@ -50,12 +50,14 @@ contract RecordsMerkleTree is Rescue {
     }
 
     // Create the new "hole node" that points to the children already inserted in the array
-    function createHoleNode(
-        uint256 indexHoleNode,
-        uint256 indexFirstSibling,
-        uint256 indexSecondSibling,
-        uint256 posSibling
-    ) private returns (Node memory) {
+    function createHoleNode(uint256 cursor, uint256 posSibling)
+        private
+        returns (Node memory)
+    {
+        uint256 indexHoleNode = cursor - 3;
+        uint256 indexFirstSibling = cursor - 2;
+        uint256 indexSecondSibling = cursor - 1;
+
         if (posSibling == 0) {
             // TODO use constants for LEFT=0, MIDDLE=1, RIGHT=2
             return
@@ -145,12 +147,7 @@ contract RecordsMerkleTree is Rescue {
         uint256 cursor = 4;
         uint256 frontierLen = _frontier.length; // TODO This should be constant
         while (cursor < frontierLen) {
-            nodes[cursor] = createHoleNode(
-                cursor - 3,
-                cursor - 2,
-                cursor - 1,
-                _frontier[cursor - 1]
-            );
+            nodes[cursor] = createHoleNode(cursor, _frontier[cursor - 1]);
 
             // Create the siblings of the "hole node". These siblings have no children
             nodes[cursor + 1] = Node(_frontier[cursor], 0, 0, 0);
@@ -161,12 +158,7 @@ contract RecordsMerkleTree is Rescue {
         }
 
         // Add the root node
-        nodes[cursor] = createHoleNode(
-            cursor - 3,
-            cursor - 2,
-            cursor - 1,
-            _frontier[cursor - 1]
-        );
+        nodes[cursor] = createHoleNode(cursor, _frontier[cursor - 1]);
 
         return cursor;
     }

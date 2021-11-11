@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd arbitrum
+
+pip install -r requirements-dev.txt
+yarn
+yarn install:validator
+
+cd packages/arb-rpc-node/cmd/arb-dev-node
+go run arb-dev-node.go

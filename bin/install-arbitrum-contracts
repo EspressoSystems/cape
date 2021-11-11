@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+echo ""
+echo "Installing arbitrum contracts"
+cp -rv artifacts/contracts/arbitrum/* artifacts/contracts
+echo ""

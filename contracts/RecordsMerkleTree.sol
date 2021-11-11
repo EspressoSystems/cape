@@ -153,8 +153,9 @@ contract RecordsMerkleTree is Rescue {
 
         // We process the nodes of the Merkle path
         uint256 cursor = 4;
-        uint256 frontierLen = _frontier.length; // TODO This should be constant
-        while (cursor < frontierLen) {
+
+        // The length of the frontier is
+        while (cursor < 3 * height + 1) {
             nodes[cursor] = createHoleNode(
                 cursor,
                 Position(_frontier[cursor - 1])

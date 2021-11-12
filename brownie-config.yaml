@@ -1,20 +1,23 @@
 project_structure:
-    # match hardhat
-    tests: test
+  # match hardhat
+  tests: test
 
 compiler:
-    solc:
-        version: ${SOLC_VERSION}
-        optimizer:
-            enabled: true
-            runs: ${SOLC_OPTIMIZER_RUNS}
+  solc:
+    version: ${SOLC_VERSION}
+    optimizer:
+      enabled: true
+      runs: ${SOLC_OPTIMIZER_RUNS}
 
-        # Enable brownie to find installed contracts
-        remappings:
-          - "hardhat=node_modules/hardhat"
-          - "@openzeppelin=node_modules/@openzeppelin"
+    # Enable brownie to find installed contracts
+    remappings:
+      - "hardhat=node_modules/hardhat"
+      - "@openzeppelin=node_modules/@openzeppelin"
 
 networks:
-    default: hardhat
-    development:
-        gas_price: 2_000_000_000
+  default: development
+  development:
+    # gas_price: 2_000_000_000
+    cmd_settings:
+      port: 8546
+      gas_limit: 20_000_000

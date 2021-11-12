@@ -10,6 +10,7 @@ specifiers:
   chai: ^4.3.4
   ethereum-waffle: ^3.4.0
   ethers: ^5.4.7
+  ganache-cli: ^6.12.2
   hardhat: ^2.6.4
   hardhat-gas-reporter: ^1.0.4
   hardhat-shorthand: ^1.0.0
@@ -37,6 +38,7 @@ devDependencies:
   chai: 4.3.4
   ethereum-waffle: 3.4.0
   ethers: 5.4.7
+  ganache-cli: 6.12.2
   hardhat: 2.6.4
   hardhat-gas-reporter: 1.0.4_hardhat@2.6.4
   hardhat-shorthand: 1.0.0
@@ -3992,6 +3994,15 @@ packages:
   /functional-red-black-tree/1.0.1:
     resolution: {integrity: sha1-GwqzvVU7Kg1jmdKcDj6gslIHgyc=}
     dev: true
+
+  /ganache-cli/6.12.2:
+    resolution: {integrity: sha512-bnmwnJDBDsOWBUP8E/BExWf85TsdDEFelQSzihSJm9VChVO1SHp94YXLP5BlA4j/OTxp0wR4R1Tje9OHOuAJVw==}
+    hasBin: true
+    dev: true
+    bundledDependencies:
+      - source-map-support
+      - yargs
+      - ethereumjs-util
 
   /ganache-core/2.13.2:
     resolution: {integrity: sha512-tIF5cR+ANQz0+3pHWxHjIwHqFXcVo0Mb+kcsNhglNFALcYo49aQpnS9dqHartqPfMFjiHh/qFoD3mYK0d/qGgw==}

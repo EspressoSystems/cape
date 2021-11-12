@@ -55,6 +55,10 @@ mkShell
     git # required for pre-commit hook installation
     netcat
     cacert
+
+    # required by @0x/sol-profiler npm package
+    libudev
+    libusb1
   ]
   ++ myPython
   ++ rustDeps;
@@ -67,6 +71,9 @@ mkShell
   SOLC_VERSION = mySolc.version;
   SOLC_PATH = "${mySolc}/bin/solc";
   SOLC_OPTIMIZER_RUNS = "1000";
+
+  # required by @0x/sol-profiler npm package
+  CFLAGS = "-I${libusb.dev}/include/libusb-1.0";
 
   shellHook = ''
 

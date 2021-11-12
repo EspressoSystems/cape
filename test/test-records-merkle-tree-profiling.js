@@ -1,6 +1,8 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
+const hre = require("hardhat");
+
 describe("Records Merkle Tree Profiling", function () {
   describe("The Records Merkle root is updated with the frontier.", async function () {
     let owner, rmt_contract;
@@ -102,7 +104,16 @@ describe("Records Merkle Tree Profiling", function () {
         elems
       );
       const txReceipt = await tx.wait();
+      console.log("status: ", txReceipt.status);
       let gasUsed = txReceipt.gasUsed;
+
+      // console.log("trace: ", await hre.network.provider.send("eth_getBlockByNumber", ["0x1", false]))
+      console.log(
+        "trace: ",
+        await hre.network.provider.send("debug_traceTransaction", [
+          txReceipt.transactionHash,
+        ])
+      );
       console.log("Tree height:" + TREE_HEIGHT.toString());
       console.log("Number of records: " + elems.length.toString());
       console.log("testUpdateRecordsMerkleTree: " + gasUsed.toString());

@@ -39,4 +39,6 @@ geth --http --dev \
     --allow-insecure-unlock \
     --password <(echo "") \
     --datadir $DATA_DIR --unlock $ADDRESS_LIST \
+    --vmdebug \
+    --rpc --rpcapi "eth,net,web3,debug" \
     "$@"

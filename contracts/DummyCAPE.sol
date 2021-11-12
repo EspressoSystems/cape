@@ -5,13 +5,15 @@ import {Curve} from "./BN254.sol";
 import "./NullifiersStore.sol";
 import "./RecordsMerkleTree.sol";
 
-contract DummyVerifier is NullifiersStore, RecordsMerkleTree {
-    uint256 internal constant RECORDS_TREE_HEIGHT = 25;
-    uint256 internal constant CAPTX_SIZE = 3000; // Must be the same as in the javascript testing code
-    uint256 internal constant N_INPUTS = 4; // Number of CAP inputs per transactions corresponding to a transaction of roughly 3 KB
-    uint256 internal constant N_OUTPUTS = 5; // Number of CAP outputs per transactions of roughly 3 KB
+contract DummyCAPE is NullifiersStore, RecordsMerkleTree {
+    uint64 public constant RECORDS_TREE_HEIGHT = 25;
+    uint256 public constant CAPTX_SIZE = 3000; // Must be the same as in the javascript testing code
+    uint256 public constant N_INPUTS = 4; // Number of AAP inputs per transactions corresponding to a transaction of roughly 3 KB
+    uint256 public constant N_OUTPUTS = 5; // Number of AAP outputs per transactions of roughly 3 KB
 
     /* solhint-enable */
+
+    constructor() public RecordsMerkleTree(RECORDS_TREE_HEIGHT) {}
 
     function verifyEmpty(
         bytes memory chunk, // solhint-disable-line no-unused-vars

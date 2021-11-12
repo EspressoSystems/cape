@@ -37,7 +37,7 @@ async function main() {
   const [owner] = await ethers.getSigners();
   let fun_to_eval, fun_names;
 
-  const DPV = await ethers.getContractFactory("DummyVerifier");
+  const DPV = await ethers.getContractFactory("DummyCAPE");
   const dpv = await DPV.deploy();
 
   // Polling interval in ms.
@@ -58,7 +58,6 @@ async function main() {
     fun_to_eval,
     fun_names,
     chunk,
-    false,
     false
   );
 

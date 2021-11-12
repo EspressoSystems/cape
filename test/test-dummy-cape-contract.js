@@ -2,7 +2,7 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 const common = require("../lib/common");
 
-describe("Dummy Verifier", function () {
+describe("Dummy CAPE", function () {
   describe("Should compute the gas fee", async function () {
     let owner, fun_to_eval;
 
@@ -12,7 +12,7 @@ describe("Dummy Verifier", function () {
     before(async function () {
       [owner] = await ethers.getSigners();
 
-      const DPV = await ethers.getContractFactory("DummyVerifier");
+      const DPV = await ethers.getContractFactory("DummyCAPE");
       const dpv = await DPV.deploy();
 
       // Polling interval in ms.
@@ -34,19 +34,19 @@ describe("Dummy Verifier", function () {
     }
 
     it("Works with merkle tree update", async function () {
-      const expected_gas = ["119329", "7051382", "6959977"];
+      const expected_gas = ["119340", "7051437", "6960010"];
       const actual_gas = await check_actual_gas(chunk, true);
       expect(actual_gas).to.deep.equal(expected_gas);
     });
 
     it("Works with without merkle tree update", async function () {
-      const expected_gas = ["119317", "759922", "705161"];
+      const expected_gas = ["119328", "759977", "705194"];
       const actual_gas = await check_actual_gas(chunk, false);
       expect(actual_gas).to.deep.equal(expected_gas);
     });
 
     it("Batch verifier is more efficient than simple verifier when there are enough transactions", async function () {
-      const expected_gas = ["167870", "10295854", "10173003"];
+      const expected_gas = ["167881", "10295909", "10173036"];
 
       const N_CAPTX = 3;
       const chunk = common.create_chunk(N_CAPTX);

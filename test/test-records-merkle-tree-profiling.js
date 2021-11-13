@@ -97,6 +97,13 @@ describe("Records Merkle Tree Profiling", function () {
         initial_number_of_leaves
       );
 
+      const tx_empty = await rmt_contract.testUpdateRecordsMerkleTree(
+        flattened_frontier,
+        []
+      );
+      const tx_emptyReceipt = await tx_empty.wait();
+      let empty_gasUsed = tx_emptyReceipt.gasUsed;
+
       const tx = await rmt_contract.testUpdateRecordsMerkleTree(
         flattened_frontier,
         elems
@@ -104,8 +111,12 @@ describe("Records Merkle Tree Profiling", function () {
       const txReceipt = await tx.wait();
       let gasUsed = txReceipt.gasUsed;
       console.log("Tree height:" + TREE_HEIGHT.toString());
+      console.log(
+        "testUpdateRecordsMerkleTree empty: " + empty_gasUsed.toString()
+      );
       console.log("Number of records: " + elems.length.toString());
       console.log("testUpdateRecordsMerkleTree: " + gasUsed.toString());
+      console.log("insertion gas: " + (gasUsed - empty_gasUsed).toString());
       expect(gasUsed).lt(20_000_000);
     });
   });

@@ -66,7 +66,7 @@ mkShell
   SOLCX_BINARY_PATH = "${mySolc}/bin";
   SOLC_VERSION = mySolc.version;
   SOLC_PATH = "${mySolc}/bin/solc";
-  SOLC_OPTIMIZER_RUNS = "1000";
+  SOLC_OPTIMIZER_RUNS = "1000000";
 
   shellHook = ''
 

@@ -1,6 +1,6 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
-const common = require("../lib/common");
+const common = require("../../lib/common");
 
 describe("Dummy CAPE", function () {
   describe("Should compute the gas fee", async function () {

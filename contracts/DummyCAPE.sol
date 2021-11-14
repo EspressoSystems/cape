@@ -6,7 +6,7 @@ import "./NullifiersStore.sol";
 import "./RecordsMerkleTree.sol";
 
 contract DummyCAPE is NullifiersStore, RecordsMerkleTree {
-    uint64 public constant RECORDS_TREE_HEIGHT = 25;
+    uint8 public constant RECORDS_TREE_HEIGHT = 25;
     uint256 public constant CAPTX_SIZE = 3000; // Must be the same as in the javascript testing code
     uint256 public constant N_INPUTS = 4; // Number of AAP inputs per transactions corresponding to a transaction of roughly 3 KB
     uint256 public constant N_OUTPUTS = 5; // Number of AAP outputs per transactions of roughly 3 KB

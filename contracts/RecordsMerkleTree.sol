@@ -5,51 +5,43 @@ import "hardhat/console.sol";
 import "./Rescue.sol";
 
 contract RecordsMerkleTree is Rescue {
-    // Representation of a (tree) node
-    // A node contains a value and pointers (which are index in an array of other nodes).
-    // By convention a node that has no (left,middle,right) children will point to index 0.
-    struct Node {
-        uint256 val;
-        uint256 left; // Pointer (index) to the left child
-        uint256 middle; // Pointer (index) to the middle child
-        uint256 right; // Pointer (index) to the right child
-    }
-
     enum Position {
         LEFT,
         MIDDLE,
         RIGHT
     }
 
-    // TODO index value of array should be u64 or u32
-
-    uint256 public constant EMPTY_NODE_INDEX = 0;
-    uint256 public constant EMPTY_NODE_VALUE = 0;
+    // Representation of a (tree) node
+    // A node contains a value and pointers (which are index in an array of other nodes).
+    // By convention a node that has no (left,middle,right) children will point to index 0.
+    struct Node {
+        uint256 val;
+        uint64 left; // Pointer (index) to the left child
+        uint64 middle; // Pointer (index) to the middle child
+        uint64 right; // Pointer (index) to the right child
+    }
 
     uint256 internal rootValue;
     uint64 internal numLeaves;
-    uint64 internal height;
+    uint8 internal height;
 
-    constructor(uint64 _height) {
-        rootValue = EMPTY_NODE_VALUE;
+    constructor(uint8 _height) {
+        rootValue = 0;
         numLeaves = 0;
         height = _height;
     }
 
     function isTerminal(Node memory node) private returns (bool) {
-        return
-            (node.left == EMPTY_NODE_INDEX) &&
-            (node.middle == EMPTY_NODE_INDEX) &&
-            (node.right == EMPTY_NODE_INDEX);
+        return (node.left == 0) && (node.middle == 0) && (node.right == 0);
     }
 
     // TODO save gas using comparison against a constant node value Node(0,0,0,0)?
     function isNull(Node memory node) private returns (bool) {
-        return (node.val == EMPTY_NODE_VALUE && isTerminal(node));
+        return (node.val == 0 && isTerminal(node));
     }
 
     // Create the new "hole node" that points to the children already inserted in the array
-    function createHoleNode(uint256 cursor, Position posSibling)
+    function createHoleNode(uint64 cursor, Position posSibling)
         private
         returns (Node memory)
     {
@@ -58,9 +50,9 @@ contract RecordsMerkleTree is Rescue {
         // indexFirstSibling = cursor - 2;
         // indexSecondSibling = cursor - 1;
 
-        uint256 left;
-        uint256 middle;
-        uint256 right;
+        uint64 left;
+        uint64 middle;
+        uint64 right;
 
         if (posSibling == Position.LEFT) {
             left = cursor - 3;
@@ -133,7 +125,7 @@ contract RecordsMerkleTree is Rescue {
     function buildTreeFromFrontier(
         uint256[] memory flattenedFrontier,
         Node[] memory nodes
-    ) private returns (uint256) {
+    ) private returns (uint64) {
         // Set the first node to the NULL node
         nodes[0] = Node(0, 0, 0, 0);
 
@@ -149,8 +141,8 @@ contract RecordsMerkleTree is Rescue {
         uint8 localPosition = uint8(absolutePosition % 3);
 
         // We process the nodes of the Merkle path
-        uint256 cursor = 4;
-        uint256 cursorFrontier = 3;
+        uint64 cursor = 4;
+        uint64 cursorFrontier = 3;
 
         //console.log("height: %s", height);
 
@@ -195,10 +187,10 @@ contract RecordsMerkleTree is Rescue {
 
     function nextNodeIndex(
         Node[] memory nodes,
-        uint256 nodeIndex,
+        uint64 nodeIndex,
         Position pos
-    ) private returns (uint256) {
-        uint256 nextNodeIndex;
+    ) private returns (uint64) {
+        uint64 nextNodeIndex;
 
         if (pos == Position.LEFT) {
             nextNodeIndex = nodes[nodeIndex].left;
@@ -215,8 +207,8 @@ contract RecordsMerkleTree is Rescue {
     // and an index to the new child.
     function updateChildNode(
         Node[] memory nodes,
-        uint256 nodeIndex,
-        uint256 newChildIndex,
+        uint64 nodeIndex,
+        uint64 newChildIndex,
         Position pos
     ) private {
         // Get the node
@@ -250,24 +242,24 @@ contract RecordsMerkleTree is Rescue {
     /// @return updated value of maxIndex
     function pushElement(
         Node[] memory nodes,
-        uint256 rootIndex,
-        uint256 maxIndex,
+        uint64 rootIndex,
+        uint64 maxIndex,
         uint256 element
-    ) private returns (uint256) {
+    ) private returns (uint64) {
         //console.log("height: %s", height);
         //console.log("num_leaves: %s", numLeaves);
         //console.log("element: %s", element);
 
         // Get the position of the leaf from the smart contract state
-        uint256 leafPos = numLeaves;
-        uint256 branchIndex = 0;
-        uint256 currentNodeIndex = rootIndex;
-        uint256 previousNodeIndex = rootIndex;
+        uint64 leafPos = numLeaves;
+        uint64 branchIndex = 0;
+        uint64 currentNodeIndex = rootIndex;
+        uint64 previousNodeIndex = rootIndex;
 
         // Go down inside the tree until finding the first terminal node.
         //console.log("Going down until finding a terminal node");
-        uint256 pos = leafPos;
-        uint256 localPos = 0;
+        uint64 pos = leafPos;
+        uint64 localPos = 0;
         while (!isNull(nodes[currentNodeIndex])) {
             //console.log(
             //    "Going down one position from node with index %s",
@@ -276,8 +268,8 @@ contract RecordsMerkleTree is Rescue {
 
             // TODO avoid this logic duplication?
             uint256 divisor = 3**(height - branchIndex - 1);
-            localPos = pos / divisor;
-            pos = pos % divisor;
+            localPos = uint64(pos / divisor);
+            pos = uint64(pos % divisor);
 
             //console.log("branchIndex: %s", branchIndex);
             //console.log("currentNodeIndex: %s", currentNodeIndex);
@@ -302,15 +294,15 @@ contract RecordsMerkleTree is Rescue {
                 if (branchIndex < height - 1) {
                     previousNodeIndex = currentNodeIndex;
                     // TODO avoid this logic duplication?
-                    uint256 divisor = 3**(height - branchIndex - 1);
-                    localPos = pos / divisor;
+                    divisor = 3**(height - branchIndex - 1);
+                    localPos = uint64(pos / divisor);
                 }
             }
             branchIndex += 1;
         }
 
         // maxIndex tracks the index of the last element inserted in the tree
-        uint256 newNodeIndex = maxIndex + 1;
+        uint64 newNodeIndex = maxIndex + 1;
 
         // Create new nodes until completing the path one level above the leaf level
         // Always inserting to the left
@@ -325,8 +317,8 @@ contract RecordsMerkleTree is Rescue {
 
             // TODO avoid this logic duplication?
             uint256 divisor = 3**(height - branchIndex - 1);
-            localPos = pos / divisor;
-            pos = pos % divisor;
+            localPos = uint64(pos / divisor);
+            pos = uint64(pos % divisor);
 
             //console.log("localPos: %s", localPos);
 
@@ -347,12 +339,7 @@ contract RecordsMerkleTree is Rescue {
         //console.log("adding the leaf");
 
         // Leaf node where the value is hash(0,numLeaves,element)
-        nodes[newNodeIndex] = Node(
-            hash(EMPTY_NODE_VALUE, numLeaves, element),
-            0,
-            0,
-            0
-        );
+        nodes[newNodeIndex] = Node(hash(0, numLeaves, element), 0, 0, 0);
 
         //console.log("Leaf level position: %s", localPos);
         //console.log("The leaf index is %s.", newNodeIndex);
@@ -393,14 +380,14 @@ contract RecordsMerkleTree is Rescue {
         Node[] memory nodes = new Node[](3 * (numElements + 1) * height + 2);
         console.log("nodes.length: %s", nodes.length);
 
-        uint256 rootIndex = buildTreeFromFrontier(frontier, nodes);
+        uint64 rootIndex = buildTreeFromFrontier(frontier, nodes);
         bool isFrontierValid = checkFrontier(nodes, rootIndex);
         require(isFrontierValid, "Frontier not consistent w/ state");
 
         /// Insert the new elements ///
 
         // maxIndex tracks the index of the last element inserted in the tree
-        uint256 maxIndex = rootIndex;
+        uint64 maxIndex = rootIndex;
         for (uint256 i = 0; i < elements.length; i++) {
             maxIndex = pushElement(nodes, rootIndex, maxIndex, elements[i]);
         }

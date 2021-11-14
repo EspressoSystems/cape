@@ -60,52 +60,14 @@ contract RecordsMerkleTree is Rescue {
     }
 
     /// Checks that the frontier represented as a tree resolves to the right root
-    /// Note the position of the leaf is implicitly checked as it is used to build the tree structure
-    /// in the function buildTreeFromFrontier.
     /// @param nodes array of nodes obtained from the frontier
-    /// @return true if the tree resolves to right root_value and num_leaves
+    /// @return true if the tree resolves to right root_value
     function checkFrontier(Node[] memory nodes, uint256 rootIndex)
         private
         returns (bool)
     {
         // Compute the root value of the frontier
         uint256 frontierRootValue = computeRootValue(nodes, rootIndex);
-
-        //console.log("root_value %s", rootValue);
-        //console.log("frontier_root_value %s", frontierRootValue);
-
-        // Compute the number of leaves from the frontier represented as nodes
-        uint256 numLeavesFromFrontier = 0;
-
-        uint256 branchIndex = 0;
-        uint256 nodeIndex = rootIndex;
-        Node memory node = nodes[rootIndex];
-
-        // We are done when we reach the leaf.
-        while (branchIndex < height) {
-            //console.log("powerOfThree: %s", powerOfThree);
-            if (!isNull(nodes[node.left]) && isNull(nodes[node.middle])) {
-                nodeIndex = node.left;
-                //console.log("LEFT");
-            }
-            if (!isNull(nodes[node.middle]) && isNull(nodes[node.right])) {
-                nodeIndex = node.middle;
-                //console.log("MIDDLE");
-            }
-            if (!isNull(nodes[node.right])) {
-                nodeIndex = node.right;
-                //console.log("RIGHT");
-            }
-            //console.log("index: %s", nodeIndex);
-            branchIndex += 1;
-            node = nodes[nodeIndex];
-        }
-
-        // The previous loop computes the index of the leaf.
-        numLeavesFromFrontier += 1;
-
-        //console.log("expected_number_of_leaves: %s", numLeavesFromFrontier);
-        //console.log("num_leaves: %s", numLeaves);
 
         return frontierRootValue == rootValue;
     }

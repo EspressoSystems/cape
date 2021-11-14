@@ -50,25 +50,13 @@ contract RecordsMerkleTree is Rescue {
         // indexFirstSibling = cursor - 2;
         // indexSecondSibling = cursor - 1;
 
-        uint64 left;
-        uint64 middle;
-        uint64 right;
-
         if (posSibling == Position.LEFT) {
-            left = cursor - 3;
-            middle = cursor - 2;
-            right = cursor - 1;
+            return Node(0, cursor - 3, cursor - 2, cursor - 1);
         } else if (posSibling == Position.MIDDLE) {
-            left = cursor - 2;
-            middle = cursor - 3;
-            right = cursor - 1;
+            return Node(0, cursor - 2, cursor - 3, cursor - 1);
         } else if (posSibling == Position.RIGHT) {
-            left = cursor - 2;
-            middle = cursor - 1;
-            right = cursor - 3;
+            return Node(0, cursor - 2, cursor - 1, cursor - 3);
         }
-
-        return Node(0, left, middle, right);
     }
 
     /// Checks that the frontier represented as a tree resolves to the right root
@@ -364,6 +352,8 @@ contract RecordsMerkleTree is Rescue {
         // The total number of nodes is bounded by 3*height+1 + 3*N*height = 3*(N+1)*height + 1
         // where N is the number of new records
         uint256 numElements = elements.length;
+        // TODO idea instead of handling an array of Node struct handle 4 arrays , one for each field of the array
+
         Node[] memory nodes = new Node[](3 * (numElements + 1) * height + 2);
         console.log("nodes.length: %s", nodes.length);
 

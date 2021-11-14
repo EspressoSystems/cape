@@ -11,13 +11,6 @@ contract Rescue {
     uint256 private constant SCHEDULED_KEY_SIZE =
         (2 * N_ROUNDS + 1) * STATE_SIZE;
 
-    struct StateVec {
-        uint256 s0;
-        uint256 s1;
-        uint256 s2;
-        uint256 s3;
-    }
-
     // Obtained by running KeyScheduling([0,0,0,0]). See Algorithm 2 of AT specification document.
     // solhint-disable-next-line var-name-mixedcase
 
@@ -28,29 +21,6 @@ contract Rescue {
 
     uint256 private constant ALPHA_INV =
         17510594297471420177797124596205820070838691520332827474958563349260646796493;
-
-    function expMod(
-        uint256 base,
-        uint256 e,
-        uint256 m
-    ) private returns (uint256 o) {
-        assembly {
-            // define pointer
-            let p := mload(0x40)
-            // store data assembly-favouring ways
-            mstore(p, 0x20) // Length of Base
-            mstore(add(p, 0x20), 0x20) // Length of Exponent
-            mstore(add(p, 0x40), 0x20) // Length of Modulus
-            mstore(add(p, 0x60), base) // Base
-            mstore(add(p, 0x80), e) // Exponent
-            mstore(add(p, 0xa0), m) // Modulus
-            if iszero(staticcall(sub(gas(), 2000), 0x05, p, 0xc0, p, 0x20)) {
-                revert(0, 0)
-            }
-            // data
-            o := mload(p)
-        }
-    }
 
     // MDS is hardcoded
     // TODO optimize (see Starkware or hard code matrix operations + assembly)
@@ -156,35 +126,19 @@ contract Rescue {
             let basep := add(p, 0x60)
             mstore(basep, s0) // Base
             // store data assembly-favouring ways
-            if iszero(
-                staticcall(sub(gas(), 2000), 0x05, p, 0xc0, basep, 0x20)
-            ) {
-                revert(0, 0)
-            }
+            pop(staticcall(sub(gas(), 2000), 0x05, p, 0xc0, basep, 0x20))
             // data
             o0 := mload(basep)
             mstore(basep, s1) // Base
-            if iszero(
-                staticcall(sub(gas(), 2000), 0x05, p, 0xc0, basep, 0x20)
-            ) {
-                revert(0, 0)
-            }
+            pop(staticcall(sub(gas(), 2000), 0x05, p, 0xc0, basep, 0x20))
             // data
             o1 := mload(basep)
             mstore(basep, s2) // Base
-            if iszero(
-                staticcall(sub(gas(), 2000), 0x05, p, 0xc0, basep, 0x20)
-            ) {
-                revert(0, 0)
-            }
+            pop(staticcall(sub(gas(), 2000), 0x05, p, 0xc0, basep, 0x20))
             // data
             o2 := mload(basep)
             mstore(basep, s3) // Base
-            if iszero(
-                staticcall(sub(gas(), 2000), 0x05, p, 0xc0, basep, 0x20)
-            ) {
-                revert(0, 0)
-            }
+            pop(staticcall(sub(gas(), 2000), 0x05, p, 0xc0, basep, 0x20))
             // data
             o3 := mload(basep)
         }

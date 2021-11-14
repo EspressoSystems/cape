@@ -53,26 +53,27 @@ contract RecordsMerkleTree is Rescue {
         private
         returns (Node memory)
     {
-        uint256 indexHoleNode = cursor - 3;
-        uint256 indexFirstSibling = cursor - 2;
-        uint256 indexSecondSibling = cursor - 1;
+        // Copy pasting these values to save gas
+        // indexHoleNode = cursor - 3;
+        // indexFirstSibling = cursor - 2;
+        // indexSecondSibling = cursor - 1;
 
         uint256 left;
         uint256 middle;
         uint256 right;
 
         if (posSibling == Position.LEFT) {
-            left = indexHoleNode;
-            middle = indexFirstSibling;
-            right = indexSecondSibling;
+            left = cursor - 3;
+            middle = cursor - 2;
+            right = cursor - 1;
         } else if (posSibling == Position.MIDDLE) {
-            left = indexFirstSibling;
-            middle = indexHoleNode;
-            right = indexSecondSibling;
+            left = cursor - 2;
+            middle = cursor - 3;
+            right = cursor - 1;
         } else if (posSibling == Position.RIGHT) {
-            left = indexFirstSibling;
-            middle = indexSecondSibling;
-            right = indexHoleNode;
+            left = cursor - 2;
+            middle = cursor - 1;
+            right = cursor - 3;
         }
 
         return Node(0, left, middle, right);
@@ -90,8 +91,8 @@ contract RecordsMerkleTree is Rescue {
         // Compute the root value of the frontier
         uint256 frontierRootValue = computeRootValue(nodes, rootIndex);
 
-        console.log("root_value %s", rootValue);
-        console.log("frontier_root_value %s", frontierRootValue);
+        //console.log("root_value %s", rootValue);
+        //console.log("frontier_root_value %s", frontierRootValue);
 
         // Compute the number of leaves from the frontier represented as nodes
         uint256 numLeavesFromFrontier = 0;
@@ -105,15 +106,15 @@ contract RecordsMerkleTree is Rescue {
             //console.log("powerOfThree: %s", powerOfThree);
             if (!isNull(nodes[node.left]) && isNull(nodes[node.middle])) {
                 nodeIndex = node.left;
-                console.log("LEFT");
+                //console.log("LEFT");
             }
             if (!isNull(nodes[node.middle]) && isNull(nodes[node.right])) {
                 nodeIndex = node.middle;
-                console.log("MIDDLE");
+                //console.log("MIDDLE");
             }
             if (!isNull(nodes[node.right])) {
                 nodeIndex = node.right;
-                console.log("RIGHT");
+                //console.log("RIGHT");
             }
             //console.log("index: %s", nodeIndex);
             branchIndex += 1;
@@ -123,8 +124,8 @@ contract RecordsMerkleTree is Rescue {
         // The previous loop computes the index of the leaf.
         numLeavesFromFrontier += 1;
 
-        console.log("expected_number_of_leaves: %s", numLeavesFromFrontier);
-        console.log("num_leaves: %s", numLeaves);
+        //console.log("expected_number_of_leaves: %s", numLeavesFromFrontier);
+        //console.log("num_leaves: %s", numLeaves);
 
         return frontierRootValue == rootValue;
     }
@@ -151,12 +152,12 @@ contract RecordsMerkleTree is Rescue {
         uint256 cursor = 4;
         uint256 cursorFrontier = 3;
 
-        console.log("height: %s", height);
+        //console.log("height: %s", height);
 
-        // TODO cortar en 3h, y 3h+1 (evitar el if)
+        // We stop just one two node before the root to avoid
         while (cursor < 3 * height + 1) {
-            console.log("localPosition: %s", localPosition);
-            console.log("cursor: %s", cursor);
+            //console.log("localPosition: %s", localPosition);
+            //console.log("cursor: %s", cursor);
             nodes[cursor] = createHoleNode(cursor, Position(localPosition));
 
             // Create the siblings of the "hole node". These siblings have no children
@@ -175,14 +176,7 @@ contract RecordsMerkleTree is Rescue {
 
             // Move forward
             absolutePosition /= 3;
-            if (
-                cursor < 3 * height
-            ) // Before the last value of cursor, take module otherwise dividend
-            {
-                localPosition = uint8(absolutePosition % 3);
-            } else {
-                localPosition = uint8(absolutePosition / 3);
-            }
+            localPosition = uint8(absolutePosition % 3);
 
             cursor += 3;
             cursorFrontier += 2;
@@ -190,10 +184,11 @@ contract RecordsMerkleTree is Rescue {
 
         // Add the root node
         // For the root node the position is the dividend of absolutePosition divided by three
+        localPosition = uint8(absolutePosition / 3);
         nodes[cursor] = createHoleNode(cursor, Position(localPosition));
-        console.log("localPosition: %s", localPosition);
-        console.log("cursor: %s", cursor);
-        console.log("max number of nodes: %s", nodes.length);
+        //console.log("localPosition: %s", localPosition);
+        //console.log("cursor: %s", cursor);
+        //console.log("max number of nodes: %s", nodes.length);
 
         return cursor;
     }
@@ -396,6 +391,7 @@ contract RecordsMerkleTree is Rescue {
         // where N is the number of new records
         uint256 numElements = elements.length;
         Node[] memory nodes = new Node[](3 * (numElements + 1) * height + 2);
+        console.log("nodes.length: %s", nodes.length);
 
         uint256 rootIndex = buildTreeFromFrontier(frontier, nodes);
         bool isFrontierValid = checkFrontier(nodes, rootIndex);

@@ -35,7 +35,6 @@ contract RecordsMerkleTree is Rescue {
         return (node.left == 0) && (node.middle == 0) && (node.right == 0);
     }
 
-    // TODO save gas using comparison against a constant node value Node(0,0,0,0)?
     function isNull(Node memory node) private returns (bool) {
         return (node.val == 0 && isTerminal(node));
     }
@@ -314,8 +313,6 @@ contract RecordsMerkleTree is Rescue {
         // The total number of nodes is bounded by 3*height+1 + 3*N*height = 3*(N+1)*height + 1
         // where N is the number of new records
         uint256 numElements = elements.length;
-        // TODO idea instead of handling an array of Node struct handle 4 arrays , one for each field of the array
-
         Node[] memory nodes = new Node[](3 * (numElements + 1) * height + 2);
         console.log("nodes.length: %s", nodes.length);
 
@@ -325,14 +322,15 @@ contract RecordsMerkleTree is Rescue {
 
         /// Insert the new elements ///
 
-        // maxIndex tracks the index of the last element inserted in the tree
-        uint64 maxIndex = rootIndex;
-        for (uint32 i = 0; i < elements.length; i++) {
-            maxIndex = pushElement(nodes, rootIndex, maxIndex, elements[i]);
+        if (elements.length > 0) {
+            // maxIndex tracks the index of the last element inserted in the tree
+            uint64 maxIndex = rootIndex;
+            for (uint32 i = 0; i < elements.length; i++) {
+                maxIndex = pushElement(nodes, rootIndex, maxIndex, elements[i]);
+            }
+            //// Compute the root hash value ////
+            rootValue = computeRootValue(nodes, rootIndex);
         }
-
-        //// Compute the root hash value ////
-        rootValue = computeRootValue(nodes, rootIndex);
     }
 
     function getRootValue() public view returns (uint256) {

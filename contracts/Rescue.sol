@@ -136,22 +136,68 @@ contract Rescue {
         return (r0, r1, r2, r3);
     }
 
-    function expAlphaInv(uint256 base) private returns (uint256 o) {
+    function expAlphaInv4Setup(uint256[6] memory scratch) private {
         assembly {
-            // define pointer
-            let p := mload(0x40)
-            // store data assembly-favouring ways
+            let p := scratch
             mstore(p, 0x20) // Length of Base
             mstore(add(p, 0x20), 0x20) // Length of Exponent
             mstore(add(p, 0x40), 0x20) // Length of Modulus
-            mstore(add(p, 0x60), base) // Base
             mstore(add(p, 0x80), ALPHA_INV) // Exponent
             mstore(add(p, 0xa0), PRIME) // Modulus
-            if iszero(staticcall(sub(gas(), 2000), 0x05, p, 0xc0, p, 0x20)) {
+        }
+    }
+
+    function expAlphaInv4(
+        uint256[6] memory scratch,
+        uint256 s0,
+        uint256 s1,
+        uint256 s2,
+        uint256 s3
+    )
+        private
+        returns (
+            uint256 o0,
+            uint256 o1,
+            uint256 o2,
+            uint256 o3
+        )
+    {
+        assembly {
+            // define pointer
+            let p := scratch
+            mstore(add(p, 0x60), s0) // Base
+            // store data assembly-favouring ways
+            if iszero(
+                staticcall(sub(gas(), 2000), 0x05, p, 0xc0, add(p, 0x60), 0x20)
+            ) {
                 revert(0, 0)
             }
             // data
-            o := mload(p)
+            o0 := mload(add(p, 0x60))
+            mstore(add(p, 0x60), s1) // Base
+            if iszero(
+                staticcall(sub(gas(), 2000), 0x05, p, 0xc0, add(p, 0x60), 0x20)
+            ) {
+                revert(0, 0)
+            }
+            // data
+            o1 := mload(add(p, 0x60))
+            mstore(add(p, 0x60), s2) // Base
+            if iszero(
+                staticcall(sub(gas(), 2000), 0x05, p, 0xc0, add(p, 0x60), 0x20)
+            ) {
+                revert(0, 0)
+            }
+            // data
+            o2 := mload(add(p, 0x60))
+            mstore(add(p, 0x60), s3) // Base
+            if iszero(
+                staticcall(sub(gas(), 2000), 0x05, p, 0xc0, add(p, 0x60), 0x20)
+            ) {
+                revert(0, 0)
+            }
+            // data
+            o3 := mload(add(p, 0x60))
         }
     }
 
@@ -173,6 +219,9 @@ contract Rescue {
             uint256
         )
     {
+        uint256[6] memory alphaInvScratch;
+
+        expAlphaInv4_setup(alphaInvScratch);
         // s = m + k[0]
         unchecked {
             s0 += 14613516837064033601098425266946467918409544647446217386229959902054563533267;
@@ -183,12 +232,8 @@ contract Rescue {
 
         // Main loop
 
-        (s0, s1, s2, s3) = linearOp(
-            expAlphaInv(s0),
-            expAlphaInv(s1),
-            expAlphaInv(s2),
-            expAlphaInv(s3)
-        );
+        (s0, s1, s2, s3) = expAlphaInv4(alphaInvScratch, s0, s1, s2, s3);
+        (s0, s1, s2, s3) = linearOp(s0, s1, s2, s3);
 
         unchecked {
             s0 += 18657517374128716281071590782771170166993445602755371021955596036781411817786;
@@ -232,12 +277,8 @@ contract Rescue {
             s3 += 7363758719535652813463843693256839865026387361836644774317493432208443086206;
         }
 
-        (s0, s1, s2, s3) = linearOp(
-            expAlphaInv(s0),
-            expAlphaInv(s1),
-            expAlphaInv(s2),
-            expAlphaInv(s3)
-        );
+        (s0, s1, s2, s3) = expAlphaInv4(alphaInvScratch, s0, s1, s2, s3);
+        (s0, s1, s2, s3) = linearOp(s0, s1, s2, s3);
 
         unchecked {
             s0 += 307094088106440279963968943984309088038734274328527845883669678290790702381;
@@ -281,12 +322,8 @@ contract Rescue {
             s3 += 8495959434717951575638107349559891417392372124707619959558593515759091841138;
         }
 
-        (s0, s1, s2, s3) = linearOp(
-            expAlphaInv(s0),
-            expAlphaInv(s1),
-            expAlphaInv(s2),
-            expAlphaInv(s3)
-        );
+        (s0, s1, s2, s3) = expAlphaInv4(alphaInvScratch, s0, s1, s2, s3);
+        (s0, s1, s2, s3) = linearOp(s0, s1, s2, s3);
 
         unchecked {
             s0 += 15608173629791582453867933160400609222904457931922627396107815347244961625587;
@@ -330,12 +367,8 @@ contract Rescue {
             s3 += 5563181134859229953817163002660048854420912281911747312557025480927280392569;
         }
 
-        (s0, s1, s2, s3) = linearOp(
-            expAlphaInv(s0),
-            expAlphaInv(s1),
-            expAlphaInv(s2),
-            expAlphaInv(s3)
-        );
+        (s0, s1, s2, s3) = expAlphaInv4(alphaInvScratch, s0, s1, s2, s3);
+        (s0, s1, s2, s3) = linearOp(s0, s1, s2, s3);
 
         unchecked {
             s0 += 4585980485870975597083581718044393941512074846925247225127276913719050121968;
@@ -379,12 +412,8 @@ contract Rescue {
             s3 += 16000236205755938926858829908701623009580043315308207671921283074116709575629;
         }
 
-        (s0, s1, s2, s3) = linearOp(
-            expAlphaInv(s0),
-            expAlphaInv(s1),
-            expAlphaInv(s2),
-            expAlphaInv(s3)
-        );
+        (s0, s1, s2, s3) = expAlphaInv4(alphaInvScratch, s0, s1, s2, s3);
+        (s0, s1, s2, s3) = linearOp(s0, s1, s2, s3);
 
         unchecked {
             s0 += 10226182617544046880850643054874064693998595520540061157646952229134207239372;
@@ -428,12 +457,8 @@ contract Rescue {
             s3 += 7336332584551233792026746889434554547883125466404119632794862500961953384162;
         }
 
-        (s0, s1, s2, s3) = linearOp(
-            expAlphaInv(s0),
-            expAlphaInv(s1),
-            expAlphaInv(s2),
-            expAlphaInv(s3)
-        );
+        (s0, s1, s2, s3) = expAlphaInv4(alphaInvScratch, s0, s1, s2, s3);
+        (s0, s1, s2, s3) = linearOp(s0, s1, s2, s3);
 
         unchecked {
             s0 += 10351436748086126474964482623536554036637945319698748519226181145454116702488;
@@ -477,12 +502,8 @@ contract Rescue {
             s3 += 14285412497877984113655094566695921704826935980354186365694472961163628072901;
         }
 
-        (s0, s1, s2, s3) = linearOp(
-            expAlphaInv(s0),
-            expAlphaInv(s1),
-            expAlphaInv(s2),
-            expAlphaInv(s3)
-        );
+        (s0, s1, s2, s3) = expAlphaInv4(alphaInvScratch, s0, s1, s2, s3);
+        (s0, s1, s2, s3) = linearOp(s0, s1, s2, s3);
 
         unchecked {
             s0 += 16224484149774307577146165975762490690838415946665379067259822320752729067513;
@@ -526,12 +547,8 @@ contract Rescue {
             s3 += 4824035239925904398047276123907644574421550988870123756876333092498925242854;
         }
 
-        (s0, s1, s2, s3) = linearOp(
-            expAlphaInv(s0),
-            expAlphaInv(s1),
-            expAlphaInv(s2),
-            expAlphaInv(s3)
-        );
+        (s0, s1, s2, s3) = expAlphaInv4(alphaInvScratch, s0, s1, s2, s3);
+        (s0, s1, s2, s3) = linearOp(s0, s1, s2, s3);
 
         unchecked {
             s0 += 5526416022516734657935645023952329824887761902324086126076396040056459740202;
@@ -575,12 +592,8 @@ contract Rescue {
             s3 += 13804898145881881347835367366352189037341704254740510664318597456840481739975;
         }
 
-        (s0, s1, s2, s3) = linearOp(
-            expAlphaInv(s0),
-            expAlphaInv(s1),
-            expAlphaInv(s2),
-            expAlphaInv(s3)
-        );
+        (s0, s1, s2, s3) = expAlphaInv4(alphaInvScratch, s0, s1, s2, s3);
+        (s0, s1, s2, s3) = linearOp(s0, s1, s2, s3);
 
         unchecked {
             s0 += 3523599105403569319090449327691358425990456728660349400211678603795116364226;
@@ -624,12 +637,8 @@ contract Rescue {
             s3 += 3428721187625124675258692786364137915132424621324969246210899039774126165479;
         }
 
-        (s0, s1, s2, s3) = linearOp(
-            expAlphaInv(s0),
-            expAlphaInv(s1),
-            expAlphaInv(s2),
-            expAlphaInv(s3)
-        );
+        (s0, s1, s2, s3) = expAlphaInv4(alphaInvScratch, s0, s1, s2, s3);
+        (s0, s1, s2, s3) = linearOp(s0, s1, s2, s3);
 
         unchecked {
             s0 += 2552744099402346352193097862110515290335034445517764751557635302899937367219;
@@ -673,12 +682,8 @@ contract Rescue {
             s3 += 10574066469653966216567896842413898230152427846140046825523989742590727910280;
         }
 
-        (s0, s1, s2, s3) = linearOp(
-            expAlphaInv(s0),
-            expAlphaInv(s1),
-            expAlphaInv(s2),
-            expAlphaInv(s3)
-        );
+        (s0, s1, s2, s3) = expAlphaInv4(alphaInvScratch, s0, s1, s2, s3);
+        (s0, s1, s2, s3) = linearOp(s0, s1, s2, s3);
 
         unchecked {
             s0 += 21386271527766270535632132320974945129946865648321206442664310421414128279311;
@@ -722,12 +727,8 @@ contract Rescue {
             s3 += 21851693551359717578445799046408060941161959589978077352548456186528047792150;
         }
 
-        (s0, s1, s2, s3) = linearOp(
-            expAlphaInv(s0),
-            expAlphaInv(s1),
-            expAlphaInv(s2),
-            expAlphaInv(s3)
-        );
+        (s0, s1, s2, s3) = expAlphaInv4(alphaInvScratch, s0, s1, s2, s3);
+        (s0, s1, s2, s3) = linearOp(s0, s1, s2, s3);
 
         unchecked {
             s0 += 19076469206110044175016166349949136119962165667268661130584159239385341119621;

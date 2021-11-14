@@ -221,7 +221,7 @@ contract Rescue {
     {
         uint256[6] memory alphaInvScratch;
 
-        expAlphaInv4_setup(alphaInvScratch);
+        expAlphaInv4Setup(alphaInvScratch);
         // s = m + k[0]
         unchecked {
             s0 += 14613516837064033601098425266946467918409544647446217386229959902054563533267;

@@ -34,7 +34,7 @@ describe("Dummy CAPE", function () {
     }
 
     it("Works with merkle tree update", async function () {
-      const expected_gas = ["119274", "2223242", "2131457"];
+      const expected_gas = ["119274", "2134795", "2043013"];
       const actual_gas = await check_actual_gas(chunk, true);
       expect(actual_gas).to.deep.equal(expected_gas);
     });
@@ -46,7 +46,7 @@ describe("Dummy CAPE", function () {
     });
 
     it("Batch verifier is more efficient than simple verifier when there are enough transactions", async function () {
-      const expected_gas = ["167815", "3219790", "3096673"];
+      const expected_gas = ["167815", "3091030", "2967916"];
 
       const N_CAPTX = 3;
       const chunk = common.create_chunk(N_CAPTX);

@@ -115,7 +115,7 @@ describe("Records Merkle Tree Profiling", function () {
       const rescue_txReceipt = await rescue_tx.wait();
       let rescue_gasUsed = rescue_txReceipt.gasUsed;
 
-      const do_nothing_tx = await rmt_contract.do_nothing();
+      const do_nothing_tx = await rmt_contract.doNothing();
       const do_nothing_txReceipt = await do_nothing_tx.wait();
       let do_nothing_gasUsed = do_nothing_txReceipt.gasUsed;
 
@@ -123,10 +123,21 @@ describe("Records Merkle Tree Profiling", function () {
       console.log("nothing: " + do_nothing_gasUsed.toString());
       console.log("rescue: " + rescue_gasUsed.toString());
       console.log(
+        "rescue only: " + (rescue_gasUsed - do_nothing_gasUsed).toString()
+      );
+      console.log(
         "testUpdateRecordsMerkleTree empty: " + empty_gasUsed.toString()
+      );
+      console.log(
+        "testUpdateRecordsMerkleTree empty only: " +
+          (empty_gasUsed - do_nothing_gasUsed).toString()
       );
       console.log("Number of records: " + elems.length.toString());
       console.log("testUpdateRecordsMerkleTree: " + gasUsed.toString());
+      console.log(
+        "testUpdateRecordsMerkleTree only: " +
+          (gasUsed - do_nothing_gasUsed).toString()
+      );
       console.log("insertion gas: " + (gasUsed - empty_gasUsed).toString());
       expect(gasUsed).lt(20_000_000);
     });

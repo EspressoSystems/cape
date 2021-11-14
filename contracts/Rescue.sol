@@ -136,13 +136,6 @@ contract Rescue {
         return (r0, r1, r2, r3);
     }
 
-    function expAlpha(uint256 base) private returns (uint256) {
-        /* return expMod(base,ALPHA,PRIME); */
-        uint256 base2 = mulmod(base, base, PRIME);
-        uint256 base4 = mulmod(base2, base2, PRIME);
-        return mulmod(base4, base, PRIME);
-    }
-
     function expAlphaInv(uint256 base) private returns (uint256 o) {
         assembly {
             // define pointer
@@ -190,13 +183,12 @@ contract Rescue {
 
         // Main loop
 
-        // TODO avoid code duplication?
-        s0 = expAlphaInv(s0);
-        s1 = expAlphaInv(s1);
-        s2 = expAlphaInv(s2);
-        s3 = expAlphaInv(s3);
-
-        (s0, s1, s2, s3) = linearOp(s0, s1, s2, s3);
+        (s0, s1, s2, s3) = linearOp(
+            expAlphaInv(s0),
+            expAlphaInv(s1),
+            expAlphaInv(s2),
+            expAlphaInv(s3)
+        );
 
         unchecked {
             s0 += 18657517374128716281071590782771170166993445602755371021955596036781411817786;
@@ -206,10 +198,30 @@ contract Rescue {
         }
 
         // TODO avoid code duplication?
-        s0 = expAlpha(s0);
-        s1 = expAlpha(s1);
-        s2 = expAlpha(s2);
-        s3 = expAlpha(s3);
+        {
+            uint256 tmp = s0;
+            s0 = mulmod(s0, s0, PRIME);
+            s0 = mulmod(s0, s0, PRIME);
+            s0 = mulmod(s0, tmp, PRIME);
+        }
+        {
+            uint256 tmp = s1;
+            s1 = mulmod(s1, s1, PRIME);
+            s1 = mulmod(s1, s1, PRIME);
+            s1 = mulmod(s1, tmp, PRIME);
+        }
+        {
+            uint256 tmp = s2;
+            s2 = mulmod(s2, s2, PRIME);
+            s2 = mulmod(s2, s2, PRIME);
+            s2 = mulmod(s2, tmp, PRIME);
+        }
+        {
+            uint256 tmp = s3;
+            s3 = mulmod(s3, s3, PRIME);
+            s3 = mulmod(s3, s3, PRIME);
+            s3 = mulmod(s3, tmp, PRIME);
+        }
 
         (s0, s1, s2, s3) = linearOp(s0, s1, s2, s3);
 
@@ -220,13 +232,12 @@ contract Rescue {
             s3 += 7363758719535652813463843693256839865026387361836644774317493432208443086206;
         }
 
-        // TODO avoid code duplication?
-        s0 = expAlphaInv(s0);
-        s1 = expAlphaInv(s1);
-        s2 = expAlphaInv(s2);
-        s3 = expAlphaInv(s3);
-
-        (s0, s1, s2, s3) = linearOp(s0, s1, s2, s3);
+        (s0, s1, s2, s3) = linearOp(
+            expAlphaInv(s0),
+            expAlphaInv(s1),
+            expAlphaInv(s2),
+            expAlphaInv(s3)
+        );
 
         unchecked {
             s0 += 307094088106440279963968943984309088038734274328527845883669678290790702381;
@@ -236,10 +247,30 @@ contract Rescue {
         }
 
         // TODO avoid code duplication?
-        s0 = expAlpha(s0);
-        s1 = expAlpha(s1);
-        s2 = expAlpha(s2);
-        s3 = expAlpha(s3);
+        {
+            uint256 tmp = s0;
+            s0 = mulmod(s0, s0, PRIME);
+            s0 = mulmod(s0, s0, PRIME);
+            s0 = mulmod(s0, tmp, PRIME);
+        }
+        {
+            uint256 tmp = s1;
+            s1 = mulmod(s1, s1, PRIME);
+            s1 = mulmod(s1, s1, PRIME);
+            s1 = mulmod(s1, tmp, PRIME);
+        }
+        {
+            uint256 tmp = s2;
+            s2 = mulmod(s2, s2, PRIME);
+            s2 = mulmod(s2, s2, PRIME);
+            s2 = mulmod(s2, tmp, PRIME);
+        }
+        {
+            uint256 tmp = s3;
+            s3 = mulmod(s3, s3, PRIME);
+            s3 = mulmod(s3, s3, PRIME);
+            s3 = mulmod(s3, tmp, PRIME);
+        }
 
         (s0, s1, s2, s3) = linearOp(s0, s1, s2, s3);
 
@@ -250,13 +281,12 @@ contract Rescue {
             s3 += 8495959434717951575638107349559891417392372124707619959558593515759091841138;
         }
 
-        // TODO avoid code duplication?
-        s0 = expAlphaInv(s0);
-        s1 = expAlphaInv(s1);
-        s2 = expAlphaInv(s2);
-        s3 = expAlphaInv(s3);
-
-        (s0, s1, s2, s3) = linearOp(s0, s1, s2, s3);
+        (s0, s1, s2, s3) = linearOp(
+            expAlphaInv(s0),
+            expAlphaInv(s1),
+            expAlphaInv(s2),
+            expAlphaInv(s3)
+        );
 
         unchecked {
             s0 += 15608173629791582453867933160400609222904457931922627396107815347244961625587;
@@ -266,10 +296,30 @@ contract Rescue {
         }
 
         // TODO avoid code duplication?
-        s0 = expAlpha(s0);
-        s1 = expAlpha(s1);
-        s2 = expAlpha(s2);
-        s3 = expAlpha(s3);
+        {
+            uint256 tmp = s0;
+            s0 = mulmod(s0, s0, PRIME);
+            s0 = mulmod(s0, s0, PRIME);
+            s0 = mulmod(s0, tmp, PRIME);
+        }
+        {
+            uint256 tmp = s1;
+            s1 = mulmod(s1, s1, PRIME);
+            s1 = mulmod(s1, s1, PRIME);
+            s1 = mulmod(s1, tmp, PRIME);
+        }
+        {
+            uint256 tmp = s2;
+            s2 = mulmod(s2, s2, PRIME);
+            s2 = mulmod(s2, s2, PRIME);
+            s2 = mulmod(s2, tmp, PRIME);
+        }
+        {
+            uint256 tmp = s3;
+            s3 = mulmod(s3, s3, PRIME);
+            s3 = mulmod(s3, s3, PRIME);
+            s3 = mulmod(s3, tmp, PRIME);
+        }
 
         (s0, s1, s2, s3) = linearOp(s0, s1, s2, s3);
 
@@ -280,13 +330,12 @@ contract Rescue {
             s3 += 5563181134859229953817163002660048854420912281911747312557025480927280392569;
         }
 
-        // TODO avoid code duplication?
-        s0 = expAlphaInv(s0);
-        s1 = expAlphaInv(s1);
-        s2 = expAlphaInv(s2);
-        s3 = expAlphaInv(s3);
-
-        (s0, s1, s2, s3) = linearOp(s0, s1, s2, s3);
+        (s0, s1, s2, s3) = linearOp(
+            expAlphaInv(s0),
+            expAlphaInv(s1),
+            expAlphaInv(s2),
+            expAlphaInv(s3)
+        );
 
         unchecked {
             s0 += 4585980485870975597083581718044393941512074846925247225127276913719050121968;
@@ -296,10 +345,30 @@ contract Rescue {
         }
 
         // TODO avoid code duplication?
-        s0 = expAlpha(s0);
-        s1 = expAlpha(s1);
-        s2 = expAlpha(s2);
-        s3 = expAlpha(s3);
+        {
+            uint256 tmp = s0;
+            s0 = mulmod(s0, s0, PRIME);
+            s0 = mulmod(s0, s0, PRIME);
+            s0 = mulmod(s0, tmp, PRIME);
+        }
+        {
+            uint256 tmp = s1;
+            s1 = mulmod(s1, s1, PRIME);
+            s1 = mulmod(s1, s1, PRIME);
+            s1 = mulmod(s1, tmp, PRIME);
+        }
+        {
+            uint256 tmp = s2;
+            s2 = mulmod(s2, s2, PRIME);
+            s2 = mulmod(s2, s2, PRIME);
+            s2 = mulmod(s2, tmp, PRIME);
+        }
+        {
+            uint256 tmp = s3;
+            s3 = mulmod(s3, s3, PRIME);
+            s3 = mulmod(s3, s3, PRIME);
+            s3 = mulmod(s3, tmp, PRIME);
+        }
 
         (s0, s1, s2, s3) = linearOp(s0, s1, s2, s3);
 
@@ -310,13 +379,12 @@ contract Rescue {
             s3 += 16000236205755938926858829908701623009580043315308207671921283074116709575629;
         }
 
-        // TODO avoid code duplication?
-        s0 = expAlphaInv(s0);
-        s1 = expAlphaInv(s1);
-        s2 = expAlphaInv(s2);
-        s3 = expAlphaInv(s3);
-
-        (s0, s1, s2, s3) = linearOp(s0, s1, s2, s3);
+        (s0, s1, s2, s3) = linearOp(
+            expAlphaInv(s0),
+            expAlphaInv(s1),
+            expAlphaInv(s2),
+            expAlphaInv(s3)
+        );
 
         unchecked {
             s0 += 10226182617544046880850643054874064693998595520540061157646952229134207239372;
@@ -326,10 +394,30 @@ contract Rescue {
         }
 
         // TODO avoid code duplication?
-        s0 = expAlpha(s0);
-        s1 = expAlpha(s1);
-        s2 = expAlpha(s2);
-        s3 = expAlpha(s3);
+        {
+            uint256 tmp = s0;
+            s0 = mulmod(s0, s0, PRIME);
+            s0 = mulmod(s0, s0, PRIME);
+            s0 = mulmod(s0, tmp, PRIME);
+        }
+        {
+            uint256 tmp = s1;
+            s1 = mulmod(s1, s1, PRIME);
+            s1 = mulmod(s1, s1, PRIME);
+            s1 = mulmod(s1, tmp, PRIME);
+        }
+        {
+            uint256 tmp = s2;
+            s2 = mulmod(s2, s2, PRIME);
+            s2 = mulmod(s2, s2, PRIME);
+            s2 = mulmod(s2, tmp, PRIME);
+        }
+        {
+            uint256 tmp = s3;
+            s3 = mulmod(s3, s3, PRIME);
+            s3 = mulmod(s3, s3, PRIME);
+            s3 = mulmod(s3, tmp, PRIME);
+        }
 
         (s0, s1, s2, s3) = linearOp(s0, s1, s2, s3);
 
@@ -340,13 +428,12 @@ contract Rescue {
             s3 += 7336332584551233792026746889434554547883125466404119632794862500961953384162;
         }
 
-        // TODO avoid code duplication?
-        s0 = expAlphaInv(s0);
-        s1 = expAlphaInv(s1);
-        s2 = expAlphaInv(s2);
-        s3 = expAlphaInv(s3);
-
-        (s0, s1, s2, s3) = linearOp(s0, s1, s2, s3);
+        (s0, s1, s2, s3) = linearOp(
+            expAlphaInv(s0),
+            expAlphaInv(s1),
+            expAlphaInv(s2),
+            expAlphaInv(s3)
+        );
 
         unchecked {
             s0 += 10351436748086126474964482623536554036637945319698748519226181145454116702488;
@@ -356,10 +443,30 @@ contract Rescue {
         }
 
         // TODO avoid code duplication?
-        s0 = expAlpha(s0);
-        s1 = expAlpha(s1);
-        s2 = expAlpha(s2);
-        s3 = expAlpha(s3);
+        {
+            uint256 tmp = s0;
+            s0 = mulmod(s0, s0, PRIME);
+            s0 = mulmod(s0, s0, PRIME);
+            s0 = mulmod(s0, tmp, PRIME);
+        }
+        {
+            uint256 tmp = s1;
+            s1 = mulmod(s1, s1, PRIME);
+            s1 = mulmod(s1, s1, PRIME);
+            s1 = mulmod(s1, tmp, PRIME);
+        }
+        {
+            uint256 tmp = s2;
+            s2 = mulmod(s2, s2, PRIME);
+            s2 = mulmod(s2, s2, PRIME);
+            s2 = mulmod(s2, tmp, PRIME);
+        }
+        {
+            uint256 tmp = s3;
+            s3 = mulmod(s3, s3, PRIME);
+            s3 = mulmod(s3, s3, PRIME);
+            s3 = mulmod(s3, tmp, PRIME);
+        }
 
         (s0, s1, s2, s3) = linearOp(s0, s1, s2, s3);
 
@@ -370,13 +477,12 @@ contract Rescue {
             s3 += 14285412497877984113655094566695921704826935980354186365694472961163628072901;
         }
 
-        // TODO avoid code duplication?
-        s0 = expAlphaInv(s0);
-        s1 = expAlphaInv(s1);
-        s2 = expAlphaInv(s2);
-        s3 = expAlphaInv(s3);
-
-        (s0, s1, s2, s3) = linearOp(s0, s1, s2, s3);
+        (s0, s1, s2, s3) = linearOp(
+            expAlphaInv(s0),
+            expAlphaInv(s1),
+            expAlphaInv(s2),
+            expAlphaInv(s3)
+        );
 
         unchecked {
             s0 += 16224484149774307577146165975762490690838415946665379067259822320752729067513;
@@ -386,10 +492,30 @@ contract Rescue {
         }
 
         // TODO avoid code duplication?
-        s0 = expAlpha(s0);
-        s1 = expAlpha(s1);
-        s2 = expAlpha(s2);
-        s3 = expAlpha(s3);
+        {
+            uint256 tmp = s0;
+            s0 = mulmod(s0, s0, PRIME);
+            s0 = mulmod(s0, s0, PRIME);
+            s0 = mulmod(s0, tmp, PRIME);
+        }
+        {
+            uint256 tmp = s1;
+            s1 = mulmod(s1, s1, PRIME);
+            s1 = mulmod(s1, s1, PRIME);
+            s1 = mulmod(s1, tmp, PRIME);
+        }
+        {
+            uint256 tmp = s2;
+            s2 = mulmod(s2, s2, PRIME);
+            s2 = mulmod(s2, s2, PRIME);
+            s2 = mulmod(s2, tmp, PRIME);
+        }
+        {
+            uint256 tmp = s3;
+            s3 = mulmod(s3, s3, PRIME);
+            s3 = mulmod(s3, s3, PRIME);
+            s3 = mulmod(s3, tmp, PRIME);
+        }
 
         (s0, s1, s2, s3) = linearOp(s0, s1, s2, s3);
 
@@ -400,13 +526,12 @@ contract Rescue {
             s3 += 4824035239925904398047276123907644574421550988870123756876333092498925242854;
         }
 
-        // TODO avoid code duplication?
-        s0 = expAlphaInv(s0);
-        s1 = expAlphaInv(s1);
-        s2 = expAlphaInv(s2);
-        s3 = expAlphaInv(s3);
-
-        (s0, s1, s2, s3) = linearOp(s0, s1, s2, s3);
+        (s0, s1, s2, s3) = linearOp(
+            expAlphaInv(s0),
+            expAlphaInv(s1),
+            expAlphaInv(s2),
+            expAlphaInv(s3)
+        );
 
         unchecked {
             s0 += 5526416022516734657935645023952329824887761902324086126076396040056459740202;
@@ -416,10 +541,30 @@ contract Rescue {
         }
 
         // TODO avoid code duplication?
-        s0 = expAlpha(s0);
-        s1 = expAlpha(s1);
-        s2 = expAlpha(s2);
-        s3 = expAlpha(s3);
+        {
+            uint256 tmp = s0;
+            s0 = mulmod(s0, s0, PRIME);
+            s0 = mulmod(s0, s0, PRIME);
+            s0 = mulmod(s0, tmp, PRIME);
+        }
+        {
+            uint256 tmp = s1;
+            s1 = mulmod(s1, s1, PRIME);
+            s1 = mulmod(s1, s1, PRIME);
+            s1 = mulmod(s1, tmp, PRIME);
+        }
+        {
+            uint256 tmp = s2;
+            s2 = mulmod(s2, s2, PRIME);
+            s2 = mulmod(s2, s2, PRIME);
+            s2 = mulmod(s2, tmp, PRIME);
+        }
+        {
+            uint256 tmp = s3;
+            s3 = mulmod(s3, s3, PRIME);
+            s3 = mulmod(s3, s3, PRIME);
+            s3 = mulmod(s3, tmp, PRIME);
+        }
 
         (s0, s1, s2, s3) = linearOp(s0, s1, s2, s3);
 
@@ -430,13 +575,12 @@ contract Rescue {
             s3 += 13804898145881881347835367366352189037341704254740510664318597456840481739975;
         }
 
-        // TODO avoid code duplication?
-        s0 = expAlphaInv(s0);
-        s1 = expAlphaInv(s1);
-        s2 = expAlphaInv(s2);
-        s3 = expAlphaInv(s3);
-
-        (s0, s1, s2, s3) = linearOp(s0, s1, s2, s3);
+        (s0, s1, s2, s3) = linearOp(
+            expAlphaInv(s0),
+            expAlphaInv(s1),
+            expAlphaInv(s2),
+            expAlphaInv(s3)
+        );
 
         unchecked {
             s0 += 3523599105403569319090449327691358425990456728660349400211678603795116364226;
@@ -446,10 +590,30 @@ contract Rescue {
         }
 
         // TODO avoid code duplication?
-        s0 = expAlpha(s0);
-        s1 = expAlpha(s1);
-        s2 = expAlpha(s2);
-        s3 = expAlpha(s3);
+        {
+            uint256 tmp = s0;
+            s0 = mulmod(s0, s0, PRIME);
+            s0 = mulmod(s0, s0, PRIME);
+            s0 = mulmod(s0, tmp, PRIME);
+        }
+        {
+            uint256 tmp = s1;
+            s1 = mulmod(s1, s1, PRIME);
+            s1 = mulmod(s1, s1, PRIME);
+            s1 = mulmod(s1, tmp, PRIME);
+        }
+        {
+            uint256 tmp = s2;
+            s2 = mulmod(s2, s2, PRIME);
+            s2 = mulmod(s2, s2, PRIME);
+            s2 = mulmod(s2, tmp, PRIME);
+        }
+        {
+            uint256 tmp = s3;
+            s3 = mulmod(s3, s3, PRIME);
+            s3 = mulmod(s3, s3, PRIME);
+            s3 = mulmod(s3, tmp, PRIME);
+        }
 
         (s0, s1, s2, s3) = linearOp(s0, s1, s2, s3);
 
@@ -460,13 +624,12 @@ contract Rescue {
             s3 += 3428721187625124675258692786364137915132424621324969246210899039774126165479;
         }
 
-        // TODO avoid code duplication?
-        s0 = expAlphaInv(s0);
-        s1 = expAlphaInv(s1);
-        s2 = expAlphaInv(s2);
-        s3 = expAlphaInv(s3);
-
-        (s0, s1, s2, s3) = linearOp(s0, s1, s2, s3);
+        (s0, s1, s2, s3) = linearOp(
+            expAlphaInv(s0),
+            expAlphaInv(s1),
+            expAlphaInv(s2),
+            expAlphaInv(s3)
+        );
 
         unchecked {
             s0 += 2552744099402346352193097862110515290335034445517764751557635302899937367219;
@@ -476,10 +639,30 @@ contract Rescue {
         }
 
         // TODO avoid code duplication?
-        s0 = expAlpha(s0);
-        s1 = expAlpha(s1);
-        s2 = expAlpha(s2);
-        s3 = expAlpha(s3);
+        {
+            uint256 tmp = s0;
+            s0 = mulmod(s0, s0, PRIME);
+            s0 = mulmod(s0, s0, PRIME);
+            s0 = mulmod(s0, tmp, PRIME);
+        }
+        {
+            uint256 tmp = s1;
+            s1 = mulmod(s1, s1, PRIME);
+            s1 = mulmod(s1, s1, PRIME);
+            s1 = mulmod(s1, tmp, PRIME);
+        }
+        {
+            uint256 tmp = s2;
+            s2 = mulmod(s2, s2, PRIME);
+            s2 = mulmod(s2, s2, PRIME);
+            s2 = mulmod(s2, tmp, PRIME);
+        }
+        {
+            uint256 tmp = s3;
+            s3 = mulmod(s3, s3, PRIME);
+            s3 = mulmod(s3, s3, PRIME);
+            s3 = mulmod(s3, tmp, PRIME);
+        }
 
         (s0, s1, s2, s3) = linearOp(s0, s1, s2, s3);
 
@@ -490,13 +673,12 @@ contract Rescue {
             s3 += 10574066469653966216567896842413898230152427846140046825523989742590727910280;
         }
 
-        // TODO avoid code duplication?
-        s0 = expAlphaInv(s0);
-        s1 = expAlphaInv(s1);
-        s2 = expAlphaInv(s2);
-        s3 = expAlphaInv(s3);
-
-        (s0, s1, s2, s3) = linearOp(s0, s1, s2, s3);
+        (s0, s1, s2, s3) = linearOp(
+            expAlphaInv(s0),
+            expAlphaInv(s1),
+            expAlphaInv(s2),
+            expAlphaInv(s3)
+        );
 
         unchecked {
             s0 += 21386271527766270535632132320974945129946865648321206442664310421414128279311;
@@ -506,10 +688,30 @@ contract Rescue {
         }
 
         // TODO avoid code duplication?
-        s0 = expAlpha(s0);
-        s1 = expAlpha(s1);
-        s2 = expAlpha(s2);
-        s3 = expAlpha(s3);
+        {
+            uint256 tmp = s0;
+            s0 = mulmod(s0, s0, PRIME);
+            s0 = mulmod(s0, s0, PRIME);
+            s0 = mulmod(s0, tmp, PRIME);
+        }
+        {
+            uint256 tmp = s1;
+            s1 = mulmod(s1, s1, PRIME);
+            s1 = mulmod(s1, s1, PRIME);
+            s1 = mulmod(s1, tmp, PRIME);
+        }
+        {
+            uint256 tmp = s2;
+            s2 = mulmod(s2, s2, PRIME);
+            s2 = mulmod(s2, s2, PRIME);
+            s2 = mulmod(s2, tmp, PRIME);
+        }
+        {
+            uint256 tmp = s3;
+            s3 = mulmod(s3, s3, PRIME);
+            s3 = mulmod(s3, s3, PRIME);
+            s3 = mulmod(s3, tmp, PRIME);
+        }
 
         (s0, s1, s2, s3) = linearOp(s0, s1, s2, s3);
 
@@ -520,13 +722,12 @@ contract Rescue {
             s3 += 21851693551359717578445799046408060941161959589978077352548456186528047792150;
         }
 
-        // TODO avoid code duplication?
-        s0 = expAlphaInv(s0);
-        s1 = expAlphaInv(s1);
-        s2 = expAlphaInv(s2);
-        s3 = expAlphaInv(s3);
-
-        (s0, s1, s2, s3) = linearOp(s0, s1, s2, s3);
+        (s0, s1, s2, s3) = linearOp(
+            expAlphaInv(s0),
+            expAlphaInv(s1),
+            expAlphaInv(s2),
+            expAlphaInv(s3)
+        );
 
         unchecked {
             s0 += 19076469206110044175016166349949136119962165667268661130584159239385341119621;
@@ -536,10 +737,30 @@ contract Rescue {
         }
 
         // TODO avoid code duplication?
-        s0 = expAlpha(s0);
-        s1 = expAlpha(s1);
-        s2 = expAlpha(s2);
-        s3 = expAlpha(s3);
+        {
+            uint256 tmp = s0;
+            s0 = mulmod(s0, s0, PRIME);
+            s0 = mulmod(s0, s0, PRIME);
+            s0 = mulmod(s0, tmp, PRIME);
+        }
+        {
+            uint256 tmp = s1;
+            s1 = mulmod(s1, s1, PRIME);
+            s1 = mulmod(s1, s1, PRIME);
+            s1 = mulmod(s1, tmp, PRIME);
+        }
+        {
+            uint256 tmp = s2;
+            s2 = mulmod(s2, s2, PRIME);
+            s2 = mulmod(s2, s2, PRIME);
+            s2 = mulmod(s2, tmp, PRIME);
+        }
+        {
+            uint256 tmp = s3;
+            s3 = mulmod(s3, s3, PRIME);
+            s3 = mulmod(s3, s3, PRIME);
+            s3 = mulmod(s3, tmp, PRIME);
+        }
 
         (s0, s1, s2, s3) = linearOp(s0, s1, s2, s3);
 

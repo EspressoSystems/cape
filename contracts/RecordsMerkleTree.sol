@@ -247,8 +247,8 @@ contract RecordsMerkleTree is Rescue {
 
         // Go down inside the tree until finding the first terminal node.
         //console.log("Going down until finding a terminal node");
-        uint64 pos = leafPos;
-        uint64 localPos = 0;
+        uint256 pos = leafPos;
+        uint256 localPos = 0;
         while (!isNull(nodes[currentNodeIndex])) {
             //console.log(
             //    "Going down one position from node with index %s",
@@ -257,8 +257,8 @@ contract RecordsMerkleTree is Rescue {
 
             // TODO avoid this logic duplication?
             uint256 divisor = 3**(height - branchIndex - 1);
-            localPos = uint64(pos / divisor);
-            pos = uint64(pos % divisor);
+            localPos = pos / divisor;
+            pos = pos % divisor;
 
             //console.log("branchIndex: %s", branchIndex);
             //console.log("currentNodeIndex: %s", currentNodeIndex);
@@ -284,7 +284,7 @@ contract RecordsMerkleTree is Rescue {
                     previousNodeIndex = currentNodeIndex;
                     // TODO avoid this logic duplication?
                     divisor = 3**(height - branchIndex - 1);
-                    localPos = uint64(pos / divisor);
+                    localPos = pos / divisor;
                 }
             }
             branchIndex += 1;

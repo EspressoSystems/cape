@@ -206,14 +206,10 @@ contract RecordsMerkleTree is Rescue {
     // Update the child of a node based on the position (which child to select)
     // and an index to the new child.
     function updateChildNode(
-        Node[] memory nodes,
-        uint64 nodeIndex,
+        Node memory node,
         uint64 newChildIndex,
         Position pos
     ) private {
-        // Get the node
-        Node memory node = nodes[nodeIndex];
-
         // Update the node
         if (pos == Position.LEFT) {
             node.left = newChildIndex;
@@ -222,13 +218,6 @@ contract RecordsMerkleTree is Rescue {
         } else if (pos == Position.RIGHT) {
             node.right = newChildIndex;
         }
-
-        //console.log(
-        //    "Child with index %s and position %s of node with index %s updated.",
-        //    newChildIndex,
-        //    uint256(pos),
-        //    nodeIndex
-        //);
     }
 
     // TODO is it possible to create a data structure for handling the nodes array and tracking the maximum index at
@@ -323,8 +312,7 @@ contract RecordsMerkleTree is Rescue {
             //console.log("localPos: %s", localPos);
 
             updateChildNode(
-                nodes,
-                previousNodeIndex,
+                nodes[previousNodeIndex],
                 newNodeIndex,
                 Position(localPos)
             );
@@ -345,8 +333,7 @@ contract RecordsMerkleTree is Rescue {
         //console.log("The leaf index is %s.", newNodeIndex);
 
         updateChildNode(
-            nodes,
-            previousNodeIndex,
+            nodes[previousNodeIndex],
             newNodeIndex,
             Position(localPos)
         );
@@ -388,7 +375,7 @@ contract RecordsMerkleTree is Rescue {
 
         // maxIndex tracks the index of the last element inserted in the tree
         uint64 maxIndex = rootIndex;
-        for (uint256 i = 0; i < elements.length; i++) {
+        for (uint32 i = 0; i < elements.length; i++) {
             maxIndex = pushElement(nodes, rootIndex, maxIndex, elements[i]);
         }
 

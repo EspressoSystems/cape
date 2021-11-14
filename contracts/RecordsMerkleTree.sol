@@ -78,7 +78,9 @@ contract RecordsMerkleTree is Rescue {
         return Node(0, left, middle, right);
     }
 
-    /// Checks that the frontier represented as a tree resolves to the right root and number of leaves
+    /// Checks that the frontier represented as a tree resolves to the right root
+    /// Note the position of the leaf is implicitly checked as it is used to build the tree structure
+    /// in the function buildTreeFromFrontier.
     /// @param nodes array of nodes obtained from the frontier
     /// @return true if the tree resolves to right root_value and num_leaves
     function checkFrontier(Node[] memory nodes, uint256 rootIndex)
@@ -88,8 +90,8 @@ contract RecordsMerkleTree is Rescue {
         // Compute the root value of the frontier
         uint256 frontierRootValue = computeRootValue(nodes, rootIndex);
 
-        //console.log("root_value %s", rootValue);
-        //console.log("frontier_root_value %s", frontierRootValue);
+        console.log("root_value %s", rootValue);
+        console.log("frontier_root_value %s", frontierRootValue);
 
         // Compute the number of leaves from the frontier represented as nodes
         uint256 numLeavesFromFrontier = 0;
@@ -98,26 +100,21 @@ contract RecordsMerkleTree is Rescue {
         uint256 nodeIndex = rootIndex;
         Node memory node = nodes[rootIndex];
 
-        // We are done when we reach the leaf. The leaf index is LEAF_INDEX.
-        // See function buildTreeFromFrontier.
-        uint256 powerOfThree = 3**(height - 1);
+        // We are done when we reach the leaf.
         while (branchIndex < height) {
             //console.log("powerOfThree: %s", powerOfThree);
             if (!isNull(nodes[node.left]) && isNull(nodes[node.middle])) {
                 nodeIndex = node.left;
-                //console.log("LEFT");
+                console.log("LEFT");
             }
             if (!isNull(nodes[node.middle]) && isNull(nodes[node.right])) {
-                numLeavesFromFrontier += powerOfThree * 1;
                 nodeIndex = node.middle;
-                //console.log("MIDDLE");
+                console.log("MIDDLE");
             }
             if (!isNull(nodes[node.right])) {
-                numLeavesFromFrontier += powerOfThree * 2;
                 nodeIndex = node.right;
-                //console.log("RIGHT");
+                console.log("RIGHT");
             }
-            powerOfThree /= 3;
             //console.log("index: %s", nodeIndex);
             branchIndex += 1;
             node = nodes[nodeIndex];
@@ -126,50 +123,77 @@ contract RecordsMerkleTree is Rescue {
         // The previous loop computes the index of the leaf.
         numLeavesFromFrontier += 1;
 
-        //console.log("expected_number_of_leaves: %s", numLeavesFromFrontier);
-        //console.log("num_leaves: %s", numLeaves);
+        console.log("expected_number_of_leaves: %s", numLeavesFromFrontier);
+        console.log("num_leaves: %s", numLeaves);
 
-        return
-            (frontierRootValue == rootValue) &&
-            (numLeavesFromFrontier == numLeaves);
+        return frontierRootValue == rootValue;
     }
 
     function buildTreeFromFrontier(
-        uint256[] memory _frontier,
+        uint256[] memory flattenedFrontier,
         Node[] memory nodes
     ) private returns (uint256) {
         // Set the first node to the NULL node
         nodes[0] = Node(0, 0, 0, 0);
 
         // Insert the leaf
-        nodes[1] = Node(_frontier[0], 0, 0, 0);
+        nodes[1] = Node(flattenedFrontier[0], 0, 0, 0);
 
         // Insert the siblings
-        nodes[2] = Node(_frontier[1], 0, 0, 0);
-        nodes[3] = Node(_frontier[2], 0, 0, 0);
+        nodes[2] = Node(flattenedFrontier[1], 0, 0, 0);
+        nodes[3] = Node(flattenedFrontier[2], 0, 0, 0);
+
+        // Compute the position of each node
+        uint64 absolutePosition = numLeaves - 1;
+        uint8 localPosition = uint8(absolutePosition % 3);
 
         // We process the nodes of the Merkle path
         uint256 cursor = 4;
+        uint256 cursorFrontier = 3;
 
-        // The length of the frontier is
+        console.log("height: %s", height);
+
+        // TODO cortar en 3h, y 3h+1 (evitar el if)
         while (cursor < 3 * height + 1) {
-            nodes[cursor] = createHoleNode(
-                cursor,
-                Position(_frontier[cursor - 1])
-            );
+            console.log("localPosition: %s", localPosition);
+            console.log("cursor: %s", cursor);
+            nodes[cursor] = createHoleNode(cursor, Position(localPosition));
 
             // Create the siblings of the "hole node". These siblings have no children
-            nodes[cursor + 1] = Node(_frontier[cursor], 0, 0, 0);
-            nodes[cursor + 2] = Node(_frontier[cursor + 1], 0, 0, 0);
+            nodes[cursor + 1] = Node(
+                flattenedFrontier[cursorFrontier],
+                0,
+                0,
+                0
+            );
+            nodes[cursor + 2] = Node(
+                flattenedFrontier[cursorFrontier + 1],
+                0,
+                0,
+                0
+            );
 
             // Move forward
+            absolutePosition /= 3;
+            if (
+                cursor < 3 * height
+            ) // Before the last value of cursor, take module otherwise dividend
+            {
+                localPosition = uint8(absolutePosition % 3);
+            } else {
+                localPosition = uint8(absolutePosition / 3);
+            }
+
             cursor += 3;
+            cursorFrontier += 2;
         }
 
         // Add the root node
-        //console.log("cursor: %s", cursor);
-        //console.log("max number of nodes: %s", nodes.length);
-        nodes[cursor] = createHoleNode(cursor, Position(_frontier[cursor - 1]));
+        // For the root node the position is the dividend of absolutePosition divided by three
+        nodes[cursor] = createHoleNode(cursor, Position(localPosition));
+        console.log("localPosition: %s", localPosition);
+        console.log("cursor: %s", cursor);
+        console.log("max number of nodes: %s", nodes.length);
 
         return cursor;
     }

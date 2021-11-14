@@ -10,6 +10,7 @@ use jf_primitives::merkle_tree::{
 };
 use jf_rescue::Permutation;
 use jf_rescue::RescueParameter;
+use std::convert::TryFrom;
 use std::path::Path;
 abigen!(
     TestRecordsMerkleTree,
@@ -69,9 +70,9 @@ pub(crate) async fn get_contract_records_merkle_tree(
 /// and `leaf` is the final node of the path.
 /// Note that we ignore the leaf.
 /// * `frontier` - frontier to be flattened
+/// * `uid` - uid of the leaf, needed to compute the commitment
 /// * `returns` - flattened frontier. If the frontier is empty, returns an empty vector.
 ///
-// TODO improve return the array of siblings and the array of 0,1,3 value (positions) to save space. Actually the uid should be enough.
 // TODO the uid can be deduced from the frontier (path)
 fn flatten_frontier(frontier: &MerkleFrontier<Fr254>, uid: u64) -> Vec<Fr254> {
     match frontier {
@@ -84,11 +85,6 @@ fn flatten_frontier(frontier: &MerkleFrontier<Fr254>, uid: u64) -> Vec<Fr254> {
             for node in lap.path.nodes.iter() {
                 res.push(node.sibling1.to_scalar());
                 res.push(node.sibling2.to_scalar());
-                match node.pos {
-                    NodePos::Left => res.push(Fr254::from(0)),
-                    NodePos::Middle => res.push(Fr254::from(1)),
-                    NodePos::Right => res.push(Fr254::from(2)),
-                }
             }
             res
         }
@@ -101,31 +97,33 @@ fn flatten_frontier(frontier: &MerkleFrontier<Fr254>, uid: u64) -> Vec<Fr254> {
 /// The smart contract somehow follows some similar logic in order to create the tree structure from the flattened frontier.
 /// * `flattened_frontier` - flat representation of the frontier
 /// * `returns` - structured representation of the frontier
-fn parse_flattened_frontier(flattened_frontier: &[Fr254]) -> MerkleFrontier<Fr254> {
+fn parse_flattened_frontier(flattened_frontier: &[Fr254], uid: u64) -> MerkleFrontier<Fr254> {
     if flattened_frontier.is_empty() {
         MerkleFrontier::Empty { height: 0 }
     } else {
         let mut nodes: Vec<MerklePathNode<Fr254>> = vec![];
 
+        // Obtain the position from the uid
+        let mut absolute_position = uid;
+        let mut local_position = u8::try_from(absolute_position % 3).unwrap();
+
         let mut i = 1;
         while i < flattened_frontier.len() {
-            let pos = if flattened_frontier[i + 2] == Fr254::from(0) {
-                NodePos::Left
-            } else if flattened_frontier[i + 2] == Fr254::from(1) {
-                NodePos::Middle
-            } else if flattened_frontier[i + 2] == Fr254::from(2) {
-                NodePos::Right
-            } else {
-                NodePos::Left // Should not happen
-            };
-
             let node = MerklePathNode::new(
-                pos,
+                NodePos::from(local_position),
                 NodeValue::from_scalar(flattened_frontier[i]),
                 NodeValue::from_scalar(flattened_frontier[i + 1]),
             );
+
+            if i < flattened_frontier.len() - 1 {
+                absolute_position /= 3;
+                local_position = u8::try_from(absolute_position % 3).unwrap();
+            } else {
+                local_position = u8::try_from(absolute_position / 3).unwrap()
+            }
+
             nodes.push(node.clone());
-            i = i + 3;
+            i = i + 2;
         }
         MerkleFrontier::Proof(MerkleLeafProof {
             leaf: MerkleLeaf(flattened_frontier[0]),
@@ -202,16 +200,13 @@ mod tests {
             compute_hash_leaf(leaf, uid),
             merkle_path_nodes[0].sibling1.to_scalar(),
             merkle_path_nodes[0].sibling2.to_scalar(),
-            Fr254::from(2),
             merkle_path_nodes[1].sibling1.to_scalar(),
             merkle_path_nodes[1].sibling2.to_scalar(),
-            Fr254::from(0),
             merkle_path_nodes[2].sibling1.to_scalar(),
             merkle_path_nodes[2].sibling2.to_scalar(),
-            Fr254::from(0),
         ];
         // Size of the vector containing the Merkle path and the leaf value
-        let expected_len = usize::from(height * 3 + 1);
+        let expected_len = usize::from(height * 2 + 1);
         assert_eq!(flattened_frontier.len(), expected_len);
         assert_eq!(expected_flattened_frontier, flattened_frontier);
 
@@ -238,7 +233,7 @@ mod tests {
         // ie. v = H(0,l,uid) instead of the value of the leaf `l`.
         let flattened_frontier = flatten_frontier(&frontier, uid);
         let frontier_from_flattened_frontier =
-            parse_flattened_frontier(flattened_frontier.as_slice());
+            parse_flattened_frontier(flattened_frontier.as_slice(), uid);
 
         let merkle_path_from_flattened = match frontier_from_flattened_frontier {
             MerkleFrontier::Proof(lap) => lap.path.nodes,

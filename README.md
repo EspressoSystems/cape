@@ -1,54 +1,113 @@
 # CAP on Ethereum
+<!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
+**Table of Contents**
 
-### Obtaining the source code
+- [CAP on Ethereum](#cap-on-ethereum)
+    - [Obtaining the source code](#obtaining-the-source-code)
+    - [Dependencies](#dependencies)
+    - [1. Install nix](#1-install-nix)
+    - [2. Activate the nix environment](#2-activate-the-nix-environment)
+    - [3. Install nodejs dependencies](#3-install-nodejs-dependencies)
+    - [4. Verify installation](#4-verify-installation)
+    - [(Optional, but recommended) direnv](#optional-but-recommended-direnv)
+- [Development](#development)
+    - [Testing (Javascript)](#testing-javascript)
+    - [Testing against go-ethereum node](#testing-against-go-ethereum-node)
+    - [Testing against hardhat node](#testing-against-hardhat-node)
+        - [Separate hardhat node](#separate-hardhat-node)
+        - [Hardhat node integrated in test command](#hardhat-node-integrated-in-test-command)
+    - [Running scripts](#running-scripts)
+    - [Precompiled solidity binaries](#precompiled-solidity-binaries)
+        - [Details about solidity compiler (solc) management](#details-about-solidity-compiler-solc-management)
+    - [Ethereum contracts](#ethereum-contracts)
+    - [Rust](#rust)
+    - [Examples](#examples)
+    - [Linting](#linting)
+    - [Formatting](#formatting)
+    - [Updating dependencies](#updating-dependencies)
+    - [Git hooks](#git-hooks)
+    - [Ethereum key management](#ethereum-key-management)
+    - [Python tools](#python-tools)
+    - [Interacting with contracts from python](#interacting-with-contracts-from-python)
+        - [eth-brownie usage](#eth-brownie-usage)
+- [Benchmarks](#benchmarks)
+- [Local network](#local-network)
+- [Rinkeby](#rinkeby)
+- [Goerli](#goerli)
+- [Arbitrum on Rinkeby](#arbitrum-on-rinkeby)
+- [CAP on Arbitrum (a.k.a CAPA)](#cap-on-arbitrum-aka-capa)
+- [Running local arb-dev-node (not officially supported!)](#running-local-arb-dev-node-not-officially-supported)
+- [Gas Reporter](#gas-reporter)
+- [CI](#ci)
+- [Documentation](#documentation)
+    - [Ethereum Asset (Un)Wrapping Workflow](#ethereum-asset-unwrapping-workflow)
 
-    git clone  git@gitlab.com:translucence/cap-on-ethereum
+<!-- markdown-toc end -->
 
-### Dependencies
+## Obtaining the source code
 
-Install the [nix](https://nixos.org) package manager to provide dependencies with
-correct versions. Installation instructions can be found [here](https://nixos.org/download.html).
-If in a rush, running the following command and following the on-screen instructions should
-work in most cases
+    git clone git@gitlab.com:translucence/cap-on-ethereum/cape
+
+## Dependencies
+This project has a lot of dependencies the only tested installation method is
+via the [nix](https://nixos.org) package manager.
+
+## 1. Install nix
+Installation instructions can be found [here](https://nixos.org/download.html).
+If in a rush, running the following command and following the on-screen
+instructions should work in most cases
 
     curl -L https://nixos.org/nix/install | sh
 
-To update the pinned version of `nixpkgs` run `nix/update-nix`, optionally passing a github owner and
-revision as arguments. The default is: `nix/update-nix nixos master`. Make sure to commit any changed
-files in the `./nix` directory afterwards.
+## 2. Activate the nix environment
+To activate a shell with the development environment run
 
-The rust overlay can be updated by running `nix/update-rust-overlay`.
-
-### Environment
-
-#### 1. Activate the nix environment
-
-The [direnv](https://direnv.net/) shell extension can be used to activate the environment.
-Note that it direnv needs to be [hooked](https://direnv.net/docs/hook.html) into the shell to function.
-
-To enable `direnv` run
-
-    direnv allow
-
-from the root directory of this repo. The first time this may take a few minutes to download all dependencies.
-Once the `nix-shell` is activated all dependencies as well as scripts in the `./bin` directory will be in the
-`PATH`.
-
-When developing `nix` related code it can sometimes be handy to take direnv out of the equation: to
-temporarily disable `direnv` and manually enter a nix shell run
-
-    direnv deny
     nix-shell
 
-#### 2. Install nodejs dependencies
+from within the top-level directory of the repo.
 
+Note: for the remainder of this README it is necessary that this environment is
+active.
+
+Once the `nix-shell` is activated the dependencies as well as the scripts in the
+`./bin` directory will be in the `PATH`.
+
+## 3. Install nodejs dependencies
 Install the node dependencies with pnpm
 
     pnpm i
 
 Also run this command after pulling in changes that modify `pnpm-lock.yaml`.
 
-### Development
+## 4. Verify installation
+Try running some tests to verify the installation
+
+    cape-test-geth
+
+If this fails with errors that don't point to obvious problems please open an
+issue on gitlab.
+
+## (Optional, but recommended) direnv
+To avoid manually activating the nix shell each time the
+[direnv](https://direnv.net/) shell extension can be used to activate the
+environment when entering the local directory of this repo. Note that direnv
+needs to be [hooked](https://direnv.net/docs/hook.html) into the shell to
+function.
+
+To enable `direnv` run
+
+    direnv allow
+
+from the root directory of this repo.
+
+When developing `nix` related code it can sometimes be handy to take direnv out
+of the equation: to temporarily disable `direnv` and manually enter a nix shell
+run
+
+    direnv deny
+    nix-shell
+
+# Development
 
 To start the background services to support interactive development run the command
 
@@ -59,7 +118,7 @@ For the time being this is a `geth` node and a contract compilation watcher.
 To add additional processes add lines to `Procfile` and (if desired) scripts to
 run in the `./bin` directory.
 
-### Testing (Javascript)
+## Testing (Javascript)
 
 We support running against a go-ethereum (`geth`) or hardhat (shortcut `hh`) node
 running on `localhost:8545`.
@@ -87,7 +146,7 @@ To run all the tests against both nodes
 
     cape-test-all
 
-#### Testing against go-ethereum node
+## Testing against go-ethereum node
 
 Start the geth chain in separate terminal
 
@@ -99,12 +158,17 @@ When running tests against geth
 - The `console.log` statements in solidity **do nothing** (except consume a tiny amount of gas (?)).
 - Failing `require` statements are shown in the`geth` console log.
 
-#### Testing against hardhat node
+The genesis block is generated with the python script `bin/make-genesis-block`.
+
+If time permits replacing the `run-geth` bash script with a python script that
+uses `make-genesis-block` and `hdwallet-derive` could be useful.
+
+## Testing against hardhat node
 
 You can choose to let hardhat start a hardhat node automatically or start a node
 yourself and let hardhat connect to it.
 
-##### Separate hardhat node
+### Separate hardhat node
 
 Start the hardhat node in separate terminal
 
@@ -116,7 +180,7 @@ When running tests against this hardhat node
 - The `console.log` statements in solidity show in terminal running the node.
 - Failing `require` statements are shown in human readable form in the terminal running the node.
 
-##### Hardhat node integrated in test command
+### Hardhat node integrated in test command
 
 It's also possible to run the hardhat node and tests in one command
 
@@ -126,20 +190,20 @@ It's also possible to run the hardhat node and tests in one command
 - The `console.log` statements are shown in in the terminal.
 - Failing `require` statements are shown in human readable form in the terminal.
 
-### Running scripts
+## Running scripts
 
 Run a script that connects to the local network (on port 8545)
 
     hh run scripts/sample-script.js --network localhost
 
-#### Precompiled solidity binaries
+## Precompiled solidity binaries
 
 Hardhat is configured to use the solc binary installed with nix (see
 [nix/solc-bin/default.nix](nix/solc-bin/default.nix)) if matches the version
 number. If hardhat downloads and uses another binary a warning is printed the
 console.
 
-##### Details
+### Details about solidity compiler (solc) management
 
 The binaries used by hardhat, brownie, solc-select, ... from
 https://solc-bin.ethereum.org/linux-amd64/list.json underwent a change in build
@@ -158,24 +222,7 @@ Hardhat always "works" because it falls back to solcjs silently (unless running 
 The solcjs compiler is a lot slower than native solc and brownie (using py-solc-x),
 solc-select do not have such a fallback mechanisms.
 
-# Rust client
-
-All the rust code can be found in the `rust` directory.
-
-## Development
-
-### go-ethereum / geth
-
-Run a geth node (in a separate terminal, from anywhere):
-
-    run-geth
-
-The genesis block is generated with the python script `bin/make-genesis-block`.
-
-If time permits replacing the `run-geth` bash script with a python script that
-uses `make-genesis-block` and `hdwallet-derive` could be useful.
-
-### Ethereum contracts
+## Ethereum contracts
 
 Compile the contracts to extract the abi for the ethers abigen (workflow to be
 improved!).
@@ -202,7 +249,7 @@ artifacts directory and the compilation cache with
 
     hardhat clean
 
-### Rust
+## Rust
 
 To run the rust tests
 
@@ -218,7 +265,7 @@ To watch the rust files and compile on changes
 
 The command (`check` by default) can be changed with `-x` (for example `cargo watch -x test`).
 
-#### Examples
+## Examples
 
 Generate a `jf_txn::transfer::TransferNote` and save it to a file `my_note.bin`.
 Building with the `--release` flag make this a lot faster.
@@ -229,7 +276,7 @@ Load the file:
 
     cargo run -p cap-rust-sandbox --example read_note
 
-### Linting
+## Linting
 
 Lint the solidity code using `solhint` by running
 
@@ -237,7 +284,7 @@ Lint the solidity code using `solhint` by running
 
 This runs also as part of the pre-commit hook.
 
-### Formatting
+## Formatting
 
 Format all the source files with their respective formatters:
 
@@ -250,7 +297,16 @@ Check if all files are correctly formatted:
 For big reformatting commits, add the revision to the `.git-blame-ignore-revs`
 file.
 
-### Git hooks
+## Updating dependencies
+
+To update the pinned version of `nixpkgs` run `nix/update-nix`, optionally
+passing a github owner and revision as arguments. The default is:
+`nix/update-nix nixos master`. Make sure to commit any changed files in the
+`./nix` directory afterwards.
+
+The rust overlay can be updated by running `nix/update-rust-overlay`.
+
+## Git hooks
 
 Pre-commit hooks are managed by nix. Edit `./nix/precommit.nix` to manage the
 hooks.
@@ -272,13 +328,13 @@ in the nix-shell development environment.
 
 Use any poetry command e. g. `poetry add --dev ipython` to add packages.
 
-### Interacting with contracts from python
+## Interacting with contracts from python
 
 The ethereum development suite [eth-brownie](https://eth-brownie.readthedocs.io)
 provides some interactive tools and makes it convenient to test the contracts
 with python code.
 
-#### Usage
+### eth-brownie usage
 
 Note: brownie currently only works with the hardhat node (but not with the geth
 node). If the geth node is running it will try to connect to it and hang. If
@@ -312,7 +368,7 @@ The smart contract `DummyVerifier.sol` simulates the most expensive (in gas) ope
 Our "implementation" of the Rescue permutation function is less performant than [Starkware's one](https://etherscan.io/address/0x7B6fc6b18A20823c3d3663E58AB2Af8D780D0AFe#code) .
 We provide here the gas and usd cost for one CAP transaction.
 
-## Local network
+# Local network
 
 ```
 > hardhat run scripts/benchmarks.js
@@ -334,7 +390,7 @@ verify:  2816589.5714285714 gas  ------ 2128.001019364 USD
 batch_verify:  2759316.285714286 gas  ------ 2084.7296774480005 USD
 ```
 
-## Rinkeby
+# Rinkeby
 
 - Set the RINKEBY_URL in the .env file. A project can be created at
   https://infura.io/dashboard/ethereum.
@@ -345,13 +401,13 @@ batch_verify:  2759316.285714286 gas  ------ 2084.7296774480005 USD
 > hardhat --network rinkeby run scripts/benchmarks.js
 ```
 
-## Goerli
+# Goerli
 
 - Similar to Rinkeby section (replace RINKEBY with GOERLI) and use `--network goerli`.
 - Faucets: [Simple](https://goerli-faucet.slock.it),
   [Social](https://faucet.goerli.mudit.blog/).
 
-## Arbitrum on Rinkeby
+# Arbitrum on Rinkeby
 
 To run the benchmarks against Arbitrum Rinkeby follow these steps:
 
@@ -404,14 +460,14 @@ Run tests
 
 at the moment this will fail due to gas mismatch.
 
-## Gas Reporter
+# Gas Reporter
 
 Set the env var `REPORT_GAS` to get extra output about the gas consumption of
 contract functions called in the tests.
 
     env REPORT_GAS=1 hh test
 
-## CI
+# CI
 
 To locally spin up a docker container like the one used in the CI
 
@@ -423,7 +479,7 @@ To locally spin up a docker container like the one used in the CI
 The code in the current directory will be at `/code`. You may have to delete the
 `./node_modules` directory with root permissions afterwards.
 
-## Documentation
+# Documentation
 
 Extracting documentation from the solidity source is done using a javascript
 tool called `solidity-docgen`.
@@ -434,6 +490,6 @@ To generate the documentation run
 
 The generated files can be found in the `./doc/contracts` folder.
 
-### Ethereum Asset (Un)Wrapping Workflow
+## Ethereum Asset (Un)Wrapping Workflow
 
 Documentation about wrapping and unwrapping ERC20 tokens into and out of CAPE is described in `./doc/workflow/lib.rs::test`.

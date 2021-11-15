@@ -14,9 +14,6 @@ function cleanup(){
    fi
 }
 
-echo "Ensuring all node dependencies are installed"
-pnpm i
-
 if is-listening $RPC_PORT; then
    echo "Using node running at $RPC_PORT"
 else

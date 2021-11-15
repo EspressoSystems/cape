@@ -14,9 +14,6 @@ function cleanup(){
    fi
 }
 
-echo "Ensuring all node dependencies are installed"
-pnpm i
-
 echo "Compile contracts and generate ABI artifacts"
 build-abi
 

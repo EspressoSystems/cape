@@ -69,6 +69,8 @@ mkShell
   SOLC_OPTIMIZER_RUNS = "1000000";
 
   shellHook = ''
+    echo "Ensuring node dependencies are installed"
+    pnpm i
 
     if [ ! -f .env ]; then
       echo "Copying .env.sample to .env"

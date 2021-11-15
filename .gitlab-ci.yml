@@ -10,9 +10,9 @@ test:
     - docker
   image: lnl7/nix
   script:
-    - nix-shell --run "pnpm i && lint-solidity"
+    - nix-shell --run "lint-solidity"
     - nix-shell --run cape-test-geth
-    - nix-shell --run "pnpm i && solidity-docgen --solc-module solc-0.8 -o ./doc/contracts"
+    - nix-shell --run "solidity-docgen --solc-module solc-0.8 -o ./doc/contracts"
   artifacts:
     paths:
       - doc

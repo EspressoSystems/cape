@@ -7,8 +7,7 @@
     - [Dependencies](#dependencies)
     - [1. Install nix](#1-install-nix)
     - [2. Activate the nix environment](#2-activate-the-nix-environment)
-    - [3. Install nodejs dependencies](#3-install-nodejs-dependencies)
-    - [4. Verify installation](#4-verify-installation)
+    - [3. Verify installation](#3-verify-installation)
     - [(Optional, but recommended) direnv](#optional-but-recommended-direnv)
 - [Development](#development)
     - [Testing (Javascript)](#testing-javascript)
@@ -86,14 +85,7 @@ active.
 Once the `nix-shell` is activated the dependencies as well as the scripts in the
 `./bin` directory will be in the `PATH`.
 
-## 3. Install nodejs dependencies
-Install the node dependencies with pnpm
-
-    pnpm i
-
-Also run this command after pulling in changes that modify `pnpm-lock.yaml`.
-
-## 4. Verify installation
+## 3. Verify installation
 Try running some tests to verify the installation
 
     cape-test-geth

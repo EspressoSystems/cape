@@ -25,6 +25,8 @@
     - [Linting](#linting)
     - [Formatting](#formatting)
     - [Updating dependencies](#updating-dependencies)
+    - [Alternative nix installation methods](#alternative-nix-installation-methods)
+        - [Nix on debian/ubuntu](#nix-on-debianubuntu)
     - [Git hooks](#git-hooks)
     - [Ethereum key management](#ethereum-key-management)
     - [Python tools](#python-tools)
@@ -66,6 +68,10 @@ If in a rush, running the following command and following the on-screen
 instructions should work in most cases
 
     curl -L https://nixos.org/nix/install | sh
+
+Some linux distros (ubuntu, arch, ...) have packaged `nix`. See the section
+[Alternative nix installation methods](#alternative-nix-installation-methods)
+for more information.
 
 ## 2. Activate the nix environment
 To activate a shell with the development environment run
@@ -313,6 +319,21 @@ passing a github owner and revision as arguments. The default is:
 `./nix` directory afterwards.
 
 The rust overlay can be updated by running `nix/update-rust-overlay`.
+
+## Alternative nix installation methods
+### Nix on debian/ubuntu
+To install and setup `nix` on debian/ubuntu using [their nix
+package](https://packages.debian.org/sid/nix-setup-systemd). The steps below
+were tested on ubuntu 20.04.
+
+    sudo apt install nix
+    sudo usermod -a -G nix-users $USER # logout and login
+    nix-channel --add https://nixos.org/channels/nixos-21.05 nixpkgs
+    nix-channel --update
+    source /usr/share/doc/nix-bin/examples/nix-profile.sh
+
+The last line needs to be run once per session and is usually appended to
+`.bashrc` or similar.
 
 ## Git hooks
 

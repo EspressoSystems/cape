@@ -52,6 +52,14 @@
 This project has a lot of dependencies the only tested installation method is
 via the [nix](https://nixos.org) package manager.
 
+You also need access to the following git repos
+
+- https://gitlab.com/translucence/crypto/jellyfish
+- https://gitlab.com/translucence/crypto/curves
+- https://gitlab.com/translucence/common/tagged-base64
+
+Ping Mat for access.
+
 ## 1. Install nix
 Installation instructions can be found [here](https://nixos.org/download.html).
 If in a rush, running the following command and following the on-screen

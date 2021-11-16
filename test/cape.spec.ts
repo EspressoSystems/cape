@@ -1,33 +1,22 @@
-const { expect } = require("chai");
-const { ethers } = require("hardhat");
+import { expect } from "chai";
+import { ethers } from "hardhat";
+import { TestCAPE } from "../typechain-types";
 
 describe("CAPE", function () {
   describe("Handling of nullifiers", async function () {
-    let owner, cape;
+    let cape: TestCAPE;
 
     beforeEach(async function () {
-      [owner] = await ethers.getSigners();
-
-      const CAPE = await ethers.getContractFactory("TestCAPE");
-      cape = await CAPE.deploy();
-
-      // Polling interval in ms.
-      cape.provider.pollingInterval = 20;
-
-      await cape.deployed();
+      let capeFactory = await ethers.getContractFactory("TestCAPE");
+      cape = await capeFactory.deploy();
     });
 
     it("is possible to check for non-membership", async function () {
       let elem = ethers.utils.randomBytes(32);
-
-      let ret = await cape.callStatic._hasNullifierAlreadyBeenPublished(elem);
-      expect(ret).to.be.true;
+      expect(await cape.callStatic._hasNullifierAlreadyBeenPublished(elem)).to.be.true;
 
       await cape._insertNullifier(elem);
-
-      ret = await cape.callStatic._hasNullifierAlreadyBeenPublished(elem);
-
-      expect(ret).to.be.false;
+      expect(await cape.callStatic._hasNullifierAlreadyBeenPublished(elem)).to.be.false;
     });
 
     it("is possible to insert several elements", async function () {

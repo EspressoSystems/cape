@@ -2,8 +2,7 @@ const bls = require("noble-bls12-381");
 // if you're using single file, use global variable nobleBls12381
 
 // You can use Uint8Array, or hex string for readability
-const privateKey =
-  "67d53f170b908cabb9eb326c3c337762d59289a8fec79f7bc9254b584b73265c";
+const privateKey = "67d53f170b908cabb9eb326c3c337762d59289a8fec79f7bc9254b584b73265c";
 const privateKeys = [
   "18f020b98eb798752a50ed0563b079c125b0db5dd0b1060d1c1b47d4a193e1e4",
   "ed69a8c50cf8c9836be3b67c7eeff416612d45ba39a5c099d48fa668bf558c9c",
@@ -23,9 +22,7 @@ const messages = ["d2", "0d98", "05caf3"];
   console.log("is correct:", isCorrect);
 
   // Sign 1 msg with 3 keys
-  const signatures2 = await Promise.all(
-    privateKeys.map((p) => bls.sign(message, p))
-  );
+  const signatures2 = await Promise.all(privateKeys.map((p) => bls.sign(message, p)));
   const aggPubKey2 = bls.aggregatePublicKeys(publicKeys);
   const aggSignature2 = bls.aggregateSignatures(signatures2);
   const isCorrect2 = await bls.verify(aggSignature2, message, aggPubKey2);
@@ -35,9 +32,7 @@ const messages = ["d2", "0d98", "05caf3"];
   console.log("is correct:", isCorrect2);
 
   // Sign 3 msgs with 3 keys
-  const signatures3 = await Promise.all(
-    privateKeys.map((p, i) => bls.sign(messages[i], p))
-  );
+  const signatures3 = await Promise.all(privateKeys.map((p, i) => bls.sign(messages[i], p)));
   const aggSignature3 = bls.aggregateSignatures(signatures3);
   const isCorrect3 = await bls.verifyBatch(aggSignature3, messages, publicKeys);
   console.log();

@@ -15,13 +15,8 @@
   "main": "hardhat.config.js",
   "scripts": {
     "compile": "hardhat compile",
-    "lint": "treefmt",
-    "test": "hardhat test"
-  },
-  "prettier": {
-    "plugins": [
-      "node_modules/prettier-plugin-solidity"
-    ]
+    "lint": "treefmt --clear-cache",
+    "test": "hardhat clean && hardhat test"
   },
   "dependencies": {
     "@noble/bls12-381": "^1.0.1",

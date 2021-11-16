@@ -86,22 +86,13 @@ describe("Records Merkle Tree Profiling", function () {
 
       let elems = [1, 2, 3, 4, 5];
 
-      await rmtContract.testSetRootAndNumLeaves(
-        initial_root_value,
-        initial_number_of_leaves
-      );
+      await rmtContract.testSetRootAndNumLeaves(initial_root_value, initial_number_of_leaves);
 
-      const txEmpty = await rmtContract.testUpdateRecordsMerkleTree(
-        flattened_frontier,
-        []
-      );
+      const txEmpty = await rmtContract.testUpdateRecordsMerkleTree(flattened_frontier, []);
       const txEmptyReceipt = await txEmpty.wait();
       let emptyGasUsed = txEmptyReceipt.gasUsed;
 
-      const tx = await rmtContract.testUpdateRecordsMerkleTree(
-        flattened_frontier,
-        elems
-      );
+      const tx = await rmtContract.testUpdateRecordsMerkleTree(flattened_frontier, elems);
       const txReceipt = await tx.wait();
       let totalGasUsed = txReceipt.gasUsed;
 
@@ -120,8 +111,7 @@ describe("Records Merkle Tree Profiling", function () {
       expect(checkFrontierGasUsedWithoutBaseCost).to.be.equal(1850270);
 
       // Gas used to check the frontier and insert records but without "base" cost
-      let updateRecordsMerkleTreeWithoutBaseCost =
-        totalGasUsed - doNothingGasUsed;
+      let updateRecordsMerkleTreeWithoutBaseCost = totalGasUsed - doNothingGasUsed;
       expect(updateRecordsMerkleTreeWithoutBaseCost).to.be.equal(4389285);
 
       // Gas used to insert the records

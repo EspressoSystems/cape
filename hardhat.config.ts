@@ -17,25 +17,22 @@ task("accounts", "Prints the list of accounts", async (_taskArgs, hre) => {
 
 // Use the compiler downloaded with nix if the version matches
 // Based on: https://github.com/fvictorio/hardhat-examples/tree/master/custom-solc
-subtask(
-  TASK_COMPILE_SOLIDITY_GET_SOLC_BUILD,
-  async (args: any, _hre, runSuper) => {
-    if (args.solcVersion === process.env.SOLC_VERSION) {
-      const compilerPath = process.env.SOLC_PATH;
+subtask(TASK_COMPILE_SOLIDITY_GET_SOLC_BUILD, async (args: any, _hre, runSuper) => {
+  if (args.solcVersion === process.env.SOLC_VERSION) {
+    const compilerPath = process.env.SOLC_PATH;
 
-      return {
-        compilerPath,
-        isSolcJs: false, // native solc
-        version: args.solcVersion,
-        // for extra information in the build-info files, otherwise not important
-        longVersion: `${args.solcVersion}-dummy-long-version`,
-      };
-    }
-
-    console.warn("Warning: Using compiler downloaded by hardhat");
-    return runSuper(); // Fall back to running the default subtask
+    return {
+      compilerPath,
+      isSolcJs: false, // native solc
+      version: args.solcVersion,
+      // for extra information in the build-info files, otherwise not important
+      longVersion: `${args.solcVersion}-dummy-long-version`,
+    };
   }
-);
+
+  console.warn("Warning: Using compiler downloaded by hardhat");
+  return runSuper(); // Fall back to running the default subtask
+});
 
 const config: HardhatUserConfig = {
   defaultNetwork: "localhost",
@@ -76,8 +73,7 @@ const config: HardhatUserConfig = {
       // url: 'https://kovan3.arbitrum.io/rpc',
       gas: 999999999999999,
       accounts: {
-        mnemonic:
-          "jar deny prosper gasp flush glass core corn alarm treat leg smart",
+        mnemonic: "jar deny prosper gasp flush glass core corn alarm treat leg smart",
         path: "m/44'/60'/0'/0",
         initialIndex: 0,
         count: 10,

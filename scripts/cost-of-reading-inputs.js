@@ -1,28 +1,16 @@
 const { ethers } = require("hardhat");
 const common = require("../lib/common");
 
-async function print_report(
-  owner,
-  title,
-  fun_to_eval,
-  fun_names,
-  chunk,
-  merkle_tree_update
-) {
+async function print_report(owner, title, fun_to_eval, fun_names, chunk, merkle_tree_update) {
   console.log("**** " + title + "****");
   for (let i = 0; i < fun_to_eval.length; i++) {
     let res;
     try {
-      res = await common.compute_gas_and_price(owner, fun_to_eval[i], [
-        chunk,
-        merkle_tree_update,
-      ]);
+      res = await common.compute_gas_and_price(owner, fun_to_eval[i], [chunk, merkle_tree_update]);
       let gas = res[0];
 
       let price = res[1].getValue();
-      console.log(
-        fun_names[i] + ":  " + gas + " gas  ------ " + price + " USD "
-      );
+      console.log(fun_names[i] + ":  " + gas + " gas  ------ " + price + " USD ");
     } catch (error) {
       console.log(error);
     }
@@ -51,14 +39,7 @@ async function main() {
   for (let i = 1; i < N_APPT_TX_MAX; i++) {
     const chunk = common.create_chunk(i);
 
-    await print_report(
-      owner,
-      "Empty inputs",
-      fun_to_eval,
-      fun_names,
-      chunk,
-      false
-    );
+    await print_report(owner, "Empty inputs", fun_to_eval, fun_names, chunk, false);
   }
 }
 

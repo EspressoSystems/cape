@@ -1,13 +1,7 @@
 use anyhow::Result;
-use cap_rust_sandbox::ethereum::*;
+use cap_rust_sandbox::{bindings::Greeter, ethereum::*};
 use ethers::{core::k256::ecdsa::SigningKey, prelude::*};
 use std::path::Path;
-
-abigen!(
-    Greeter,
-    "artifacts/contracts/Greeter.sol/Greeter/abi.json",
-    event_derives(serde::Deserialize, serde::Serialize)
-);
 
 async fn deploy_contract() -> Result<Greeter<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>>
 {

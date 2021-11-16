@@ -1,7 +1,6 @@
 mod rescue;
 
-use ethers::prelude::abigen;
-
+use crate::bindings::TestRecordsMerkleTree;
 use crate::ethereum;
 use ark_ed_on_bn254::Fq as Fr254;
 use ethers::prelude::*;
@@ -12,11 +11,6 @@ use jf_rescue::Permutation;
 use jf_rescue::RescueParameter;
 use std::convert::TryFrom;
 use std::path::Path;
-abigen!(
-    TestRecordsMerkleTree,
-    "artifacts/contracts/TestRecordsMerkleTree.sol/TestRecordsMerkleTree/abi.json",
-    event_derives(serde::Deserialize, serde::Serialize)
-);
 
 // TODO make this function public in Jellyfish?
 /// Hash function used to compute an internal node value

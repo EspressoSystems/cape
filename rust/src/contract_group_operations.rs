@@ -1,12 +1,9 @@
-use ethers::prelude::{abigen, U256};
+use ethers::prelude::U256;
 
-use crate::{G1Ark, G1Ethers, G2Ark, G2Ethers};
-
-abigen!(
-    TestBN254,
-    "artifacts/contracts/TestBN254.sol/TestBN254/abi.json",
-    event_derives(serde::Deserialize, serde::Serialize)
-);
+use crate::{
+    bindings::{G1Point, G2Point},
+    G1Ark, G1Ethers, G2Ark, G2Ethers,
+};
 
 impl From<G1Ark> for G1Point {
     fn from(point: G1Ark) -> Self {
@@ -55,6 +52,7 @@ mod tests {
     use super::*;
 
     use crate::{
+        bindings::TestBN254,
         ethereum::{deploy, get_funded_deployer},
         G1Affine, G1Ark, G1Projective, G2Affine, G2Ark, G2Projective, Zero,
     };

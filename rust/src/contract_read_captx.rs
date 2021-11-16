@@ -1,18 +1,8 @@
 // Note: commented out because compilation files with nested solidity struct
 // See: https://github.com/gakonst/ethers-rs/issues/538
 //
-// use ethers::prelude::abigen;
-
-// // Create rust structs for
-// //   contract: ReadCAPTx
-// //   contract structs: TransferNote, AuditMemo...
-// //   contract events: (not used here)
-// abigen!(
-//     ReadCAPTx,
-//     "./artifacts/contracts/ReadCAPTx.sol/ReadCAPTx/abi.json",
-//     event_derives(serde::Deserialize, serde::Serialize)
-// );
-
+// // TODO: fix imports
+//
 // #[cfg(test)]
 // mod tests {
 //     use std::path::Path;

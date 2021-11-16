@@ -1,3 +1,4 @@
+pub mod bindings;
 pub mod cap_jf;
 mod contract_group_operations;
 mod contract_read_captx;

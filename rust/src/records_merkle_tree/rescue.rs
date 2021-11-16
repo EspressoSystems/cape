@@ -1,14 +1,7 @@
-use ethers::prelude::abigen;
-
-abigen!(
-    RecordsMerkleTree,
-    "artifacts/contracts/TestRecordsMerkleTree.sol/TestRecordsMerkleTree/abi.json",
-    event_derives(serde::Deserialize, serde::Serialize)
-);
-
 #[cfg(test)]
 mod tests {
-
+    use crate::bindings::RecordsMerkleTree;
+    use crate::ethereum;
     use crate::helpers::{convert_fr254_to_u256, convert_u256_to_bytes_le};
     use ark_ed_on_bn254::Fq as Fr254;
     use ark_ff::{BigInteger, PrimeField, UniformRand, Zero};

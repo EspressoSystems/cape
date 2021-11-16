@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { Greeter } from "../typechain";
+import { Greeter } from "@typechain-types";
 
 describe("Greeter (typescript)", function () {
   it("Should return the new greeting once it's changed", async function () {

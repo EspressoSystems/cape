@@ -13,10 +13,9 @@
   "license": "ISC",
   "author": "Translucence Research Institute",
   "main": "hardhat.config.js",
-  "directories": {
-    "test": "test"
-  },
   "scripts": {
+    "compile": "hardhat compile",
+    "lint": "treefmt",
     "test": "hardhat test"
   },
   "prettier": {

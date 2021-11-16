@@ -3,7 +3,7 @@ import "@nomiclabs/hardhat-waffle";
 import "@typechain/hardhat";
 import "hardhat-gas-reporter";
 import { TASK_COMPILE_SOLIDITY_GET_SOLC_BUILD } from "hardhat/builtin-tasks/task-names";
-import { subtask, task } from "hardhat/config";
+import { HardhatUserConfig, subtask, task } from "hardhat/config";
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -19,7 +19,7 @@ task("accounts", "Prints the list of accounts", async (_taskArgs, hre) => {
 // Based on: https://github.com/fvictorio/hardhat-examples/tree/master/custom-solc
 subtask(
   TASK_COMPILE_SOLIDITY_GET_SOLC_BUILD,
-  async (args: any, hre, runSuper) => {
+  async (args: any, _hre, runSuper) => {
     if (args.solcVersion === process.env.SOLC_VERSION) {
       const compilerPath = process.env.SOLC_PATH;
 
@@ -37,13 +37,7 @@ subtask(
   }
 );
 
-// You need to export an object to set up your config
-// Go to https://hardhat.org/config/ to learn more
-
-/**
- * @type import('hardhat/config').HardhatUserConfig
- */
-module.exports = {
+const config: HardhatUserConfig = {
   defaultNetwork: "localhost",
   networks: {
     hardhat: {
@@ -59,26 +53,22 @@ module.exports = {
       gas: 25_000_000,
       accounts: { mnemonic: process.env.RINKEBY_MNEMONIC },
     },
-
     goerli: {
       url: process.env.GOERLI_URL,
       gasPrice: 2_000_000_000,
       gas: 25_000_000,
       accounts: { mnemonic: process.env.GOERLI_MNEMONIC },
     },
-
     localhost: {
       url: `http://localhost:${process.env.RPC_PORT || 8545}`,
       timeout: 120000, // when running against hardhat, some tests are very slow
     },
-
     arbitrum: {
       url: `https://rinkeby.arbitrum.io/rpc`,
       gasPrice: 1_000_000_000,
       gas: 25_000_000,
       accounts: { mnemonic: process.env.RINKEBY_MNEMONIC },
     },
-
     // Network config from
     // https://github.com/OffchainLabs/arbitrum/blob/b89d2d626f7e78f3c24624ba23c2fd8d2bad42ac/packages/arb-bridge-eth/hardhat.config.ts#L337-L349
     arbitrum_dev: {
@@ -96,7 +86,7 @@ module.exports = {
     },
   },
   solidity: {
-    version: process.env.SOLC_VERSION,
+    version: process.env.SOLC_VERSION ? process.env.SOLC_VERSION : "0.8.0",
     settings: {
       optimizer: {
         enabled: true,
@@ -115,8 +105,9 @@ module.exports = {
     timeout: 300000,
   },
   typechain: {
-    outDir: "typechain",
     target: "ethers-v5",
     alwaysGenerateOverloads: false, // should overloads with full signatures like deposit(uint256) be generated always, even if there are no overloads?
   },
 };
+
+export default config;

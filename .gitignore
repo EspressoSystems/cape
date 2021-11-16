@@ -30,4 +30,4 @@ __pycache__/
 /doc/contracts
 
 # typescript contract bindings
-/typechain/
+typechain-types/

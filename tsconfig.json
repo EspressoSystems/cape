@@ -1,13 +1,16 @@
 {
   "compilerOptions": {
-    "target": "es2018",
+    "target": "es2019",
     "module": "commonjs",
     "strict": true,
     "esModuleInterop": true,
-    "outDir": "dist",
     "resolveJsonModule": true,
-    "baseUrl": "."
+    "outDir": "dist",
+    "baseUrl": ".",
+    "paths": {
+      "@typechain-types": ["typechain-types/index"]
+    }
   },
-  "include": ["./scripts", "./test", "./typechain"],
+  "include": ["./scripts", "./test"],
   "files": ["./hardhat.config.ts"]
 }

@@ -1,12 +1,13 @@
-require("@nomiclabs/hardhat-waffle");
-require("hardhat-gas-reporter");
-const {
-  TASK_COMPILE_SOLIDITY_GET_SOLC_BUILD,
-} = require("hardhat/builtin-tasks/task-names");
+import "@nomiclabs/hardhat-ethers";
+import "@nomiclabs/hardhat-waffle";
+import "@typechain/hardhat";
+import "hardhat-gas-reporter";
+import { TASK_COMPILE_SOLIDITY_GET_SOLC_BUILD } from "hardhat/builtin-tasks/task-names";
+import { subtask, task } from "hardhat/config";
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
-task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
+task("accounts", "Prints the list of accounts", async (_taskArgs, hre) => {
   const accounts = await hre.ethers.getSigners();
 
   for (const account of accounts) {
@@ -16,22 +17,25 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
 
 // Use the compiler downloaded with nix if the version matches
 // Based on: https://github.com/fvictorio/hardhat-examples/tree/master/custom-solc
-subtask(TASK_COMPILE_SOLIDITY_GET_SOLC_BUILD, async (args, hre, runSuper) => {
-  if (args.solcVersion === process.env.SOLC_VERSION) {
-    const compilerPath = process.env.SOLC_PATH;
+subtask(
+  TASK_COMPILE_SOLIDITY_GET_SOLC_BUILD,
+  async (args: any, hre, runSuper) => {
+    if (args.solcVersion === process.env.SOLC_VERSION) {
+      const compilerPath = process.env.SOLC_PATH;
 
-    return {
-      compilerPath,
-      isSolcJs: false, // native solc
-      version: args.solcVersion,
-      // for extra information in the build-info files, otherwise not important
-      longVersion: `${args.solcVersion}-dummy-long-version`,
-    };
+      return {
+        compilerPath,
+        isSolcJs: false, // native solc
+        version: args.solcVersion,
+        // for extra information in the build-info files, otherwise not important
+        longVersion: `${args.solcVersion}-dummy-long-version`,
+      };
+    }
+
+    console.warn("Warning: Using compiler downloaded by hardhat");
+    return runSuper(); // Fall back to running the default subtask
   }
-
-  console.warn("Warning: Using compiler downloaded by hardhat");
-  return runSuper(); // Fall back to running the default subtask
-});
+);
 
 // You need to export an object to set up your config
 // Go to https://hardhat.org/config/ to learn more
@@ -109,5 +113,10 @@ module.exports = {
   },
   mocha: {
     timeout: 300000,
+  },
+  typechain: {
+    outDir: "typechain",
+    target: "ethers-v5",
+    alwaysGenerateOverloads: false, // should overloads with full signatures like deposit(uint256) be generated always, even if there are no overloads?
   },
 };

@@ -1,0 +1,43 @@
+# General
+.prettierignore
+.solhintignore
+.husky
+.gitignore
+.gitattributes
+.env.example
+.env
+workspace.code-workspace
+.DS_STORE
+codechecks.yml
+.*
+
+# Hardhat
+coverage
+coverage.json
+build
+typechain
+deployments
+dist
+artifacts
+
+# JS
+node_modules
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+pnpm-lock.yml
+
+# Solidity
+contracts/mock
+
+# Rust
+rust/
+doc/
+.cargo
+.Cargo*
+
+# Shell/Binary
+bin/
+
+# NIX
+nix/

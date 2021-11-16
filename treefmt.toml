@@ -14,15 +14,24 @@ includes = [
   "bin/make-genesis-block",
 ]
 
-[formatter.javascript]
+[formatter.prettier]
 command = "prettier"
 options = ["-w"]
 includes = [
   "**/*.js",
   "**/*.ts",
+  "**/*.sol",
+  "**/*.md",
+  "**/*.mdx",
+  "**/*.yaml",
+  "**/*.json",
 ]
 
-[formatter.solidity]
-command = "prettier"
-options = ["-w"]
-includes = ["**/*.sol"]
+[formatter.contract]
+command = "solhint"
+options = ["--fix"]
+includes = ["contracts/**/*.sol"]
+
+[formatter.package_json]
+command = "sort-package-json"
+includes = ["**/package.json"]

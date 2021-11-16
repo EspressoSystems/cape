@@ -1,4 +1,38 @@
 {
+  "name": "cap-on-ethereum",
+  "version": "1.0.0",
+  "description": "### Obtaining the source code Check out the source with submodules by running",
+  "homepage": "https://gitlab.com/translucence/cap-on-ethereum#readme",
+  "bugs": {
+    "url": "https://gitlab.com/translucence/cap-on-ethereum/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@gitlab.com/translucence/cap-on-ethereum.git"
+  },
+  "license": "ISC",
+  "author": "Translucence Research Institute",
+  "main": "hardhat.config.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "hardhat test"
+  },
+  "prettier": {
+    "plugins": [
+      "node_modules/prettier-plugin-solidity"
+    ]
+  },
+  "dependencies": {
+    "@noble/bls12-381": "^1.0.1",
+    "@openzeppelin/contracts": "^4.3.3",
+    "@summa-tx/memview-sol": "^2.0.0",
+    "async": "^3.2.2",
+    "async-child-process": "^1.1.1",
+    "js-big-decimal": "^1.3.4",
+    "random-seed": "^0.3.0"
+  },
   "devDependencies": {
     "@codechecks/client": "^0.1.12",
     "@ethersproject/abi": "^5.5.0",
@@ -23,42 +57,9 @@
     "solc-0.8": "npm:solc@^0.8.10",
     "solhint": "^3.3.6",
     "solidity-docgen": "^0.5.16",
+    "sort-package-json": "^1.53.1",
     "ts-node": "^10.4.0",
     "typechain": "^6.0.2",
     "typescript": "^4.4.4"
-  },
-  "dependencies": {
-    "@noble/bls12-381": "^1.0.1",
-    "@openzeppelin/contracts": "^4.3.3",
-    "@summa-tx/memview-sol": "^2.0.0",
-    "async": "^3.2.2",
-    "async-child-process": "^1.1.1",
-    "js-big-decimal": "^1.3.4",
-    "random-seed": "^0.3.0"
-  },
-  "name": "cap-on-ethereum",
-  "description": "### Obtaining the source code Check out the source with submodules by running",
-  "version": "1.0.0",
-  "main": "hardhat.config.js",
-  "directories": {
-    "test": "test"
-  },
-  "scripts": {
-    "test": "hardhat test"
-  },
-  "prettier": {
-    "plugins": [
-      "node_modules/prettier-plugin-solidity"
-    ]
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+ssh://git@gitlab.com/translucence/cap-on-ethereum.git"
-  },
-  "author": "Translucence Research Institute",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://gitlab.com/translucence/cap-on-ethereum/issues"
-  },
-  "homepage": "https://gitlab.com/translucence/cap-on-ethereum#readme"
+  }
 }

@@ -1,38 +1,40 @@
 # CAP on Ethereum
+
 <!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
+
 **Table of Contents**
 
 - [CAP on Ethereum](#cap-on-ethereum)
-    - [Obtaining the source code](#obtaining-the-source-code)
-    - [Dependencies](#dependencies)
-    - [1. Install nix](#1-install-nix)
-    - [2. Activate the nix environment](#2-activate-the-nix-environment)
-    - [3. Verify installation](#3-verify-installation)
-    - [(Optional, but recommended) direnv](#optional-but-recommended-direnv)
+  - [Obtaining the source code](#obtaining-the-source-code)
+  - [Dependencies](#dependencies)
+  - [1. Install nix](#1-install-nix)
+  - [2. Activate the nix environment](#2-activate-the-nix-environment)
+  - [3. Verify installation](#3-verify-installation)
+  - [(Optional, but recommended) direnv](#optional-but-recommended-direnv)
 - [Development](#development)
-    - [Testing (Javascript)](#testing-javascript)
-    - [Testing against go-ethereum node](#testing-against-go-ethereum-node)
-    - [Testing against hardhat node](#testing-against-hardhat-node)
-        - [Separate hardhat node](#separate-hardhat-node)
-        - [Hardhat node integrated in test command](#hardhat-node-integrated-in-test-command)
-    - [Running scripts](#running-scripts)
-    - [Precompiled solidity binaries](#precompiled-solidity-binaries)
-        - [Details about solidity compiler (solc) management](#details-about-solidity-compiler-solc-management)
-    - [Ethereum contracts](#ethereum-contracts)
-    - [Rust](#rust)
-    - [Examples](#examples)
-    - [Linting](#linting)
-    - [Formatting](#formatting)
-    - [Updating dependencies](#updating-dependencies)
-    - [Alternative nix installation methods](#alternative-nix-installation-methods)
-        - [Nix on debian/ubuntu](#nix-on-debianubuntu)
-            - [Installation](#installation)
-            - [Uninstallation](#uninstallation)
-    - [Git hooks](#git-hooks)
-    - [Ethereum key management](#ethereum-key-management)
-    - [Python tools](#python-tools)
-    - [Interacting with contracts from python](#interacting-with-contracts-from-python)
-        - [eth-brownie usage](#eth-brownie-usage)
+  - [Testing (Javascript)](#testing-javascript)
+  - [Testing against go-ethereum node](#testing-against-go-ethereum-node)
+  - [Testing against hardhat node](#testing-against-hardhat-node)
+    - [Separate hardhat node](#separate-hardhat-node)
+    - [Hardhat node integrated in test command](#hardhat-node-integrated-in-test-command)
+  - [Running scripts](#running-scripts)
+  - [Precompiled solidity binaries](#precompiled-solidity-binaries)
+    - [Details about solidity compiler (solc) management](#details-about-solidity-compiler-solc-management)
+  - [Ethereum contracts](#ethereum-contracts)
+  - [Rust](#rust)
+  - [Examples](#examples)
+  - [Linting](#linting)
+  - [Formatting](#formatting)
+  - [Updating dependencies](#updating-dependencies)
+  - [Alternative nix installation methods](#alternative-nix-installation-methods)
+    - [Nix on debian/ubuntu](#nix-on-debianubuntu)
+      - [Installation](#installation)
+      - [Uninstallation](#uninstallation)
+  - [Git hooks](#git-hooks)
+  - [Ethereum key management](#ethereum-key-management)
+  - [Python tools](#python-tools)
+  - [Interacting with contracts from python](#interacting-with-contracts-from-python)
+    - [eth-brownie usage](#eth-brownie-usage)
 - [Benchmarks](#benchmarks)
 - [Local network](#local-network)
 - [Rinkeby](#rinkeby)
@@ -43,7 +45,7 @@
 - [Gas Reporter](#gas-reporter)
 - [CI](#ci)
 - [Documentation](#documentation)
-    - [Ethereum Asset (Un)Wrapping Workflow](#ethereum-asset-unwrapping-workflow)
+  - [Ethereum Asset (Un)Wrapping Workflow](#ethereum-asset-unwrapping-workflow)
 
 <!-- markdown-toc end -->
 
@@ -52,6 +54,7 @@
     git clone git@gitlab.com:translucence/cap-on-ethereum/cape
 
 ## Dependencies
+
 This project has a lot of dependencies the only tested installation method is
 via the [nix](https://nixos.org) package manager.
 
@@ -64,6 +67,7 @@ You also need access to the following git repos
 Ping Mat for access.
 
 ## 1. Install nix
+
 Installation instructions can be found [here](https://nixos.org/download.html).
 If in a rush, running the following command and following the on-screen
 instructions should work in most cases
@@ -75,6 +79,7 @@ Some linux distros (ubuntu, arch, ...) have packaged `nix`. See the section
 for more information.
 
 ## 2. Activate the nix environment
+
 To activate a shell with the development environment run
 
     nix-shell
@@ -88,6 +93,7 @@ Once the `nix-shell` is activated the dependencies as well as the scripts in the
 `./bin` directory will be in the `PATH`.
 
 ## 3. Verify installation
+
 Try running some tests to verify the installation
 
     cape-test-geth
@@ -96,6 +102,7 @@ If this fails with errors that don't point to obvious problems please open an
 issue on gitlab.
 
 ## (Optional, but recommended) direnv
+
 To avoid manually activating the nix shell each time the
 [direnv](https://direnv.net/) shell extension can be used to activate the
 environment when entering the local directory of this repo. Note that direnv
@@ -318,8 +325,11 @@ passing a github owner and revision as arguments. The default is:
 The rust overlay can be updated by running `nix/update-rust-overlay`.
 
 ## Alternative nix installation methods
+
 ### Nix on debian/ubuntu
+
 #### Installation
+
 To install and setup `nix` on debian/ubuntu using [their nix
 package](https://packages.debian.org/sid/nix-setup-systemd). The steps below
 were tested on ubuntu 20.10.
@@ -340,6 +350,7 @@ To test the installation, run
     Hello, world!
 
 #### Uninstallation
+
 To remove `nix` (careful with the `rm` commands)
 
     sudo apt purge --autoremove nix-bin nix-setup-systemd

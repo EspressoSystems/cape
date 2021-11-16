@@ -26,6 +26,8 @@
     - [Updating dependencies](#updating-dependencies)
     - [Alternative nix installation methods](#alternative-nix-installation-methods)
         - [Nix on debian/ubuntu](#nix-on-debianubuntu)
+            - [Installation](#installation)
+            - [Uninstallation](#uninstallation)
     - [Git hooks](#git-hooks)
     - [Ethereum key management](#ethereum-key-management)
     - [Python tools](#python-tools)
@@ -314,9 +316,10 @@ The rust overlay can be updated by running `nix/update-rust-overlay`.
 
 ## Alternative nix installation methods
 ### Nix on debian/ubuntu
+#### Installation
 To install and setup `nix` on debian/ubuntu using [their nix
 package](https://packages.debian.org/sid/nix-setup-systemd). The steps below
-were tested on ubuntu 20.04.
+were tested on ubuntu 20.10.
 
     sudo apt install nix
     sudo usermod -a -G nix-users $USER # logout and login
@@ -326,6 +329,23 @@ were tested on ubuntu 20.04.
 
 The last line needs to be run once per session and is usually appended to
 `.bashrc` or similar.
+
+To test the installation, run
+
+    $ nix-shell -p hello --run hello
+    ...
+    Hello, world!
+
+#### Uninstallation
+To remove `nix` (careful with the `rm` commands)
+
+    sudo apt purge --autoremove nix-bin nix-setup-systemd
+    rm -r ~/.nix-*
+    sudo rm -r /nix
+    # reboot machine (this step my not always be necessary)
+
+- Remove any lines added to `.bashrc` (or other files) during installation.
+- If desired remove group `nix-users` and users `nixbld*` added by nix.
 
 ## Git hooks
 

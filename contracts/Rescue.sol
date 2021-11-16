@@ -759,4 +759,17 @@ contract Rescue {
         (o, a, b, c) = perm(a % PRIME, b % PRIME, c % PRIME, 0);
         o %= PRIME;
     }
+
+    function doNothing() public {}
+
+    event Gas(uint256 gas);
+
+    function myGas() public returns (uint256) {
+        uint256 g;
+        assembly {
+            g := gas()
+        }
+        emit Gas(g);
+        return g;
+    }
 }

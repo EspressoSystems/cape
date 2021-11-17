@@ -11,9 +11,15 @@ in
 nix-pre-commit-hooks.run {
   src = ./.;
   hooks = {
-    lint-fix = {
+    lint-solidity = {
       enable = true;
-      entry = "lint-fix";
+      files = "^contracts/";
+      entry = "lint-solidity";
+      types = [ "solidity" ];
+    };
+    check-format = {
+      enable = true;
+      entry = "treefmt --fail-on-change";
     };
   };
 }

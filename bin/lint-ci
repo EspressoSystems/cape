@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -euxo pipefail
 
-solhint -w 0 'contracts/**/*.sol'
-treefmt --fail-on-change
+# We need the rust bindings to run rustfmt!
+build-abi
+cargo build
+
+pre-commit run --all-files

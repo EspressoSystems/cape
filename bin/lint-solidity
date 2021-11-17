@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# This file is used by pre-commit, it should pass on a list of file paths
+exec solhint -w 0 "$@"

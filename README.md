@@ -295,11 +295,9 @@ Load the file:
 
 ## Linting & Formatting
 
-Lint the solidity & Rust & Python & JS/TS code using `prettier` and `solhint` in one-shot
+Lint the code using all formatters and linters in one shot
 
     lint-fix
-
-This runs also as part of the pre-commit hook.
 
 ## Updating dependencies
 
@@ -519,6 +517,12 @@ To locally spin up a docker container like the one used in the CI
 
 The code in the current directory will be at `/code`. You may have to delete the
 `./node_modules` directory with root permissions afterwards.
+
+To run the CI locally install [gitlab-runner](https://docs.gitlab.com/runner/install/) and run
+
+    gitlab-runner exec docker test
+
+Where the last argument is the name of the job to run.
 
 # Documentation
 

@@ -759,6 +759,4 @@ contract Rescue {
         (o, a, b, c) = perm(a % PRIME, b % PRIME, c % PRIME, 0);
         o %= PRIME;
     }
-
-    function doNothing() public {}
 }

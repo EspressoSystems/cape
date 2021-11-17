@@ -19,4 +19,6 @@ contract TestRecordsMerkleTree is RecordsMerkleTree {
         rootValue = _root;
         numLeaves = _numLeaves;
     }
+
+    function doNothing() public {}
 }

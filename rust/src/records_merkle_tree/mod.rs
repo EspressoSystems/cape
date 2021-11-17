@@ -18,6 +18,7 @@ use std::path::Path;
 /// * `b` - second input value (e.g.: middle child value)
 /// * `c` - third input value (e.g.: right child value)
 /// * `returns` - rescue_sponge_no_padding(a,b,c)
+#[allow(dead_code)]
 pub(crate) fn hash<F: RescueParameter>(
     a: &NodeValue<F>,
     b: &NodeValue<F>,
@@ -30,6 +31,7 @@ pub(crate) fn hash<F: RescueParameter>(
     NodeValue::from_scalar(digest)
 }
 
+#[allow(dead_code)]
 pub(crate) fn compute_hash_leaf(leaf_value: Fr254, uid: u64) -> Fr254 {
     hash(
         &NodeValue::empty_node_value(),
@@ -68,6 +70,7 @@ pub(crate) async fn get_contract_records_merkle_tree(
 /// * `returns` - flattened frontier. If the frontier is empty, returns an empty vector.
 ///
 // TODO the uid can be deduced from the frontier (path)
+#[allow(dead_code)]
 fn flatten_frontier(frontier: &MerkleFrontier<Fr254>, uid: u64) -> Vec<Fr254> {
     match frontier {
         MerkleFrontier::Proof(lap) => {
@@ -91,6 +94,7 @@ fn flatten_frontier(frontier: &MerkleFrontier<Fr254>, uid: u64) -> Vec<Fr254> {
 /// The smart contract somehow follows some similar logic in order to create the tree structure from the flattened frontier.
 /// * `flattened_frontier` - flat representation of the frontier
 /// * `returns` - structured representation of the frontier
+#[allow(dead_code)]
 fn parse_flattened_frontier(flattened_frontier: &[Fr254], uid: u64) -> MerkleFrontier<Fr254> {
     if flattened_frontier.is_empty() {
         MerkleFrontier::Empty { height: 0 }

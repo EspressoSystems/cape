@@ -1,7 +1,7 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
-describe("Records Merkle Tree Profiling", function () {
+describe("Records Merkle Tree Benchmarks", function () {
   describe("The Records Merkle root is updated with the frontier.", async function () {
     let owner, rmtContract;
 
@@ -16,20 +16,6 @@ describe("Records Merkle Tree Profiling", function () {
       rmtContract.provider.pollingInterval = 20;
 
       await rmtContract.deployed();
-    });
-
-    it("shows how much gas is spent on Rescue", async function () {
-      const doNothingTx = await rmtContract.doNothing();
-      const doNothingtxReceipt = await doNothingTx.wait();
-      let doNothingGasUsed = doNothingtxReceipt.gasUsed;
-
-      const rescueTx = await rmtContract.hash(10, 15, 20);
-      const rescueTxReceipt = await rescueTx.wait();
-      let rescueGasUsed = rescueTxReceipt.gasUsed;
-
-      let rescueOnly = rescueGasUsed - doNothingGasUsed;
-
-      expect(rescueOnly).to.be.equal(87163);
     });
 
     it("shows how much gas is spent by updateRecordsMerkleTree", async function () {

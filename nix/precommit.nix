@@ -11,13 +11,9 @@ in
 nix-pre-commit-hooks.run {
   src = ./.;
   hooks = {
-    treefmt = {
+    lint-fix = {
       enable = true;
-      entry = "treefmt";
-    };
-    lint-solidity = {
-      enable = true;
-      entry = "lint-solidity";
+      entry = "lint-fix";
     };
   };
 }

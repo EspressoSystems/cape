@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+solhint -w 0 'contracts/**/*.sol'
+treefmt --fail-on-change

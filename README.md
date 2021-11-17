@@ -23,8 +23,7 @@
   - [Ethereum contracts](#ethereum-contracts)
   - [Rust](#rust)
   - [Examples](#examples)
-  - [Linting](#linting)
-  - [Formatting](#formatting)
+  - [Linting & Formatting](#linting--formatting)
   - [Updating dependencies](#updating-dependencies)
   - [Alternative nix installation methods](#alternative-nix-installation-methods)
     - [Nix on debian/ubuntu](#nix-on-debianubuntu)
@@ -294,26 +293,13 @@ Load the file:
 
     cargo run -p cap-rust-sandbox --example read_note
 
-## Linting
+## Linting & Formatting
 
-Lint the solidity code using `solhint` by running
+Lint the solidity & Rust & Python & JS/TS code using `prettier` and `solhint` in one-shot
 
-    lint-solidity
+    lint-fix
 
 This runs also as part of the pre-commit hook.
-
-## Formatting
-
-Format all the source files with their respective formatters:
-
-    treefmt
-
-Check if all files are correctly formatted:
-
-    treefmt --fail-on-change
-
-For big reformatting commits, add the revision to the `.git-blame-ignore-revs`
-file.
 
 ## Updating dependencies
 

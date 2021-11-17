@@ -13,11 +13,6 @@
   "license": "ISC",
   "author": "Translucence Research Institute",
   "main": "hardhat.config.js",
-  "scripts": {
-    "compile": "hardhat compile",
-    "lint": "treefmt --clear-cache",
-    "test": "hardhat clean && hardhat test"
-  },
   "dependencies": {
     "@noble/bls12-381": "^1.0.1",
     "@openzeppelin/contracts": "^4.3.3",

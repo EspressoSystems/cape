@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+solhint --fix 'contracts/**/*.sol'
+treefmt

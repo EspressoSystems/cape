@@ -1,0 +1,59 @@
+@startuml
+autonumber
+participant "CapeContract" as CapeContract
+participant "USDC Contract" as USDC
+actor       "User A" as A
+actor       "User B" as B
+actor       "Relayer" as R
+
+group Register Asset Type
+A -> A: asset_def=usdc_cape_asset_def()
+A -> CapeContract: register_cape_asset(usdc_address(), asset_def)
+
+end group
+
+group Wrapping: USDC -> AAP record
+
+A -> A: asset_def = usdc_cape_asset_def() \n deposit_amount = 1000
+A -> USDC: approve(cape_contract.address(), deposit_amount)
+A -> A: ro = RecordOpening::new( \n   &mut rng, \n   deposit_amount.as_u64(), \n   asset_def,\n   cape_user_keypair.pub_key(),\n   FreezeFlag::Unfrozen \n)
+A -> CapeContract: deposit_erc20(ro, usdc_address(), eth_user_address)
+end
+
+group Transfers within AAP
+
+A -> A: (tx,r_out) := JellyFish.generate_transfer_transaction(usk_a,upk_b,at,null,r_out)
+A -> R: tx
+A -> B: r_out
+R -> R: Compute block b
+note left
+Block <i>b</i> is a list of transactions that contains <i>tx</i>.
+end note
+
+note right
+The frontier consists of the path from the root to the latest inserted leaf.
+It is enough to let the CAPE contract update the Merkle root value.
+end note
+
+R -> R: frontier = mt.frontier()
+
+R -> CapeContract: submit_cape_block(b, frontier)
+end group
+
+group Unwrapping: AAP record -> USDC token
+ B -> B:   asset_def = usdc_cape_asset_def()
+ B -> B: burn_amount = 1000
+ B -> B: burned_ro = RecordOpening::new( \n    &mut rng, \n    burn_amount,\n    asset_def, \n    cape_user_keypair.pub_key(),\n    FreezeFlag::Unfrozen)
+ B -> B: burn_tx = generate_burn_transaction(&burned_ro)
+ B -> R: burn_tx
+ R -> R: generate new block *b* containing tx
+ R -> R: frontier = mt.frontier()
+ R -> CapeContract: submit_cape_block(b, frontier)
+ B -> CapeContract: withdraw_erc20( \n usdc_address(),  \n eth_user_address,  \n burn_amount,  \n block_num,  \n txn_index,  \n burned_ro)
+ note right
+ * <i>eth_user_address</i> is the ethereum address of user B.
+ * <i>block_num</i> is the block number the burn transaction was inserted in.
+ * <i>txn_index</i> is the location of the burn transaction inside the block.
+ end note
+end
+@enduml

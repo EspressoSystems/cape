@@ -26,7 +26,7 @@ let
     openssl
 
     curl
-
+    plantuml
     stableToolchain
 
     cargo-edit

@@ -760,8 +760,6 @@ contract Rescue {
         o %= PRIME;
     }
 
-    function doNothing() public {}
-
     event Gas(uint256 gas);
 
     function myGas() public returns (uint256) {

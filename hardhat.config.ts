@@ -62,8 +62,8 @@ const config: HardhatUserConfig = {
     },
     arbitrum: {
       url: `https://rinkeby.arbitrum.io/rpc`,
-      gasPrice: 1_000_000_000,
-      gas: 25_000_000,
+      // gasPrice: 1_000_000_000,
+      // gas: 25_000_000,
       accounts: { mnemonic: process.env.RINKEBY_MNEMONIC },
     },
     // Network config from

@@ -174,7 +174,15 @@ contract RescueNonOptimized {
         uint256 base,
         uint256 e,
         uint256 m
-    ) public view returns (uint256 o) {
+    ) public returns (uint256 o) {
+        return expModMulMod(base, e, m);
+    }
+
+    function expModPrecompile(
+        uint256 base,
+        uint256 e,
+        uint256 m
+    ) public returns (uint256 o) {
         assembly {
             // define pointer
             let p := mload(0x40)
@@ -190,6 +198,21 @@ contract RescueNonOptimized {
             }
             // data
             o := mload(p)
+        }
+    }
+
+    function expModMulMod(
+        uint256 base,
+        uint256 e,
+        uint256 m
+    ) public returns (uint256 o) {
+        o = 1;
+        while (e > 0) {
+            if ((e & 1) == 1) {
+                o = mulmod(o, base, m);
+            }
+            base = mulmod(base, base, m);
+            e >>= 1;
         }
     }
 
@@ -302,5 +325,16 @@ contract RescueNonOptimized {
         state = perm(input);
 
         return state[0];
+    }
+
+    event Gas(uint256 gas);
+
+    function myGas() public returns (uint256) {
+        uint256 g;
+        assembly {
+            g := gas()
+        }
+        emit Gas(g);
+        return g;
     }
 }

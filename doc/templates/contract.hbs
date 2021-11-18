@@ -1,0 +1,64 @@
+## Contract `{{name}}`
+
+### User Documentation
+{{{natspec.userdoc}}}
+
+### Developer Documentation
+{{{natspec.devdoc}}}
+
+{{#each ownModifiers}}
+### `{{name}}({{args}})`
+
+#### User Documentation Again
+{{{natspec.userdoc}}}
+
+#### Developer Documentation Again
+{{{natspec.devdoc}}}
+
+{{/each}}
+
+{{#each ownFunctions}}
+### Function `{{name}}({{args}}){{#if outputs}} → {{outputs}}{{/if}}` ({{visibility}})
+
+#### User Documentation
+{{{natspec.userdoc}}}
+
+#### Developer Documentation
+{{{natspec.devdoc}}}
+
+{{/each}}
+
+{{#each ownEvents}}
+### Event `{{name}}({{args}})`
+
+#### User Documentation
+{{{natspec.userdoc}}}
+
+#### Developer Documentation
+{{{natspec.devdoc}}}
+
+{{/each}}
+
+{{#each ownStructs}}
+### Struct `{{name}}`
+
+#### Members
+{{#each members}}
+
+{{type}} {{name}}
+
+{{/each}}
+
+{{/each}}
+
+{{#each ownEnums}}
+### Enum `{{name}}`
+
+#### Members
+{{#each members}}
+
+{{name}}
+
+{{/each}}
+
+{{/each}}

@@ -13,7 +13,7 @@ contract DummyCAPE is NullifiersStore, RecordsMerkleTree {
 
     /* solhint-enable */
 
-    constructor() public RecordsMerkleTree(RECORDS_TREE_HEIGHT) {}
+    constructor() RecordsMerkleTree(RECORDS_TREE_HEIGHT) {}
 
     function verifyEmpty(
         bytes memory chunk, // solhint-disable-line no-unused-vars

@@ -9,6 +9,7 @@ use jf_primitives::merkle_tree::{
 };
 use jf_rescue::Permutation;
 use jf_rescue::RescueParameter;
+
 use std::convert::TryFrom;
 use std::path::Path;
 
@@ -69,7 +70,6 @@ pub(crate) async fn get_contract_records_merkle_tree(
 /// * `uid` - uid of the leaf, needed to compute the commitment
 /// * `returns` - flattened frontier. If the frontier is empty, returns an empty vector.
 ///
-// TODO the uid can be deduced from the frontier (path)
 #[allow(dead_code)]
 fn flatten_frontier(frontier: &MerkleFrontier<Fr254>, uid: u64) -> Vec<Fr254> {
     match frontier {
@@ -138,9 +138,20 @@ mod tests {
     use ark_ff::BigInteger;
     use ark_ff::PrimeField;
     use ark_std::UniformRand;
-
+    use ethers::abi::AbiEncode;
+    use ethers::utils::keccak256;
     use itertools::Itertools;
     use jf_primitives::merkle_tree::{MerkleTree, NodeValue};
+    use std::convert::TryInto;
+
+    fn compute_hash_frontier(flattened_frontier: &Vec<U256>, uid: u64) -> Vec<u8> {
+        let value_u256 = U256::from(uid);
+
+        let mut input = vec![value_u256];
+        input.extend(flattened_frontier);
+
+        return keccak256(input.encode()).to_vec();
+    }
 
     async fn compare_roots(
         mt: &MerkleTree<Fr254>,
@@ -251,95 +262,141 @@ mod tests {
 
         let mut mt = MerkleTree::<Fr254>::new(height).unwrap();
 
-        // Insert several elements
-        let mut rng = ark_std::test_rng();
+        if n_leaves_before > 0 {
+            // Insert several elements
+            let mut rng = ark_std::test_rng();
 
-        for _ in 0..n_leaves_before {
-            let elem = Fr254::rand(&mut rng);
-            mt.push(elem.clone());
+            for _ in 0..n_leaves_before {
+                let elem = Fr254::rand(&mut rng);
+                mt.push(elem.clone());
+            }
+
+            let root_fr254 = mt.commitment().root_value.to_scalar();
+            let num_leaves = mt.commitment().num_leaves;
+            let root_u256 = convert_fr254_to_u256(root_fr254);
+
+            contract
+                .test_set_root_and_num_leaves(root_u256, num_leaves)
+                .legacy()
+                .send()
+                .await
+                .unwrap()
+                .await
+                .unwrap();
+
+            let frontier_fr254 = mt.frontier();
+
+            let uid = num_leaves - 1;
+            println!("uid: {}", uid);
+            let frontier_u256 = flatten_frontier(&frontier_fr254, uid)
+                .iter()
+                .map(|v| convert_fr254_to_u256(*v))
+                .collect_vec();
+
+            // Set the hash of the frontier inside the contract
+            let frontier_hash = compute_hash_frontier(&frontier_u256, uid);
+            let _res = contract
+                .clone()
+                .test_set_frontier_hash_value(frontier_hash[0..32].try_into().unwrap())
+                .legacy()
+                .send()
+                .await
+                .unwrap()
+                .await;
+
+            // Check the frontier resolves correctly to the root.
+            let _res = contract
+                .clone()
+                .test_update_records_merkle_tree(frontier_u256.clone(), vec![])
+                .legacy()
+                .send()
+                .await
+                .unwrap()
+                .await;
+
+            // Wrong frontier
+            let mut wrong_frontier_u256 = frontier_u256.clone();
+            wrong_frontier_u256[0] = U256::from(1777);
+            let c = contract
+                .test_update_records_merkle_tree(wrong_frontier_u256.clone(), vec![])
+                .legacy();
+            let receipt = c.send().await;
+            assert!(receipt.is_err());
+
+            // Wrong frontier hash
+            let wrong_frontier_hash = [33u8; 32];
+            let _res = contract
+                .clone()
+                .test_set_frontier_hash_value(wrong_frontier_hash)
+                .legacy()
+                .send()
+                .await
+                .unwrap()
+                .await;
+
+            let c = contract
+                .test_update_records_merkle_tree(frontier_u256.clone(), vec![])
+                .legacy();
+            let receipt = c.send().await;
+            assert!(receipt.is_err());
+
+            // Restore the right frontier hash
+            let _res = contract
+                .clone()
+                .test_set_frontier_hash_value(frontier_hash[0..32].try_into().unwrap())
+                .legacy()
+                .send()
+                .await
+                .unwrap()
+                .await;
+
+            compare_roots(&mt, &contract, true).await;
+
+            // Insert another element into the Jellyfish Merkle tree to check that roots are different
+            mt.push(Fr254::from(7878));
+            compare_roots(&mt, &contract, false).await;
+        } else {
+            // Edge case where the tree is initially empty: the flattened frontier must be empty
+            let empty_flattened_frontier = vec![];
+            let _res = contract
+                .clone()
+                .test_update_records_merkle_tree(empty_flattened_frontier, vec![])
+                .legacy()
+                .send()
+                .await
+                .unwrap()
+                .await;
+
+            compare_roots(&mt, &contract, true).await;
         }
-
-        let root_fr254 = mt.commitment().root_value.to_scalar();
-        let num_leaves = mt.commitment().num_leaves;
-        let root_u256 = convert_fr254_to_u256(root_fr254);
-
-        contract
-            .test_set_root_and_num_leaves(root_u256, num_leaves)
-            .legacy()
-            .send()
-            .await
-            .unwrap()
-            .await
-            .unwrap();
-
-        let frontier_fr254 = mt.frontier();
-
-        let frontier_u256 = flatten_frontier(&frontier_fr254, num_leaves - 1)
-            .iter()
-            .map(|v| convert_fr254_to_u256(*v))
-            .collect_vec();
-
-        // Check the frontier resolves correctly to the root.
-        let _res = contract
-            .clone()
-            .test_update_records_merkle_tree(frontier_u256.clone(), vec![])
-            .legacy()
-            .send()
-            .await
-            .unwrap()
-            .await;
-
-        // Negative paths
-
-        // Wrong frontier
-        let mut wrong_frontier_u256 = frontier_u256.clone();
-        wrong_frontier_u256[0] = U256::from(1777);
-        let c = contract
-            .test_update_records_merkle_tree(wrong_frontier_u256.clone(), vec![])
-            .legacy();
-        let receipt = c.send().await;
-        assert!(receipt.is_err()); // TODO add a test like this in ethereum_test?
-
-        // Wrong number of leaves
-        let wrong_number_of_leaves = 33;
-        contract
-            .test_set_root_and_num_leaves(root_u256, wrong_number_of_leaves)
-            .legacy()
-            .send()
-            .await
-            .unwrap()
-            .await
-            .unwrap();
-
-        let c = contract
-            .test_update_records_merkle_tree(frontier_u256.clone(), vec![])
-            .legacy();
-        let receipt = c.send().await;
-        assert!(receipt.is_err()); // TODO add a test like this in ethereum_test?
-
-        // Restore the right number of leaves
-        contract
-            .test_set_root_and_num_leaves(root_u256, num_leaves)
-            .legacy()
-            .send()
-            .await
-            .unwrap()
-            .await
-            .unwrap();
-
-        compare_roots(&mt, &contract, true).await;
-
-        // Insert another element into the Jellyfish Merkle tree to check that roots are differents
-        mt.push(Fr254::from(7878));
-        compare_roots(&mt, &contract, false).await;
     }
 
     #[tokio::test]
     async fn test_check_frontier() {
-        // TODO edge case: empty tree
+        check_check_frontier(0, 3).await;
         check_check_frontier(1, 3).await;
         check_check_frontier(2, 5).await;
         check_check_frontier(3, 7).await;
+    }
+
+    fn extract_flattened_frontier_from_jellyfish_mt(mt: &MerkleTree<Fr254>, uid: u64) -> Vec<U256> {
+        let frontier_fr254 = mt.frontier();
+        flatten_frontier(&frontier_fr254, uid)
+            .iter()
+            .map(|v| convert_fr254_to_u256(*v))
+            .collect_vec()
+    }
+
+    fn insert_elements_into_jellyfish_mt(mt: &mut MerkleTree<Fr254>, n_elems: u32) -> Vec<U256> {
+        let mut rng = ark_std::test_rng();
+        let mut elems_u256 = vec![];
+        for _ in 0..n_elems {
+            let elem = Fr254::rand(&mut rng);
+            let elem_u256 = convert_fr254_to_u256(elem);
+            elems_u256.push(elem_u256);
+            mt.push(elem.clone());
+        }
+        return elems_u256;
     }
 
     async fn check_update_records_merkle_tree(
@@ -360,31 +417,38 @@ mod tests {
             mt.push(elem.clone());
         }
 
-        let frontier_fr254 = mt.frontier();
-
         let root_fr254 = mt.commitment().root_value.to_scalar();
         let num_leaves = mt.commitment().num_leaves;
         let root_u256 = convert_fr254_to_u256(root_fr254);
 
-        let frontier_u256 = flatten_frontier(&frontier_fr254, num_leaves - 1)
-            .iter()
-            .map(|v| convert_fr254_to_u256(*v))
-            .collect_vec();
+        let mut frontier_u256: Vec<U256>;
+        if n_leaves_before > 0 {
+            let uid = num_leaves - 1;
 
-        println!("frontier_u256: {:?}", frontier_u256);
+            frontier_u256 = extract_flattened_frontier_from_jellyfish_mt(&mt, uid);
 
-        println!("root_u256: {}", root_u256);
-        println!("num_leaves: {}", num_leaves);
+            contract
+                .test_set_root_and_num_leaves(root_u256, num_leaves)
+                .legacy()
+                .send()
+                .await
+                .unwrap()
+                .await
+                .unwrap();
 
-        contract
-            .test_set_root_and_num_leaves(root_u256, num_leaves)
-            .legacy()
-            .send()
-            .await
-            .unwrap()
-            .await
-            .unwrap();
-
+            // Set the hash of the frontier inside the contract
+            let frontier_hash = compute_hash_frontier(&frontier_u256, uid);
+            let _res = contract
+                .clone()
+                .test_set_frontier_hash_value(frontier_hash[0..32].try_into().unwrap())
+                .legacy()
+                .send()
+                .await
+                .unwrap()
+                .await;
+        } else {
+            frontier_u256 = vec![];
+        }
         // Do not insert any element yet into the records merkle tree of the smart contract
         contract
             .test_update_records_merkle_tree(frontier_u256.clone(), vec![])
@@ -399,13 +463,7 @@ mod tests {
         compare_roots(&mt, &contract, true).await;
 
         // After insertion into the Jellyfish Merkle tree roots are different
-        let mut elems_u256 = vec![];
-        for _ in 0..n_leaves_after {
-            let elem = Fr254::rand(&mut rng);
-            let elem_u256 = convert_fr254_to_u256(elem);
-            elems_u256.push(elem_u256);
-            mt.push(elem.clone());
-        }
+        let elems_u256 = insert_elements_into_jellyfish_mt(&mut mt, n_leaves_after);
 
         if n_leaves_after > 0 {
             compare_roots(&mt, &contract, false).await;
@@ -425,22 +483,49 @@ mod tests {
 
         // Roots are the same
         compare_roots(&mt, &contract, true).await;
+
+        // Check extracting the frontier again and updating the Merkle tree
+        let num_leaves = mt.commitment().num_leaves;
+        let num_elements: u64 = 3;
+        // Do not continue if the tree is already filled
+        let total_num_elements = u64::from(num_leaves + num_elements);
+        let mt_capacity = (3_u64).checked_pow(mt.height() as u32).unwrap();
+        if total_num_elements < mt_capacity {
+            let uid = num_leaves - 1;
+            frontier_u256 = extract_flattened_frontier_from_jellyfish_mt(&mt, uid);
+
+            let elems_u256 =
+                insert_elements_into_jellyfish_mt(&mut mt, num_elements.try_into().unwrap());
+
+            contract
+                .test_update_records_merkle_tree(frontier_u256, elems_u256)
+                .legacy()
+                .send()
+                .await
+                .unwrap()
+                .await
+                .unwrap();
+
+            // Roots are the same
+            compare_roots(&mt, &contract, true).await;
+        }
     }
 
     #[tokio::test]
     async fn test_update_records_merkle_tree() {
-        for n_leaves_before in 1..9 {
-            // TODO greater values yield the EVM "Stack too deep exception"
-            let n_leaves_after_values = [0, 1, 2, 3, 4];
-            for n_leaves_after in n_leaves_after_values {
-                println!("n_leaves_before: {}", n_leaves_before);
-                println!("n_leaves_after: {}", n_leaves_after);
-                check_update_records_merkle_tree(3, n_leaves_before, n_leaves_after).await;
-            }
-        }
+        // We can insert elements in an empty tree
+        check_update_records_merkle_tree(3, 0, 4).await;
 
-        for height in [4, 10, 15] {
-            check_update_records_merkle_tree(height, 1, 3).await;
-        }
+        // We can fill up a tree of height 3 with 27 leaves
+        check_update_records_merkle_tree(3, 1, 26).await;
+
+        // We can insert elements by providing a frontier after several elements have been inserted
+        check_update_records_merkle_tree(3, 9, 1).await;
+        check_update_records_merkle_tree(3, 10, 17).await;
+        check_update_records_merkle_tree(3, 25, 2).await;
+
+        // It still works with different heights
+        check_update_records_merkle_tree(4, 6, 30).await;
+        check_update_records_merkle_tree(6, 5, 8).await;
     }
 }

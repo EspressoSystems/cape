@@ -1,5 +1,6 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
+const { hashFrontier } = require("../../lib/common-tests");
 
 describe("Records Merkle Tree Benchmarks", function () {
   describe("The Records Merkle root is updated with the frontier.", async function () {
@@ -74,11 +75,18 @@ describe("Records Merkle Tree Benchmarks", function () {
 
       await rmtContract.testSetRootAndNumLeaves(initial_root_value, initial_number_of_leaves);
 
+      let hash_frontier_value = hashFrontier(flattened_frontier, 0);
+
+      let tx = await rmtContract.testSetFrontierHashValue(
+        ethers.utils.arrayify(hash_frontier_value)
+      );
+      await tx.wait();
+
       const txEmpty = await rmtContract.testUpdateRecordsMerkleTree(flattened_frontier, []);
       const txEmptyReceipt = await txEmpty.wait();
       let emptyGasUsed = txEmptyReceipt.gasUsed;
 
-      const tx = await rmtContract.testUpdateRecordsMerkleTree(flattened_frontier, elems);
+      tx = await rmtContract.testUpdateRecordsMerkleTree(flattened_frontier, elems);
       const txReceipt = await tx.wait();
       let totalGasUsed = txReceipt.gasUsed;
 
@@ -87,22 +95,22 @@ describe("Records Merkle Tree Benchmarks", function () {
       let doNothingGasUsed = doNothingTxReceipt.gasUsed;
 
       // Total gas used to check the frontier and insert all the records
-      expect(totalGasUsed).to.be.equal(4410470);
+      expect(totalGasUsed).to.be.equal(2704282);
 
       // Gas used just to check the frontier (no records inserted)
-      expect(emptyGasUsed).to.be.equal(1871455);
+      expect(emptyGasUsed).to.be.equal(111743);
 
       // Gas used to check the frontier but without "base" cost
       let checkFrontierGasUsedWithoutBaseCost = emptyGasUsed - doNothingGasUsed;
-      expect(checkFrontierGasUsedWithoutBaseCost).to.be.equal(1850270);
+      expect(checkFrontierGasUsedWithoutBaseCost).to.be.equal(90558);
 
       // Gas used to check the frontier and insert records but without "base" cost
       let updateRecordsMerkleTreeWithoutBaseCost = totalGasUsed - doNothingGasUsed;
-      expect(updateRecordsMerkleTreeWithoutBaseCost).to.be.equal(4389285);
+      expect(updateRecordsMerkleTreeWithoutBaseCost).to.be.equal(2683097);
 
       // Gas used to insert the records
       let insertRecordsGasUsed = totalGasUsed - emptyGasUsed;
-      expect(insertRecordsGasUsed).to.be.equal(2539015);
+      expect(insertRecordsGasUsed).to.be.equal(2592539);
     });
   });
 });

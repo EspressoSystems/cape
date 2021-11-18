@@ -6,7 +6,7 @@ import "./Rescue.sol";
 import "./RecordsMerkleTree.sol";
 
 contract TestRecordsMerkleTree is RecordsMerkleTree {
-    constructor(uint8 _height) public RecordsMerkleTree(_height) {}
+    constructor(uint8 _height) RecordsMerkleTree(_height) {}
 
     function testUpdateRecordsMerkleTree(
         uint256[] memory _frontier,
@@ -18,6 +18,10 @@ contract TestRecordsMerkleTree is RecordsMerkleTree {
     function testSetRootAndNumLeaves(uint256 _root, uint64 _numLeaves) public {
         rootValue = _root;
         numLeaves = _numLeaves;
+    }
+
+    function testSetFrontierHashValue(bytes32 _frontierHashValue) public {
+        frontierHashValue = _frontierHashValue;
     }
 
     function doNothing() public {}

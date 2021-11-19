@@ -78,7 +78,7 @@ contract DummyCAPE is NullifiersStore, RecordsMerkleTree {
             uint256 a = 7878754242;
             uint256 b = 468777777777776575;
             uint256 c = 87875474574;
-            RescueNonOptimized.hash(a, b, c);
+            Rescue.hash(a, b, c);
         }
     }
 

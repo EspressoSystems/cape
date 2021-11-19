@@ -35,7 +35,7 @@ pub fn create_test_anon_xfr_2in_6out() -> TransferNote {
     .set_input_creds(cred_expiry);
 
     let (note, _recv_memos, _sig) = builder
-        .build_transfer_note(&mut prng, &prover_key, valid_until)
+        .build_transfer_note(&mut prng, &prover_key, valid_until, vec![])
         .unwrap();
 
     note

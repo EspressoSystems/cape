@@ -2,9 +2,9 @@
 pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
-import "./RescueNonOptimized.sol";
+import "./Rescue.sol";
 
-contract RecordsMerkleTree is RescueNonOptimized {
+contract RecordsMerkleTree is Rescue {
     enum Position {
         LEFT,
         MIDDLE,

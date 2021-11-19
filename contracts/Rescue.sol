@@ -106,7 +106,6 @@ contract Rescue {
     }
 
     function expAlphaInv4(
-        uint256[6] memory scratch,
         uint256 s0,
         uint256 s1,
         uint256 s2,
@@ -120,29 +119,67 @@ contract Rescue {
             uint256 o3
         )
     {
-        assembly {
-            // define pointer
-            let p := scratch
-            let basep := add(p, 0x60)
-            mstore(basep, s0) // Base
-            // store data assembly-favouring ways
-            pop(staticcall(sub(gas(), 2000), 0x05, p, 0xc0, basep, 0x20))
-            // data
-            o0 := mload(basep)
-            mstore(basep, s1) // Base
-            pop(staticcall(sub(gas(), 2000), 0x05, p, 0xc0, basep, 0x20))
-            // data
-            o1 := mload(basep)
-            mstore(basep, s2) // Base
-            pop(staticcall(sub(gas(), 2000), 0x05, p, 0xc0, basep, 0x20))
-            // data
-            o2 := mload(basep)
-            mstore(basep, s3) // Base
-            pop(staticcall(sub(gas(), 2000), 0x05, p, 0xc0, basep, 0x20))
-            // data
-            o3 := mload(basep)
+        uint256 e = ALPHA_INV;
+
+        o0 = 1;
+        o1 = 1;
+        o2 = 1;
+        o3 = 1;
+
+        while (e > 0) {
+            if ((e & 1) != 0) {
+                o0 = mulmod(o0, s0, PRIME);
+                o1 = mulmod(o1, s1, PRIME);
+                o2 = mulmod(o2, s2, PRIME);
+                o3 = mulmod(o3, s3, PRIME);
+            }
+            s0 = mulmod(s0, s0, PRIME);
+            s1 = mulmod(s1, s1, PRIME);
+            s2 = mulmod(s2, s2, PRIME);
+            s3 = mulmod(s3, s3, PRIME);
+            e >>= 1;
         }
     }
+
+    // function expMod(
+    //     uint256 base,
+    //     uint256 e,
+    //     uint256 m
+    // ) public returns (uint256 o) {
+    //     o = 1;
+    //     while (e > 0) {
+    //         if ((e & 1) == 1) {
+    //             o = mulmod(o, base, m);
+    //         }
+    //         base = mulmod(base, base, m);
+    //         e >>= 1;
+    //     }
+    // }
+
+    // {
+    //     assembly {
+    //         // define pointer
+    //         let p := scratch
+    //         let basep := add(p, 0x60)
+    //         mstore(basep, s0) // Base
+    //         // store data assembly-favouring ways
+    //         pop(staticcall(sub(gas(), 2000), 0x05, p, 0xc0, basep, 0x20))
+    //         // data
+    //         o0 := mload(basep)
+    //         mstore(basep, s1) // Base
+    //         pop(staticcall(sub(gas(), 2000), 0x05, p, 0xc0, basep, 0x20))
+    //         // data
+    //         o1 := mload(basep)
+    //         mstore(basep, s2) // Base
+    //         pop(staticcall(sub(gas(), 2000), 0x05, p, 0xc0, basep, 0x20))
+    //         // data
+    //         o2 := mload(basep)
+    //         mstore(basep, s3) // Base
+    //         pop(staticcall(sub(gas(), 2000), 0x05, p, 0xc0, basep, 0x20))
+    //         // data
+    //         o3 := mload(basep)
+    //     }
+    // }
 
     // Computes the Rescue permutation on some input
     // Recall that the scheduled key is precomputed in our case
@@ -162,13 +199,13 @@ contract Rescue {
             uint256
         )
     {
-        uint256[6] memory alphaInvScratch;
+        // uint256[6] memory alphaInvScratch;
 
-        expAlphaInv4Setup(alphaInvScratch);
+        // expAlphaInv4Setup(alphaInvScratch);
 
         unchecked {
             (s0, s1, s2, s3) = expAlphaInv4(
-                alphaInvScratch,
+                // alphaInvScratch,
                 s0 +
                     14613516837064033601098425266946467918409544647446217386229959902054563533267,
                 s1 +
@@ -215,7 +252,7 @@ contract Rescue {
 
         unchecked {
             (s0, s1, s2, s3) = expAlphaInv4(
-                alphaInvScratch,
+                // alphaInvScratch,
                 s0 +
                     3394657260998945409283098835682964352503279447198495330506177586645995289229,
                 s1 +
@@ -262,7 +299,7 @@ contract Rescue {
 
         unchecked {
             (s0, s1, s2, s3) = expAlphaInv4(
-                alphaInvScratch,
+                // alphaInvScratch,
                 s0 +
                     2604166168648013711791424714498680546427073388134923208733633668316805639713,
                 s1 +
@@ -309,7 +346,7 @@ contract Rescue {
 
         unchecked {
             (s0, s1, s2, s3) = expAlphaInv4(
-                alphaInvScratch,
+                // alphaInvScratch,
                 s0 +
                     6015589261538006311719125697023069952804098656652050863009463360598997670240,
                 s1 +
@@ -356,7 +393,7 @@ contract Rescue {
 
         unchecked {
             (s0, s1, s2, s3) = expAlphaInv4(
-                alphaInvScratch,
+                // alphaInvScratch,
                 s0 +
                     6957758175844522415482704083077249782181516476067074624906502033584870962925,
                 s1 +
@@ -403,7 +440,7 @@ contract Rescue {
 
         unchecked {
             (s0, s1, s2, s3) = expAlphaInv4(
-                alphaInvScratch,
+                // alphaInvScratch,
                 s0 +
                     2671157351815122058649197205531097090514563992249109660044882868649840700911,
                 s1 +
@@ -450,7 +487,7 @@ contract Rescue {
 
         unchecked {
             (s0, s1, s2, s3) = expAlphaInv4(
-                alphaInvScratch,
+                // alphaInvScratch,
                 s0 +
                     19390446529582160674621825412345750405397926216690583196542690617266028463414,
                 s1 +
@@ -497,7 +534,7 @@ contract Rescue {
 
         unchecked {
             (s0, s1, s2, s3) = expAlphaInv4(
-                alphaInvScratch,
+                // alphaInvScratch,
                 s0 +
                     183740587182448242823071506013879595265109215202349952517434740768878294134,
                 s1 +
@@ -544,7 +581,7 @@ contract Rescue {
 
         unchecked {
             (s0, s1, s2, s3) = expAlphaInv4(
-                alphaInvScratch,
+                // alphaInvScratch,
                 s0 +
                     15475465085113677237835653765189267963435264152924949727326000496982746660612,
                 s1 +
@@ -591,7 +628,7 @@ contract Rescue {
 
         unchecked {
             (s0, s1, s2, s3) = expAlphaInv4(
-                alphaInvScratch,
+                // alphaInvScratch,
                 s0 +
                     7562572155566079175343789986900217168516831778275127159068657756836798778249,
                 s1 +
@@ -638,7 +675,7 @@ contract Rescue {
 
         unchecked {
             (s0, s1, s2, s3) = expAlphaInv4(
-                alphaInvScratch,
+                // alphaInvScratch,
                 s0 +
                     1273319740931699377003430019539548781935202579355152343831464213279794249000,
                 s1 +
@@ -685,7 +722,7 @@ contract Rescue {
 
         unchecked {
             (s0, s1, s2, s3) = expAlphaInv4(
-                alphaInvScratch,
+                // alphaInvScratch,
                 s0 +
                     14555572526833606349832007897859411042036463045080050783981107823326880950231,
                 s1 +

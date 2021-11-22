@@ -4,19 +4,18 @@ set -euo pipefail
 project=$(dirname $(dirname $0))
 
 input=$project/doc/contracts/*.md
-output=$project/doc/contracts/index.html
+output=$project/doc/mdbook/book/index.html
 css=$project/doc/templates/style.css
 title='Spectrum Cape Smart Contract API'
 
-echo "Generating contract documentation in $output."
 
 echo "  Running solidity-docgen..."
 # Note, solidity-docgen is oddly sensitive to working directory despite
 # the use of absolute paths.
 (cd $project && \
-     solidity-docgen --solc-module solc-0.8 -o ./doc/contracts -t ./doc/templates/)
+     solidity-docgen --solc-module solc-0.8 -o ./doc/mdbook/src -t ./doc/templates/)
 
-echo "  Running pandoc..."
-pandoc --toc --standalone --metadata title="$title" --css=$css --output=$output $input
+echo "  Running mdbook..."
+(cd $project/doc/mdbook && mdbook build)
 
-echo "Done."
+echo "Generated contract documentation in file://$output."

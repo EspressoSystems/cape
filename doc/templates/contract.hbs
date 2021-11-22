@@ -1,46 +1,51 @@
 ## Contract `{{name}}`
 
-### User Documentation
 {{{natspec.userdoc}}}
 
-### Developer Documentation
 {{{natspec.devdoc}}}
 
-{{#each ownModifiers}}
-### `{{name}}({{args}})`
+{{#each ownFunctions}}
+### Function {{name}} [{{visibility}}]
+```solidity
+function {{name}}({{args}}){{#if outputs}} → {{outputs}}{{/if}}
+```
 
-#### User Documentation Again
 {{{natspec.userdoc}}}
 
-#### Developer Documentation Again
 {{{natspec.devdoc}}}
 
 {{/each}}
 
-{{#each ownFunctions}}
-### Function `{{name}}({{args}}){{#if outputs}} → {{outputs}}{{/if}}` ({{visibility}})
+{{#each ownModifiers}}
+### Modifier `{{name}}`
+```solidity
+modifier {{name}}({{args}})
+```
 
-#### User Documentation
 {{{natspec.userdoc}}}
 
-#### Developer Documentation
 {{{natspec.devdoc}}}
 
 {{/each}}
 
 {{#each ownEvents}}
-### Event `{{name}}({{args}})`
+### Event {{name}}
+```solidity
+event {{name}}({{args}})
+```
 
-#### User Documentation
 {{{natspec.userdoc}}}
 
-#### Developer Documentation
 {{{natspec.devdoc}}}
 
 {{/each}}
 
 {{#each ownStructs}}
-### Struct `{{name}}`
+### Struct {{name}}
+
+{{{natspec.userdoc}}}
+
+{{{natspec.devdoc}}}
 
 #### Members
 {{#each members}}
@@ -53,6 +58,10 @@
 
 {{#each ownEnums}}
 ### Enum `{{name}}`
+
+{{{natspec.userdoc}}}
+
+{{{natspec.devdoc}}}
 
 #### Members
 {{#each members}}

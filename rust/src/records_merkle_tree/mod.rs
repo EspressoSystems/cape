@@ -121,7 +121,7 @@ fn parse_flattened_frontier(flattened_frontier: &[Fr254], uid: u64) -> MerkleFro
             }
 
             nodes.push(node.clone());
-            i = i + 2;
+            i += 2;
         }
         MerkleFrontier::Proof(MerkleLeafProof {
             leaf: MerkleLeaf(flattened_frontier[0]),

@@ -531,9 +531,9 @@ tool called `solidity-docgen`.
 
 To generate the documentation run
 
-    solidity-docgen --solc-module solc-0.8 -o ./doc/contracts
+    make-doc
 
-The generated files can be found in the `./doc/contracts` folder.
+Open `./doc/contracts/index.html` to browse the generated documentation.
 
 ## Ethereum Asset (Un)Wrapping Workflow
 

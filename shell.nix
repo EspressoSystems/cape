@@ -56,7 +56,7 @@ mkShell
     git # required for pre-commit hook installation
     netcat-gnu # only used to check for open ports
     cacert
-    pandoc # make-doc, documentation generation
+    mdbook # make-doc, documentation generation
   ]
   ++ myPython
   ++ rustDeps;

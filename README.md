@@ -533,7 +533,7 @@ To generate the documentation run
 
     make-doc
 
-Open `./doc/contracts/index.html` to browse the generated documentation.
+and observe the CLI output.
 
 ## Ethereum Asset (Un)Wrapping Workflow
 

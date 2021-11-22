@@ -3,7 +3,6 @@ set -euo pipefail
 
 project=$(dirname $(dirname $0))
 
-input=$project/doc/contracts/*.md
 output=$project/doc/mdbook/book/index.html
 css=$project/doc/templates/style.css
 title='Spectrum Cape Smart Contract API'

@@ -1,6 +1,6 @@
 {
   "plugins": [
-    "node_modules/prettier-plugin-solidity"
+    "./node_modules/prettier-plugin-solidity"
   ],
   "overrides": [
     {

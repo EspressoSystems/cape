@@ -9,10 +9,10 @@ doctest = false
 [dependencies]
 ethers.git = "https://github.com/gakonst/ethers-rs"
 
-jf-txn = { git = "ssh://git@gitlab.com/translucence/crypto/jellyfish.git" } # latest
-jf-utils = { git = "ssh://git@gitlab.com/translucence/crypto/jellyfish.git" } # latest
-jf-rescue = { git = "ssh://git@gitlab.com/translucence/crypto/jellyfish.git" } # latest
-jf-primitives = { git = "ssh://git@gitlab.com/translucence/crypto/jellyfish.git" } # latest
+jf-txn = { git = "ssh://git@gitlab.com/translucence/crypto/jellyfish.git", rev = "4d7e1c38e3f41d83e5b93f0eca1ae0663f221a5e" }
+jf-utils = { git = "ssh://git@gitlab.com/translucence/crypto/jellyfish.git", rev = "4d7e1c38e3f41d83e5b93f0eca1ae0663f221a5e" }
+jf-rescue = { git = "ssh://git@gitlab.com/translucence/crypto/jellyfish.git", rev = "4d7e1c38e3f41d83e5b93f0eca1ae0663f221a5e" }
+jf-primitives = { git = "ssh://git@gitlab.com/translucence/crypto/jellyfish.git", rev = "4d7e1c38e3f41d83e5b93f0eca1ae0663f221a5e" }
 
 itertools = "0.10.1" # needed for jf-txn to compile
 ark-std = "0.3.0"

@@ -16,3 +16,6 @@ pub(crate) fn burn_pub_key() -> UserPubKey {
 }
 
 pub(crate) const RECORD_MT_HEIGHT: u8 = 25;
+
+// allow building transaction against any one of the most recent 10 merkle root
+pub(crate) const MERKLE_ROOT_QUEUE_CAP: usize = 10;

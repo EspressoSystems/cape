@@ -4,14 +4,14 @@ use ethers::prelude::*;
 use ethers::utils::keccak256;
 use jf_txn::keys::UserPubKey;
 use jf_txn::structs::{AssetDefinition, FreezeFlag, Nullifier, RecordCommitment, RecordOpening};
-use jf_txn::{MerkleCommitment, MerkleFrontier, TransactionNote};
-use std::collections::{HashMap, HashSet};
+use jf_txn::{MerkleCommitment, MerkleFrontier, NodeValue, TransactionNote};
+use std::collections::{HashMap, HashSet, LinkedList};
 
 mod constants;
 mod erc20;
 mod merkle_tree;
 mod relayer;
-use crate::constants::burn_pub_key;
+use crate::constants::{burn_pub_key, MERKLE_ROOT_QUEUE_CAP};
 use crate::erc20::Erc20Contract;
 use crate::merkle_tree::RecordMerkleTree;
 
@@ -47,6 +47,12 @@ pub struct CapeContract {
     merkle_commitment: MerkleCommitment,
     // hash of the latest merkle frontier
     merkle_frontier_digest: [u8; 32],
+    // last X merkle root, allowing transaction building against recent merkle roots (instead of just
+    // the lastest merkle root) as a buffer.
+    // where X is the capacity the Queue and can be specified during constructor. (rust doesn't have queue
+    // so we use LinkedList to simulate)
+    // NOTE: in Solidity, we can instantiate with a fixed array and an indexer to build a FIFO queue.
+    recent_merkle_roots: LinkedList<NodeValue>,
     // NOTE: in Solidity impl, we should use `keccak256(abi.encode(AssetDefinition))` as the mapping key
     wrapped_erc20_registrar: HashMap<AssetDefinition, Address>,
     pending_deposit_queue: Vec<RecordCommitment>,
@@ -117,6 +123,14 @@ impl CapeContract {
     ) {
         // 1. verify the block, and insert its input nullifiers and output record commitments
         assert!(new_block.validate());
+        assert!(
+            new_block
+                .txns
+                .iter()
+                .chain(new_block.burn_txns.iter())
+                .all(|txn| self.recent_merkle_roots.contains(&txn.merkle_root())),
+            "should produce txn validity proof against recent merkle root",
+        );
         assert_eq!(new_block.block_height, self.height + 1); // targetting the next block
         assert_eq!(
             keccak256(abi_encode(&mt_frontier)),
@@ -184,6 +198,11 @@ impl CapeContract {
         self.height += 1;
         self.merkle_commitment = updated_mt_comm;
         self.merkle_frontier_digest = keccak256(abi_encode(updated_mt_frontier));
+        if self.recent_merkle_roots.len() == MERKLE_ROOT_QUEUE_CAP {
+            self.recent_merkle_roots.pop_front(); // remove the oldest root
+        }
+        self.recent_merkle_roots
+            .push_back(updated_mt_comm.root_value); // add the new root
     }
 }
 
@@ -194,8 +213,6 @@ fn abi_encode<T>(_data: T) -> Vec<u8> {
 
 #[cfg(test)]
 mod test {
-    use std::vec;
-
     use jf_txn::{
         keys::{AuditorKeyPair, FreezerKeyPair, UserKeyPair},
         structs::{AssetCode, AssetCodeSeed, AssetPolicy, FreezeFlag},
@@ -219,6 +236,7 @@ mod test {
                     num_leaves: 0,
                 },
                 merkle_frontier_digest: [0u8; 32],
+                recent_merkle_roots: LinkedList::default(),
                 wrapped_erc20_registrar: HashMap::default(),
                 pending_deposit_queue: vec![],
             }

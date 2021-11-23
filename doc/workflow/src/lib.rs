@@ -24,14 +24,14 @@ pub struct CapeBlock {
     pub(crate) txns: Vec<TransactionNote>,
     // fee_blind: BlindFactor,
     pub(crate) miner: UserPubKey,
-    // targeting block digest
+    // targeting block height
     pub(crate) block_height: u64,
 }
 
 impl CapeBlock {
     // Refer to `validate_block()` in:
     // https://gitlab.com/translucence/crypto/jellyfish/-/blob/main/transactions/tests/examples.rs
-    pub fn verify_txns(&self) -> bool {
+    pub fn validate(&self) -> bool {
         // Prmarily a Plonk proof verification!
         true
     }
@@ -107,15 +107,16 @@ impl CapeContract {
     }
 
     /// Relayer submit the next block, and withdraw for users who had burn transactions included
-    /// in `new_block` with the help of user-submitted auxiliary info about the withdraw `requests`.
+    /// in `new_block` with the help of record openings of the "burned records" (output of the burn
+    /// transaction) submitted by user.
     pub fn submit_cape_block(
         &mut self,
         new_block: CapeBlock,
         mt_frontier: MerkleFrontier,
-        requests: Vec<WithdrawRequest>,
+        burned_ros: Vec<RecordOpening>,
     ) {
         // 1. verify the block, and insert its input nullifiers and output record commitments
-        assert!(new_block.verify_txns());
+        assert!(new_block.validate());
         assert_eq!(new_block.block_height, self.height + 1); // targetting the next block
         assert_eq!(
             keccak256(abi_encode(&mt_frontier)),
@@ -131,11 +132,12 @@ impl CapeContract {
         }
 
         // 2. process all burn transaction and withdraw for user immediately
-        assert_eq!(new_block.burn_txns.len(), requests.len());
-        for (burn_txn, request) in new_block.burn_txns.iter().zip(requests.iter()) {
+        assert_eq!(new_block.burn_txns.len(), burned_ros.len());
+        for (burn_txn, burned_ro) in new_block.burn_txns.iter().zip(burned_ros.iter()) {
+            // burn transaction is basically a "Transfer-to-dedicated-burn-pk" transaction
             if let TransactionNote::Transfer(note) = burn_txn {
-                // 2.1. validate the withdraw request against the burn transaction.
-                let withdraw_amount = request.burned_ro.amount;
+                // 2.1. validate the burned record opening against the burn transaction.
+                let withdraw_amount = burned_ro.amount;
                 // get recipient address from txn's proof bounded data field
                 let recipient = {
                     let mut proof_bounded_address = [0u8; 20];
@@ -144,20 +146,22 @@ impl CapeContract {
                     Address::from(proof_bounded_address)
                 };
 
+                // to validate the burn transaction, we need to check if the second output
+                // of the transfer (while the first being fee change) is sent to dedicated
+                // "burn address/pubkey". Since the contract only have record commitments,
+                // we require the user to provide the record opening and check against it.
                 assert_eq!(
-                    self.wrapped_erc20_registrar
-                        .get(&request.burned_ro.asset_def)
-                        .unwrap(),
-                    &request.erc20_addr
-                );
-                assert_eq!(request.burned_ro.pub_key, burn_pub_key());
-                assert_eq!(
-                    RecordCommitment::from(&request.burned_ro),
+                    RecordCommitment::from(burned_ro),
                     burn_txn.output_commitments()[1]
                 );
+                assert_eq!(burned_ro.pub_key, burn_pub_key());
+                let erc20_addr = self
+                    .wrapped_erc20_registrar
+                    .get(&burned_ro.asset_def)
+                    .unwrap();
 
-                // 2.2. upon successful request verification, execute the withdraw for user
-                let mut erc20_contract = Erc20Contract::at(request.erc20_addr);
+                // 2.2. upon successful verification, execute the withdraw for user
+                let mut erc20_contract = Erc20Contract::at(*erc20_addr);
                 erc20_contract.transfer(recipient, U256::from(withdraw_amount));
 
                 // 2.3. like other txn, insert input nullifiers and output record commitments
@@ -181,13 +185,6 @@ impl CapeContract {
         self.merkle_commitment = updated_mt_comm;
         self.merkle_frontier_digest = keccak256(abi_encode(updated_mt_frontier));
     }
-}
-
-/// Auxiliary information, provided by the withdrawig user to the relayer,
-/// for burn transaction to execute withdraw.
-pub struct WithdrawRequest {
-    erc20_addr: Address,
-    burned_ro: RecordOpening,
 }
 
 // Solidity equivalent of `abi.encode()`
@@ -326,25 +323,17 @@ mod test {
         );
         let burn_txn = generate_burn_transaction(&burned_ro);
 
-        // 2. user: build WithdrawRequest and send over to relayer together with the burn transaction
-        let withdraw_request = WithdrawRequest {
-            erc20_addr: usdc_address(),
-            burned_ro,
-        };
+        // 2. user: send over the burn_txn and burned_ro to relayer.
 
         // 3. relayer: build a new block containing the burn txn broadcasted by the user (off-chain)
         let mut new_block = CapeBlock::build_next();
         new_block
             .burn_txns
             .push(TransactionNote::Transfer(Box::new(burn_txn)));
-        let mut withdraw_requests = vec![];
-        withdraw_requests.push(withdraw_request);
+        let mut burned_ros = vec![];
+        burned_ros.push(burned_ro);
 
-        cape_contract.submit_cape_block(
-            new_block.clone(),
-            relayer.mt.frontier(),
-            withdraw_requests,
-        );
+        cape_contract.submit_cape_block(new_block.clone(), relayer.mt.frontier(), burned_ros);
 
         // done! when CAPE contract process a new block,
         // it will automatically withdraw for user that has submitted the burn transaction.

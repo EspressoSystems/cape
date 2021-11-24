@@ -43,30 +43,10 @@ event {{name}}({{args}})
 {{#each ownStructs}}
 ### Struct {{name}}
 
-{{{natspec.userdoc}}}
-
-{{{natspec.devdoc}}}
-
 #### Members
 {{#each members}}
 
 {{type}} {{name}}
-
-{{/each}}
-
-{{/each}}
-
-{{#each ownEnums}}
-### Enum `{{name}}`
-
-{{{natspec.userdoc}}}
-
-{{{natspec.devdoc}}}
-
-#### Members
-{{#each members}}
-
-{{name}}
 
 {{/each}}
 

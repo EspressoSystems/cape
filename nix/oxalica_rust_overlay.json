@@ -1,7 +1,7 @@
 {
     "owner": "oxalica",
     "repo": "rust-overlay",
-    "rev": "7d496e6703a0b7083cf70d3168cf3d30bb888d6c",
-    "sha256": "/5ZKRJZhIECQJ0MQmTsKh6VFqtAiWrT1RZ54JwDKacY=",
+    "rev": "ac8f77587c3dd5d116123713362d7b39ccb8eb90",
+    "sha256": "GPpPu1xl/UIWijjHbpRErlK29NfhXDKN5gp9oSfaSzM=",
     "fetchSubmodules": true
 }

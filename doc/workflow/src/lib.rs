@@ -1,42 +1,59 @@
 //! This crate describes the workflow and interfaces of a CAPE contract deployed on Ethereum.
 
 use ethers::prelude::*;
+use ethers::utils::keccak256;
 use jf_txn::keys::UserPubKey;
 use jf_txn::structs::{AssetDefinition, FreezeFlag, Nullifier, RecordCommitment, RecordOpening};
-use jf_txn::{MerkleCommitment, MerkleFrontier, TransactionNote};
-use std::collections::{HashMap, HashSet};
+use jf_txn::{MerkleCommitment, MerkleFrontier, NodeValue, TransactionNote};
+use std::collections::{HashMap, HashSet, LinkedList};
 
 mod constants;
 mod erc20;
 mod merkle_tree;
 mod relayer;
-use crate::constants::burn_pub_key;
+use crate::constants::{burn_pub_key, MERKLE_ROOT_QUEUE_CAP};
 use crate::erc20::Erc20Contract;
 use crate::merkle_tree::RecordMerkleTree;
 
 /// a block in CAPE blockchain
 #[derive(Default, Clone)]
 pub struct CapeBlock {
-    txns: Vec<TransactionNote>,
+    // NOTE: separated out list of burn transaction
+    pub(crate) burn_txns: Vec<TransactionNote>,
+    // rest of the transactions (except burn txn)
+    pub(crate) txns: Vec<TransactionNote>,
     // fee_blind: BlindFactor,
-    miner: UserPubKey,
+    pub(crate) miner: UserPubKey,
+    // targeting block height
+    pub(crate) block_height: u64,
 }
 
 impl CapeBlock {
     // Refer to `validate_block()` in:
     // https://gitlab.com/translucence/crypto/jellyfish/-/blob/main/transactions/tests/examples.rs
-    pub fn verify(&self) -> bool {
+    pub fn validate(&self) -> bool {
         // Prmarily a Plonk proof verification!
         true
     }
 }
-#[derive(Default)]
+
 pub struct CapeContract {
     // set of spent records' nullifiers, stored as mapping in contract
     nullifiers: HashSet<Nullifier>,
-    // blockchain history: block content and post-block merkle tree commitment
-    blocks: Vec<(CapeBlock, MerkleCommitment)>,
-    // TODO: in Solidity impl, we should use `keccak256(abi.encodePacked(AssetDefinition))` as the mapping key
+    // latest block height
+    height: u64,
+    // TODO: should we further hash MerkleCommitment and only store a bytes32 in contract?
+    // latest record merkle tree commitment (including merkle root, tree height and num of leaves)
+    merkle_commitment: MerkleCommitment,
+    // hash of the latest merkle frontier
+    merkle_frontier_digest: [u8; 32],
+    // last X merkle root, allowing transaction building against recent merkle roots (instead of just
+    // the lastest merkle root) as a buffer.
+    // where X is the capacity the Queue and can be specified during constructor. (rust doesn't have queue
+    // so we use LinkedList to simulate)
+    // NOTE: in Solidity, we can instantiate with a fixed array and an indexer to build a FIFO queue.
+    recent_merkle_roots: LinkedList<NodeValue>,
+    // NOTE: in Solidity impl, we should use `keccak256(abi.encode(AssetDefinition))` as the mapping key
     wrapped_erc20_registrar: HashMap<AssetDefinition, Address>,
     pending_deposit_queue: Vec<RecordCommitment>,
 }
@@ -95,10 +112,31 @@ impl CapeContract {
         self.pending_deposit_queue.push(rc);
     }
 
-    /// Relayer submit the next block
-    pub fn submit_cape_block(&mut self, new_block: CapeBlock, mt_frontier: MerkleFrontier) {
+    /// Relayer submit the next block, and withdraw for users who had burn transactions included
+    /// in `new_block` with the help of record openings of the "burned records" (output of the burn
+    /// transaction) submitted by user.
+    pub fn submit_cape_block(
+        &mut self,
+        new_block: CapeBlock,
+        mt_frontier: MerkleFrontier,
+        burned_ros: Vec<RecordOpening>,
+    ) {
         // 1. verify the block, and insert its input nullifiers and output record commitments
-        assert!(new_block.verify());
+        assert!(new_block.validate());
+        assert!(
+            new_block
+                .txns
+                .iter()
+                .chain(new_block.burn_txns.iter())
+                .all(|txn| self.recent_merkle_roots.contains(&txn.merkle_root())),
+            "should produce txn validity proof against recent merkle root",
+        );
+        assert_eq!(new_block.block_height, self.height + 1); // targetting the next block
+        assert_eq!(
+            keccak256(abi_encode(&mt_frontier)),
+            self.merkle_frontier_digest
+        ); // ensure mt_frontier is correct
+
         let mut rc_to_be_inserted = vec![];
         for txn in new_block.txns.iter() {
             for &nf in txn.nullifiers().iter() {
@@ -107,46 +145,70 @@ impl CapeContract {
             rc_to_be_inserted.extend_from_slice(&txn.output_commitments());
         }
 
-        // 2. insert all pending deposits AND output records from the txns into record merkle tree
+        // 2. process all burn transaction and withdraw for user immediately
+        assert_eq!(new_block.burn_txns.len(), burned_ros.len());
+        for (burn_txn, burned_ro) in new_block.burn_txns.iter().zip(burned_ros.iter()) {
+            // burn transaction is basically a "Transfer-to-dedicated-burn-pk" transaction
+            if let TransactionNote::Transfer(note) = burn_txn {
+                // 2.1. validate the burned record opening against the burn transaction.
+                let withdraw_amount = burned_ro.amount;
+                // get recipient address from txn's proof bounded data field
+                let recipient = {
+                    let mut proof_bounded_address = [0u8; 20];
+                    proof_bounded_address
+                        .copy_from_slice(&note.aux_info.extra_proof_bound_data[..20]);
+                    Address::from(proof_bounded_address)
+                };
+
+                // to validate the burn transaction, we need to check if the second output
+                // of the transfer (while the first being fee change) is sent to dedicated
+                // "burn address/pubkey". Since the contract only have record commitments,
+                // we require the user to provide the record opening and check against it.
+                assert_eq!(
+                    RecordCommitment::from(burned_ro),
+                    burn_txn.output_commitments()[1]
+                );
+                assert_eq!(burned_ro.pub_key, burn_pub_key());
+                let erc20_addr = self
+                    .wrapped_erc20_registrar
+                    .get(&burned_ro.asset_def)
+                    .unwrap();
+
+                // 2.2. upon successful verification, execute the withdraw for user
+                let mut erc20_contract = Erc20Contract::at(*erc20_addr);
+                erc20_contract.transfer(recipient, U256::from(withdraw_amount));
+
+                // 2.3. like other txn, insert input nullifiers and output record commitments
+                for &nf in burn_txn.nullifiers().iter() {
+                    self.nullifiers.insert(nf);
+                }
+                rc_to_be_inserted.extend_from_slice(&burn_txn.output_commitments());
+            } else {
+                panic!("burn txn should be of TransferNote type");
+            }
+        }
+
+        // 3. insert all pending deposits AND output records from the txns into record merkle tree
         // and update the merkle root/commitment.
         rc_to_be_inserted.extend_from_slice(&self.pending_deposit_queue);
-        let updated_mt_comm = self.batch_insert_with_frontier(mt_frontier, &rc_to_be_inserted);
-        self.blocks.push((new_block, updated_mt_comm));
+        let (updated_mt_comm, updated_mt_frontier) =
+            self.batch_insert_with_frontier(mt_frontier, &rc_to_be_inserted);
+
+        // 4. update the blockchain state digest
+        self.height += 1;
+        self.merkle_commitment = updated_mt_comm;
+        self.merkle_frontier_digest = keccak256(abi_encode(updated_mt_frontier));
+        if self.recent_merkle_roots.len() == MERKLE_ROOT_QUEUE_CAP {
+            self.recent_merkle_roots.pop_front(); // remove the oldest root
+        }
+        self.recent_merkle_roots
+            .push_back(updated_mt_comm.root_value); // add the new root
     }
+}
 
-    /// Withdraw CAPE asset back to the ERC20 that it wraps over.
-    pub fn withdraw_erc20(
-        &self,
-        erc20_addr: Address,
-        recipient: Address,
-        withdraw_amount: U256,
-        block_num: U256,
-        txn_index: U256,
-        burned_ro: RecordOpening,
-    ) {
-        // 1. fetch the burn txn from blockchain history
-        let block = &self.blocks[block_num.as_usize()].0;
-        let burn_txn = &block.txns[txn_index.as_usize()];
-        assert!(matches!(burn_txn, TransactionNote::Transfer(_)));
-
-        // 2. check if the burn txn has sent the correct amount to the correct burn address
-        assert_eq!(burned_ro.amount, withdraw_amount.as_u64());
-        assert_eq!(
-            self.wrapped_erc20_registrar
-                .get(&burned_ro.asset_def)
-                .unwrap(),
-            &erc20_addr
-        );
-        assert_eq!(burned_ro.pub_key, burn_pub_key());
-        assert_eq!(
-            RecordCommitment::from(&burned_ro),
-            burn_txn.output_commitments()[1]
-        );
-
-        // 3. upon successful verification, credit the `recipient` ERC20
-        let mut erc20_contract = Erc20Contract::at(erc20_addr);
-        erc20_contract.transfer(recipient, withdraw_amount);
-    }
+// Solidity equivalent of `abi.encode()`
+fn abi_encode<T>(_data: T) -> Vec<u8> {
+    unimplemented!();
 }
 
 #[cfg(test)]
@@ -155,6 +217,7 @@ mod test {
         keys::{AuditorKeyPair, FreezerKeyPair, UserKeyPair},
         structs::{AssetCode, AssetCodeSeed, AssetPolicy, FreezeFlag},
         transfer::TransferNote,
+        NodeValue,
     };
 
     use super::*;
@@ -164,7 +227,19 @@ mod test {
     impl CapeContract {
         // return a mocked contract with some pre-filled states.
         fn mock() -> Self {
-            Self::default()
+            Self {
+                nullifiers: HashSet::default(),
+                height: 0,
+                merkle_commitment: MerkleCommitment {
+                    root_value: NodeValue::empty_node_value(),
+                    height: 20,
+                    num_leaves: 0,
+                },
+                merkle_frontier_digest: [0u8; 32],
+                recent_merkle_roots: LinkedList::default(),
+                wrapped_erc20_registrar: HashMap::default(),
+                pending_deposit_queue: vec![],
+            }
         }
     }
 
@@ -243,7 +318,7 @@ mod test {
         // 4. relayer: build next block and user's deposit will be credited (inserted into
         // record merkle tree) when CAPE contract process the next valid block.
         let new_block = CapeBlock::build_next();
-        cape_contract.submit_cape_block(new_block, relayer.mt.frontier());
+        cape_contract.submit_cape_block(new_block, relayer.mt.frontier(), vec![]);
     }
 
     #[test]
@@ -252,7 +327,6 @@ mod test {
         let mut rng = rand::thread_rng();
         let mut cape_contract = CapeContract::mock();
         let cape_user_keypair = UserKeyPair::generate(&mut rng);
-        let eth_user_address = Address::random();
         let relayer = Relayer::new();
 
         // 1. user: build and send a burn transaction to relayer (off-chain)
@@ -267,25 +341,19 @@ mod test {
         );
         let burn_txn = generate_burn_transaction(&burned_ro);
 
-        // 2. relayer: build a new block containing the burn txn broadcasted by the user (off-chain)
+        // 2. user: send over the burn_txn and burned_ro to relayer.
+
+        // 3. relayer: build a new block containing the burn txn broadcasted by the user (off-chain)
         let mut new_block = CapeBlock::build_next();
         new_block
-            .txns
+            .burn_txns
             .push(TransactionNote::Transfer(Box::new(burn_txn)));
-        cape_contract.submit_cape_block(new_block.clone(), relayer.mt.frontier());
+        let mut burned_ros = vec![];
+        burned_ros.push(burned_ro);
 
-        // 3. user: invoke withdraw on layer 1 (on-chain)
-        // NOTE: block_num and txn_index are only available after the burn txn was
-        // submitted to the CAPE contract and accepted.
-        let block_num = cape_contract.blocks.len();
-        let txn_index = new_block.txns.len();
-        cape_contract.withdraw_erc20(
-            usdc_address(),
-            eth_user_address,
-            U256::from(burn_amount),
-            U256::from(block_num),
-            U256::from(txn_index),
-            burned_ro,
-        );
+        cape_contract.submit_cape_block(new_block.clone(), relayer.mt.frontier(), burned_ros);
+
+        // done! when CAPE contract process a new block,
+        // it will automatically withdraw for user that has submitted the burn transaction.
     }
 }

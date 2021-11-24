@@ -34,6 +34,6 @@ stdenv.mkDerivation {
     homepage = https://github.com/ethereum/solidity;
     license = licenses.gpl3;
     maintainers = with stdenv.lib.maintainers; [ ];
-    platforms = [ "x86_64-linux" "x86_64-darwin" ];
+    platforms = [ "x86_64-linux" "x86_64-darwin" "aarch64-darwin" ];
   };
 }

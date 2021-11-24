@@ -7,6 +7,15 @@ let
   pkgs = import ./nix/nixpkgs.nix { overlays = [ rust_overlay ]; };
 
   pre-commit-check = pkgs.callPackage ./nix/precommit.nix { };
+  # Broken on aarch64-darwin (nix >= 2.4, M1 macs)
+  #   https://github.com/cachix/pre-commit-hooks.nix/issues/131
+  preCommitHook =
+    if pkgs.stdenv.isx86_64
+    then
+      "${pre-commit-check.shellHook}"
+    else
+      "echo 'Warning: not installing pre-commit hooks'";
+
   mySolc = pkgs.callPackage ./nix/solc-bin { version = "0.8.4"; };
   pythonEnv = pkgs.poetry2nix.mkPoetryEnv {
     projectDir = ./.;
@@ -21,6 +30,14 @@ let
   stableToolchain = pkgs.rust-bin.stable."1.56.0".minimal.override {
     extensions = [ "rustfmt" "clippy" "llvm-tools-preview" ];
   };
+  darwinDeps = with pkgs; [
+    # required to compile ethers-rs
+    darwin.apple_sdk.frameworks.Security
+    darwin.apple_sdk.frameworks.CoreFoundation
+
+    # https://github.com/NixOS/nixpkgs/issues/126182
+    libiconv
+  ];
   rustDeps = with pkgs; [
     pkgconfig
     openssl
@@ -30,15 +47,10 @@ let
     stableToolchain
 
     cargo-edit
-    cargo-watch
-  ] ++ lib.optionals stdenv.isDarwin [
-    # required to compile ethers-rs
-    darwin.apple_sdk.frameworks.Security
-    darwin.apple_sdk.frameworks.CoreFoundation
-
-    # https://github.com/NixOS/nixpkgs/issues/126182
-    libiconv
-  ];
+  ] ++ lib.optionals stdenv.isDarwin darwinDeps
+  # cargo-watch does not build on aarch darwin (M1 macs)
+  #   https://github.com/NixOS/nixpkgs/issues/146349
+  ++ lib.optionals stdenv.isx86_64 [ cargo-watch ];
 in
 with pkgs;
 mkShell
@@ -84,8 +96,7 @@ mkShell
 
     export PATH=$(pwd)/bin:$(pwd)/node_modules/.bin:$PATH
 
-    # install pre-commit hooks
-    ${pre-commit-check.shellHook}
+    ${preCommitHook}
 
     git config --local blame.ignoreRevsFile .git-blame-ignore-revs
   '';

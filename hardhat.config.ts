@@ -2,6 +2,7 @@ import "@nomiclabs/hardhat-ethers";
 import "@nomiclabs/hardhat-waffle";
 import "@typechain/hardhat";
 import "hardhat-gas-reporter";
+import "hardhat-preprocessor";
 import { TASK_COMPILE_SOLIDITY_GET_SOLC_BUILD } from "hardhat/builtin-tasks/task-names";
 import { HardhatUserConfig, subtask, task } from "hardhat/config";
 
@@ -33,6 +34,8 @@ subtask(TASK_COMPILE_SOLIDITY_GET_SOLC_BUILD, async (args: any, _hre, runSuper) 
   console.warn("Warning: Using compiler downloaded by hardhat");
   return runSuper(); // Fall back to running the default subtask
 });
+
+const rescueImplementation = process.env.RESCUE_IMPLEMENTATION || "Rescue.sol";
 
 const config: HardhatUserConfig = {
   defaultNetwork: "localhost",
@@ -99,6 +102,13 @@ const config: HardhatUserConfig = {
   },
   mocha: {
     timeout: 300000,
+  },
+  preprocess: {
+    eachLine: (hre) => ({
+      transform: (line) => line.replace(/@RESCUE_IMPLEMENTATION@/, rescueImplementation),
+      // Changing `settings` should invalidate the cache and re-compile the contracts.
+      settings: { rescueImplementation },
+    }),
   },
   typechain: {
     target: "ethers-v5",

@@ -22,6 +22,7 @@ specifiers:
   ethers: ^5.5.1
   hardhat: ^2.6.8
   hardhat-gas-reporter: ^1.0.4
+  hardhat-preprocessor: ^0.1.4
   hardhat-shorthand: ^1.0.0
   js-big-decimal: ^1.3.4
   lodash: ^4.17.21
@@ -62,6 +63,7 @@ devDependencies:
   ethers: 5.5.1
   hardhat: 2.6.8
   hardhat-gas-reporter: 1.0.4_87bb44b05626a2d879bb5b9564432f10
+  hardhat-preprocessor: 0.1.4_hardhat@2.6.8
   hardhat-shorthand: 1.0.0
   lodash: 4.17.21
   prettier: 2.4.1
@@ -3050,6 +3052,10 @@ packages:
     resolution: {integrity: sha512-MSjYzcWNOA0ewAHpz0MxpYFvwg6yjy1NG3xteoqz644VCo/RPgnr1/GGt+ic3iJTzQ8Eu3TdM14SawnVUmGE6A==}
     dev: true
 
+  /encode-utf8/1.0.3:
+    resolution: {integrity: sha512-ucAnuBEhUK4boH2HjVYG5Q2mQyPorvv0u/ocS+zhdw0S8AlHYY+GOFhP1Gio5z4icpP2ivFSvhtFjQi8+T9ppw==}
+    dev: true
+
   /encodeurl/1.0.2:
     resolution: {integrity: sha1-rT/0yG7C0CkyL1oCw6mmBslbP1k=}
     engines: {node: '>= 0.8'}
@@ -4078,6 +4084,12 @@ packages:
     resolution: {integrity: sha1-SiksW8/4s5+mzAyxqFPYbyfu/3s=}
     dev: true
 
+  /fmix/0.1.0:
+    resolution: {integrity: sha1-x7vxJN7ELJ0ZHPuUfQqXeN2YbAw=}
+    dependencies:
+      imul: 1.0.1
+    dev: true
+
   /follow-redirects/1.14.5:
     resolution: {integrity: sha512-wtphSXy7d4/OR+MvIFbCVBDzZ5520qV8XfPklSN5QtxuMUJZ+b0Wnst1e1lCDocfzuCkHqj8k0FpZqO+UIaKNA==}
     engines: {node: '>=4.0'}
@@ -4517,6 +4529,15 @@ packages:
       - '@codechecks/client'
     dev: true
 
+  /hardhat-preprocessor/0.1.4_hardhat@2.6.8:
+    resolution: {integrity: sha512-TeIi9y5xXf6oKa2BMqXAFQV0tAJRy9MKDElu0VrHMsEVpiUXRh47AEJqWkFpWr2lVLFweif40n1RGxGIEFOPXw==}
+    peerDependencies:
+      hardhat: ^2.0.5
+    dependencies:
+      hardhat: 2.6.8
+      murmur-128: 0.2.1
+    dev: true
+
   /hardhat-shorthand/1.0.0:
     resolution: {integrity: sha512-ixvUHrZBfGRXXrerBziNwGFmQZtz8iX43z2mJZTPnQasoaDbZ7oDZ4FqqI80EmZvP0hIml4wgpiQhrE3P/eqXQ==}
     hasBin: true
@@ -4855,6 +4876,11 @@ packages:
     dependencies:
       parent-module: 1.0.1
       resolve-from: 4.0.0
+    dev: true
+
+  /imul/1.0.1:
+    resolution: {integrity: sha1-nVhnFh6LPelsLDjV3HyxAvNeKsk=}
+    engines: {node: '>=0.10.0'}
     dev: true
 
   /imurmurhash/0.1.4:
@@ -6170,6 +6196,14 @@ packages:
       varint: 5.0.2
     dev: true
     optional: true
+
+  /murmur-128/0.2.1:
+    resolution: {integrity: sha512-WseEgiRkI6aMFBbj8Cg9yBj/y+OdipwVC7zUo3W2W1JAJITwouUOtpqsmGSg67EQmwwSyod7hsVsWY5LsrfQVg==}
+    dependencies:
+      encode-utf8: 1.0.3
+      fmix: 0.1.0
+      imul: 1.0.1
+    dev: true
 
   /mute-stream/0.0.7:
     resolution: {integrity: sha1-MHXOk7whuPq0PhvE2n6BFe0ee6s=}

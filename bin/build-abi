@@ -5,12 +5,6 @@ echo "Compiling contracts ..."
 
 hardhat compile
 
-CONTRACT_VERSION="${CONTRACT_VERSION:-mainnet}"
-
-if [ "$CONTRACT_VERSION" == arbitrum ]; then
-    install-arbitrum-contracts
-fi
-
 # for recursive globbing
 shopt -s globstar
 

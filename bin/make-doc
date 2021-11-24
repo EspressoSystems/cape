@@ -8,13 +8,21 @@ output=$project/doc/contracts/index.html
 css=$project/doc/templates/style.css
 title='Spectrum Cape Smart Contract API'
 
+preprocessed_contract_dir="$(mktemp --directory -t cape-contracts-XXXXXXXX)"
+echo "Preprocessing contracts to $preprocessed_contract_dir"
+hardhat preprocess --dest "$preprocessed_contract_dir"
+
 echo "Generating contract documentation in $output."
 
 echo "  Running solidity-docgen..."
 # Note, solidity-docgen is oddly sensitive to working directory despite
 # the use of absolute paths.
 (cd $project && \
-     solidity-docgen --solc-module solc-0.8 -o ./doc/contracts -t ./doc/templates/)
+     solidity-docgen \
+          --solc-module solc-0.8 \
+          --input "$preprocessed_contract_dir" \
+          --output ./doc/contracts \
+          --templates ./doc/templates/)
 
 echo "  Running pandoc..."
 pandoc --toc --standalone --metadata title="$title" --css=$css --output=$output $input

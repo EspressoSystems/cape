@@ -2,6 +2,7 @@
 before_script:
   - git config --global url."https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/".insteadOf git://gitlab.com
   - git config --global url."https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/".insteadOf ssh://git@gitlab.com
+  - git config --global url."https://dl.cloudsmith.io/${CLOUDSMITH_ENTITLEMENT}/".insteadOf https://dl.cloudsmith.io/basic/
   - echo ""
 
 test:

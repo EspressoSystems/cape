@@ -3,8 +3,10 @@ mod contract_group_operations;
 mod contract_read_captx;
 pub mod ethereum;
 pub mod helpers;
+mod ledger;
 mod records_merkle_tree;
 pub mod types;
+pub mod wallet;
 
 // TODO check which imports are really needed
 use ark_bn254::fq2::Fq2;

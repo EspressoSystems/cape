@@ -14,6 +14,7 @@ jf-txn = { git = "ssh://git@gitlab.com/translucence/crypto/jellyfish.git", rev =
 jf-utils = { git = "ssh://git@gitlab.com/translucence/crypto/jellyfish.git", rev = "4d7e1c38e3f41d83e5b93f0eca1ae0663f221a5e" }
 jf-rescue = { git = "ssh://git@gitlab.com/translucence/crypto/jellyfish.git", rev = "4d7e1c38e3f41d83e5b93f0eca1ae0663f221a5e" }
 jf-primitives = { git = "ssh://git@gitlab.com/translucence/crypto/jellyfish.git", rev = "4d7e1c38e3f41d83e5b93f0eca1ae0663f221a5e" }
+zerok_lib = { git = "ssh://git@gitlab.com/translucence/systems/system.git", rev="0c5be1a57f007e48f6380eebcd49220b6ff26a82" }
 
 itertools = "0.10.1" # needed for jf-txn to compile
 ark-std = "0.3.0"
@@ -33,6 +34,11 @@ ark-bn254 = "0.3.0"
 num-traits = "0.2.14"
 num-derive = "0.3.3"
 rand_chacha = "0.3.1"
+generic-array = { version = "0.14.4", features = ["serde"] }
+sha3 = "0.9.1"
+async-std = { version = "1.10.0", features = ["unstable", "attributes"] }
+async-trait = "0.1.51"
+futures = "0.3.16"
 
 [dev-dependencies]
 proptest = "1.0.0"

@@ -11,7 +11,7 @@ contract NullifiersStore {
 
     // Check if a nullifier has already been inserted
     function hasNullifierAlreadyBeenPublished(bytes memory _nullifier)
-        internal
+        public
         view
         returns (bool)
     {

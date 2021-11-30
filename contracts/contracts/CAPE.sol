@@ -1,7 +1,6 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
-import "./Wrapper.sol";
 import "./NullifiersStore.sol";
 
 /// @title Configurable Anonymous Payments on Ethereum
@@ -10,7 +9,7 @@ import "./NullifiersStore.sol";
 /// @notice This is a notice.
 /// @dev Developers are awesome!
 
-contract CAPE is NullifiersStore, Wrapper {
+contract CAPE is NullifiersStore {
     struct CAPETransaction {
         /// DOC COMMENT IGNORED. Documentation for the field named field.
         bool field; // TODO
@@ -35,10 +34,6 @@ contract CAPE is NullifiersStore, Wrapper {
     /// @dev This is the developer doc for validateAndApply.
     /// @param _block is an array of transactions
     function validateAndApply(CAPETransaction[] calldata _block) internal {}
-
-    /// Insert an asset record.
-    /// @param _record is an AssetRecord to insert somewhere
-    function insertRecord(AssetRecord memory _record) internal {}
 
     /// Process a transaction in the standard way (not a burn?)
     /// @param _transaction is a CAPETransaction

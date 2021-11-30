@@ -1,11 +1,11 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
-import {Curve} from "./BN254.sol";
 import "./NullifiersStore.sol";
 import "./RecordsMerkleTree.sol";
+import "./PlonkVerifier.sol";
 
-contract DummyCAPE is NullifiersStore, RecordsMerkleTree {
+contract DummyCAPE is NullifiersStore, RecordsMerkleTree, PlonkVerifier {
     uint8 public constant RECORDS_TREE_HEIGHT = 25;
     uint256 public constant CAPTX_SIZE = 3000; // Must be the same as in the javascript testing code
     uint256 public constant N_INPUTS = 4; // Number of AAP inputs per transactions corresponding to a transaction of roughly 3 KB
@@ -16,42 +16,22 @@ contract DummyCAPE is NullifiersStore, RecordsMerkleTree {
     constructor() RecordsMerkleTree(RECORDS_TREE_HEIGHT) {}
 
     function verifyEmpty(
-        bytes memory chunk, // solhint-disable-line no-unused-vars
-        bool merkleTreesUpdate // solhint-disable-line no-unused-vars
+        bytes memory chunk // solhint-disable-line no-unused-vars
     ) public returns (bool) {
         return true;
     }
 
-    function verify(bytes memory chunk, bool merkleTreesUpdate)
-        public
-        returns (bool)
-    {
+    function verify(bytes memory chunk) public returns (bool) {
         // Count the number of transactions
         uint256 nCaptx = chunk.length / CAPTX_SIZE;
 
-        // nCaptx pairing check
-        for (uint256 i = 0; i < nCaptx; i++) {
-            runPairingCheck();
-        }
+        // Cost of plonk verification
+        batchVerify(chunk);
 
-        // Cost of prepare_pcs_info
-        preparePcsInfo(nCaptx);
-
-        if (merkleTreesUpdate) {
-            updateMerkleTrees(nCaptx);
-        }
+        // Cost of updating the Merkle tree
+        updateMerkleTrees(nCaptx);
 
         return true;
-    }
-
-    function preparePcsInfo(uint256 nCaptx) private {
-        // $nCaptx$ multi-exp in G1 of size $c$ where c=32
-        // (Empirically 29=<c<=36. See rust code call `prepare_pcs_info` in PlonkKzgSnark.batch_verify)
-
-        uint256 c = 32;
-        for (uint256 i = 0; i < nCaptx; i++) {
-            runMultiExpG1(c);
-        }
     }
 
     function insertNullifiers() private returns (bytes32) {
@@ -90,61 +70,5 @@ contract DummyCAPE is NullifiersStore, RecordsMerkleTree {
 
         // For the record tree we insert the records in batch
         updateRecordsTreeBatch(nCaptx);
-    }
-
-    function batchVerify(bytes memory chunk, bool merkleTreesUpdate)
-        public
-        returns (bool)
-    {
-        // Count the number of transactions
-        uint256 captxSize = 3000;
-        uint256 nCaptx = chunk.length / captxSize;
-
-        // We lower bound the complexity by
-        // 1 pairing check
-        // 2  multi exp in G1 of size $nCaptx$ (See rust code PlonkKzgSnark.batch_verify)
-        // Cost of preparePcsInfo(nCaptx)
-
-        // 2 multi exp in G1 of size $nCaptx$
-        runMultiExpG1(nCaptx);
-        runMultiExpG1(nCaptx);
-
-        // 1 pairing check
-        runPairingCheck();
-
-        preparePcsInfo(nCaptx);
-
-        if (merkleTreesUpdate) {
-            updateMerkleTrees(nCaptx);
-        }
-
-        return true;
-    }
-
-    function runPairingCheck() private {
-        Curve.G1Point memory g1 = Curve.P1();
-        Curve.G2Point memory g2 = Curve.P2();
-
-        Curve.G1Point[] memory points1 = new Curve.G1Point[](1);
-        points1[0] = g1;
-
-        Curve.G2Point[] memory points2 = new Curve.G2Point[](1);
-        points2[0] = g2;
-        bool res = Curve.pairing(points1, points2); // solhint-disable-line no-unused-vars
-    }
-
-    // TODO use proper multiexp opcode
-    function runMultiExpG1(uint256 size) private {
-        for (uint256 i = 0; i < size; i++) {
-            // Group scalar multiplications
-            Curve.G1Point memory g1 = Curve.P1();
-            uint256 scalar1 = 545454; // TODO use bigger scalar
-            Curve.G1Point memory p1 = Curve.g1mul(g1, scalar1); // solhint-disable-line no-unused-vars
-
-            // (size-1) group additions
-            if (i >= 1) {
-                Curve.G1Point memory p2 = Curve.g1add(g1, g1); // solhint-disable-line no-unused-vars
-            }
-        }
     }
 }

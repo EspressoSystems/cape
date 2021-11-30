@@ -69,8 +69,8 @@ impl CapeContract {
         self.wrapped_erc20_registrar.contains_key(asset_def)
     }
 
-    /// registering a new CAPE asset for an ERC20.
-    pub fn register_cape_asset(&mut self, erc20_addr: Address, new_asset: AssetDefinition) {
+    /// Create a new asset type for an ERC20 and register it to the contract.
+    pub fn sponsor_cape_asset(&mut self, erc20_addr: Address, new_asset: AssetDefinition) {
         assert!(
             !self.is_cape_asset_registered(&new_asset),
             "this CAPE asset is already registered"
@@ -280,7 +280,7 @@ mod test {
         let asset_def = usdc_cape_asset_def();
 
         // 2. sponser: register the asset (on-L1-chain).
-        cape_contract.register_cape_asset(usdc_address(), asset_def.clone());
+        cape_contract.sponsor_cape_asset(usdc_address(), asset_def.clone());
     }
 
     #[test]

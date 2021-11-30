@@ -5,5 +5,6 @@
     , "compiler-version": "off"
     , "no-empty-blocks": "off"
     , "func-visibility": [ "warn" , { "ignoreConstructors": true }]
+    , "no-unused-vars": "off"
   }
 }

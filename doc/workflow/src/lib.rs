@@ -112,7 +112,7 @@ impl CapeContract {
         self.pending_deposit_queue.push(rc);
     }
 
-    /// Relayer submit the next block, and withdraw for users who had burn transactions included
+    /// Relayer submits the next block, and withdraw for users who had burn transactions included
     /// in `new_block` with the help of record openings of the "burned records" (output of the burn
     /// transaction) submitted by user.
     pub fn submit_cape_block(

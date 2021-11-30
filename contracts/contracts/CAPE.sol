@@ -81,9 +81,9 @@ contract CAPE is NullifiersStore, Wrapper {
     }
 
     /// @notice submit a new block to the CAPE contract. Transactions are validated and the blockchain state is updated. Moreover burn transactions trigger the unwrapping of cape asset records into erc20 tokens.
-    /// @param _newBlock block to be processed by the CAPE contract.
-    /// @param _mtFrontier latest frontier of the records merkle tree.
-    /// @param _burnedRos record opening of the second outputs of the burn transactions. The information contained in these records opening allow the contract to transfer the erc20 tokens.
+    /// @param newBlock block to be processed by the CAPE contract.
+    /// @param mtFrontier latest frontier of the records merkle tree.
+    /// @param burnedRos record opening of the second outputs of the burn transactions. The information contained in these records opening allow the contract to transfer the erc20 tokens.
     function submitCapeBlock(
         CapeBlock memory newBlock,
         uint256[] memory mtFrontier,

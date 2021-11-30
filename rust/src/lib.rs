@@ -1,10 +1,10 @@
-pub mod bindings;
 pub mod cap_jf;
 mod contract_group_operations;
 mod contract_read_captx;
 pub mod ethereum;
 pub mod helpers;
 mod records_merkle_tree;
+pub mod types;
 
 // TODO check which imports are really needed
 use ark_bn254::fq2::Fq2;
@@ -270,20 +270,20 @@ mod tests {
     proptest! {
         #[test]
         fn prop_test_to_ethers_and_back_fq(n in prop::array::uniform4(0u64..)
-            .prop_map(|limbs| BigInteger256::new(limbs))
+            .prop_map(BigInteger256::new)
             .prop_filter("Must not exceed Modulus",
                          |v| v < &FqParameters::MODULUS)
-                 .prop_map(|v| Fq::new(v)))
+                 .prop_map(Fq::new))
         {
             check_serde(n);
         }
 
         #[test]
         fn prop_test_to_ethers_and_back_fr(n in prop::array::uniform4(0u64..)
-            .prop_map(|limbs| BigInteger256::new(limbs))
+            .prop_map(BigInteger256::new)
             .prop_filter("Must not exceed Modulus",
                          |v| v < &FrParameters::MODULUS)
-                 .prop_map(|v| Fr::new(v)))
+                 .prop_map(Fr::new))
         {
             check_serde(n);
         }

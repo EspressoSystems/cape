@@ -1,5 +1,5 @@
 use anyhow::Result;
-use cap_rust_sandbox::{bindings::Greeter, ethereum::*};
+use cap_rust_sandbox::{ethereum::*, types::Greeter};
 use ethers::{core::k256::ecdsa::SigningKey, prelude::*};
 use std::path::Path;
 
@@ -36,6 +36,6 @@ async fn test_basic_contract_transaction() {
         .unwrap()
         .expect("Failed to get TX receipt");
 
-    let res: String = contract.greet().call().await.unwrap().into();
+    let res: String = contract.greet().call().await.unwrap();
     assert_eq!(res, "Hi!");
 }

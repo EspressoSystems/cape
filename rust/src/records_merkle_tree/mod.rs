@@ -1,7 +1,7 @@
 mod rescue;
 
-use crate::bindings::TestRecordsMerkleTree;
 use crate::ethereum;
+use crate::types::TestRecordsMerkleTree;
 use ark_ed_on_bn254::Fq as Fr254;
 use ethers::prelude::*;
 use jf_primitives::merkle_tree::{

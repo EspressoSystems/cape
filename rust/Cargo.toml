@@ -8,6 +8,7 @@ doctest = false
 
 [dependencies]
 ethers.git = "https://github.com/gakonst/ethers-rs"
+ethers.rev = "133382d0344edc0efe9f19f97248a85b5f6b003a"
 
 jf-txn = { git = "ssh://git@gitlab.com/translucence/crypto/jellyfish.git", rev = "4d7e1c38e3f41d83e5b93f0eca1ae0663f221a5e" }
 jf-utils = { git = "ssh://git@gitlab.com/translucence/crypto/jellyfish.git", rev = "4d7e1c38e3f41d83e5b93f0eca1ae0663f221a5e" }

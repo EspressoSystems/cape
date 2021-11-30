@@ -1,9 +1,8 @@
 use ethers::prelude::U256;
 
-use crate::{
-    bindings::{G1Point, G2Point},
-    G1Ark, G1Ethers, G2Ark, G2Ethers,
-};
+use crate::types::{G1Point, G2Point};
+
+use crate::{G1Ark, G1Ethers, G2Ark, G2Ethers};
 
 impl From<G1Ark> for G1Point {
     fn from(point: G1Ark) -> Self {
@@ -52,8 +51,8 @@ mod tests {
     use super::*;
 
     use crate::{
-        bindings::TestBN254,
         ethereum::{deploy, get_funded_deployer},
+        types::TestBN254,
         G1Affine, G1Ark, G1Projective, G2Affine, G2Ark, G2Projective, Zero,
     };
     use ark_ec::AffineCurve;

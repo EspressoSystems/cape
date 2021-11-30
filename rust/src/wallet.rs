@@ -32,10 +32,13 @@ impl<'a, Metadata: Send + Serialize + DeserializeOwned> wallet::WalletBackend<'a
     }
 
     async fn subscribe(&self, _starting_at: u64) -> Self::EventStream {
+        // Return an event stream containing events for committed blocks, rejected blocks, and
+        // published memos. This will involve both the query service and the memo bulletin board.
         unimplemented!()
     }
 
     async fn get_public_key(&self, _address: &UserAddress) -> Result<UserPubKey, WalletError> {
+        // Get the encryption public key associated with this address from the address map service.
         unimplemented!()
     }
 

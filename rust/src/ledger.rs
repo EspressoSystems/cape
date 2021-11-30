@@ -96,6 +96,10 @@ impl Block for CAPEBlock {
 // In CAPE, we don't do local lightweight validation to check the results of queries. We trust the
 // results of Ethereum query services, and our local validator stores just enough information to
 // satisfy the Validator interface required by the wallet.
+//
+// Note that this might change if we end up implementing a lightweight CAPE validator in Rust as
+// part of the relayer service. In that case, we may be able to reuse that lightweight validator
+// here in order to avoid trusting a query service.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CAPEValidator {
     // The current timestamp. The only requirement is that this is a monotonically increasing value,
@@ -136,6 +140,9 @@ impl Validator for CAPEValidator {
     }
 
     fn validate_and_apply(&mut self, block: Self::Block) -> Result<Vec<u64>, ValidationError> {
+        // We don't actually do validation here, since in this implementation we trust the query
+        // service to provide only valid blocks. Instead, just compute a new commitment (by chaining
+        // the new block onto the current commitment hash, with a domain separator tag).
         self.commitment = Keccak256::new()
             .chain("block".as_bytes())
             .chain(&self.commitment)
@@ -143,6 +150,8 @@ impl Validator for CAPEValidator {
             .finalize();
         self.now += 1;
 
+        // Compute the unique IDs of the output records of this block. The IDs for each block are
+        // a consecutive range of integers starting at the previous number of records.
         let mut uids = vec![];
         let mut uid = self.num_records;
         for txn in block.0 {

@@ -21,10 +21,17 @@ contract ReadCAPTx {
         GroupProjective key;
     }
 
+    // XXX This wrapper around the solidity array type is to workaround
+    // an issue that causes the ethers abigen to fail on nested structs.
+    //     https://github.com/gakonst/ethers-rs/issues/538
+    struct Array {
+        uint256[] items;
+    }
+
     struct AuditMemo {
         // is Ciphertext
         EncKey ephemeral;
-        uint256[] data;
+        Array data;
     }
 
     struct AuxInfo {
@@ -35,30 +42,14 @@ contract ReadCAPTx {
     }
 
     struct TransferNote {
-        uint256[] inputNullifiers;
-        uint256[] outputCommitments;
+        Array inputNullifiers;
+        Array outputCommitments;
         TransferValidityProof proof;
         AuditMemo auditMemo;
         AuxInfo auxInfo;
     }
 
-    function readInt256(int256 x) public view returns (int256) {
-        return x;
-    }
-
-    function addBlsScalar(uint256 x, uint256 y) public view returns (uint256) {
-        return x + y;
-    }
-
-    function submitNullifiers(uint256[] calldata inputsNullifiers)
-        public
-        view
-        returns (uint256)
-    {
-        return inputsNullifiers.length;
-    }
-
     function submitTransferNote(TransferNote calldata note) public {
-        scratch = note.inputNullifiers[0];
+        scratch = note.inputNullifiers.items[0];
     }
 }

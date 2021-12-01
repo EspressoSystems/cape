@@ -13,6 +13,10 @@ abigen!(
     "../artifacts/contracts/TestTranscript.sol/TestTranscript/abi.json",
     event_derives(serde::Deserialize, serde::Serialize);
 
+    ReadCAPTx,
+    "../artifacts/contracts/ReadCAPTx.sol/ReadCAPTx/abi.json",
+    event_derives(serde::Deserialize, serde::Serialize);
+
     Greeter,
     "../artifacts/contracts/Greeter.sol/Greeter/abi.json",
     event_derives(serde::Deserialize, serde::Serialize);

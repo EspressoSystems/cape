@@ -4,6 +4,6 @@ set -euo pipefail
 make-doc
 lint-ci
 cape-test-geth
-brownie test --network hardhat
+# cape-test-brownie
 
 echo Ok!

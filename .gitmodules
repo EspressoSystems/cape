@@ -1,4 +1,4 @@
 [submodule "arbitrum"]
-	path = arbitrum
+	path = contracts/arbitrum
 	url = git@gitlab.com:translucence/arbitrum
 	branch = translucence

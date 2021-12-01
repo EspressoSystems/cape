@@ -1,8 +1,4 @@
 #!/usr/bin/env bash
 set -euxo pipefail
 
-# We need the rust bindings to run rustfmt!
-build-abi
-cargo build
-
 pre-commit run --all-files

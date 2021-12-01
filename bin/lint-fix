@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
-solhint --fix 'contracts/**/*.sol'
+(cd $CONTRACTS_DIR && solhint --fix 'contracts/**/*.sol')
 treefmt

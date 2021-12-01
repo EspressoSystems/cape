@@ -11,8 +11,8 @@ title='Spectrum Cape Smart Contract API'
 echo "  Running solidity-docgen..."
 # Note, solidity-docgen is oddly sensitive to working directory despite
 # the use of absolute paths.
-(cd $project && \
-     solidity-docgen --solc-module solc-0.8 -o ./doc/mdbook/src -t ./doc/templates/)
+(cd $CONTRACTS_DIR && \
+     solidity-docgen --solc-module solc-0.8 -o $project/doc/mdbook/src -t $project/doc/templates/)
 
 echo "  Running mdbook..."
 (cd $project/doc/mdbook && mdbook build)

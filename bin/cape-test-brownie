@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd "$CONTRACTS_DIR"
+brownie test --network hardhat

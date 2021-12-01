@@ -1,3 +1,6 @@
 #!/usr/bin/env bash
 # This file is used by pre-commit, it should pass on a list of file paths
-exec solhint -w 0 "$@"
+set -euo pipefail
+
+# No cd into ./contracts otherwise the paths passed along are incorrect.
+exec solhint -c $CONTRACTS_DIR/.solhint.json -w 0 "$@"

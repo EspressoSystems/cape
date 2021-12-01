@@ -3,6 +3,8 @@ set -euo pipefail
 
 echo "Compiling contracts ..."
 
+cd $CONTRACTS_DIR
+
 hardhat compile
 
 # for recursive globbing

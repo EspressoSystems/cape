@@ -29,7 +29,7 @@ includes = [
 
 [formatter.contract]
 command = "solhint"
-options = ["--fix"]
+options = ["-c", "contracts/.solhint.json", "--fix"]
 includes = ["contracts/**/*.sol"]
 
 [formatter.package_json]

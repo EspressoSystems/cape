@@ -13,7 +13,7 @@ nix-pre-commit-hooks.run {
   hooks = {
     lint-solidity = {
       enable = true;
-      files = "^contracts/";
+      files = "^contracts/contracts/";
       entry = "lint-solidity";
       types = [ "solidity" ];
     };

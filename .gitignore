@@ -1,6 +1,5 @@
 .idea
 node_modules
-/artifacts
 cache
 .env
 **/*.DS_Store
@@ -11,9 +10,6 @@ cache
 
 # direnv cache
 .direnv/
-
-# prevent our formatters from formatting code in submodule
-/arbitrum
 
 # rust
 Cargo.lock
@@ -29,6 +25,3 @@ __pycache__/
 # static files should still be force added to that directory though
 /doc/contracts
 /doc/mdbook
-
-# typescript contract bindings
-typechain-types/

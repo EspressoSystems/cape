@@ -62,6 +62,7 @@ You also need access to the following git repos
 - https://gitlab.com/translucence/crypto/jellyfish
 - https://gitlab.com/translucence/crypto/curves
 - https://gitlab.com/translucence/common/tagged-base64
+- https://gitlab.com/translucence/systems/system (wallet crate)
 
 Ping Mat for access.
 
@@ -134,8 +135,8 @@ run in the `./bin` directory.
 
 ## Testing (Javascript)
 
-We support running against a go-ethereum (`geth`) or hardhat (shortcut `hh`) node
-running on `localhost:8545`.
+We support running against a go-ethereum (`geth`) or hardhat node running on
+`localhost:8545`.
 
 The simplest way to run all the tests against a nodes is to use the scripts
 
@@ -186,7 +187,7 @@ yourself and let hardhat connect to it.
 
 Start the hardhat node in separate terminal
 
-    hh node
+    hardhat node
 
 When running tests against this hardhat node
 
@@ -198,7 +199,7 @@ When running tests against this hardhat node
 
 It's also possible to run the hardhat node and tests in one command
 
-    hh --network hardhat test
+    hardhat --network hardhat test
 
 - Tests are slow.
 - The `console.log` statements are shown in in the terminal.
@@ -208,7 +209,7 @@ It's also possible to run the hardhat node and tests in one command
 
 Run a script that connects to the local network (on port 8545)
 
-    hh run scripts/sample-script.js --network localhost
+    hardhat run scripts/benchmark.js --network localhost
 
 ## Precompiled solidity binaries
 
@@ -248,7 +249,7 @@ Note: structs will only be included in the ABI if there is a (public, I guess)
 function that uses them.
 
 To have rust typings, add the contract to the `abigen!` macro call in
-`./rust/src/types.rs`.
+`./contracts/rust/src/types.rs`.
 
 Instead of running `geth` and `build-abi` one can also just run
 
@@ -437,7 +438,7 @@ batch_verify:  2759316.285714286 gas  ------ 2084.7296774480005 USD
 - Run the following command
 
 ```
-> hardhat --network rinkeby run scripts/benchmarks.js
+> hardhat --network rinkeby run contracts/scripts/benchmarks.js
 ```
 
 # Goerli
@@ -460,7 +461,7 @@ To run the benchmarks against Arbitrum Rinkeby follow these steps:
 - Run the following command
 
 ```
-> hardhat --network arbitrum run scripts/benchmarks.js
+> hardhat --network arbitrum run contracts/scripts/benchmarks.js
 ```
 
 You can check the deployment and transactions on Arbitrum for the contract
@@ -471,7 +472,7 @@ at https://testnet.arbiscan.io/address/0x2FB18F4b4519a5fc792cb6508C6505675BA659E
 Clone the arbitrum submodule (https://gitlab.com/translucence/arbitrum fork)
 
     git submodule update --init --recursive
-    cd arbitrum
+    cd contracts/arbitrum
     nix-shell
 
 # Running local arb-dev-node (not officially supported!)
@@ -489,13 +490,13 @@ Build and run `arb-dev-node` and keep it running
 
 Run scripts
 
-    hardhat --network arbitrum_dev run scripts/benchmarks.js
+    hardhat --network arbitrum_dev run contracts/scripts/benchmarks.js
 
 We are investigating why some of these transactions revert.
 
 Run tests
 
-    hardhat --network arbitrum_dev test/test-dummy-cape-contract.js
+    hardhat --network arbitrum_dev contracts/test/test-dummy-cape-contract.js
 
 at the moment this will fail due to gas mismatch.
 
@@ -504,7 +505,7 @@ at the moment this will fail due to gas mismatch.
 Set the env var `REPORT_GAS` to get extra output about the gas consumption of
 contract functions called in the tests.
 
-    env REPORT_GAS=1 hh test
+    env REPORT_GAS=1 hardhat test
 
 # CI
 

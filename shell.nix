@@ -72,7 +72,7 @@ mkShell
 
   shellHook = ''
     echo "Ensuring node dependencies are installed"
-    pnpm i
+    pnpm --recursive install
 
     if [ ! -f .env ]; then
       echo "Copying .env.sample to .env"
@@ -82,7 +82,11 @@ mkShell
     echo "Exporting all vars in .env file"
     set -a; source .env; set +a;
 
-    export PATH=$(pwd)/bin:$(pwd)/node_modules/.bin:$PATH
+    export CONTRACTS_DIR=$(pwd)/contracts
+    export HARDHAT_CONFIG=$CONTRACTS_DIR/hardhat.config.ts
+    export PATH=$(pwd)/node_modules/.bin:$PATH
+    export PATH=$CONTRACTS_DIR/node_modules/.bin:$PATH
+    export PATH=$(pwd)/bin:$PATH
 
     # install pre-commit hooks
     ${pre-commit-check.shellHook}

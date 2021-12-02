@@ -20,22 +20,22 @@ contract CAPE is NullifiersStore {
     //     uint256 dummy;
     // }
 
-    struct GroupProjective {
-        uint256 x;
-        uint256 y;
-        uint256 t;
-        uint256 z;
-    }
+    //    struct GroupProjective {
+    //        uint256 x;
+    //        uint256 y;
+    //        uint256 t;
+    //        uint256 z;
+    //    }
 
-    struct EncKey {
-        GroupProjective key;
-    }
+    //    struct EncKey {
+    //        GroupProjective key;
+    //    }
 
-    struct AuditMemo {
-        // is Ciphertext
-        EncKey ephemeral;
-        uint256[] data;
-    }
+    //    struct AuditMemo {
+    //        // is Ciphertext
+    //        EncKey ephemeral;
+    //        uint256[] data;
+    //    }
 
     // XXX This wrapper around the solidity array type is to workaround
     // an issue that causes the ethers abigen to fail on nested structs.
@@ -46,57 +46,33 @@ contract CAPE is NullifiersStore {
     //     uint256[] items;
     // }
 
-    struct TransferNote {
-        uint256[] inputNullifiers;
-        uint256[] outputCommitments;
-        TransferValidityProof proof;
-        AuditMemo auditMemo;
-        AuxInfo auxInfo;
-    }
+    //    struct TransferNote {
+    //        uint256[] inputNullifiers;
+    //        uint256[] outputCommitments;
+    //        TransferValidityProof proof;
+    //        AuditMemo auditMemo;
+    //        AuxInfo auxInfo;
+    //    }
+    //
+    //    struct AuxInfo {
+    //        uint256 merkleRoot;
+    //        uint256 fee;
+    //        uint256 validUntil;
+    //        GroupProjective txnMemoVerKey;
+    //    }
+    //
+    //
+    //    struct UserPubKey {
+    //        GroupProjective address_; // TODO Probably not the right type.
+    //        GroupProjective encKey;
+    //    }
+    //
+    //    struct FreezeNote {
+    //        bool field;
+    //        // TODO
+    //    }
 
-    struct AuxInfo {
-        uint256 merkleRoot;
-        uint256 fee;
-        uint256 validUntil;
-        GroupProjective txnMemoVerKey;
-    }
-
-    // struct MintNote {
-    //     /// nullifier for the input (i.e. transaction fee record)
-    //     uint256 nullifier;
-    //     /// output commitment for the fee change
-    //     uint256 chgComm;
-    //     /// output commitment for the minted asset
-    //     uint256 mintComm;
-    //     /// the amount of the minted asset
-    //     uint64 mintAmount; // TODO change to uint128?
-    //     /// the asset definition of the asset
-    //     AssetDefinition mintAssedDef;
-    //     /// the validity proof of this note
-    //     MintValidityProof proof;
-    //     /// memo for policy compliance specified for the designated auditor
-    //     AuditMemo auditMemo;
-    //     /// auxiliary information
-    //     MintAuxInfo aux_info;
-    // }
-
-    // struct MintAuxInfo {
-    //     uint256 merkleRoot;
-    //     uint64 fee;
-    //     GroupProjective txnMemoVerKey;
-    // }
-
-    struct UserPubKey {
-        GroupProjective address_; // TODO Probably not the right type.
-        GroupProjective encKey;
-    }
-
-    struct FreezeNote {
-        bool field;
-        // TODO
-    }
-
-    struct CAPETransaction {
+    struct CapeTransaction {
         /// DOC COMMENT IGNORED. Documentation for the field named field.
         // For now we only represent the list of nullifiers of a transactions
         uint256[] nullifiers;
@@ -108,11 +84,13 @@ contract CAPE is NullifiersStore {
     }
 
     struct AssetPolicy {
-        EncKey auditorPk;
-        EncKey credPk;
-        EncKey freezerPk;
-        bool[12] revealMap; // ATTRS_LEN (8) + 3 + 1
-        uint64 revealThreshold;
+        // TODO
+        bool field;
+        //        EncKey auditorPk;
+        //        EncKey credPk;
+        //        EncKey freezerPk;
+        //        bool[12] revealMap; // ATTRS_LEN (8) + 3 + 1
+        //        uint64 revealThreshold;
     }
 
     struct RecordOpening {
@@ -120,27 +98,27 @@ contract CAPE is NullifiersStore {
         // TODO (Philippe will take care of it)
     }
 
-    struct CapeBlock {
-        CAPETransaction[] txns;
-        // CAPETransaction[] burnTxns; // TODO
-        //UserPubKey miner; // TODO
-        // uint64 blockHeight; // TODO
-    }
+    //    struct CapeBlock {
+    //        CAPETransaction[] txns;
+    //        // CAPETransaction[] burnTxns; // TODO
+    //        //UserPubKey miner; // TODO
+    //        // uint64 blockHeight; // TODO
+    //    }
 
     /// @notice Validate a transaction and if successful apply it.
     /// @dev This is the developer doc for validateAndApply.
     /// @param _block is an array of transactions
-    function validateAndApply(CAPETransaction[] calldata _block) internal {}
+    function validateAndApply(CapeTransaction[] calldata _block) internal {}
 
     /// Process a transaction in the standard way (not a burn?)
     /// @param _transaction is a CAPETransaction
-    function processStandardTransaction(CAPETransaction memory _transaction)
+    function processStandardTransaction(CapeTransaction memory _transaction)
         internal
     {}
 
     /// Process a burn transaction.
     /// @param _transaction is a CAPETransaction
-    function processBurnTransaction(CAPETransaction memory _transaction)
+    function processBurnTransaction(CapeTransaction memory _transaction)
         internal
     {}
 
@@ -177,12 +155,8 @@ contract CAPE is NullifiersStore {
     /// @param mtFrontier latest frontier of the records merkle tree.
     // /// @param burnedRos record opening of the second outputs of the burn transactions. The information contained in these records opening allow the contract to transfer the erc20 tokens.
     function submitCapeBlock(
-        CapeBlock memory newBlock,
-        uint256[] memory mtFrontier
-    )
-        public
-    // RecordOpening[] memory burnedRos // TODO part of the unwrapping logic
-    {
-
-    }
+        CapeTransaction[] memory newBlock, // TODO try to use a struct instead of an array of transactions
+        uint256[] memory mtFrontier,
+        RecordOpening[] memory burnedRos
+    ) public {}
 }

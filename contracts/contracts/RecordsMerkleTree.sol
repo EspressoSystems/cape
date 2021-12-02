@@ -351,7 +351,6 @@ contract RecordsMerkleTree is Rescue {
         uint256 numElements = elements.length;
         Node[] memory nodes = new Node[](3 * (numElements + 1) * height + 2);
 
-        uint64 rootIndex = buildTreeFromFrontier(flattenedFrontier, nodes);
         bool isFrontierValid = checkFrontier(flattenedFrontier);
         require(isFrontierValid, "Frontier not consistent w/ state");
 
@@ -359,6 +358,7 @@ contract RecordsMerkleTree is Rescue {
 
         if (elements.length > 0) {
             // maxIndex tracks the index of the last element inserted in the tree
+            uint64 rootIndex = buildTreeFromFrontier(flattenedFrontier, nodes);
             uint64 maxIndex = rootIndex;
             for (uint32 i = 0; i < elements.length; i++) {
                 maxIndex = pushElement(nodes, rootIndex, maxIndex, elements[i]);

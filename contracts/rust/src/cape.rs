@@ -1,14 +1,24 @@
+use ethers::prelude::U256;
+
+use jf_txn::transfer::TransferNote;
+
+use crate::types::CapeTransaction;
+
+fn to_solidity(note: &TransferNote) -> CapeTransaction {
+    return CapeTransaction {
+        nullifiers: vec![U256::from(0)],
+    };
+}
+
 #[cfg(test)]
 mod tests {
     use std::path::Path;
 
-    use crate::types::{
-        Array, AuditMemo, AuxInfo, EncKey, GroupProjective, ReadCAPTx, TransferNote,
-        TransferValidityProof,
-    };
-
+    use crate::types::CAPE;
     use ethers::prelude::U256;
 
+    use crate::cap_jf::create_anon_xfr_2in_3out;
+    use crate::cape::to_solidity;
     use crate::ethereum::{deploy, get_funded_deployer};
 
     #[tokio::test]
@@ -22,27 +32,40 @@ mod tests {
         .await
         .unwrap();
 
+        let contract = CAPE::new(contract.address(), client);
+
         // Create two transactions
+        let mut prng = ark_std::test_rng();
+        let notes = create_anon_xfr_2in_3out(&mut prng, 2);
 
         // Convert the AAP transactions into some solidity friendly representation
+        let mut solidity_notes = vec![];
+        for note in notes {
+            let solidity_note = to_solidity(&note);
+            solidity_notes.push(solidity_note.clone());
+        }
 
-        // Create a block to be submitted to the contract
+        // For now the block is simply the vector of "solidity" notes
+        let block = solidity_notes;
 
         // Create a dummy frontier
+        let frontier = vec![];
+
+        // Create dummy records openings arrary
+        let records_openings = vec![];
 
         // Submit to the contract
+        let _receipt = contract
+            .submit_cape_block(block, frontier, records_openings)
+            .legacy()
+            .send()
+            .await
+            .unwrap()
+            .await
+            .unwrap()
+            .expect("Failed to get tx receipt");
 
         // Check that the nullifiers have been inserted into the contract hashmap
-
-        // let _receipt = contract
-        //     .submit_transfer_note(transfer_note)
-        //     .legacy()
-        //     .send()
-        //     .await
-        //     .unwrap()
-        //     .await
-        //     .unwrap()
-        //     .expect("Failed to get tx receipt");
 
         // let read_sentinel = contract.scratch().call().await.unwrap();
         // println!("Gas used {}", _receipt.gas_used.unwrap());

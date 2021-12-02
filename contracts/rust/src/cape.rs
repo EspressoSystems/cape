@@ -5,6 +5,7 @@ use crate::types::CapeTransaction;
 use itertools::Itertools;
 
 #[allow(dead_code)]
+/// Converts a TransferNote into a solidity friendly data structure that can be passed to the CAPE contract
 fn to_solidity(note: &TransferNote) -> CapeTransaction {
     return CapeTransaction {
         nullifiers: note

@@ -10,24 +10,121 @@ import "./NullifiersStore.sol";
 /// @dev Developers are awesome!
 
 contract CAPE is NullifiersStore {
+    struct TransferValidityProof {
+        // TODO
+        uint256 dummy;
+    }
+
+    // struct MintValidityProof {
+    //     // TODO
+    //     uint256 dummy;
+    // }
+
+    struct GroupProjective {
+        uint256 x;
+        uint256 y;
+        uint256 t;
+        uint256 z;
+    }
+
+    struct EncKey {
+        GroupProjective key;
+    }
+
+    struct AuditMemo {
+        // is Ciphertext
+        EncKey ephemeral;
+        uint256[] data;
+    }
+
+    // XXX This wrapper around the solidity array type is to workaround
+    // an issue that causes the ethers abigen to fail on nested structs.
+    //     https://github.com/gakonst/ethers-rs/issues/538
+    //
+    // Note: doesn't really work as workaround anymore
+    // struct SolidityArray {
+    //     uint256[] items;
+    // }
+
+    struct TransferNote {
+        uint256[] inputNullifiers;
+        uint256[] outputCommitments;
+        TransferValidityProof proof;
+        AuditMemo auditMemo;
+        AuxInfo auxInfo;
+    }
+
+    struct AuxInfo {
+        uint256 merkleRoot;
+        uint256 fee;
+        uint256 validUntil;
+        GroupProjective txnMemoVerKey;
+    }
+
+    // struct MintNote {
+    //     /// nullifier for the input (i.e. transaction fee record)
+    //     uint256 nullifier;
+    //     /// output commitment for the fee change
+    //     uint256 chgComm;
+    //     /// output commitment for the minted asset
+    //     uint256 mintComm;
+    //     /// the amount of the minted asset
+    //     uint64 mintAmount; // TODO change to uint128?
+    //     /// the asset definition of the asset
+    //     AssetDefinition mintAssedDef;
+    //     /// the validity proof of this note
+    //     MintValidityProof proof;
+    //     /// memo for policy compliance specified for the designated auditor
+    //     AuditMemo auditMemo;
+    //     /// auxiliary information
+    //     MintAuxInfo aux_info;
+    // }
+
+    // struct MintAuxInfo {
+    //     uint256 merkleRoot;
+    //     uint64 fee;
+    //     GroupProjective txnMemoVerKey;
+    // }
+
+    struct UserPubKey {
+        GroupProjective address_; // TODO Probably not the right type.
+        GroupProjective encKey;
+    }
+
+    struct FreezeNote {
+        bool field;
+        // TODO
+    }
+
     struct CAPETransaction {
         /// DOC COMMENT IGNORED. Documentation for the field named field.
-        bool field; // TODO
+        // TODO do we need other types of notes?
+        TransferNote note;
     }
 
     struct AssetDefinition {
-        bool field;
-        // TODO
+        uint256 code;
+        AssetPolicy policy;
+    }
+
+    struct AssetPolicy {
+        EncKey auditorPk;
+        EncKey credPk;
+        EncKey freezerPk;
+        bool[12] revealMap; // ATTRS_LEN (8) + 3 + 1
+        uint64 revealThreshold;
     }
 
     struct RecordOpening {
         bool field;
-        // TODO
+        // TODO (Philippe will take care of it)
     }
 
     struct CapeBlock {
-        bool field;
-        // TODO
+        CAPETransaction[] txns;
+        CAPETransaction[] burnTxns;
+        UserPubKey miner;
+        uint64 blockHeight;
     }
 
     /// @notice Validate a transaction and if successful apply it.
@@ -77,7 +174,7 @@ contract CAPE is NullifiersStore {
 
     /// @notice submit a new block to the CAPE contract. Transactions are validated and the blockchain state is updated. Moreover burn transactions trigger the unwrapping of cape asset records into erc20 tokens.
     /// @param newBlock block to be processed by the CAPE contract.
-    /// @param mtFrontier latest frontier of the records merkle tree.
+    // /// @param mtFrontier latest frontier of the records merkle tree.
     /// @param burnedRos record opening of the second outputs of the burn transactions. The information contained in these records opening allow the contract to transfer the erc20 tokens.
     function submitCapeBlock(
         CapeBlock memory newBlock,

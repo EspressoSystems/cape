@@ -1,12 +1,19 @@
-use ethers::prelude::U256;
+use ethers::prelude::{Bytes, U256};
 
 use jf_txn::transfer::TransferNote;
 
+use crate::helpers::{convert_fr254_to_u256, convert_nullifier_to_u256};
 use crate::types::CapeTransaction;
+use itertools::Itertools;
 
 fn to_solidity(note: &TransferNote) -> CapeTransaction {
     return CapeTransaction {
-        nullifiers: vec![U256::from(0)],
+        nullifiers: note
+            .inputs_nullifiers
+            .clone()
+            .iter()
+            .map(|v| convert_nullifier_to_u256(v))
+            .collect_vec(),
     };
 }
 
@@ -67,9 +74,13 @@ mod tests {
 
         // Check that the nullifiers have been inserted into the contract hashmap
 
-        // let read_sentinel = contract.scratch().call().await.unwrap();
-        // println!("Gas used {}", _receipt.gas_used.unwrap());
-        // println!("Sentinel {}\n", read_sentinel);
-        // assert_eq!(read_sentinel, sentinel);
+        // let is_nullifier_inserted: bool = contract
+        //   .has_nullifier_already_been_published(nullifier)
+        //   .call()
+        //   .await
+        //   .unwrap()
+        //   .into();
+        //
+        // assert!(is_nullifier_inserted);
     }
 }

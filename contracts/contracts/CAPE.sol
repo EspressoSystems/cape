@@ -98,8 +98,8 @@ contract CAPE is NullifiersStore {
 
     struct CAPETransaction {
         /// DOC COMMENT IGNORED. Documentation for the field named field.
-        // TODO do we need other types of notes?
-        TransferNote note;
+        // For now we only represent the list of nullifiers of a transactions
+        uint256[] nullifiers;
     }
 
     struct AssetDefinition {
@@ -122,9 +122,9 @@ contract CAPE is NullifiersStore {
 
     struct CapeBlock {
         CAPETransaction[] txns;
-        CAPETransaction[] burnTxns;
-        UserPubKey miner;
-        uint64 blockHeight;
+        // CAPETransaction[] burnTxns; // TODO
+        //UserPubKey miner; // TODO
+        // uint64 blockHeight; // TODO
     }
 
     /// @notice Validate a transaction and if successful apply it.
@@ -174,11 +174,15 @@ contract CAPE is NullifiersStore {
 
     /// @notice submit a new block to the CAPE contract. Transactions are validated and the blockchain state is updated. Moreover burn transactions trigger the unwrapping of cape asset records into erc20 tokens.
     /// @param newBlock block to be processed by the CAPE contract.
-    // /// @param mtFrontier latest frontier of the records merkle tree.
-    /// @param burnedRos record opening of the second outputs of the burn transactions. The information contained in these records opening allow the contract to transfer the erc20 tokens.
+    /// @param mtFrontier latest frontier of the records merkle tree.
+    // /// @param burnedRos record opening of the second outputs of the burn transactions. The information contained in these records opening allow the contract to transfer the erc20 tokens.
     function submitCapeBlock(
         CapeBlock memory newBlock,
-        uint256[] memory mtFrontier,
-        RecordOpening[] memory burnedRos
-    ) public {}
+        uint256[] memory mtFrontier
+    )
+        public
+    // RecordOpening[] memory burnedRos // TODO part of the unwrapping logic
+    {
+
+    }
 }

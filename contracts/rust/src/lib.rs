@@ -1,10 +1,10 @@
 pub mod cap_jf;
+mod cape;
 mod contract_group_operations;
 pub mod ethereum;
 pub mod helpers;
 mod ledger;
 mod records_merkle_tree;
-mod test_cape;
 mod transcript;
 pub mod types;
 pub mod wallet;

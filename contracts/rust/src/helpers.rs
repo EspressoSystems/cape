@@ -16,6 +16,6 @@ pub fn convert_fr254_to_u256(f: Fr254) -> U256 {
 
 pub fn convert_nullifier_to_u256(n: &Nullifier) -> U256 {
     let mut buffer: Vec<u8> = vec![];
-    n.serialize(&mut buffer);
+    let _ = n.serialize(&mut buffer);
     U256::from(buffer.as_slice())
 }

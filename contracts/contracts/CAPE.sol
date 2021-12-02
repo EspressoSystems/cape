@@ -158,5 +158,13 @@ contract CAPE is NullifiersStore {
         CapeTransaction[] memory newBlock, // TODO try to use a struct instead of an array of transactions
         uint256[] memory mtFrontier,
         RecordOpening[] memory burnedRos
-    ) public {}
+    ) public {
+        // Go through the nullifiers list of each transaction and do the insertion into the Nullifier Store
+        for (uint256 i = 0; i < newBlock.length; i++) {
+            uint256[] memory nullifiers = newBlock[i].nullifiers;
+            for (uint256 j = 0; j < nullifiers.length; j++) {
+                insertNullifier(nullifiers[j]);
+            }
+        }
+    }
 }

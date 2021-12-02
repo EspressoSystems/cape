@@ -13,7 +13,7 @@ contract NullifiersStore {
         view
         returns (bool)
     {
-        return !nullifiers[_nullifier];
+        return nullifiers[_nullifier];
     }
 
     // Insert a nullifier into the set of nullifiers.

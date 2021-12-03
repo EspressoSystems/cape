@@ -20,16 +20,17 @@ contract CAPE is NullifiersStore {
         uint256 dummy;
     }
 
-    struct GroupProjective {
+    // Group Projective
+    struct EncKey {
         uint256 x;
         uint256 y;
         uint256 t;
         uint256 z;
     }
 
-    struct EncKey {
-        GroupProjective key;
-    }
+    // struct EncKey {
+    //     GroupProjective key;
+    // }
 
     struct AuditMemo {
         // is Ciphertext
@@ -47,23 +48,23 @@ contract CAPE is NullifiersStore {
     // }
 
     struct TransferNote {
-        uint256[] inputNullifiers;
-        uint256[] outputCommitments;
         TransferValidityProof proof;
         AuditMemo auditMemo;
         AuxInfo auxInfo;
+        uint256[] inputNullifiers;
+        uint256[] outputCommitments;
     }
 
     struct AuxInfo {
         uint256 merkleRoot;
         uint256 fee;
         uint256 validUntil;
-        GroupProjective txnMemoVerKey;
+        EncKey txnMemoVerKey;
     }
 
     struct UserPubKey {
-        GroupProjective address_; // TODO Probably not the right type.
-        GroupProjective encKey;
+        EncKey address_; // TODO Probably not the right type.
+        EncKey encKey;
     }
 
     struct FreezeNote {
@@ -74,8 +75,8 @@ contract CAPE is NullifiersStore {
     struct CapeTransaction {
         /// DOC COMMENT IGNORED. Documentation for the field named field.
         // For now we only represent the list of nullifiers of a transactions
-        // uint256[] nullifiers; (works)
-        TransferNote note;
+        uint256[] nullifiers; // (works)
+        // TransferNote note;
     }
 
     struct AssetDefinition {
@@ -83,12 +84,13 @@ contract CAPE is NullifiersStore {
         AssetPolicy policy;
     }
 
+    // NOTE: abigen! seems sensitive to order of fields
     struct AssetPolicy {
+        uint64 revealThreshold;
+        bool[12] revealMap; // ATTRS_LEN (8) + 3 + 1
         EncKey auditorPk;
         EncKey credPk;
         EncKey freezerPk;
-        bool[12] revealMap; // ATTRS_LEN (8) + 3 + 1
-        uint64 revealThreshold;
     }
 
     struct RecordOpening {
@@ -124,12 +126,12 @@ contract CAPE is NullifiersStore {
     /// @param erc20Address erc20 token address corresponding to the asset type.
     /// @param newAsset asset type.
     /// @return true if the asset type is registered, false otherwise
-    function isCapeAssetRegistered(
-        address erc20Address,
-        AssetDefinition memory newAsset
-    ) public returns (bool) {
-        return true;
-    }
+    // function isCapeAssetRegistered(
+    //     address erc20Address,
+    //     AssetDefinition memory newAsset
+    // ) public returns (bool) {
+    //     return true;
+    // }
 
     /// @notice create a new asset type associated to some erc20 token and register it in the contract so that it can be used later for wrapping.
     /// @param _erc20Address erc20 token address of corresponding to the asset type.
@@ -153,13 +155,15 @@ contract CAPE is NullifiersStore {
     /// @param mtFrontier latest frontier of the records merkle tree.
     // /// @param burnedRos record opening of the second outputs of the burn transactions. The information contained in these records opening allow the contract to transfer the erc20 tokens.
     function submitCapeBlock(
-        CapeBlock memory newBlock,
+        CapeTransaction[] memory newBlock, // TODO use block struct
         uint256[] memory mtFrontier,
         RecordOpening[] memory burnedRos
     ) public {
         // Go through the nullifiers list of each transaction and do the insertion into the Nullifier Store
-        for (uint256 i = 0; i < newBlock.txns.length; i++) {
-            uint256[] memory nullifiers = newBlock.txns[i].note.inputNullifiers;
+        // for (uint256 i = 0; i < newBlock.txns.length; i++) {
+        // uint256[] memory nullifiers = newBlock.txns[i].note.inputNullifiers;
+        for (uint256 i = 0; i < newBlock.length; i++) {
+            uint256[] memory nullifiers = newBlock[i].nullifiers;
             for (uint256 j = 0; j < nullifiers.length; j++) {
                 insertNullifier(nullifiers[j]);
             }

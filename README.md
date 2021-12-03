@@ -101,6 +101,8 @@ Try running some tests to verify the installation
 If this fails with errors that don't point to obvious problems please open an
 issue on gitlab.
 
+Note that these tests use `cargo test --release` which is slower for compiling but then faster for executing.
+
 ## (Optional, but recommended) direnv
 
 To avoid manually activating the nix shell each time the

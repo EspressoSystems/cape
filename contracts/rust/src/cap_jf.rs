@@ -1,3 +1,4 @@
+use ark_std::rand::prelude::StdRng;
 use jf_txn::{
     keys::UserKeyPair,
     proof::{transfer::preprocess, universal_setup},
@@ -6,24 +7,23 @@ use jf_txn::{
     utils::{compute_universal_param_size, params_builder::TransferParamsBuilder},
 };
 
-pub fn create_test_anon_xfr_2in_6out() -> TransferNote {
+pub fn create_anon_xfr_2in_3out(prng: &mut StdRng, num_notes: u32) -> Vec<TransferNote> {
     let depth = 10;
     let num_input = 2;
-    let num_output = 6;
+    let num_output = 3;
     let cred_expiry = 9999;
     let valid_until = 1234;
 
-    let mut prng = ark_std::test_rng();
     let domain_size =
         compute_universal_param_size(NoteType::Transfer, num_input, num_output, depth).unwrap();
-    let srs = universal_setup(domain_size, &mut prng).unwrap();
+    let srs = universal_setup(domain_size, prng).unwrap();
     let (prover_key, _verifier_key, _) = preprocess(&srs, num_input, num_output, depth).unwrap();
 
     let input_amounts = [30, 25];
-    let output_amounts = [19, 3, 4, 5, 6, 7];
+    let output_amounts = [19, 10, 15];
 
-    let keypair1 = UserKeyPair::generate(&mut prng);
-    let keypair2 = UserKeyPair::generate(&mut prng);
+    let keypair1 = UserKeyPair::generate(prng);
+    let keypair2 = UserKeyPair::generate(prng);
     let builder = TransferParamsBuilder::new_non_native(
         num_input,
         num_output,
@@ -34,9 +34,14 @@ pub fn create_test_anon_xfr_2in_6out() -> TransferNote {
     .set_output_amounts(output_amounts[0], &output_amounts[1..])
     .set_input_creds(cred_expiry);
 
-    let (note, _recv_memos, _sig) = builder
-        .build_transfer_note(&mut prng, &prover_key, valid_until, vec![])
-        .unwrap();
+    let mut notes = vec![];
 
-    note
+    for _ in 0..num_notes {
+        let (note, _recv_memos, _sig) = builder
+            .build_transfer_note(prng, &prover_key, valid_until, vec![])
+            .unwrap();
+
+        notes.push(note.clone());
+    }
+    notes
 }

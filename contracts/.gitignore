@@ -15,6 +15,7 @@ cache
 # rust
 Cargo.lock
 target/
+rust/my_note.bin
 
 # python / brownie
 build/

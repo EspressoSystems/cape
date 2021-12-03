@@ -1,3 +1,5 @@
+image: lnl7/nix
+
 # Override git urls to use ci-job-token
 before_script:
   - git config --global url."https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/".insteadOf git://gitlab.com
@@ -5,16 +7,24 @@ before_script:
   - git config --global url."https://dl.cloudsmith.io/${CLOUDSMITH_ENTITLEMENT}/".insteadOf https://dl.cloudsmith.io/basic/
   - echo ""
 
-test:
-  stage: test
+lint:
   tags:
     - docker
-  image: lnl7/nix
   script:
-    - nix-shell --run make-doc
-    - nix-shell --run lint-ci
-    - nix-shell --run cape-test-geth
+    - nix-shell --run "prepend-timestamps lint-ci"
+
+test:
+  tags:
+    - docker
+  script:
+    - nix-shell --run "prepend-timestamps cape-test-geth"
     # - nix-shell --run cape-test-brownie # TODO not working at the moment
+
+doc:
+  tags:
+    - docker
+  script:
+    - nix-shell --run "prepend-timestamps make-doc"
   artifacts:
     paths:
       - doc

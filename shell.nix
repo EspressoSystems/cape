@@ -57,6 +57,7 @@ mkShell
     netcat-gnu # only used to check for open ports
     cacert
     mdbook # make-doc, documentation generation
+    moreutils # includes `ts`, used to add timestamps on CI
   ]
   ++ myPython
   ++ rustDeps;

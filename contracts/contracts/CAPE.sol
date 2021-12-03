@@ -51,7 +51,7 @@ contract CAPE is NullifiersStore {
         TransferValidityProof proof;
         AuditMemo auditMemo;
         AuxInfo auxInfo;
-        uint256[] inputNullifiers;
+        uint256[] inputsNullifiers;
         uint256[] outputCommitments;
     }
 
@@ -75,7 +75,7 @@ contract CAPE is NullifiersStore {
     struct CapeTransaction {
         /// DOC COMMENT IGNORED. Documentation for the field named field.
         // For now we only represent the list of nullifiers of a transactions
-        uint256[] nullifiers; // (works)
+        uint256[] inputsNullifiers; // (works)
         // TransferNote note;
     }
 
@@ -99,10 +99,10 @@ contract CAPE is NullifiersStore {
     }
 
     struct CapeBlock {
-        CapeTransaction[] txns;
-        CapeTransaction[] burnTxns; // TODO
         UserPubKey miner; // TODO
         uint64 blockHeight; // TODO
+        CapeTransaction[] txns;
+        CapeTransaction[] burnTxns; // TODO
     }
 
     /// @notice Validate a transaction and if successful apply it.
@@ -155,15 +155,15 @@ contract CAPE is NullifiersStore {
     /// @param mtFrontier latest frontier of the records merkle tree.
     // /// @param burnedRos record opening of the second outputs of the burn transactions. The information contained in these records opening allow the contract to transfer the erc20 tokens.
     function submitCapeBlock(
-        CapeTransaction[] memory newBlock, // TODO use block struct
+        CapeBlock memory newBlock, // TODO use block struct
         uint256[] memory mtFrontier,
         RecordOpening[] memory burnedRos
     ) public {
         // Go through the nullifiers list of each transaction and do the insertion into the Nullifier Store
-        // for (uint256 i = 0; i < newBlock.txns.length; i++) {
-        // uint256[] memory nullifiers = newBlock.txns[i].note.inputNullifiers;
-        for (uint256 i = 0; i < newBlock.length; i++) {
-            uint256[] memory nullifiers = newBlock[i].nullifiers;
+        for (uint256 i = 0; i < newBlock.txns.length; i++) {
+            uint256[] memory nullifiers = newBlock.txns[i].inputsNullifiers;
+            // for (uint256 i = 0; i < newBlock.length; i++) {
+            //     uint256[] memory nullifiers = newBlock[i].nullifiers;
             for (uint256 j = 0; j < nullifiers.length; j++) {
                 insertNullifier(nullifiers[j]);
             }

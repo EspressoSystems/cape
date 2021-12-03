@@ -8,7 +8,7 @@ use itertools::Itertools;
 /// Converts a TransferNote into a solidity friendly data structure that can be passed to the CAPE contract
 fn to_solidity(note: &TransferNote) -> CapeTransaction {
     return CapeTransaction {
-        nullifiers: note
+        inputs_nullifiers: note
             .inputs_nullifiers
             .clone()
             .iter()
@@ -23,7 +23,7 @@ mod tests {
     use crate::cape::to_solidity;
     use crate::ethereum::{deploy, get_funded_deployer};
     use crate::helpers::convert_nullifier_to_u256;
-    use crate::types::{AssetDefinition, CAPE};
+    use crate::types::{AssetDefinition, CapeBlock, CAPE};
     use std::path::Path;
 
     #[tokio::test]

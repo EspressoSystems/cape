@@ -124,14 +124,14 @@ contract CAPE is NullifiersStore {
 
     /// @notice Check if an asset is already registered
     /// @param erc20Address erc20 token address corresponding to the asset type.
-    /// @param newAsset asset type.
+    /// @param _newAsset asset type.
     /// @return true if the asset type is registered, false otherwise
-    // function isCapeAssetRegistered(
-    //     address erc20Address,
-    //     AssetDefinition memory newAsset
-    // ) public returns (bool) {
-    //     return true;
-    // }
+    function isCapeAssetRegistered(
+        address erc20Address,
+        AssetDefinition memory _newAsset
+    ) public returns (bool) {
+        return true;
+    }
 
     /// @notice create a new asset type associated to some erc20 token and register it in the contract so that it can be used later for wrapping.
     /// @param _erc20Address erc20 token address of corresponding to the asset type.

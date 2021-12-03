@@ -13,7 +13,6 @@ abigen!(
     "../artifacts/contracts/TestTranscript.sol/TestTranscript/abi.json",
     event_derives(serde::Deserialize, serde::Serialize);
 
-    // Currently will not compile
     CAPE,
     "../artifacts/contracts/CAPE.sol/CAPE/abi.json",
     event_derives(serde::Deserialize, serde::Serialize);

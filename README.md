@@ -452,7 +452,7 @@ batch_verify:  2759316.285714286 gas  ------ 2084.7296774480005 USD
 To run the benchmarks against Arbitrum Rinkeby follow these steps:
 
 - Install [Metamask](https://metamask.io/) in your browser and copy the mnemonic.
-- Set the RINKEBY_MNEMONIC in the .env file.
+- Set the RINKEBY_MNEMONIC in the .env file. Note: this variable may be looked up in the environment so restart your nix shell for the updated env var to be accurate when read.
 - Switch metamask to the rinkeby network.
 - Get some Rinkeby coins at the [MyCrypto faucet](https://app.mycrypto.com/faucet). You can also use the official [Rinkeby faucet](https://faucet.rinkeby.io) which is less stable but where you can get more coins at once.
 - Go to the [Arbitrum bridge](https://bridge.arbitrum.io/) and deposit your

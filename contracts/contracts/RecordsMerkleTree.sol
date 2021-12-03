@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import "./Rescue.sol";
 
+/// @notice The Records Merkle Tree stores asset records.
 contract RecordsMerkleTree is Rescue {
     enum Position {
         LEFT,
@@ -34,6 +35,7 @@ contract RecordsMerkleTree is Rescue {
         height = _height;
     }
 
+    /// Is the given node a terminal (i.e. a leaf)?
     function isTerminal(Node memory node) private returns (bool) {
         return (node.left == 0) && (node.middle == 0) && (node.right == 0);
     }
@@ -42,11 +44,12 @@ contract RecordsMerkleTree is Rescue {
         return !isTerminal(node);
     }
 
+    /// Is the given node null?
     function isNull(Node memory node) private returns (bool) {
         return (node.val == 0 && isTerminal(node));
     }
 
-    // Create the new "hole node" that points to the children already inserted in the array
+    /// Create the new "hole node" that points to the children already inserted in the array.
     function createHoleNode(uint64 cursor, Position posSibling)
         private
         returns (Node memory)
@@ -105,6 +108,8 @@ contract RecordsMerkleTree is Rescue {
         }
     }
 
+    /// Builds a Merkle tree from a frontier.
+    /// Returns a cursor.
     function buildTreeFromFrontier(
         uint256[] memory flattenedFrontier,
         Node[] memory nodes

@@ -12,6 +12,7 @@
 
 pragma solidity ^0.8.0;
 
+/// @notice Barreto-Naehrig curve over a 254 bit prime field
 library Curve {
     // p = p(u) = 36u^4 + 36u^3 + 24u^2 + 6u + 1
     uint256 internal constant FIELD_ORDER =

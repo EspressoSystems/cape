@@ -1,3 +1,6 @@
+variables:
+  FF_USE_FASTZIP: 1
+
 image: lnl7/nix
 
 # Override git urls to use ci-job-token
@@ -19,6 +22,11 @@ test:
   script:
     - nix-shell --run "prepend-timestamps cape-test-geth"
     # - nix-shell --run cape-test-brownie # TODO not working at the moment
+  cache:
+    key: cape-test
+    paths:
+      - .cargo/
+      - target/
 
 doc:
   tags:

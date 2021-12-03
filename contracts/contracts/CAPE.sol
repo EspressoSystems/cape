@@ -21,16 +21,16 @@ contract CAPE is NullifiersStore {
     }
 
     // Group Projective
-    struct EncKey {
+    struct GroupProjective {
         uint256 x;
         uint256 y;
         uint256 t;
         uint256 z;
     }
 
-    // struct EncKey {
-    //     GroupProjective key;
-    // }
+    struct EncKey {
+        GroupProjective key;
+    }
 
     struct AuditMemo {
         // is Ciphertext
@@ -76,7 +76,7 @@ contract CAPE is NullifiersStore {
         /// DOC COMMENT IGNORED. Documentation for the field named field.
         // For now we only represent the list of nullifiers of a transactions
         uint256[] inputsNullifiers; // (works)
-        // TransferNote note;
+        // TransferNote note; // breaks!
     }
 
     struct AssetDefinition {
@@ -155,15 +155,13 @@ contract CAPE is NullifiersStore {
     /// @param mtFrontier latest frontier of the records merkle tree.
     // /// @param burnedRos record opening of the second outputs of the burn transactions. The information contained in these records opening allow the contract to transfer the erc20 tokens.
     function submitCapeBlock(
-        CapeBlock memory newBlock, // TODO use block struct
+        CapeBlock memory newBlock,
         uint256[] memory mtFrontier,
         RecordOpening[] memory burnedRos
     ) public {
         // Go through the nullifiers list of each transaction and do the insertion into the Nullifier Store
         for (uint256 i = 0; i < newBlock.txns.length; i++) {
             uint256[] memory nullifiers = newBlock.txns[i].inputsNullifiers;
-            // for (uint256 i = 0; i < newBlock.length; i++) {
-            //     uint256[] memory nullifiers = newBlock[i].nullifiers;
             for (uint256 j = 0; j < nullifiers.length; j++) {
                 insertNullifier(nullifiers[j]);
             }

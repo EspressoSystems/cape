@@ -1,29 +1,103 @@
-use jf_txn::transfer::TransferNote;
+use ethers::{
+    abi::{self, Tokenizable},
+    prelude::{Bytes, EthAbiType, U256},
+};
+use jf_txn::freeze::FreezeNote;
+use jf_txn::mint::MintNote;
+use jf_txn::transfer::{AuxInfo, TransferNote};
+use jf_txn::TransactionNote;
 
-use crate::helpers::convert_nullifier_to_u256;
-use crate::types::CapeTransaction;
+use crate::helpers::{convert_fr254_to_u256, convert_nullifier_to_u256};
+use crate::types as sol; // TODO figure out what to do about type collisions
 use itertools::Itertools;
 
-#[allow(dead_code)]
-/// Converts a TransferNote into a solidity friendly data structure that can be passed to the CAPE contract
-fn to_solidity(note: &TransferNote) -> CapeTransaction {
-    return CapeTransaction {
-        nullifiers: note
-            .inputs_nullifiers
-            .clone()
-            .iter()
-            .map(|v| convert_nullifier_to_u256(v))
-            .collect_vec(),
-    };
+const DUMMY_UINT: U256 = U256::zero();
+
+#[derive(Debug, Clone, PartialEq, EthAbiType)]
+enum NoteType {
+    Transfer,
+    Mint,
+    Freeze,
+    Burn,
+}
+
+impl From<TransferNote> for sol::TransferNote {
+    fn from(note: TransferNote) -> Self {
+        Self {
+            inputs_nullifiers: note
+                .inputs_nullifiers
+                .clone()
+                .iter()
+                .map(convert_nullifier_to_u256)
+                .collect_vec(),
+
+            output_commitments: note
+                .output_commitments
+                .clone()
+                .iter()
+                .map(|c| convert_fr254_to_u256(c.to_field_element()))
+                .collect_vec(),
+
+            // TODO
+            proof: sol::PlonkProof { dummy: DUMMY_UINT },
+
+            // TODO
+            audit_memo: sol::AuditMemo {
+                ephemeral_key: DUMMY_UINT,
+                data: vec![DUMMY_UINT],
+            },
+
+            aux_info: note.aux_info.into(),
+        }
+    }
+}
+
+impl From<MintNote> for sol::MintNote {
+    fn from(note: MintNote) -> Self {
+        unimplemented!() // TODO
+    }
+}
+
+impl From<FreezeNote> for sol::FreezeNote {
+    fn from(note: FreezeNote) -> Self {
+        unimplemented!() // TODO
+    }
+}
+
+impl From<AuxInfo> for sol::AuxInfo {
+    fn from(item: AuxInfo) -> Self {
+        Self {
+            merkle_root: convert_fr254_to_u256(item.merkle_root.to_scalar()),
+            fee: item.fee,
+            valid_until: item.valid_until,
+            txn_memo_ver_key: sol::G1Point::default(),
+            extra_proof_bound_data: Bytes::from(b""),
+        }
+    }
+}
+
+fn get_note_types(notes: Vec<TransactionNote>) -> Vec<u8> {
+    // TODO does ethers have better support for encoding an enum?
+    notes
+        .iter()
+        .map(|tx| match tx {
+            TransactionNote::Transfer(_) => 0u8,
+            // TODO Handle burn case => 3u8
+            TransactionNote::Mint(_) => 1u8,
+            TransactionNote::Freeze(_) => 2u8,
+        })
+        .collect_vec()
 }
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use itertools::Itertools;
+
     use crate::cap_jf::create_anon_xfr_2in_3out;
-    use crate::cape::to_solidity;
     use crate::ethereum::{deploy, get_funded_deployer};
     use crate::helpers::convert_nullifier_to_u256;
-    use crate::types::CAPE;
+    use crate::types::{CapeBlock, CAPE};
     use std::path::Path;
 
     #[tokio::test]
@@ -43,15 +117,26 @@ mod tests {
         let mut prng = ark_std::test_rng();
         let notes = create_anon_xfr_2in_3out(&mut prng, 2);
 
-        // Convert the AAP transactions into some solidity friendly representation
-        let mut solidity_notes = vec![];
-        for note in notes.clone() {
-            let solidity_note = to_solidity(&note);
-            solidity_notes.push(solidity_note.clone());
-        }
+        let note_types = get_note_types(
+            notes
+                .iter()
+                .map(|note| TransactionNote::from(note.clone()))
+                .collect_vec(),
+        );
 
-        // For now the block is simply the vector of "solidity" notes
-        let block = solidity_notes;
+        // Convert the AAP transactions into some solidity friendly representation
+        let block = CapeBlock {
+            miner: sol::UserPubKey {
+                address: sol::G1Point::default(), // TODO: handle address type
+                enc_key: sol::G1Point::default(),
+            },
+            block_height: 123u64,
+            transfer_notes: notes.iter().map(|note| note.clone().into()).collect_vec(),
+            note_types,
+            mint_notes: vec![],
+            freeze_notes: vec![],
+            burn_notes: vec![],
+        };
 
         // Create dummy records openings arrary
         let records_openings = vec![];

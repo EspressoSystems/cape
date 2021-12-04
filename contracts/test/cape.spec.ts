@@ -26,7 +26,7 @@ describe("CAPE", function () {
 
       await cape._insertNullifier(elem1);
 
-      expect(await cape._insertNullifier(elem1)).not.to.throw;
+      await expect(cape._insertNullifier(elem1)).to.be.reverted;
 
       expect(await cape._insertNullifier(elem2)).not.to.throw;
     });

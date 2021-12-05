@@ -236,7 +236,6 @@ mod test {
     };
 
     use super::*;
-    use crate::relayer::Relayer;
     use constants::*;
 
     impl CapeContract {
@@ -250,7 +249,7 @@ mod test {
                     height: 20,
                     num_leaves: 0,
                 },
-                mt_frontier: MerkleFrontier,
+                mt_frontier: MerkleFrontier::Empty { height: 0 },
                 recent_merkle_roots: LinkedList::default(),
                 wrapped_erc20_registrar: HashMap::default(),
                 pending_deposit_queue: vec![],
@@ -307,7 +306,6 @@ mod test {
 
         let cape_user_keypair = UserKeyPair::generate(&mut rng);
         let eth_user_address = Address::random();
-        let relayer = Relayer::new();
 
         // 1. user: fetch the CAPE asset definition from UI or sponsor.
         let asset_def = usdc_cape_asset_def();
@@ -333,7 +331,7 @@ mod test {
         // 4. relayer: build next block and user's deposit will be credited (inserted into
         // record merkle tree) when CAPE contract process the next valid block.
         let new_block = CapeBlock::build_next();
-        cape_contract.submit_cape_block(new_block, relayer.mt.frontier(), vec![]);
+        cape_contract.submit_cape_block(new_block, vec![]);
     }
 
     #[test]
@@ -342,7 +340,6 @@ mod test {
         let mut rng = rand::thread_rng();
         let mut cape_contract = CapeContract::mock();
         let cape_user_keypair = UserKeyPair::generate(&mut rng);
-        let relayer = Relayer::new();
 
         // 1. user: build and send a burn transaction to relayer (off-chain)
         let asset_def = usdc_cape_asset_def();
@@ -366,7 +363,7 @@ mod test {
         let mut burned_ros = vec![];
         burned_ros.push(burned_ro);
 
-        cape_contract.submit_cape_block(new_block.clone(), relayer.mt.frontier(), burned_ros);
+        cape_contract.submit_cape_block(new_block.clone(), burned_ros);
 
         // done! when CAPE contract process a new block,
         // it will automatically withdraw for user that has submitted the burn transaction.

@@ -1,7 +1,6 @@
 //! This crate describes the workflow and interfaces of a CAPE contract deployed on Ethereum.
 
 use ethers::prelude::*;
-use ethers::utils::keccak256;
 use jf_txn::keys::UserPubKey;
 use jf_txn::structs::{AssetDefinition, FreezeFlag, Nullifier, RecordCommitment, RecordOpening};
 use jf_txn::{MerkleCommitment, MerkleFrontier, NodeValue, TransactionNote};
@@ -32,7 +31,7 @@ impl CapeBlock {
     // Refer to `validate_block()` in:
     // https://gitlab.com/translucence/crypto/jellyfish/-/blob/main/transactions/tests/examples.rs
     pub fn validate(&self) -> bool {
-        // Prmarily a Plonk proof verification!
+        // Primarily a Plonk proof verification!
         true
     }
 }
@@ -45,10 +44,10 @@ pub struct CapeContract {
     // TODO: should we further hash MerkleCommitment and only store a bytes32 in contract?
     // latest record merkle tree commitment (including merkle root, tree height and num of leaves)
     merkle_commitment: MerkleCommitment,
-    // hash of the latest merkle frontier
-    merkle_frontier_digest: [u8; 32],
+    // The merkle frontier is stored locally
+    mt_frontier: MerkleFrontier,
     // last X merkle root, allowing transaction building against recent merkle roots (instead of just
-    // the lastest merkle root) as a buffer.
+    // the latest merkle root) as a buffer.
     // where X is the capacity the Queue and can be specified during constructor. (rust doesn't have queue
     // so we use LinkedList to simulate)
     // NOTE: in Solidity, we can instantiate with a fixed array and an indexer to build a FIFO queue.
@@ -115,12 +114,7 @@ impl CapeContract {
     /// Relayer submits the next block, and withdraw for users who had burn transactions included
     /// in `new_block` with the help of record openings of the "burned records" (output of the burn
     /// transaction) submitted by user.
-    pub fn submit_cape_block(
-        &mut self,
-        new_block: CapeBlock,
-        mt_frontier: MerkleFrontier,
-        burned_ros: Vec<RecordOpening>,
-    ) {
+    pub fn submit_cape_block(&mut self, new_block: CapeBlock, burned_ros: Vec<RecordOpening>) {
         // 1. verify the block, and insert its input nullifiers and output record commitments
         assert!(new_block.validate());
         assert!(
@@ -131,11 +125,7 @@ impl CapeContract {
                 .all(|txn| self.recent_merkle_roots.contains(&txn.merkle_root())),
             "should produce txn validity proof against recent merkle root",
         );
-        assert_eq!(new_block.block_height, self.height + 1); // targetting the next block
-        assert_eq!(
-            keccak256(abi_encode(&mt_frontier)),
-            self.merkle_frontier_digest
-        ); // ensure mt_frontier is correct
+        assert_eq!(new_block.block_height, self.height + 1); // targeting the next block
 
         let mut rc_to_be_inserted = vec![];
         for txn in new_block.txns.iter() {
@@ -192,23 +182,20 @@ impl CapeContract {
         // and update the merkle root/commitment.
         rc_to_be_inserted.extend_from_slice(&self.pending_deposit_queue);
         let (updated_mt_comm, updated_mt_frontier) =
-            self.batch_insert_with_frontier(mt_frontier, &rc_to_be_inserted);
+            self.batch_insert_with_frontier(self.mt_frontier.clone(), &rc_to_be_inserted);
 
         // 4. update the blockchain state digest
         self.height += 1;
         self.merkle_commitment = updated_mt_comm;
-        self.merkle_frontier_digest = keccak256(abi_encode(updated_mt_frontier));
         if self.recent_merkle_roots.len() == MERKLE_ROOT_QUEUE_CAP {
             self.recent_merkle_roots.pop_front(); // remove the oldest root
         }
         self.recent_merkle_roots
             .push_back(updated_mt_comm.root_value); // add the new root
-    }
-}
 
-// Solidity equivalent of `abi.encode()`
-fn abi_encode<T>(_data: T) -> Vec<u8> {
-    unimplemented!();
+        // Store the new frontier
+        self.mt_frontier = updated_mt_frontier;
+    }
 }
 
 #[cfg(test)]
@@ -235,7 +222,7 @@ mod test {
                     height: 20,
                     num_leaves: 0,
                 },
-                merkle_frontier_digest: [0u8; 32],
+                mt_frontier: MerkleFrontier,
                 recent_merkle_roots: LinkedList::default(),
                 wrapped_erc20_registrar: HashMap::default(),
                 pending_deposit_queue: vec![],

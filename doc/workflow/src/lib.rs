@@ -27,12 +27,45 @@ pub struct CapeBlock {
     pub(crate) block_height: u64,
 }
 
+// TODO missing Plonk verifying keys
+fn check_plonk_proof(_txn: &TransactionNote, _merkle_commitment: &NodeValue) -> bool {
+    // TODO
+    return true;
+}
+
 impl CapeBlock {
     // Refer to `validate_block()` in:
     // https://gitlab.com/translucence/crypto/jellyfish/-/blob/main/transactions/tests/examples.rs
-    pub fn validate(&self) -> bool {
-        // Primarily a Plonk proof verification!
-        true
+    // Take a new block and remove the transactions that are not valid
+    pub fn validate(&self, recent_merkle_roots: &LinkedList<NodeValue>) -> CapeBlock {
+        // In order to avoid race conditions between block submitters (relayers or wallets), the CAPE contract
+        // discards invalid transactions but keeps the valid ones (instead of rejecting the full block).
+        // See https://gitlab.com/translucence/cap-on-ethereum/cape/-/issues/129 for more details.
+
+        let mut filtered_block = CapeBlock {
+            burn_txns: vec![],
+            txns: vec![],
+            miner: self.miner.clone(),
+            block_height: self.block_height,
+        };
+
+        // Ensure the proofs are checked against the latest root and are valid
+        // Standard transactions
+        for txn in &self.txns {
+            let merkle_root = txn.merkle_root();
+            if recent_merkle_roots.contains(&merkle_root) && check_plonk_proof(&txn, &merkle_root) {
+                filtered_block.txns.push(txn.clone());
+            }
+        }
+        // Burn transactions
+        for txn in &self.burn_txns {
+            let merkle_root = txn.merkle_root();
+            if recent_merkle_roots.contains(&merkle_root) && check_plonk_proof(&txn, &merkle_root) {
+                filtered_block.burn_txns.push(txn.clone());
+            }
+        }
+
+        return filtered_block;
     }
 }
 
@@ -116,15 +149,10 @@ impl CapeContract {
     /// transaction) submitted by user.
     pub fn submit_cape_block(&mut self, new_block: CapeBlock, burned_ros: Vec<RecordOpening>) {
         // 1. verify the block, and insert its input nullifiers and output record commitments
-        assert!(new_block.validate());
-        assert!(
-            new_block
-                .txns
-                .iter()
-                .chain(new_block.burn_txns.iter())
-                .all(|txn| self.recent_merkle_roots.contains(&txn.merkle_root())),
-            "should produce txn validity proof against recent merkle root",
-        );
+        let new_block = new_block.validate(&self.recent_merkle_roots);
+        // Check there is at least one valid transaction
+        assert!(new_block.txns.len() > 0 || new_block.burn_txns.len() > 0);
+
         assert_eq!(new_block.block_height, self.height + 1); // targeting the next block
 
         let mut rc_to_be_inserted = vec![];
@@ -263,10 +291,10 @@ mod test {
     #[ignore = "ignore panic due to unimplemented logic"]
     fn asset_registration_workflow() {
         let mut cape_contract = CapeContract::mock();
-        // 1. sponser: design  the CAPE asset type (off-chain).
+        // 1. sponsor: design  the CAPE asset type (off-chain).
         let asset_def = usdc_cape_asset_def();
 
-        // 2. sponser: register the asset (on-L1-chain).
+        // 2. sponsor: register the asset (on-L1-chain).
         cape_contract.sponsor_cape_asset(usdc_address(), asset_def.clone());
     }
 

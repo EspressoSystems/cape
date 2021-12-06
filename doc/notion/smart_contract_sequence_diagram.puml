@@ -8,7 +8,7 @@ actor       "Relayer" as R
 
 group Register Asset Type
 A -> A: asset_def=usdc_cape_asset_def()
-A -> CapeContract: register_cape_asset(usdc_address(), asset_def)
+A -> CapeContract: sponsor_cape_asset(usdc_address(), asset_def)
 
 end group
 
@@ -30,26 +30,19 @@ note left
 Block <i>b</i> is a list of transactions that contains <i>tx</i>.
 end note
 
-note right
-The frontier consists of the path from the root to the latest inserted leaf.
-It is enough to let the CAPE contract update the Merkle root value.
-end note
-
-R -> R: frontier = mt.frontier()
 
 R -> CapeContract: submit_cape_block(b, frontier)
 end group
 
 group Unwrapping: AAP record -> USDC token
- B -> B:   asset_def = usdc_cape_asset_def()
+ B -> B: asset_def = usdc_cape_asset_def()
  B -> B: burn_amount = 1000
  B -> B: burned_ro = RecordOpening::new( \n    &mut rng, \n    burn_amount,\n    asset_def, \n    cape_user_keypair.pub_key(),\n    FreezeFlag::Unfrozen)
  B -> B: burn_tx = generate_burn_transaction(&burned_ro)
- B -> R: burn_tx
+ B -> R: (burn_tx, burned_ro)
  R -> R: generate new block *b* containing tx
- R -> R: frontier = mt.frontier()
- R -> CapeContract: submit_cape_block(b, frontier)
- B -> CapeContract: withdraw_erc20( \n usdc_address(),  \n eth_user_address,  \n burn_amount,  \n block_num,  \n txn_index,  \n burned_ro)
+ R -> R: generate record openings *burn_ros* corresponding to burn transactions
+ R -> CapeContract: submit_cape_block(b, burn_ros)
  note right
  * <i>eth_user_address</i> is the ethereum address of user B.
  * <i>block_num</i> is the block number the burn transaction was inserted in.

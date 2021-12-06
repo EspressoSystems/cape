@@ -25,16 +25,17 @@ package "AAP <-> ETH" {
 interface submit_tx
 submit_tx -down- Relayer
 
-[Ethereum Query Service] as QS
+[Ethereum Query Service] as EQS
 interface get_mt_proof_asset_record
-interface get_frontier
 interface get_txs_aap_since_block
 interface get_latest_aap_state
-get_txs_aap_since_block -down- QS
-get_frontier -down- QS
-get_mt_proof_asset_record -down- QS
-get_latest_n_roots -down- QS
-get_latest_aap_state -down- QS
+interface get_plonk_verif_keys
+interface get_nullifiers
+get_nullifiers -down- EQS
+get_plonk_verif_keys -down- EQS
+get_txs_aap_since_block -down- EQS
+get_mt_proof_asset_record -down- EQS
+get_latest_aap_state -down- EQS
 
 ' [Ethereum Access Provider] as EAP
 
@@ -51,40 +52,47 @@ interface get_enc_pub_key_from_addr
 register_addr_and_enc_pub_key -down- MAPADDRENC
 get_enc_pub_key_from_addr -down- MAPADDRENC
 
-Package "Smart Contracts" {
 
-    [CAPE Smart Contract] as CAPESC
-    interface submit_cape_block
-    interface "sponsor_asset_type" as sponsor_asset_type_cape
-    interface get_call_data
-    note right: We are abusing the notation here as <b>get_call_data</b> \n is not a function of the CAPE Smart Contract. \nFetching the data of the transactions sent to the contract \n can be done by monitoring events on the ethereum blockchain.
-    interface deposit_erc20
-    submit_cape_block -down- CAPESC
-    sponsor_asset_type_cape -down- CAPESC
-    get_call_data -down- CAPESC
-    deposit_erc20 -down- CAPESC
+component ETHBlockchain {
 
-    [ERC20 Smart Contract] as ERC20
-    interface approve
-    interface transfer_from
-    interface transfer
-    interface balance
+    Package "Smart Contracts" {
 
-    approve -down- ERC20
-    transfer -down- ERC20
-    balance -down- ERC20
-    transfer_from -down- ERC20
+        [CAPE Smart Contract] as CAPESC
+        interface submit_cape_block
+        interface "sponsor_asset_type" as sponsor_asset_type_cape
+        interface deposit_erc20
+        submit_cape_block -down- CAPESC
+        sponsor_asset_type_cape -down- CAPESC
+        deposit_erc20 -down- CAPESC
+
+        [ERC20 Smart Contract] as ERC20
+        interface approve
+        interface transfer_from
+        interface transfer
+        interface balance
+
+        approve -down- ERC20
+        transfer -down- ERC20
+        balance -down- ERC20
+        transfer_from -down- ERC20
+
+    }
+
+    database Events {
+        interface new_cape_block
+    }
 
 }
 
 Relayer -down-> submit_cape_block
 Relayer -down-> get_txs_aap_since_block
-Relayer -down-> get_latest_n_roots
-Relayer -down-> get_frontier
 Relayer -down-> get_latest_aap_state
+Relayer -down-> get_nullifiers
+Relayer -down-> get_plonk_verif_keys
 
 CAPESC -down-> transfer_from
 CAPESC -down-> transfer
+CAPESC -down-> new_cape_block
 
 UI -down-> fetch_memos
 UI -down-> submit_tx
@@ -97,6 +105,9 @@ UI -down-> get_txs_aap_since_block
 UI -down-> register_addr_and_enc_pub_key
 UI -down-> get_enc_pub_key_from_addr
 UI -down-> get_latest_aap_state
-QS -down-> get_call_data
+UI -down-> get_plonk_verif_keys
+UI -down..-> submit_cape_block: Optional \n ("Escape Hatch")
+
+new_cape_block -up-> EQS
 
 @enduml

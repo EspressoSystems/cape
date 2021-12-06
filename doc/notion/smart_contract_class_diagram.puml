@@ -28,23 +28,22 @@ class Relayer {
 package "Cape Contract Package" #DDDDDD {
 
     class RecordsMerkleTree {
-        - fn verify_frontier(&self, frontier: &MerkleFrontier) -> bool
         + fn batch_insert_with_frontier(&mut self, \n current_frontier: MerkleFrontier, \n rcs: &[RecordCommitment]) -> MerkleCommitment
     }
 
     class CapeContract {
         nullifiers: HashSet<Nullifier>
+        mt_frontier: MerkleFrontier
         blocks: Vec<CapeBlock, MerkleCommitment>
 
-        + submit_cape_block(&mut self, \n new_block: CapeBlock, \n  mt_frontier: MerkleFrontier)
-        + withdraw_erc20(&self, \n erc20_addr: Address, \n recipient: Address, \n withdraw_amount: U256, \n block_num: U256,  \n txn_index: U256, \n burned_ro: RecordOpening)
+        + submit_cape_block(&mut self, \n new_block: CapeBlock)
     }
 
     class Wrapper {
         wrapped_erc20_registrar: HashMap<AssetDefinition, Address>
         pending_deposit_queue: Vec<RecordCommitment>
         +is_cape_asset_registered(&self, \n asset_def: &AssetDefinition) -> bool
-        +register_cape_asset(&mut self, \n erc20_addr: Address, \n new_asset: AssetDefinition)
+        +sponsor_cape_asset(&mut self, \n erc20_addr: Address, \n new_asset: AssetDefinition)
         +deposit_erc20(&mut self, \n ro: RecordOpening, \n erc20_addr: Address, \n depositor: Address)
     }
 

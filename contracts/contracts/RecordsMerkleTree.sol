@@ -1,6 +1,7 @@
 //SPDX-License-Identifier: MIT OR Apache-2.0
 pragma solidity ^0.8.0;
 
+import "hardhat/console.sol";
 import "./Rescue.sol";
 
 /// @notice The Records Merkle Tree stores asset records.
@@ -72,7 +73,7 @@ contract RecordsMerkleTree is Rescue {
     }
 
     function hashFrontier(uint256[] memory flattenedFrontier, uint64 uid)
-        private
+        internal
         returns (bytes32)
     {
         uint256 frontierLength = flattenedFrontier.length;
@@ -91,7 +92,7 @@ contract RecordsMerkleTree is Rescue {
     /// @param flattenedFrontier "flat" representation of the frontier. Note that the frontier is fully defined with the flattened representation and the current number of leaves.
     /// @return true if hashing the flattened frontier concatenated with the number of leaves equal the hash value of the frontier stored in the contract.
     function checkFrontier(uint256[] memory flattenedFrontier)
-        private
+        internal
         returns (bool)
     {
         if (flattenedFrontier.length == 0) {
@@ -113,7 +114,7 @@ contract RecordsMerkleTree is Rescue {
     function buildTreeFromFrontier(
         uint256[] memory flattenedFrontier,
         Node[] memory nodes
-    ) private returns (uint64) {
+    ) internal returns (uint64) {
         // Tree is empty
         if (flattenedFrontier.length == 0) {
             nodes[0] = Node(0, 0, 0, 0); // Empty node

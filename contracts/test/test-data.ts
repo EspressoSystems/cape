@@ -6,6 +6,9 @@ let leaf_value0 = ethers.BigNumber.from(
 
 let zero = ethers.BigNumber.from(0);
 
+let rootValue = ethers.BigNumber.from(
+  "16338819200219295738128869281163133642735762710891814031809540606861827401155"
+);
 let flattenedFrontier0TreeHeight3 = [leaf_value0, zero, zero, zero, zero, zero, zero];
 
 let flattenedFrontier0TreeHeight20 = Array(20 * 2 + 1).fill(0);
@@ -30,6 +33,7 @@ flattenedFrontier1TreeHeight20[3] = ethers.BigNumber.from(
 );
 
 export {
+  rootValue,
   flattenedFrontier0TreeHeight3,
   flattenedFrontier0TreeHeight20,
   flattenedFrontier1TreeHeight20,

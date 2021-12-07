@@ -1,3 +1,4 @@
+//SPDX-License-Identifier: MIT OR Apache-2.0
 pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
@@ -193,11 +194,10 @@ contract RescueNonOptimized {
         }
     }
 
-    // TODO make something more efficient
     function addVectors(
         uint256[STATE_SIZE] memory v1,
         uint256[STATE_SIZE] memory v2
-    ) internal returns (uint256[STATE_SIZE] memory) {
+    ) internal pure returns (uint256[STATE_SIZE] memory) {
         uint256[STATE_SIZE] memory v;
 
         for (uint256 j = 0; j < STATE_SIZE; j++) {
@@ -208,11 +208,10 @@ contract RescueNonOptimized {
     }
 
     // MDS is hardcoded
-    // TODO optimize (see Starkware or hard code matrix operations + assembly)
     function linearOp(
         uint256[STATE_SIZE] memory state,
         uint256[STATE_SIZE] memory key
-    ) private returns (uint256[STATE_SIZE] memory) {
+    ) private view returns (uint256[STATE_SIZE] memory) {
         uint256[STATE_SIZE] memory newState = [uint256(0), 0, 0, 0];
 
         // TODO remove loop to save gas?
@@ -241,7 +240,7 @@ contract RescueNonOptimized {
     // @return permutation output
     function perm(
         uint256[STATE_SIZE] memory input // TODO this should be made private/internal
-    ) public returns (uint256[STATE_SIZE] memory) {
+    ) public view returns (uint256[STATE_SIZE] memory) {
         uint256[STATE_SIZE] memory key0 = [
             SCHEDULED_KEY[0],
             SCHEDULED_KEY[1],

@@ -1,3 +1,4 @@
+//SPDX-License-Identifier: MIT OR Apache-2.0
 // This file is MIT Licensed.
 //
 // From: https://gist.githubusercontent.com/chriseth/f9be9d9391efc5beb9704255a8e2989d/raw/4d0fb90847df1d4e04d507019031888df8372239/snarktest.solidity
@@ -42,24 +43,24 @@ library Curve {
     }
 
     // (P+1) / 4
-    function A() internal returns (uint256) {
+    function A() internal pure returns (uint256) {
         return CURVE_A;
     }
 
-    function P() internal returns (uint256) {
+    function P() internal pure returns (uint256) {
         return FIELD_ORDER;
     }
 
-    function N() internal returns (uint256) {
+    function N() internal pure returns (uint256) {
         return GEN_ORDER;
     }
 
     /// @return the generator of G1
-    function P1() internal returns (G1Point memory) {
+    function P1() internal pure returns (G1Point memory) {
         return G1Point(1, 2);
     }
 
-    function HashToPoint(uint256 s) internal returns (G1Point memory) {
+    function HashToPoint(uint256 s) internal view returns (G1Point memory) {
         uint256 beta = 0;
         uint256 y = 0;
 
@@ -76,6 +77,8 @@ library Curve {
 
             x = addmod(x, 1, FIELD_ORDER);
         }
+
+        return G1Point(x, y);
     }
 
     /**
@@ -85,7 +88,7 @@ library Curve {
      *
      * Returns: (x^3 + b), y
      */
-    function FindYforX(uint256 x) internal returns (uint256, uint256) {
+    function FindYforX(uint256 x) internal view returns (uint256, uint256) {
         // beta = (x^3 + b) % p
         uint256 beta = addmod(
             mulmod(mulmod(x, x, FIELD_ORDER), x, FIELD_ORDER),
@@ -101,7 +104,7 @@ library Curve {
     }
 
     // a - b = c;
-    function submod(uint256 a, uint256 b) internal returns (uint256) {
+    function submod(uint256 a, uint256 b) internal pure returns (uint256) {
         uint256 a_nn;
 
         if (a > b) {
@@ -117,7 +120,7 @@ library Curve {
         uint256 _base,
         uint256 _exponent,
         uint256 _modulus
-    ) internal returns (uint256 retval) {
+    ) internal view returns (uint256 retval) {
         bool success;
         uint256[1] memory output;
         uint256[6] memory input;
@@ -147,7 +150,7 @@ library Curve {
     }
 
     /// @return the generator of G2
-    function P2() internal returns (G2Point memory) {
+    function P2() internal pure returns (G2Point memory) {
         return
             G2Point(
                 [
@@ -162,7 +165,7 @@ library Curve {
     }
 
     /// @return the negation of p, i.e. p.add(p.negate()) should be zero.
-    function g1neg(G1Point memory p) internal returns (G1Point memory) {
+    function g1neg(G1Point memory p) internal pure returns (G1Point memory) {
         // The prime q in the base field F_q for G1
         uint256 q = FIELD_ORDER;
         if (p.X == 0 && p.Y == 0) return G1Point(0, 0);
@@ -176,6 +179,7 @@ library Curve {
      */
     function g1add(G1Point memory p1, G1Point memory p2)
         internal
+        view
         returns (G1Point memory r)
     {
         uint256[4] memory input;
@@ -203,6 +207,7 @@ library Curve {
     /// p == p.mul(1) and p.add(p) == p.mul(2) for all points p.
     function g1mul(G1Point memory p, uint256 s)
         internal
+        view
         returns (G1Point memory r)
     {
         uint256[3] memory input;
@@ -227,6 +232,7 @@ library Curve {
     /// return true.
     function pairing(G1Point[] memory p1, G2Point[] memory p2)
         internal
+        view
         returns (bool)
     {
         require(p1.length == p2.length);

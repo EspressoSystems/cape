@@ -4,7 +4,6 @@ pragma solidity ^0.8.0;
 import "hardhat/console.sol";
 import "./Rescue.sol";
 
-/// @notice The Records Merkle Tree stores asset records.
 contract RecordsMerkleTree is Rescue {
     enum Position {
         LEFT,
@@ -26,7 +25,7 @@ contract RecordsMerkleTree is Rescue {
     uint64 internal numLeaves;
     uint8 internal height;
 
-    bytes32 internal frontierHashValue;
+    mapping(uint256 => uint256) private flattenedFrontier;
 
     /// Instantiate a records merkle tree with its height
     /// @param _height height of the merkle tree
@@ -36,23 +35,22 @@ contract RecordsMerkleTree is Rescue {
         height = _height;
     }
 
-    /// Is the given node a terminal (i.e. a leaf)?
-    function isTerminal(Node memory node) private returns (bool) {
+    function isTerminal(Node memory node) private pure returns (bool) {
         return (node.left == 0) && (node.middle == 0) && (node.right == 0);
     }
 
-    function hasChildren(Node memory node) private returns (bool) {
+    function hasChildren(Node memory node) private pure returns (bool) {
         return !isTerminal(node);
     }
 
-    /// Is the given node null?
-    function isNull(Node memory node) private returns (bool) {
+    function isNull(Node memory node) private pure returns (bool) {
         return (node.val == 0 && isTerminal(node));
     }
 
-    /// Create the new "hole node" that points to the children already inserted in the array.
+    // Create the new "hole node" that points to the children already inserted in the array
     function createHoleNode(uint64 cursor, Position posSibling)
         private
+        pure
         returns (Node memory)
     {
         // Copy pasting these values to save gas
@@ -72,55 +70,18 @@ contract RecordsMerkleTree is Rescue {
         return node;
     }
 
-    function hashFrontier(uint256[] memory flattenedFrontier, uint64 uid)
+    function buildTreeFromFrontier(Node[] memory nodes)
         internal
-        returns (bytes32)
+        view
+        returns (uint64)
     {
-        uint256 frontierLength = flattenedFrontier.length;
-        uint256[] memory input = new uint256[](frontierLength + 1);
-        input[0] = uint256(uid);
-        for (uint256 i = 0; i < frontierLength; i++) {
-            input[i + 1] = flattenedFrontier[i];
-        }
-
-        bytes32 value = keccak256(abi.encode(input));
-
-        return value;
-    }
-
-    /// Checks that the frontier represented as a tree resolves to the right root
-    /// @param flattenedFrontier "flat" representation of the frontier. Note that the frontier is fully defined with the flattened representation and the current number of leaves.
-    /// @return true if hashing the flattened frontier concatenated with the number of leaves equal the hash value of the frontier stored in the contract.
-    function checkFrontier(uint256[] memory flattenedFrontier)
-        internal
-        returns (bool)
-    {
-        if (flattenedFrontier.length == 0) {
-            // When the tree is empty
-            return frontierHashValue == 0;
-        } else {
-            // Compute the hash of the frontier
-            bytes32 computedFrontierHashValue = hashFrontier(
-                flattenedFrontier,
-                numLeaves - 1
-            );
-
-            return computedFrontierHashValue == frontierHashValue;
-        }
-    }
-
-    /// Builds a Merkle tree from a frontier.
-    /// Returns a cursor.
-    function buildTreeFromFrontier(
-        uint256[] memory flattenedFrontier,
-        Node[] memory nodes
-    ) internal returns (uint64) {
         // Tree is empty
-        if (flattenedFrontier.length == 0) {
+        if (numLeaves == 0) {
             nodes[0] = Node(0, 0, 0, 0); // Empty node
             nodes[1] = Node(0, 0, 0, 0); // Root node
             return 1;
         }
+
         // Tree is not empty
 
         // Set the first node to the NULL node
@@ -176,7 +137,7 @@ contract RecordsMerkleTree is Rescue {
         Node[] memory nodes,
         uint64 nodeIndex,
         Position pos
-    ) private returns (uint64) {
+    ) private pure returns (uint64) {
         uint64 res;
 
         if (pos == Position.LEFT) {
@@ -196,7 +157,7 @@ contract RecordsMerkleTree is Rescue {
         Node memory node,
         uint64 newChildIndex,
         Position pos
-    ) private {
+    ) private pure {
         // Update the node
         if (pos == Position.LEFT) {
             node.left = newChildIndex;
@@ -209,6 +170,7 @@ contract RecordsMerkleTree is Rescue {
 
     function computeNodePos(uint64 absolutePos, uint64 branchIndex)
         private
+        view
         returns (uint64, uint64)
     {
         uint64 localPos;
@@ -303,10 +265,8 @@ contract RecordsMerkleTree is Rescue {
     }
 
     /// Updates the hash of the frontier based on the current tree structure.
-    function updateFrontierHash(Node[] memory nodes, uint64 rootIndex) private {
-        /// Update the hash of the frontier
+    function storeFrontier(Node[] memory nodes, uint64 rootIndex) private {
         uint64 frontierSize = 2 * height + 1;
-        uint256[] memory newFlattenedFrontier = new uint256[](frontierSize);
 
         /// Collect the values from the root to the leaf but in reverse order
         uint64 currentNodeIndex = rootIndex;
@@ -334,47 +294,34 @@ contract RecordsMerkleTree is Rescue {
             }
             uint256 secondSiblingPos = frontierSize - 1 - (2 * i);
             uint256 firstSiblingPos = secondSiblingPos - 1;
-            newFlattenedFrontier[secondSiblingPos] = nodes[secondSiblingIndex]
-                .val;
-            newFlattenedFrontier[firstSiblingPos] = nodes[firstSiblingIndex]
-                .val;
+            flattenedFrontier[secondSiblingPos] = nodes[secondSiblingIndex].val;
+            flattenedFrontier[firstSiblingPos] = nodes[firstSiblingIndex].val;
         }
         // currentNodeIndex points to the leaf
-        newFlattenedFrontier[0] = nodes[currentNodeIndex].val;
-
-        frontierHashValue = hashFrontier(newFlattenedFrontier, numLeaves - 1);
+        flattenedFrontier[0] = nodes[currentNodeIndex].val;
     }
 
     /// Updates the state of the record merkle tree by inserting new elements
-    /// @param flattenedFrontier list composed by the leaf of the frontier and the list of siblings from bottom to top (the root). Note that the path is already encoded implicitly with the number of leaves *numLeaves* stored in the contract,
     /// @param elements list of elements to be appended to the current merkle tree described by the frontier.
-    function updateRecordsMerkleTree(
-        uint256[] memory flattenedFrontier,
-        uint256[] memory elements
-    ) internal {
+    function updateRecordsMerkleTree(uint256[] memory elements) internal {
         // The total number of nodes is bounded by 3*height+1 + 3*N*height = 3*(N+1)*height + 1
         // where N is the number of new records
         uint256 numElements = elements.length;
         Node[] memory nodes = new Node[](3 * (numElements + 1) * height + 2);
 
-        bool isFrontierValid = checkFrontier(flattenedFrontier);
-        require(isFrontierValid, "Frontier not consistent w/ state");
-
         /// Insert the new elements ///
 
-        if (elements.length > 0) {
-            // maxIndex tracks the index of the last element inserted in the tree
-            uint64 rootIndex = buildTreeFromFrontier(flattenedFrontier, nodes);
-            uint64 maxIndex = rootIndex;
-            for (uint32 i = 0; i < elements.length; i++) {
-                maxIndex = pushElement(nodes, rootIndex, maxIndex, elements[i]);
-            }
-            //// Compute the root hash value ////
-            rootValue = computeRootValueAndUpdateTree(nodes, rootIndex);
-
-            //// Update the frontier hash
-            updateFrontierHash(nodes, rootIndex);
+        // maxIndex tracks the index of the last element inserted in the tree
+        uint64 rootIndex = buildTreeFromFrontier(nodes);
+        uint64 maxIndex = rootIndex;
+        for (uint32 i = 0; i < elements.length; i++) {
+            maxIndex = pushElement(nodes, rootIndex, maxIndex, elements[i]);
         }
+        //// Compute the root hash value ////
+        rootValue = computeRootValueAndUpdateTree(nodes, rootIndex);
+
+        //// Store the frontier
+        storeFrontier(nodes, rootIndex);
     }
 
     // Returns the root value of the Merkle tree

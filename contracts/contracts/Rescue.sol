@@ -1,3 +1,4 @@
+//SPDX-License-Identifier: MIT OR Apache-2.0
 pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
@@ -31,6 +32,7 @@ contract Rescue {
         uint256 s3
     )
         private
+        pure
         returns (
             uint256,
             uint256,
@@ -94,7 +96,7 @@ contract Rescue {
         }
     }
 
-    function expAlphaInv4Setup(uint256[6] memory scratch) private {
+    function expAlphaInv4Setup(uint256[6] memory scratch) private pure {
         assembly {
             let p := scratch
             mstore(p, 0x20) // Length of Base
@@ -113,6 +115,7 @@ contract Rescue {
         uint256 s3
     )
         private
+        view
         returns (
             uint256 o0,
             uint256 o1,
@@ -155,6 +158,7 @@ contract Rescue {
         uint256 s3
     )
         private
+        view
         returns (
             uint256,
             uint256,

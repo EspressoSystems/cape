@@ -167,11 +167,9 @@ contract CAPE {
 
     /// @notice submit a new block to the CAPE contract. Transactions are validated and the blockchain state is updated. Moreover burn transactions trigger the unwrapping of cape asset records into erc20 tokens.
     /// @param newBlock block to be processed by the CAPE contract.
-    /// @param mtFrontier latest frontier of the records merkle tree.
     // /// @param burnedRos record opening of the second outputs of the burn transactions. The information contained in these records opening allow the contract to transfer the erc20 tokens.
     function submitCapeBlock(
         CapeTransaction[] memory newBlock, // TODO try to use a struct instead of an array of transactions
-        uint256[] memory mtFrontier,
         RecordOpening[] memory burnedRos
     ) public {
         // Go through the nullifiers list of each transaction and do the insertion into the Nullifier Store

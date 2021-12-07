@@ -1,6 +1,5 @@
 const bigDecimal = require("js-big-decimal");
 var rand = require("random-seed").create();
-const { ethers } = require("hardhat");
 
 const ETH_PRICE_USD = 3962;
 

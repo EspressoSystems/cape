@@ -14,7 +14,7 @@ contract TestTranscript {
     function appendMessage(
         Transcript.TranscriptData memory transcript,
         bytes memory message
-    ) public view returns (Transcript.TranscriptData memory) {
+    ) public pure returns (Transcript.TranscriptData memory) {
         transcript.appendMessage(message);
         return transcript;
     }
@@ -22,14 +22,14 @@ contract TestTranscript {
     function appendChallenge(
         Transcript.TranscriptData memory transcript,
         uint256 challenge
-    ) public view returns (Transcript.TranscriptData memory) {
+    ) public pure returns (Transcript.TranscriptData memory) {
         transcript.appendChallenge(challenge);
         return transcript;
     }
 
     function getAndAppendChallenge(Transcript.TranscriptData memory transcript)
         public
-        view
+        pure
         returns (uint256)
     {
         return transcript.getAndAppendChallenge();

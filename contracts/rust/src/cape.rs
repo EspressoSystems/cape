@@ -53,9 +53,6 @@ mod tests {
         // For now the block is simply the vector of "solidity" notes
         let block = solidity_notes;
 
-        // Create a dummy frontier
-        let frontier = vec![];
-
         // Create dummy records openings arrary
         let records_openings = vec![];
 
@@ -71,7 +68,7 @@ mod tests {
 
         // Submit to the contract
         let _receipt = contract
-            .submit_cape_block(block, frontier, records_openings)
+            .submit_cape_block(block, records_openings)
             .legacy()
             .send()
             .await

@@ -7,6 +7,8 @@ image: lnl7/nix
 before_script:
   - git config --global url."https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/".insteadOf git://gitlab.com
   - git config --global url."https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/".insteadOf ssh://git@gitlab.com
+  - git config --global url."https://ancient123:${GITHUB_ACCESS_TOKEN}@github.com/".insteadOf git://github.com
+  - git config --global url."https://ancient123:${GITHUB_ACCESS_TOKEN}@github.com/".insteadOf ssh://git@github.com
   - git config --global url."https://dl.cloudsmith.io/${CLOUDSMITH_ENTITLEMENT}/".insteadOf https://dl.cloudsmith.io/basic/
   - echo ""
 

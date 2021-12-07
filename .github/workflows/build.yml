@@ -1,0 +1,41 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - '*'
+
+jobs:
+  build:
+    runs-on: self-hosted
+    container:
+      image: nixos/nix
+      volumes:
+        - github_nix:/nix
+    steps:
+      - name: Install Tools
+        run: |
+          apk add git
+
+      - uses: actions/checkout@v2
+        name: Checkout Repository
+
+      - name: Initialize Nix Shell
+        run: nix-shell --run "echo Init"
+
+      - name: Configure Git
+        run: |
+          git config --global url."https://tl-ancients:${{ secrets.GITLAB_PAT }}@gitlab.com/".insteadOf git://gitlab.com
+          git config --global url."https://tl-ancients:${{ secrets.GITLAB_PAT }}@gitlab.com/".insteadOf ssh://git@gitlab.com
+          git config --global url."https://ancient123:${{ secrets.GITHUB_PAT }}@github.com/".insteadOf git://github.com
+          git config --global url."https://ancient123:${{ secrets.GITHUB_PAT }}@github.com/".insteadOf ssh://git@github.com
+          git config --global url."https://dl.cloudsmith.io/${{ secrets.CLOUDSMITH_ENTITLEMENT }}/".insteadOf https://dl.cloudsmith.io/basic/
+
+      - name: Linting
+        run: nix-shell --run "prepend-timestamps lint-ci"
+
+      - name: Run Tests
+        run: nix-shell --run "prepend-timestamps cape-test-geth"
+
+      - name: Generate Docs
+        run: nix-shell --run "prepend-timestamps make-doc"

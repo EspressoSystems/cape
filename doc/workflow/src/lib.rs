@@ -33,6 +33,22 @@ fn check_plonk_proof(_txn: &TransactionNote, _merkle_commitment: &NodeValue) -> 
     return true;
 }
 
+const CAPE_BURN_PREFIX_BYTES: &str = "TRICAPE burn";
+const CAPE_BURN_PREFIX_BYTES_LEN: usize = 12;
+
+// Check that the transaction note corresponds to a transfer and that the prefix of the auxiliary
+// information corresponds to some burn transaction.
+fn is_valid_domain_separator(txn: &TransactionNote) -> bool {
+    match txn {
+        TransactionNote::Transfer(tx) => {
+            (*tx).aux_info.extra_proof_bound_data[0..CAPE_BURN_PREFIX_BYTES_LEN]
+                == *CAPE_BURN_PREFIX_BYTES.as_bytes()
+        }
+        TransactionNote::Mint(_) => false,
+        TransactionNote::Freeze(_) => false,
+    }
+}
+
 impl CapeBlock {
     // Refer to `validate_block()` in:
     // https://gitlab.com/translucence/crypto/jellyfish/-/blob/main/transactions/tests/examples.rs
@@ -66,7 +82,10 @@ impl CapeBlock {
         // Burn transactions
         for (i, txn) in self.burn_txns.iter().enumerate() {
             let merkle_root = txn.merkle_root();
-            if recent_merkle_roots.contains(&merkle_root) && check_plonk_proof(&txn, &merkle_root) {
+            if recent_merkle_roots.contains(&merkle_root)
+                && check_plonk_proof(&txn, &merkle_root)
+                && is_valid_domain_separator(&txn)
+            {
                 filtered_block.burn_txns.push(txn.clone());
                 filtered_burn_ros.push(burned_ros[i].clone());
             }

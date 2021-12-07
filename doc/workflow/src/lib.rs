@@ -36,8 +36,13 @@ fn check_plonk_proof(_txn: &TransactionNote, _merkle_commitment: &NodeValue) -> 
 impl CapeBlock {
     // Refer to `validate_block()` in:
     // https://gitlab.com/translucence/crypto/jellyfish/-/blob/main/transactions/tests/examples.rs
-    // Take a new block and remove the transactions that are not valid
-    pub fn validate(&self, recent_merkle_roots: &LinkedList<NodeValue>) -> CapeBlock {
+    // Take a new block and remove the transactions that are not valid and update
+    // the list of record openings corresponding to burn transactions accordingly.
+    pub fn validate(
+        &self,
+        recent_merkle_roots: &LinkedList<NodeValue>,
+        burned_ros: Vec<RecordOpening>,
+    ) -> (CapeBlock, Vec<RecordOpening>) {
         // In order to avoid race conditions between block submitters (relayers or wallets), the CAPE contract
         // discards invalid transactions but keeps the valid ones (instead of rejecting the full block).
         // See https://gitlab.com/translucence/cap-on-ethereum/cape/-/issues/129 for more details.
@@ -48,6 +53,7 @@ impl CapeBlock {
             miner: self.miner.clone(),
             block_height: self.block_height,
         };
+        let mut filtered_burn_ros = vec![];
 
         // Ensure the proofs are checked against the latest root and are valid
         // Standard transactions
@@ -58,14 +64,15 @@ impl CapeBlock {
             }
         }
         // Burn transactions
-        for txn in &self.burn_txns {
+        for (i, txn) in self.burn_txns.iter().enumerate() {
             let merkle_root = txn.merkle_root();
             if recent_merkle_roots.contains(&merkle_root) && check_plonk_proof(&txn, &merkle_root) {
                 filtered_block.burn_txns.push(txn.clone());
+                filtered_burn_ros.push(burned_ros[i].clone());
             }
         }
 
-        filtered_block
+        (filtered_block, filtered_burn_ros)
     }
 }
 
@@ -149,7 +156,7 @@ impl CapeContract {
     /// transaction) submitted by user.
     pub fn submit_cape_block(&mut self, new_block: CapeBlock, burned_ros: Vec<RecordOpening>) {
         // 1. verify the block, and insert its input nullifiers and output record commitments
-        let new_block = new_block.validate(&self.recent_merkle_roots);
+        let (new_block, new_burned_ros) = new_block.validate(&self.recent_merkle_roots, burned_ros);
         // Check there is at least one valid transaction
         assert!(new_block.txns.len() > 0 || new_block.burn_txns.len() > 0);
 
@@ -164,8 +171,8 @@ impl CapeContract {
         }
 
         // 2. process all burn transaction and withdraw for user immediately
-        assert_eq!(new_block.burn_txns.len(), burned_ros.len());
-        for (burn_txn, burned_ro) in new_block.burn_txns.iter().zip(burned_ros.iter()) {
+        assert_eq!(new_block.burn_txns.len(), new_burned_ros.len());
+        for (burn_txn, burned_ro) in new_block.burn_txns.iter().zip(new_burned_ros.iter()) {
             // burn transaction is basically a "Transfer-to-dedicated-burn-pk" transaction
             if let TransactionNote::Transfer(note) = burn_txn {
                 // 2.1. validate the burned record opening against the burn transaction.

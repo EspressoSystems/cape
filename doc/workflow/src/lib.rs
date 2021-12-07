@@ -65,7 +65,7 @@ impl CapeBlock {
             }
         }
 
-        return filtered_block;
+        filtered_block
     }
 }
 

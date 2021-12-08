@@ -28,7 +28,7 @@ pub struct CapeBlock {
 }
 
 // TODO missing Plonk verifying keys
-fn check_plonk_proof(_txn: &TransactionNote, _merkle_commitment: &NodeValue) -> bool {
+fn batch_plonk_proofs_verification(_txn: &[TransactionNote]) -> bool {
     // TODO
     return true;
 }
@@ -75,23 +75,38 @@ impl CapeBlock {
         // Standard transactions
         for txn in &self.txns {
             let merkle_root = txn.merkle_root();
-            if recent_merkle_roots.contains(&merkle_root) && check_plonk_proof(&txn, &merkle_root) {
+            if recent_merkle_roots.contains(&merkle_root) {
                 filtered_block.txns.push(txn.clone());
             }
         }
         // Burn transactions
         for (i, txn) in self.burn_txns.iter().enumerate() {
             let merkle_root = txn.merkle_root();
-            if recent_merkle_roots.contains(&merkle_root)
-                && check_plonk_proof(&txn, &merkle_root)
-                && is_valid_domain_separator(&txn)
-            {
+            if recent_merkle_roots.contains(&merkle_root) && is_valid_domain_separator(&txn) {
                 filtered_block.burn_txns.push(txn.clone());
                 filtered_burn_ros.push(burned_ros[i].clone());
             }
         }
 
-        (filtered_block, filtered_burn_ros)
+        // Validate plonk proofs in batch
+        // We assume it is the responsibility of the relayer to ensure all the plonk proofs are valid
+        // If not the submitting relayer will simply loose the gas needed for processing the transaction
+        let mut all_txns = filtered_block.txns.clone();
+        all_txns.extend(filtered_block.burn_txns.clone());
+        // If the verification fails return an empty list of transactions and burned record openings
+        if !batch_plonk_proofs_verification(all_txns.as_slice()) {
+            (
+                CapeBlock {
+                    burn_txns: vec![],
+                    txns: vec![],
+                    miner: self.miner.clone(),
+                    block_height: 0,
+                },
+                vec![],
+            )
+        } else {
+            (filtered_block, filtered_burn_ros)
+        }
     }
 }
 

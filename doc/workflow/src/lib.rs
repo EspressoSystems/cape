@@ -58,10 +58,13 @@ impl CapeBlock {
         &self,
         recent_merkle_roots: &LinkedList<NodeValue>,
         burned_ros: Vec<RecordOpening>,
+        contract_nullifiers: &HashSet<Nullifier>,
     ) -> (CapeBlock, Vec<RecordOpening>) {
         // In order to avoid race conditions between block submitters (relayers or wallets), the CAPE contract
         // discards invalid transactions but keeps the valid ones (instead of rejecting the full block).
         // See https://gitlab.com/translucence/cap-on-ethereum/cape/-/issues/129 for more details.
+
+        let mut block_nullifiers = vec![];
 
         let mut filtered_block = CapeBlock {
             burn_txns: vec![],
@@ -75,16 +78,23 @@ impl CapeBlock {
         // Standard transactions
         for txn in &self.txns {
             let merkle_root = txn.merkle_root();
-            if recent_merkle_roots.contains(&merkle_root) {
+            if recent_merkle_roots.contains(&merkle_root)
+                && CapeBlock::check_nullifiers(&txn, contract_nullifiers, &block_nullifiers)
+            {
                 filtered_block.txns.push(txn.clone());
+                block_nullifiers.extend(txn.nullifiers().clone());
             }
         }
         // Burn transactions
         for (i, txn) in self.burn_txns.iter().enumerate() {
             let merkle_root = txn.merkle_root();
-            if recent_merkle_roots.contains(&merkle_root) && is_valid_domain_separator(&txn) {
+            if recent_merkle_roots.contains(&merkle_root)
+                && CapeBlock::check_nullifiers(&txn, contract_nullifiers, &block_nullifiers)
+                && is_valid_domain_separator(&txn)
+            {
                 filtered_block.burn_txns.push(txn.clone());
                 filtered_burn_ros.push(burned_ros[i].clone());
+                block_nullifiers.extend(txn.nullifiers().clone());
             }
         }
 
@@ -107,6 +117,21 @@ impl CapeBlock {
         } else {
             (filtered_block, filtered_burn_ros)
         }
+    }
+
+    /// Checks that all the nullifiers of a transaction have not been published in a previous block
+    /// or are not duplicated inside the current block
+    fn check_nullifiers(
+        txn: &TransactionNote,
+        contract_nullifiers: &HashSet<Nullifier>,
+        block_nullifiers: &[Nullifier],
+    ) -> bool {
+        for n in txn.nullifiers().iter() {
+            if block_nullifiers.contains(&n) || contract_nullifiers.contains(&n) {
+                return false;
+            }
+        }
+        true
     }
 }
 
@@ -190,7 +215,8 @@ impl CapeContract {
     /// transaction) submitted by user.
     pub fn submit_cape_block(&mut self, new_block: CapeBlock, burned_ros: Vec<RecordOpening>) {
         // 1. verify the block, and insert its input nullifiers and output record commitments
-        let (new_block, new_burned_ros) = new_block.validate(&self.recent_merkle_roots, burned_ros);
+        let (new_block, new_burned_ros) =
+            new_block.validate(&self.recent_merkle_roots, burned_ros, &self.nullifiers);
         // Check there is at least one valid transaction
         assert!(new_block.txns.len() > 0 || new_block.burn_txns.len() > 0);
 

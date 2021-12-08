@@ -34,22 +34,22 @@ describe("Records Merkle Tree Benchmarks", function () {
       let doNothingGasUsed = doNothingTxReceipt.gasUsed;
 
       // Total gas used to insert all the records, read from and store into the frontier
-      expect(totalGasUsed).to.be.equal(2772952);
+      expect(totalGasUsed).to.be.equal(2772946);
 
       // Gas used just to handle the frontier (no records inserted)
-      expect(emptyGasUsed).to.be.equal(159190);
+      expect(emptyGasUsed).to.be.equal(159189);
 
       // Gas used to deal with the frontier but without "base" cost
       let handleFrontierGasUsedWithoutBaseCost = emptyGasUsed - doNothingGasUsed;
-      expect(handleFrontierGasUsedWithoutBaseCost).to.be.equal(138028);
+      expect(handleFrontierGasUsedWithoutBaseCost).to.be.equal(138027);
 
       // Gas used to handle the frontier and insert records but without "base" cost
       let updateRecordsMerkleTreeWithoutBaseCost = totalGasUsed - doNothingGasUsed;
-      expect(updateRecordsMerkleTreeWithoutBaseCost).to.be.equal(2751790);
+      expect(updateRecordsMerkleTreeWithoutBaseCost).to.be.equal(2751784);
 
       // Gas used to insert the records
       let insertRecordsGasUsed = totalGasUsed - emptyGasUsed;
-      expect(insertRecordsGasUsed).to.be.equal(2613762);
+      expect(insertRecordsGasUsed).to.be.equal(2613757);
     });
   });
 });

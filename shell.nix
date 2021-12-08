@@ -7,7 +7,7 @@ let
   pkgs = import ./nix/nixpkgs.nix { overlays = [ rust_overlay ]; };
 
   pre-commit-check = pkgs.callPackage ./nix/precommit.nix { };
-  mySolc = pkgs.callPackage ./nix/solc-bin { version = "0.8.4"; };
+  mySolc = pkgs.callPackage ./nix/solc-bin { version = "0.8.10"; };
   pythonEnv = pkgs.poetry2nix.mkPoetryEnv {
     projectDir = ./.;
     overrides = pkgs.poetry2nix.overrides.withDefaults

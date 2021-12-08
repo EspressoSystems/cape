@@ -98,7 +98,7 @@ library Transcript {
 
         // Set the 254-th bit to 1 for infinity
         // https://docs.rs/ark-serialize/0.3.0/src/ark_serialize/flags.rs.html#117
-        if (Curve.isZero(point)) {
+        if (Curve.isInfinity(point)) {
             mask |= 0x4000000000000000000000000000000000000000000000000000000000000000;
         }
 
@@ -108,7 +108,7 @@ library Transcript {
             mask = 0x8000000000000000000000000000000000000000000000000000000000000000;
         }
 
-        return abi.encodePacked(reverseEndianness(point.X | mask));
+        return abi.encodePacked(reverseEndianness(point.x | mask));
     }
 
     function getAndAppendChallenge(TranscriptData memory self)

@@ -6,211 +6,117 @@
 // The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-// We didn't write this contract.
-/* solhint-disable */
-
 pragma solidity ^0.8.0;
 
 /// @notice Barreto-Naehrig curve over a 254 bit prime field
 library Curve {
-    // p = p(u) = 36u^4 + 36u^3 + 24u^2 + 6u + 1
-    uint256 internal constant FIELD_ORDER =
-        0x30644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd47;
-    uint256 internal constant Y_ZERO_THRESHOLD = FIELD_ORDER / 2;
-
-    // Number of elements in the field (often called `q` or `Modulus`)
-    // n = n(u) = 36u^4 + 36u^3 + 18u^2 + 6u + 1
-    uint256 internal constant GEN_ORDER =
-        0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001;
-
-    uint256 internal constant CURVE_B = 3;
-
-    // a = (p+1) / 4
-    uint256 internal constant CURVE_A =
-        0xc19139cb84c680a6e14116da060561765e05aa45a1c72a34f082305b61f3f52;
+    // use notation from https://datatracker.ietf.org/doc/draft-irtf-cfrg-pairing-friendly-curves/
+    //
+    // Elliptic curve is defined over a prime field GF(p), with embedding degree k.
+    // Short Weierstrass (SW form) is, for a, b \in GF(p^n) for some natural number n > 0:
+    //   E: y^2 = x^3 + a * x + b
+    //
+    // Pairing is defined over cyclic subgroups G1, G2, both of which are of order r.
+    // G1 is a subgroup of E(GF(p)), G2 is a subgroup of E(GF(p^k)).
+    //
+    // BN family are parameterized curves with well-chosen t,
+    //   p = 36 * t^4 + 36 * t^3 + 24 * t^2 + 6 * t + 1
+    //   r = 36 * t^4 + 36 * t^3 + 18 * t^2 + 6 * t + 1
+    // for some integer t.
+    // E has the equation:
+    //   E: y^2 = x^3 + b
+    // where b is a primitive element of multiplicative group (GF(p))^* of order (p-1).
+    // A pairing e is defined by taking G1 as a subgroup of E(GF(p)) of order r,
+    // G2 as a subgroup of E'(GF(p^2)),
+    // and G_T as a subgroup of a multiplicative group (GF(p^12))^* of order r.
+    //
+    // BN254 is defined over a 254-bit prime order p, embedding degree k = 12.
+    uint256 public constant P_MOD =
+        21888242871839275222246405745257275088696311157297823662689037894645226208583;
+    uint256 public constant R_MOD =
+        21888242871839275222246405745257275088548364400416034343698204186575808495617;
 
     struct G1Point {
-        uint256 X;
-        uint256 Y;
+        uint256 x;
+        uint256 y;
     }
 
-    // Encoding of field elements is: X[0] * z + X[1]
+    // G2 group element where x \in Fp2 = x0 * z + x1
     struct G2Point {
-        uint256[2] X;
-        uint256[2] Y;
-    }
-
-    // (P+1) / 4
-    function A() internal pure returns (uint256) {
-        return CURVE_A;
-    }
-
-    function P() internal pure returns (uint256) {
-        return FIELD_ORDER;
-    }
-
-    function N() internal pure returns (uint256) {
-        return GEN_ORDER;
+        uint256 x0;
+        uint256 x1;
+        uint256 y0;
+        uint256 y1;
     }
 
     /// @return the generator of G1
+    // solhint-disable-next-line func-name-mixedcase
     function P1() internal pure returns (G1Point memory) {
         return G1Point(1, 2);
     }
 
-    function HashToPoint(uint256 s) internal view returns (G1Point memory) {
-        uint256 beta = 0;
-        uint256 y = 0;
-
-        // XXX: Gen Order (n) or Field Order (p) ?
-        uint256 x = s % GEN_ORDER;
-
-        while (true) {
-            (beta, y) = FindYforX(x);
-
-            // y^2 == beta
-            if (beta == mulmod(y, y, FIELD_ORDER)) {
-                return G1Point(x, y);
-            }
-
-            x = addmod(x, 1, FIELD_ORDER);
-        }
-
-        return G1Point(x, y);
-    }
-
-    /**
-     * Given X, find Y
-     *
-     *   where y = sqrt(x^3 + b)
-     *
-     * Returns: (x^3 + b), y
-     */
-    function FindYforX(uint256 x) internal view returns (uint256, uint256) {
-        // beta = (x^3 + b) % p
-        uint256 beta = addmod(
-            mulmod(mulmod(x, x, FIELD_ORDER), x, FIELD_ORDER),
-            CURVE_B,
-            FIELD_ORDER
-        );
-
-        // y^2 = x^3 + b
-        // this acts like: y = sqrt(beta)
-        uint256 y = expMod(beta, CURVE_A, FIELD_ORDER);
-
-        return (beta, y);
-    }
-
-    // a - b = c;
-    function submod(uint256 a, uint256 b) internal pure returns (uint256) {
-        uint256 a_nn;
-
-        if (a > b) {
-            a_nn = a;
-        } else {
-            a_nn = a + GEN_ORDER;
-        }
-
-        return addmod(a_nn - b, 0, GEN_ORDER);
-    }
-
-    function expMod(
-        uint256 _base,
-        uint256 _exponent,
-        uint256 _modulus
-    ) internal view returns (uint256 retval) {
-        bool success;
-        uint256[1] memory output;
-        uint256[6] memory input;
-        input[0] = 0x20; // baseLen = new(big.Int).SetBytes(getData(input, 0, 32))
-        input[1] = 0x20; // expLen  = new(big.Int).SetBytes(getData(input, 32, 32))
-        input[2] = 0x20; // modLen  = new(big.Int).SetBytes(getData(input, 64, 32))
-        input[3] = _base;
-        input[4] = _exponent;
-        input[5] = _modulus;
-        assembly {
-            success := staticcall(
-                sub(gas(), 2000),
-                5,
-                input,
-                0xc0,
-                output,
-                0x20
-            )
-            // Use "invalid" to make gas estimation work
-            switch success
-            case 0 {
-                revert(0, 0)
-            }
-        }
-        require(success);
-        return output[0];
-    }
-
     /// @return the generator of G2
+    // solhint-disable-next-line func-name-mixedcase
     function P2() internal pure returns (G2Point memory) {
         return
-            G2Point(
-                [
-                    11559732032986387107991004021392285783925812861821192530917403151452391805634,
-                    10857046999023057135944570762232829481370756359578518086990519993285655852781
-                ],
-                [
-                    4082367875863433681332203403145435568316851327593401208105741076214120093531,
-                    8495653923123431417604973247489272438418190587263600148770280649306958101930
-                ]
-            );
+            G2Point({
+                x0: 0x198e9393920d483a7260bfb731fb5d25f1aa493335a9e71297e485b7aef312c2,
+                x1: 0x1800deef121f1e76426a00665e5c4479674322d4f75edadd46debd5cd992f6ed,
+                y0: 0x090689d0585ff075ec9e99ad690c3395bc4b313370b38ef355acdadcd122975b,
+                y1: 0x12c85ea5db8c6deb4aab71808dcb408fe3d1e7690c43d37b4ce6cc0166fa7daa
+            });
     }
 
-    /// @return the negation of p, i.e. p.add(p.negate()) should be zero.
-    function g1neg(G1Point memory p) internal pure returns (G1Point memory) {
-        // The prime q in the base field F_q for G1
-        uint256 q = FIELD_ORDER;
-        if (p.X == 0 && p.Y == 0) return G1Point(0, 0);
-        return G1Point(p.X, q - (p.Y % q));
+    /// @dev check if a G1 point is Infinity
+    function isInfinity(G1Point memory point) internal pure returns (bool) {
+        bool result;
+        assembly {
+            let x := mload(point)
+            let y := mload(add(point, 0x20))
+            result := and(iszero(x), eq(y, 1))
+        }
+        return result;
     }
 
-    /*
-     * @param p1 G1 point
-     * @param p2 G1 point
-     * @returns the sum of two points of G1
-     */
-    function g1add(G1Point memory p1, G1Point memory p2)
+    /// @return r the negation of p, i.e. p.add(p.negate()) should be zero.
+    function negate(G1Point memory p) internal pure returns (G1Point memory r) {
+        if (isInfinity(p)) return p;
+        return G1Point(p.x, P_MOD - (p.y % P_MOD));
+    }
+
+    /// @return r the sum of two points of G1
+    function add(G1Point memory p1, G1Point memory p2)
         internal
         view
         returns (G1Point memory r)
     {
         uint256[4] memory input;
-        input[0] = p1.X;
-        input[1] = p1.Y;
-        input[2] = p2.X;
-        input[3] = p2.Y;
+        input[0] = p1.x;
+        input[1] = p1.y;
+        input[2] = p2.x;
+        input[3] = p2.y;
         bool success;
         assembly {
-            success := staticcall(sub(gas(), 2000), 6, input, 0xc0, r, 0x60)
+            success := call(sub(gas(), 2000), 6, 0, input, 0xc0, r, 0x60)
             // Use "invalid" to make gas estimation work
             switch success
             case 0 {
                 revert(0, 0)
             }
         }
-        require(success);
+        require(success, "Bn254: group addition failed!");
     }
 
-    /*
-     * @param p1 G1 point
-     * @param s scalar
-     * @returns the product of a point on G1 and a scalar, i.e.
-     */
+    /// @return r the product of a point on G1 and a scalar, i.e.
     /// p == p.mul(1) and p.add(p) == p.mul(2) for all points p.
-    function g1mul(G1Point memory p, uint256 s)
+    function scalarMul(G1Point memory p, uint256 s)
         internal
         view
         returns (G1Point memory r)
     {
         uint256[3] memory input;
-        input[0] = p.X;
-        input[1] = p.Y;
+        input[0] = p.x;
+        input[1] = p.y;
         input[2] = s;
         bool success;
         assembly {
@@ -221,52 +127,87 @@ library Curve {
                 revert(0, 0)
             }
         }
-        require(success);
+        require(success, "Bn254: scalar mul failed!");
     }
 
-    /// @return the result of computing the pairing check
-    /// e(p1[0], p2[0]) *  .... * e(p1[n], p2[n]) == 1
-    /// For example pairing([P1(), P1().negate()], [P2(), P2()]) should
-    /// return true.
-    function pairing(G1Point[] memory p1, G2Point[] memory p2)
-        internal
-        view
-        returns (bool)
-    {
-        require(p1.length == p2.length);
-        uint256 elements = p1.length;
-        uint256 inputSize = elements * 6;
-        uint256[] memory input = new uint256[](inputSize);
-        for (uint256 i = 0; i < elements; i++) {
-            input[i * 6 + 0] = p1[i].X;
-            input[i * 6 + 1] = p1[i].Y;
-            input[i * 6 + 2] = p2[i].X[0];
-            input[i * 6 + 3] = p2[i].X[1];
-            input[i * 6 + 4] = p2[i].Y[0];
-            input[i * 6 + 5] = p2[i].Y[1];
-        }
-        uint256[1] memory out;
+    /// @dev Compute f^-1 for f \in Fr scalar field
+    /// @notice credit: Aztec, Spilsbury Holdings Ltd
+    function invert(uint256 fr) internal view returns (uint256 output) {
         bool success;
+        uint256 p = R_MOD;
         assembly {
-            success := staticcall(
-                sub(gas(), 2000),
-                8,
-                add(input, 0x20),
-                mul(inputSize, 0x20),
-                out,
-                0x20
-            )
-            // Use "invalid" to make gas estimation work
-            switch success
-            case 0 {
-                revert(0, 0)
-            }
+            let mPtr := mload(0x40)
+            mstore(mPtr, 0x20)
+            mstore(add(mPtr, 0x20), 0x20)
+            mstore(add(mPtr, 0x40), 0x20)
+            mstore(add(mPtr, 0x60), fr)
+            mstore(add(mPtr, 0x80), sub(p, 2))
+            mstore(add(mPtr, 0xa0), p)
+            success := staticcall(gas(), 0x05, mPtr, 0xc0, 0x00, 0x20)
+            output := mload(0x00)
         }
-        require(success);
-        return out[0] != 0;
+        require(success, "Bn254: pow precompile failed!");
+        return output;
     }
 
-    /* solhint-enable */
+    /**
+     * validate the following:
+     *   x != 0
+     *   y != 0
+     *   x < p
+     *   y < p
+     *   y^2 = x^3 + 3 mod p
+     */
+    /// @dev validate G1 point and check if it is on curve
+    /// @notice credit: Aztec, Spilsbury Holdings Ltd
+    function validateG1Point(G1Point memory point) internal pure {
+        bool isWellFormed;
+        uint256 p = P_MOD;
+        assembly {
+            let x := mload(point)
+            let y := mload(add(point, 0x20))
+
+            isWellFormed := and(
+                and(and(lt(x, p), lt(y, p)), not(or(iszero(x), iszero(y)))),
+                eq(mulmod(y, y, p), addmod(mulmod(x, mulmod(x, x, p), p), 3, p))
+            )
+        }
+        require(isWellFormed, "Bn254: invalid G1 point");
+    }
+
+    /// @dev Evaluate the following pairing product:
+    /// @dev e(a1, a2).e(-b1, b2) == 1
+    /// @notice credit: Aztec, Spilsbury Holdings Ltd
+    function pairingProd2(
+        G1Point memory a1,
+        G2Point memory a2,
+        G1Point memory b1,
+        G2Point memory b2
+    ) internal view returns (bool success) {
+        validateG1Point(a1);
+        validateG1Point(b1);
+        uint256 out;
+        assembly {
+            let mPtr := mload(0x40)
+            mstore(mPtr, mload(a1))
+            mstore(add(mPtr, 0x20), mload(add(a1, 0x20)))
+            mstore(add(mPtr, 0x40), mload(a2))
+            mstore(add(mPtr, 0x60), mload(add(a2, 0x20)))
+            mstore(add(mPtr, 0x80), mload(add(a2, 0x40)))
+            mstore(add(mPtr, 0xa0), mload(add(a2, 0x60)))
+
+            mstore(add(mPtr, 0xc0), mload(b1))
+            mstore(add(mPtr, 0xe0), mload(add(b1, 0x20)))
+            mstore(add(mPtr, 0x100), mload(b2))
+            mstore(add(mPtr, 0x120), mload(add(b2, 0x20)))
+            mstore(add(mPtr, 0x140), mload(add(b2, 0x40)))
+            mstore(add(mPtr, 0x160), mload(add(b2, 0x60)))
+            success := staticcall(gas(), 8, mPtr, 0x180, 0x00, 0x20)
+            out := mload(0x00)
+        }
+        require(success, "Bn254: Pairing check failed!");
+        return (out != 0);
+    }
 
     function fromLeBytesModOrder(bytes memory leBytes)
         internal
@@ -275,20 +216,47 @@ library Curve {
     {
         // TODO: Can likely be gas optimized by copying the first 31 bytes directly.
         for (uint256 i = 0; i < leBytes.length; i++) {
-            ret = mulmod(ret, 256, GEN_ORDER);
+            ret = mulmod(ret, 256, R_MOD);
             ret = addmod(
                 ret,
                 uint256(uint8(leBytes[leBytes.length - 1 - i])),
-                GEN_ORDER
+                R_MOD
             );
         }
     }
 
+    /// @dev Check if y-coordinate of G1 point is negative.
     function isYNegative(G1Point memory point) internal pure returns (bool) {
-        return point.Y > Y_ZERO_THRESHOLD;
+        return point.y > P_MOD / 2;
     }
 
-    function isZero(G1Point memory point) internal pure returns (bool) {
-        return point.X == 0 && point.Y == 0;
+    // @dev Perform a modular exponentiation.
+    // @return base^exponent (mod modulus)
+    // This method is ideal for small exponents (~64 bits or less), as it is cheaper than using the pow precompile
+    // @notice credit: credit: Aztec, Spilsbury Holdings Ltd
+    function powSmall(
+        uint256 base,
+        uint256 exponent,
+        uint256 modulus
+    ) internal pure returns (uint256) {
+        uint256 result = 1;
+        uint256 input = base;
+        uint256 count = 1;
+
+        assembly {
+            let endpoint := add(exponent, 0x01)
+            for {
+
+            } lt(count, endpoint) {
+                count := add(count, count)
+            } {
+                if and(exponent, count) {
+                    result := mulmod(result, input, modulus)
+                }
+                input := mulmod(input, input, modulus)
+            }
+        }
+
+        return result;
     }
 }

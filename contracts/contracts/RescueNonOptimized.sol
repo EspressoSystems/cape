@@ -1,4 +1,4 @@
-//SPDX-License-Identifier: MIT OR Apache-2.0
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
@@ -289,7 +289,7 @@ contract RescueNonOptimized {
         uint256 a,
         uint256 b,
         uint256 c
-    ) public returns (uint256) {
+    ) public view returns (uint256) {
         uint256[STATE_SIZE] memory input;
         uint256[STATE_SIZE] memory state;
 

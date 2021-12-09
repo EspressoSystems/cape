@@ -138,6 +138,9 @@ contract CAPE {
 
     /// Insert a nullifier into the set of nullifiers.
     function insertNullifier(uint256 _nullifier) internal {
+        // This check is relied upon to prevent double spending of nullifiers
+        // within the same note.
+        require(!nullifiers[_nullifier], "Nullifier already published");
         nullifiers[_nullifier] = true;
     }
 

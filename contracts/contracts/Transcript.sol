@@ -102,9 +102,9 @@ library Transcript {
             mask |= 0x4000000000000000000000000000000000000000000000000000000000000000;
         }
 
-        // Set the 255-th bit to 1 for negative Y
+        // Set the 255-th bit to 1 for positive Y
         // https://docs.rs/ark-serialize/0.3.0/src/ark_serialize/flags.rs.html#118
-        if (Curve.isYNegative(point)) {
+        if (!Curve.isYNegative(point)) {
             mask = 0x8000000000000000000000000000000000000000000000000000000000000000;
         }
 

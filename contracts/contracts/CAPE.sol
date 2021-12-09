@@ -137,6 +137,7 @@ contract CAPE {
     }
 
     /// Insert a nullifier into the set of nullifiers.
+    /// @notice Will revert if nullifier is already in nullifier set.
     function insertNullifier(uint256 _nullifier) internal {
         // This check is relied upon to prevent double spending of nullifiers
         // within the same note.
@@ -145,6 +146,7 @@ contract CAPE {
     }
 
     /// Insert nullifiers into the set of nullifiers.
+    /// @notice Will revert if any nullifier is already in nullifier set.
     function insertNullifiers(uint256[] memory _newNullifiers) internal {
         for (uint256 j = 0; j < _newNullifiers.length; j++) {
             insertNullifier(_newNullifiers[j]);

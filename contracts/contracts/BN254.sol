@@ -68,12 +68,15 @@ library Curve {
     }
 
     /// @dev check if a G1 point is Infinity
+    /// @notice precompile bn256Add at address(6) takes (0, 0) as Point of Infinity,
+    /// some crypto libraries (such as arkwork) uses a boolean flag to mark PoI, and
+    /// just use (0, 1) as affine coordinates (not on curve) to represents PoI.
     function isInfinity(G1Point memory point) internal pure returns (bool) {
         bool result;
         assembly {
             let x := mload(point)
             let y := mload(add(point, 0x20))
-            result := and(iszero(x), eq(y, 1))
+            result := and(iszero(x), iszero(y))
         }
         return result;
     }
@@ -87,7 +90,6 @@ library Curve {
     /// @return r the sum of two points of G1
     function add(G1Point memory p1, G1Point memory p2)
         internal
-        view
         returns (G1Point memory r)
     {
         uint256[4] memory input;
@@ -227,7 +229,7 @@ library Curve {
 
     /// @dev Check if y-coordinate of G1 point is negative.
     function isYNegative(G1Point memory point) internal pure returns (bool) {
-        return point.y > P_MOD / 2;
+        return point.y < P_MOD / 2;
     }
 
     // @dev Perform a modular exponentiation.

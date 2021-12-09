@@ -1,7 +1,6 @@
-use ethers::{
-    abi::{self, Tokenizable},
-    prelude::{Bytes, EthAbiType, U256},
-};
+use ethers::prelude::{Bytes, EthAbiType, U256};
+use jf_txn::freeze::FreezeNote;
+use jf_txn::mint::MintNote;
 use jf_txn::transfer::{AuxInfo, TransferNote};
 use jf_txn::TransactionNote;
 use jf_txn::{freeze::FreezeNote, structs::AuditMemo, VerKey};
@@ -62,13 +61,13 @@ impl From<VerKey> for sol::EdOnBn254Point {
 }
 
 impl From<MintNote> for sol::MintNote {
-    fn from(note: MintNote) -> Self {
+    fn from(_note: MintNote) -> Self {
         unimplemented!() // TODO
     }
 }
 
 impl From<FreezeNote> for sol::FreezeNote {
-    fn from(note: FreezeNote) -> Self {
+    fn from(_note: FreezeNote) -> Self {
         unimplemented!() // TODO
     }
 }
@@ -91,6 +90,7 @@ impl From<AuxInfo> for sol::AuxInfo {
     }
 }
 
+#[allow(dead_code)]
 fn get_note_types(notes: Vec<TransactionNote>) -> Vec<u8> {
     // TODO does ethers have better support for encoding an enum?
     notes

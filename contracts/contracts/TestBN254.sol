@@ -6,33 +6,58 @@ import {Curve as C} from "./BN254.sol";
 contract TestBN254 {
     constructor() {}
 
-    // TODO can we avoid duplicating C. everywhere?
-    function g1Add(C.G1Point memory p1, C.G1Point memory p2)
+    // solhint-disable-next-line func-name-mixedcase
+    function P1() public pure returns (C.G1Point memory) {
+        return C.P1();
+    }
+
+    // solhint-disable-next-line func-name-mixedcase
+    function P2() public pure returns (C.G2Point memory) {
+        return C.P2();
+    }
+
+    function isInfinity(C.G1Point memory point) public pure returns (bool) {
+        return C.isInfinity(point);
+    }
+
+    function negate(C.G1Point memory p)
         public
-        view
+        pure
+        returns (C.G1Point memory r)
+    {
+        return C.negate(p);
+    }
+
+    function add(C.G1Point memory p1, C.G1Point memory p2)
+        public
         returns (C.G1Point memory)
     {
-        return C.g1add(p1, p2);
+        return C.add(p1, p2);
     }
 
-    function g1Neg(C.G1Point memory p) public pure returns (C.G1Point memory) {
-        return C.g1neg(p);
-    }
-
-    function g1Mul(C.G1Point memory p1, uint256 s)
+    function scalarMul(C.G1Point memory p, uint256 s)
         public
         view
-        returns (C.G1Point memory)
+        returns (C.G1Point memory r)
     {
-        return C.g1mul(p1, s);
+        return C.scalarMul(p, s);
     }
 
-    function pairingCheck(C.G1Point[] memory p1, C.G2Point[] memory p2)
-        public
-        view
-        returns (bool)
-    {
-        return C.pairing(p1, p2);
+    function invert(uint256 fr) public view returns (uint256 output) {
+        return C.invert(fr);
+    }
+
+    function validateG1Point(C.G1Point memory point) public pure {
+        C.validateG1Point(point);
+    }
+
+    function pairingProd2(
+        C.G1Point memory a1,
+        C.G2Point memory a2,
+        C.G1Point memory b1,
+        C.G2Point memory b2
+    ) public view returns (bool) {
+        return C.pairingProd2(a1, a2, b1, b2);
     }
 
     function fromLeBytesModOrder(bytes memory leBytes)
@@ -45,5 +70,13 @@ contract TestBN254 {
 
     function isYNegative(C.G1Point memory p) public pure returns (bool) {
         return C.isYNegative(p);
+    }
+
+    function powSmall(
+        uint256 base,
+        uint256 exponent,
+        uint256 modulus
+    ) public pure returns (uint256) {
+        return C.powSmall(base, exponent, modulus);
     }
 }

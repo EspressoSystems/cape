@@ -1,6 +1,4 @@
 use ethers::prelude::{Bytes, EthAbiType, U256};
-use jf_txn::freeze::FreezeNote;
-use jf_txn::mint::MintNote;
 use jf_txn::transfer::{AuxInfo, TransferNote};
 use jf_txn::TransactionNote;
 use jf_txn::{freeze::FreezeNote, structs::AuditMemo, VerKey};
@@ -47,14 +45,14 @@ impl From<TransferNote> for sol::TransferNote {
 }
 
 impl From<AuditMemo> for sol::AuditMemo {
-    fn from(item: AuditMemo) -> Self {
+    fn from(_item: AuditMemo) -> Self {
         // TODO
         Self::default()
     }
 }
 
 impl From<VerKey> for sol::EdOnBn254Point {
-    fn from(item: VerKey) -> Self {
+    fn from(_item: VerKey) -> Self {
         // TODO
         Self::default()
     }
@@ -73,7 +71,7 @@ impl From<FreezeNote> for sol::FreezeNote {
 }
 
 impl From<UserPubKey> for sol::UserPubKey {
-    fn from(key: UserPubKey) -> Self {
+    fn from(_key: UserPubKey) -> Self {
         Self::default() // TODO
     }
 }

@@ -5,5 +5,5 @@ pub mod ethereum;
 pub mod helpers;
 mod ledger;
 mod records_merkle_tree;
-// mod transcript;
+mod transcript;
 pub mod types;

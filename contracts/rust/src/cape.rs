@@ -2,10 +2,10 @@ use ethers::{
     abi::{self, Tokenizable},
     prelude::{Bytes, EthAbiType, U256},
 };
-use jf_txn::freeze::FreezeNote;
-use jf_txn::mint::MintNote;
 use jf_txn::transfer::{AuxInfo, TransferNote};
 use jf_txn::TransactionNote;
+use jf_txn::{freeze::FreezeNote, structs::AuditMemo, VerKey};
+use jf_txn::{keys::UserPubKey, mint::MintNote};
 
 use crate::helpers::{convert_fr254_to_u256, convert_nullifier_to_u256};
 use crate::types as sol; // TODO figure out what to do about type collisions
@@ -41,14 +41,23 @@ impl From<TransferNote> for sol::TransferNote {
             // TODO
             proof: sol::PlonkProof { dummy: DUMMY_UINT },
 
-            // TODO
-            audit_memo: sol::AuditMemo {
-                ephemeral_key: DUMMY_UINT,
-                data: vec![DUMMY_UINT],
-            },
-
+            audit_memo: note.audit_memo.into(),
             aux_info: note.aux_info.into(),
         }
+    }
+}
+
+impl From<AuditMemo> for sol::AuditMemo {
+    fn from(item: AuditMemo) -> Self {
+        // TODO
+        Self::default()
+    }
+}
+
+impl From<VerKey> for sol::EdOnBn254Point {
+    fn from(item: VerKey) -> Self {
+        // TODO
+        Self::default()
     }
 }
 
@@ -64,13 +73,19 @@ impl From<FreezeNote> for sol::FreezeNote {
     }
 }
 
+impl From<UserPubKey> for sol::UserPubKey {
+    fn from(key: UserPubKey) -> Self {
+        Self::default() // TODO
+    }
+}
+
 impl From<AuxInfo> for sol::AuxInfo {
     fn from(item: AuxInfo) -> Self {
         Self {
             merkle_root: convert_fr254_to_u256(item.merkle_root.to_scalar()),
             fee: item.fee,
             valid_until: item.valid_until,
-            txn_memo_ver_key: sol::G1Point::default(),
+            txn_memo_ver_key: item.txn_memo_ver_key.into(),
             extra_proof_bound_data: Bytes::from(b""),
         }
     }
@@ -124,12 +139,11 @@ mod tests {
                 .collect_vec(),
         );
 
+        let miner = UserPubKey::default();
+
         // Convert the AAP transactions into some solidity friendly representation
         let block = CapeBlock {
-            miner: sol::UserPubKey {
-                address: sol::G1Point::default(), // TODO: handle address type
-                enc_key: sol::G1Point::default(),
-            },
+            miner: miner.into(),
             block_height: 123u64,
             transfer_notes: notes.iter().map(|note| note.clone().into()).collect_vec(),
             note_types,

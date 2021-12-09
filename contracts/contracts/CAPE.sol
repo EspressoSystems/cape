@@ -17,8 +17,13 @@ contract CAPE {
         uint256 dummy;
     }
 
+    struct EdOnBn254Point {
+        uint256 x;
+        uint256 y;
+    }
+
     struct AuditMemo {
-        uint256 ephemeralKey;
+        EdOnBn254Point ephemeralKey;
         uint256[] data;
     }
 
@@ -72,25 +77,25 @@ contract CAPE {
         uint256 merkleRoot;
         uint64 fee;
         uint64 validUntil;
-        Curve.G1Point txnMemoVerKey;
+        EdOnBn254Point txnMemoVerKey;
         bytes extraProofBoundData;
     }
 
     struct MintAuxInfo {
         uint256 merkleRoot;
         uint64 fee;
-        Curve.G1Point txnMemoVerKey;
+        EdOnBn254Point txnMemoVerKey;
     }
 
     struct FreezeAuxInfo {
         uint256 merkleRoot;
         uint64 fee;
-        Curve.G1Point txnMemoVerKey;
+        EdOnBn254Point txnMemoVerKey;
     }
 
     struct UserPubKey {
-        Curve.G1Point address_; // TODO Probably not the right type.
-        Curve.G1Point encKey;
+        EdOnBn254Point address_; // "address" is a keyword in solidity
+        EdOnBn254Point encKey;
     }
 
     struct AssetDefinition {
@@ -101,9 +106,9 @@ contract CAPE {
     struct AssetPolicy {
         uint64 revealThreshold;
         bool[12] revealMap; // ATTRS_LEN (8) + 3 + 1
-        Curve.G1Point auditorPk;
-        Curve.G1Point credPk;
-        Curve.G1Point freezerPk;
+        EdOnBn254Point auditorPk;
+        EdOnBn254Point credPk;
+        EdOnBn254Point freezerPk;
     }
 
     struct RecordOpening {

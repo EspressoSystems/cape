@@ -137,27 +137,54 @@ contract CAPE {
     }
 
     /// Insert a nullifier into the set of nullifiers.
-    /// @notice Will revert if nullifier is already in nullifier set.
     function insertNullifier(uint256 _nullifier) internal {
-        require(!nullifiers[_nullifier], "Nullifier already inserted");
         nullifiers[_nullifier] = true;
     }
 
     /// Insert nullifiers into the set of nullifiers.
-    /// @notice Will revert if any nullifier is already in nullifier set.
     function insertNullifiers(uint256[] memory _newNullifiers) internal {
         for (uint256 j = 0; j < _newNullifiers.length; j++) {
             insertNullifier(_newNullifiers[j]);
         }
     }
 
-    function validateAndApply(TransferNote memory _note) internal {}
+    function isSpendable(uint256 _nullifier) internal view returns (bool) {
+        return !nullifiers[_nullifier];
+    }
 
-    function validateAndApply(MintNote memory _note) internal {}
+    function isSpendable(uint256[] memory _newNullifiers)
+        internal
+        view
+        returns (bool)
+    {
+        for (uint256 j = 0; j < _newNullifiers.length; j++) {
+            if (!isSpendable(_newNullifiers[j])) {
+                return false;
+            }
+        }
+        return true;
+    }
 
-    function validateAndApply(FreezeNote memory _note) internal {}
+    // @return true if the nullifiers were consumed (and note must be part of the block)
+    function spendIfUnspent(uint256[] memory nullifiers)
+        internal
+        returns (bool)
+    {
+        if (isSpendable(nullifiers)) {
+            insertNullifiers(nullifiers);
+            return true;
+        }
+        return false;
+    }
 
-    function validateAndApply(BurnNote memory _note) internal {}
+    // @return true if the nullifier was consumed (and note must be part of the block)
+    function spendIfUnspent(uint256 nullifier) internal returns (bool) {
+        if (isSpendable(nullifier)) {
+            insertNullifier(nullifier);
+            return true;
+        }
+        return false;
+    }
 
     /// @notice Check if an asset is already registered
     /// @param erc20Address erc20 token address corresponding to the asset type.
@@ -194,46 +221,54 @@ contract CAPE {
         CapeBlock memory newBlock,
         RecordOpening[] memory burnedRos
     ) public {
-        // Insert all the nullifiers (order does not matter)
-        for (uint256 i = 0; i < newBlock.transferNotes.length; i++) {
-            insertNullifiers(newBlock.transferNotes[i].inputsNullifiers);
-        }
-        for (uint256 i = 0; i < newBlock.mintNotes.length; i++) {
-            insertNullifier(newBlock.mintNotes[i].nullifier);
-        }
-        for (uint256 i = 0; i < newBlock.freezeNotes.length; i++) {
-            insertNullifiers(newBlock.freezeNotes[i].inputNullifiers);
-        }
-        for (uint256 i = 0; i < newBlock.burnNotes.length; i++) {
-            // TODO it's hard to distinguish input{,s}Nullifiers here.
-            insertNullifiers(
-                newBlock.burnNotes[i].transferNote.inputsNullifiers
-            );
-        }
+        // Growable in memory arrays (or hashmaps) don't exists so we use a
+        // boolean mask to mark the notes that are included.
+        bool[] memory transferInclude = new bool[](
+            newBlock.transferNotes.length
+        );
+        bool[] memory mintInclude = new bool[](newBlock.mintNotes.length);
+        bool[] memory freezeInclude = new bool[](newBlock.freezeNotes.length);
+        bool[] memory burnInclude = new bool[](newBlock.burnNotes.length);
 
-        // Verify transactions in the correct order given by noteTypes
-        // and the ordering of the arrays of notes.
-        uint256 transferNotesIndex = 0;
-        uint256 mintNotesIndex = 0;
-        uint256 freezeNotesIndex = 0;
-        uint256 burnNotesIndex = 0;
+        // Preserve the ordering of the (sub) arrays of notes.
+        uint256 transferIdx = 0;
+        uint256 mintIdx = 0;
+        uint256 freezeIdx = 0;
+        uint256 burnIdx = 0;
 
         for (uint256 i = 0; i < newBlock.noteTypes.length; i++) {
             NoteType noteType = newBlock.noteTypes[i];
 
             if (noteType == NoteType.TRANSFER) {
-                validateAndApply(newBlock.transferNotes[transferNotesIndex]);
-                transferNotesIndex += 1;
+                uint256[] memory nullifiers = newBlock
+                    .transferNotes[transferIdx]
+                    .inputsNullifiers;
+                bool ok = spendIfUnspent(nullifiers);
+                transferInclude[transferIdx] = ok;
+                transferIdx += 1;
             } else if (noteType == NoteType.MINT) {
-                validateAndApply(newBlock.mintNotes[mintNotesIndex]);
-                mintNotesIndex += 1;
+                uint256 nullifier = newBlock.mintNotes[mintIdx].nullifier;
+                bool ok = spendIfUnspent(nullifier);
+                mintInclude[mintIdx] = ok;
+                mintIdx += 1;
             } else if (noteType == NoteType.FREEZE) {
-                validateAndApply(newBlock.freezeNotes[freezeNotesIndex]);
-                freezeNotesIndex += 1;
+                uint256[] memory nullifiers = newBlock
+                    .freezeNotes[freezeIdx]
+                    .inputNullifiers;
+                bool ok = spendIfUnspent(nullifiers);
+                freezeInclude[freezeIdx] = ok;
+                freezeIdx += 1;
             } else if (noteType == NoteType.BURN) {
-                validateAndApply(newBlock.burnNotes[burnNotesIndex]);
-                burnNotesIndex += 1;
+                uint256[] memory nullifiers = newBlock
+                    .burnNotes[burnIdx]
+                    .transferNote
+                    .inputsNullifiers;
+                bool ok = spendIfUnspent(nullifiers);
+                burnInclude[burnIdx] = ok;
+                burnIdx += 1;
             }
         }
+
+        // TODO apply transactions where ...Include mask is true
     }
 }

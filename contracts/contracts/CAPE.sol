@@ -239,6 +239,7 @@ contract CAPE {
 
             if (noteType == NoteType.TRANSFER) {
                 TransferNote memory note = newBlock.transferNotes[transferIdx];
+                checkMerkleRootContained(note.auxInfo.merkleRoot);
                 if (spendIfUnspent(note.inputsNullifiers)) {
                     // TODO collect note.outputCommitments
                     // TODO extract proof for batch verification
@@ -246,6 +247,7 @@ contract CAPE {
                 transferIdx += 1;
             } else if (noteType == NoteType.MINT) {
                 MintNote memory note = newBlock.mintNotes[mintIdx];
+                checkMerkleRootContained(note.auxInfo.merkleRoot);
                 if (spendIfUnspent(note.nullifier)) {
                     // TODO collect note.mintComm
                     // TODO collect note.chgComm
@@ -254,6 +256,7 @@ contract CAPE {
                 mintIdx += 1;
             } else if (noteType == NoteType.FREEZE) {
                 FreezeNote memory note = newBlock.freezeNotes[freezeIdx];
+                checkMerkleRootContained(note.auxInfo.merkleRoot);
                 if (spendIfUnspent(note.inputNullifiers)) {
                     // TODO collect note.outputCommitments
                     // TODO extract proof for batch verification
@@ -262,6 +265,7 @@ contract CAPE {
             } else if (noteType == NoteType.BURN) {
                 BurnNote memory note = newBlock.burnNotes[burnIdx];
                 TransferNote memory transfer = note.transferNote;
+                checkMerkleRootContained(transfer.auxInfo.merkleRoot);
                 // TODO check burn prefix separator
                 // TODO check burn record opening matches second output commitment
                 if (spendIfUnspent(transfer.inputsNullifiers)) {
@@ -278,8 +282,8 @@ contract CAPE {
         // TODO batch insert record commitments
     }
 
-    function checkMerkleRootContained() internal view {
-        // TODO
+    function checkMerkleRootContained(uint256 root) internal view {
+        // TODO revert if not contained
     }
 
     function handleWithdrawal() internal {

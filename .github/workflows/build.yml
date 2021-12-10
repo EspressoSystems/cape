@@ -2,8 +2,7 @@ name: Build
 
 on:
   push:
-    branches:
-      - '*'
+  workflow_dispatch:
 
 jobs:
   build:
@@ -13,6 +12,12 @@ jobs:
       volumes:
         - github_nix:/nix
     steps:
+      - uses: styfle/cancel-workflow-action@0.9.1
+        name: Cancel Outdated Builds
+        with:
+          all_but_latest: true
+          access_token: ${{ github.token }}
+
       - name: Install Tools
         run: |
           apk add git

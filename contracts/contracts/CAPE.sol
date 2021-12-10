@@ -226,14 +226,7 @@ contract CAPE {
         CapeBlock memory newBlock,
         RecordOpening[] memory burnedRos
     ) public {
-        // Growable in memory arrays (or hashmaps) don't exists so we use a
-        // boolean mask to mark the notes that are included.
-        bool[] memory transferInclude = new bool[](
-            newBlock.transferNotes.length
-        );
-        bool[] memory mintInclude = new bool[](newBlock.mintNotes.length);
-        bool[] memory freezeInclude = new bool[](newBlock.freezeNotes.length);
-        bool[] memory burnInclude = new bool[](newBlock.burnNotes.length);
+        // TODO check block height
 
         // Preserve the ordering of the (sub) arrays of notes.
         uint256 transferIdx = 0;
@@ -245,35 +238,57 @@ contract CAPE {
             NoteType noteType = newBlock.noteTypes[i];
 
             if (noteType == NoteType.TRANSFER) {
-                uint256[] memory nullifiers = newBlock
-                    .transferNotes[transferIdx]
-                    .inputsNullifiers;
-                bool ok = spendIfUnspent(nullifiers);
-                transferInclude[transferIdx] = ok;
+                TransferNote memory note = newBlock.transferNotes[transferIdx];
+                if (spendIfUnspent(note.inputsNullifiers)) {
+                    // TODO collect note.outputCommitments
+                    // TODO extract proof for batch verification
+                }
                 transferIdx += 1;
             } else if (noteType == NoteType.MINT) {
-                uint256 nullifier = newBlock.mintNotes[mintIdx].nullifier;
-                bool ok = spendIfUnspent(nullifier);
-                mintInclude[mintIdx] = ok;
+                MintNote memory note = newBlock.mintNotes[mintIdx];
+                if (spendIfUnspent(note.nullifier)) {
+                    // TODO collect note.mintComm
+                    // TODO collect note.chgComm
+                    // TODO extract proof for batch verification
+                }
                 mintIdx += 1;
             } else if (noteType == NoteType.FREEZE) {
-                uint256[] memory nullifiers = newBlock
-                    .freezeNotes[freezeIdx]
-                    .inputNullifiers;
-                bool ok = spendIfUnspent(nullifiers);
-                freezeInclude[freezeIdx] = ok;
+                FreezeNote memory note = newBlock.freezeNotes[freezeIdx];
+                if (spendIfUnspent(note.inputNullifiers)) {
+                    // TODO collect note.outputCommitments
+                    // TODO extract proof for batch verification
+                }
                 freezeIdx += 1;
             } else if (noteType == NoteType.BURN) {
-                uint256[] memory nullifiers = newBlock
-                    .burnNotes[burnIdx]
-                    .transferNote
-                    .inputsNullifiers;
-                bool ok = spendIfUnspent(nullifiers);
-                burnInclude[burnIdx] = ok;
+                BurnNote memory note = newBlock.burnNotes[burnIdx];
+                TransferNote memory transfer = note.transferNote;
+                // TODO check burn prefix separator
+                // TODO check burn record opening matches second output commitment
+                if (spendIfUnspent(transfer.inputsNullifiers)) {
+                    // TODO collect transfer.outputCommitments
+                    // TODO extract proof for batch verification
+                }
+                // TODO handle withdrawal (better done at end if call is external
+                //      or have other reentrancy protection)
                 burnIdx += 1;
             }
         }
 
-        // TODO apply transactions where ...Include mask is true
+        // TODO verify plonk proof
+        // TODO batch insert record commitments
+    }
+
+    function checkMerkleRootContained() internal view {
+        // TODO
+    }
+
+    function handleWithdrawal() internal {
+        // TODO
+    }
+
+    function batchInsertRecordCommitments(uint256[] memory commitments)
+        internal
+    {
+        // TODO
     }
 }

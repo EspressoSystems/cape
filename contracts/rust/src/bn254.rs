@@ -209,6 +209,16 @@ async fn test_from_le_bytes_mod_order() -> Result<()> {
                 .await?,
             field_to_u256(Fr::from_le_bytes_mod_order(&bytes))
         );
+
+        let mut bytes = [0u8; 48];
+        rng.fill_bytes(&mut bytes);
+        assert_eq!(
+            contract
+                .from_le_bytes_mod_order(bytes.to_vec().into())
+                .call()
+                .await?,
+            field_to_u256(Fr::from_le_bytes_mod_order(&bytes))
+        );
     }
     Ok(())
 }

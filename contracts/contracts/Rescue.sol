@@ -759,7 +759,7 @@ contract Rescue {
         uint256 a,
         uint256 b,
         uint256 c
-    ) public view returns (uint256 o) {
+    ) public returns (uint256 o) {
         (o, a, b, c) = perm(a % PRIME, b % PRIME, c % PRIME, 0);
         o %= PRIME;
     }

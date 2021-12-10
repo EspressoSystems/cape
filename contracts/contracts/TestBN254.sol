@@ -30,6 +30,7 @@ contract TestBN254 {
 
     function add(C.G1Point memory p1, C.G1Point memory p2)
         public
+        view
         returns (C.G1Point memory)
     {
         return C.add(p1, p2);

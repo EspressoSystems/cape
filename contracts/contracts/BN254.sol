@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT
 //
-// Based on : https://gist.githubusercontent.com/chriseth/f9be9d9391efc5beb9704255a8e2989d/raw/4d0fb90847df1d4e04d507019031888df8372239/snarktest.solidity
+// Based on:
+// - Christian Reitwiessner: https://gist.githubusercontent.com/chriseth/f9be9d9391efc5beb9704255a8e2989d/raw/4d0fb90847df1d4e04d507019031888df8372239/snarktest.solidity
+// - Aztec: https://github.com/AztecProtocol/aztec-2-bug-bounty
+//
 // Copyright 2017 Christian Reitwiessner
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 // The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
@@ -71,25 +74,30 @@ library Curve {
     /// @notice precompile bn256Add at address(6) takes (0, 0) as Point of Infinity,
     /// some crypto libraries (such as arkwork) uses a boolean flag to mark PoI, and
     /// just use (0, 1) as affine coordinates (not on curve) to represents PoI.
-    function isInfinity(G1Point memory point) internal pure returns (bool) {
-        bool result;
+    function isInfinity(G1Point memory point)
+        internal
+        pure
+        returns (bool result)
+    {
         assembly {
             let x := mload(point)
             let y := mload(add(point, 0x20))
             result := and(iszero(x), iszero(y))
         }
-        return result;
     }
 
     /// @return r the negation of p, i.e. p.add(p.negate()) should be zero.
-    function negate(G1Point memory p) internal pure returns (G1Point memory r) {
-        if (isInfinity(p)) return p;
+    function negate(G1Point memory p) internal pure returns (G1Point memory) {
+        if (isInfinity(p)) {
+            return p;
+        }
         return G1Point(p.x, P_MOD - (p.y % P_MOD));
     }
 
     /// @return r the sum of two points of G1
     function add(G1Point memory p1, G1Point memory p2)
         internal
+        view
         returns (G1Point memory r)
     {
         uint256[4] memory input;
@@ -99,7 +107,7 @@ library Curve {
         input[3] = p2.y;
         bool success;
         assembly {
-            success := call(sub(gas(), 2000), 6, 0, input, 0xc0, r, 0x60)
+            success := staticcall(sub(gas(), 2000), 6, input, 0xc0, r, 0x60)
             // Use "invalid" to make gas estimation work
             switch success
             case 0 {
@@ -149,7 +157,6 @@ library Curve {
             output := mload(0x00)
         }
         require(success, "Bn254: pow precompile failed!");
-        return output;
     }
 
     /**
@@ -185,10 +192,11 @@ library Curve {
         G2Point memory a2,
         G1Point memory b1,
         G2Point memory b2
-    ) internal view returns (bool success) {
+    ) internal view returns (bool) {
         validateG1Point(a1);
         validateG1Point(b1);
         uint256 out;
+        bool success;
         assembly {
             let mPtr := mload(0x40)
             mstore(mPtr, mload(a1))

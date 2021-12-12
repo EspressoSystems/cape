@@ -14,6 +14,9 @@ use crate::constants::{burn_pub_key, MERKLE_ROOT_QUEUE_CAP};
 use crate::erc20::Erc20Contract;
 use crate::merkle_tree::RecordMerkleTree;
 
+#[derive(Debug, Clone)]
+pub struct NullifierRepeatedError;
+
 /// a block in CAPE blockchain
 #[derive(Default, Clone)]
 pub struct CapeBlock {
@@ -58,13 +61,11 @@ impl CapeBlock {
         &self,
         recent_merkle_roots: &LinkedList<NodeValue>,
         burned_ros: Vec<RecordOpening>,
-        contract_nullifiers: &HashSet<Nullifier>,
+        contract_nullifiers: &mut HashSet<Nullifier>,
     ) -> (CapeBlock, Vec<RecordOpening>) {
         // In order to avoid race conditions between block submitters (relayers or wallets), the CAPE contract
         // discards invalid transactions but keeps the valid ones (instead of rejecting the full block).
         // See https://gitlab.com/translucence/cap-on-ethereum/cape/-/issues/129 for more details.
-
-        let mut block_nullifiers = vec![];
 
         let mut filtered_block = CapeBlock {
             burn_txns: vec![],
@@ -79,22 +80,20 @@ impl CapeBlock {
         for txn in &self.txns {
             let merkle_root = txn.merkle_root();
             if recent_merkle_roots.contains(&merkle_root)
-                && CapeBlock::check_nullifiers(&txn, contract_nullifiers, &block_nullifiers)
+                && CapeBlock::check_nullifiers_are_fresh(&txn, contract_nullifiers)
             {
                 filtered_block.txns.push(txn.clone());
-                block_nullifiers.extend(txn.nullifiers().clone());
             }
         }
         // Burn transactions
         for (i, txn) in self.burn_txns.iter().enumerate() {
             let merkle_root = txn.merkle_root();
             if recent_merkle_roots.contains(&merkle_root)
-                && CapeBlock::check_nullifiers(&txn, contract_nullifiers, &block_nullifiers)
+                && CapeBlock::check_nullifiers_are_fresh(&txn, contract_nullifiers)
                 && is_burn_txn(&txn)
             {
                 filtered_block.burn_txns.push(txn.clone());
                 filtered_burn_ros.push(burned_ros[i].clone());
-                block_nullifiers.extend(txn.nullifiers().clone());
             }
         }
 
@@ -120,14 +119,12 @@ impl CapeBlock {
     }
 
     /// Checks that all the nullifiers of a transaction have not been published in a previous block
-    /// or are not duplicated inside the current block
-    fn check_nullifiers(
+    fn check_nullifiers_are_fresh(
         txn: &TransactionNote,
         contract_nullifiers: &HashSet<Nullifier>,
-        block_nullifiers: &[Nullifier],
     ) -> bool {
         for n in txn.nullifiers().iter() {
-            if block_nullifiers.contains(&n) || contract_nullifiers.contains(&n) {
+            if contract_nullifiers.contains(&n) {
                 return false;
             }
         }
@@ -157,6 +154,22 @@ pub struct CapeContract {
 }
 
 impl CapeContract {
+    /// Inserts a nullifier in the nullifiers hash set.
+    /// If the nullifier has already been inserted previously return an error.
+    /// In practice (solidity code), the ethereum transaction will be reverted and the smart contract state will be restored.
+    /// This approach, compared to checking no duplicates appear in the list of nullifiers for a block, aims at saving ethereum gas in the concrete solidity implementation.
+    fn insert_nullifier_or_revert(
+        &mut self,
+        nullifier: &Nullifier,
+    ) -> Result<(), NullifierRepeatedError> {
+        if self.nullifiers.contains(nullifier) {
+            Err(NullifierRepeatedError)
+        } else {
+            self.nullifiers.insert(nullifier.clone());
+            Ok(())
+        }
+    }
+
     pub(crate) fn address(&self) -> Address {
         // NOTE: in Solidity, use expression: `address(this)`
         Address::from_low_u64_le(666u64)
@@ -213,10 +226,14 @@ impl CapeContract {
     /// Relayer submits the next block, and withdraw for users who had burn transactions included
     /// in `new_block` with the help of record openings of the "burned records" (output of the burn
     /// transaction) submitted by user.
-    pub fn submit_cape_block(&mut self, new_block: CapeBlock, burned_ros: Vec<RecordOpening>) {
+    pub fn submit_cape_block(
+        &mut self,
+        new_block: CapeBlock,
+        burned_ros: Vec<RecordOpening>,
+    ) -> Result<(), NullifierRepeatedError> {
         // 1. verify the block, and insert its input nullifiers and output record commitments
         let (new_block, new_burned_ros) =
-            new_block.validate(&self.recent_merkle_roots, burned_ros, &self.nullifiers);
+            new_block.validate(&self.recent_merkle_roots, burned_ros, &mut self.nullifiers);
         // Check there is at least one valid transaction
         assert!(new_block.txns.len() > 0 || new_block.burn_txns.len() > 0);
 
@@ -225,7 +242,8 @@ impl CapeContract {
         let mut rc_to_be_inserted = vec![];
         for txn in new_block.txns.iter() {
             for &nf in txn.nullifiers().iter() {
-                self.nullifiers.insert(nf);
+                self.insert_nullifier_or_revert(&nf)
+                    .expect("Nullifiers should not be repeated inside a block.");
             }
             rc_to_be_inserted.extend_from_slice(&txn.output_commitments());
         }
@@ -290,6 +308,8 @@ impl CapeContract {
 
         // Store the new frontier
         self.mt_frontier = updated_mt_frontier;
+
+        Ok(())
     }
 }
 
@@ -398,7 +418,8 @@ mod test {
         // 4. relayer: build next block and user's deposit will be credited (inserted into
         // record merkle tree) when CAPE contract process the next valid block.
         let new_block = CapeBlock::build_next();
-        cape_contract.submit_cape_block(new_block, vec![]);
+        let _res = cape_contract.submit_cape_block(new_block, vec![]);
+        // Handle result of call to `submit_cape_block`.
     }
 
     #[test]
@@ -430,7 +451,8 @@ mod test {
         let mut burned_ros = vec![];
         burned_ros.push(burned_ro);
 
-        cape_contract.submit_cape_block(new_block.clone(), burned_ros);
+        let _res = cape_contract.submit_cape_block(new_block.clone(), burned_ros);
+        // Handle result of call to `submit_cape_block`.
 
         // done! when CAPE contract process a new block,
         // it will automatically withdraw for user that has submitted the burn transaction.

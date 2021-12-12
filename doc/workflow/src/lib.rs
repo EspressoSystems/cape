@@ -81,6 +81,7 @@ impl CapeBlock {
             let merkle_root = txn.merkle_root();
             if recent_merkle_roots.contains(&merkle_root)
                 && CapeBlock::check_nullifiers_are_fresh(&txn, contract_nullifiers)
+                && !is_burn_txn(&txn)
             {
                 filtered_block.txns.push(txn.clone());
             }

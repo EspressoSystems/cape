@@ -38,7 +38,7 @@ const CAPE_BURN_PREFIX_BYTES_LEN: usize = 12;
 
 // Check that the transaction note corresponds to a transfer and that the prefix of the auxiliary
 // information corresponds to some burn transaction.
-fn is_valid_domain_separator(txn: &TransactionNote) -> bool {
+fn is_burn_txn(txn: &TransactionNote) -> bool {
     match txn {
         TransactionNote::Transfer(tx) => {
             (*tx).aux_info.extra_proof_bound_data[0..CAPE_BURN_PREFIX_BYTES_LEN]
@@ -90,7 +90,7 @@ impl CapeBlock {
             let merkle_root = txn.merkle_root();
             if recent_merkle_roots.contains(&merkle_root)
                 && CapeBlock::check_nullifiers(&txn, contract_nullifiers, &block_nullifiers)
-                && is_valid_domain_separator(&txn)
+                && is_burn_txn(&txn)
             {
                 filtered_block.burn_txns.push(txn.clone());
                 filtered_burn_ros.push(burned_ros[i].clone());

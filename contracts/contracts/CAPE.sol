@@ -10,7 +10,7 @@ pragma solidity ^0.8.0;
 import {Curve} from "./BN254.sol";
 
 contract CAPE {
-    mapping(uint256 => bool) private nullifiers;
+    mapping(uint256 => bool) public nullifiers;
 
     struct PlonkProof {
         // TODO
@@ -126,38 +126,54 @@ contract CAPE {
         BurnNote[] burnNotes; // TODO
     }
 
-    // Handling of nullifiers
-    // Check if a nullifier has already been inserted
-    function hasNullifierAlreadyBeenPublished(uint256 _nullifier)
-        public
-        view
-        returns (bool)
-    {
-        return nullifiers[_nullifier];
-    }
-
     /// Insert a nullifier into the set of nullifiers.
-    /// @notice Will revert if nullifier is already in nullifier set.
+    /// @dev Reverts if nullifier is already in nullifier set.
     function insertNullifier(uint256 _nullifier) internal {
-        require(!nullifiers[_nullifier], "Nullifier already inserted");
+        // This check is relied upon to prevent double spending of nullifiers
+        // within the same note.
+        require(!nullifiers[_nullifier], "Nullifier already published");
         nullifiers[_nullifier] = true;
     }
 
-    /// Insert nullifiers into the set of nullifiers.
-    /// @notice Will revert if any nullifier is already in nullifier set.
-    function insertNullifiers(uint256[] memory _newNullifiers) internal {
-        for (uint256 j = 0; j < _newNullifiers.length; j++) {
-            insertNullifier(_newNullifiers[j]);
+    /// Check if a nullifier array contains previously published nullifiers.
+    /// @dev Does not check if the array contains duplicates.
+    function containsPublished(uint256[] memory _nullifiers)
+        internal
+        view
+        returns (bool)
+    {
+        for (uint256 j = 0; j < _nullifiers.length; j++) {
+            if (nullifiers[_nullifiers[j]]) {
+                return true;
+            }
         }
+        return false;
     }
 
-    function validateAndApply(TransferNote memory _note) internal {}
+    /// Publish an array of nullifiers if none of them have been published before
+    /// TODO the text after @ return does not show in docs, only the return type shows.
+    /// @return `true` if the nullifiers were published, `false` if one or more nullifiers were published before.
+    /// @dev Will revert if not all nullifiers can be published due to duplicates among them.
+    /// @dev A block creator must not submit notes with duplicate nullifiers.
+    function publish(uint256[] memory _nullifiers) internal returns (bool) {
+        if (!containsPublished(_nullifiers)) {
+            for (uint256 j = 0; j < _nullifiers.length; j++) {
+                insertNullifier(_nullifiers[j]);
+            }
+            return true;
+        }
+        return false;
+    }
 
-    function validateAndApply(MintNote memory _note) internal {}
-
-    function validateAndApply(FreezeNote memory _note) internal {}
-
-    function validateAndApply(BurnNote memory _note) internal {}
+    /// Publish a nullifier if it hasn't been published before
+    /// @return `true` if the nullifier was published, `false` if it wasn't
+    function publish(uint256 _nullifier) internal returns (bool) {
+        if (nullifiers[_nullifier]) {
+            return false;
+        }
+        insertNullifier(_nullifier);
+        return true;
+    }
 
     /// @notice Check if an asset is already registered
     /// @param erc20Address erc20 token address corresponding to the asset type.
@@ -194,46 +210,73 @@ contract CAPE {
         CapeBlock memory newBlock,
         RecordOpening[] memory burnedRos
     ) public {
-        // Insert all the nullifiers (order does not matter)
-        for (uint256 i = 0; i < newBlock.transferNotes.length; i++) {
-            insertNullifiers(newBlock.transferNotes[i].inputsNullifiers);
-        }
-        for (uint256 i = 0; i < newBlock.mintNotes.length; i++) {
-            insertNullifier(newBlock.mintNotes[i].nullifier);
-        }
-        for (uint256 i = 0; i < newBlock.freezeNotes.length; i++) {
-            insertNullifiers(newBlock.freezeNotes[i].inputNullifiers);
-        }
-        for (uint256 i = 0; i < newBlock.burnNotes.length; i++) {
-            // TODO it's hard to distinguish input{,s}Nullifiers here.
-            insertNullifiers(
-                newBlock.burnNotes[i].transferNote.inputsNullifiers
-            );
-        }
+        // TODO check block height
 
-        // Verify transactions in the correct order given by noteTypes
-        // and the ordering of the arrays of notes.
-        uint256 transferNotesIndex = 0;
-        uint256 mintNotesIndex = 0;
-        uint256 freezeNotesIndex = 0;
-        uint256 burnNotesIndex = 0;
+        // Preserve the ordering of the (sub) arrays of notes.
+        uint256 transferIdx = 0;
+        uint256 mintIdx = 0;
+        uint256 freezeIdx = 0;
+        uint256 burnIdx = 0;
 
         for (uint256 i = 0; i < newBlock.noteTypes.length; i++) {
             NoteType noteType = newBlock.noteTypes[i];
 
             if (noteType == NoteType.TRANSFER) {
-                validateAndApply(newBlock.transferNotes[transferNotesIndex]);
-                transferNotesIndex += 1;
+                TransferNote memory note = newBlock.transferNotes[transferIdx];
+                checkMerkleRootContained(note.auxInfo.merkleRoot);
+                if (publish(note.inputsNullifiers)) {
+                    // TODO collect note.outputCommitments
+                    // TODO extract proof for batch verification
+                }
+                transferIdx += 1;
             } else if (noteType == NoteType.MINT) {
-                validateAndApply(newBlock.mintNotes[mintNotesIndex]);
-                mintNotesIndex += 1;
+                MintNote memory note = newBlock.mintNotes[mintIdx];
+                checkMerkleRootContained(note.auxInfo.merkleRoot);
+                if (publish(note.nullifier)) {
+                    // TODO collect note.mintComm
+                    // TODO collect note.chgComm
+                    // TODO extract proof for batch verification
+                }
+                mintIdx += 1;
             } else if (noteType == NoteType.FREEZE) {
-                validateAndApply(newBlock.freezeNotes[freezeNotesIndex]);
-                freezeNotesIndex += 1;
+                FreezeNote memory note = newBlock.freezeNotes[freezeIdx];
+                checkMerkleRootContained(note.auxInfo.merkleRoot);
+                if (publish(note.inputNullifiers)) {
+                    // TODO collect note.outputCommitments
+                    // TODO extract proof for batch verification
+                }
+                freezeIdx += 1;
             } else if (noteType == NoteType.BURN) {
-                validateAndApply(newBlock.burnNotes[burnNotesIndex]);
-                burnNotesIndex += 1;
+                BurnNote memory note = newBlock.burnNotes[burnIdx];
+                TransferNote memory transfer = note.transferNote;
+                checkMerkleRootContained(transfer.auxInfo.merkleRoot);
+                // TODO check burn prefix separator
+                // TODO check burn record opening matches second output commitment
+                if (publish(transfer.inputsNullifiers)) {
+                    // TODO collect transfer.outputCommitments
+                    // TODO extract proof for batch verification
+                }
+                // TODO handle withdrawal (better done at end if call is external
+                //      or have other reentrancy protection)
+                burnIdx += 1;
             }
         }
+
+        // TODO verify plonk proof
+        // TODO batch insert record commitments
+    }
+
+    function checkMerkleRootContained(uint256 root) internal view {
+        // TODO revert if not contained
+    }
+
+    function handleWithdrawal() internal {
+        // TODO
+    }
+
+    function batchInsertRecordCommitments(uint256[] memory commitments)
+        internal
+    {
+        // TODO
     }
 }

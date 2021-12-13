@@ -155,12 +155,7 @@ mod tests {
 
         // Check that some nullifier is not yet inserted
         let nullifier = convert_nullifier_to_u256(&notes[0].inputs_nullifiers[0]);
-        let is_nullifier_inserted: bool = contract
-            .has_nullifier_already_been_published(nullifier)
-            .call()
-            .await
-            .unwrap()
-            .into();
+        let is_nullifier_inserted = contract.nullifiers(nullifier).call().await.unwrap();
         assert!(!is_nullifier_inserted);
 
         // Submit to the contract
@@ -175,12 +170,7 @@ mod tests {
             .expect("Failed to get tx receipt");
 
         // Check that now the nullifier has been inserted
-        let is_nullifier_inserted: bool = contract
-            .has_nullifier_already_been_published(nullifier)
-            .call()
-            .await
-            .unwrap()
-            .into();
+        let is_nullifier_inserted = contract.nullifiers(nullifier).call().await.unwrap();
 
         assert!(is_nullifier_inserted);
     }

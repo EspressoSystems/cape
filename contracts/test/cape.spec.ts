@@ -13,10 +13,10 @@ describe("CAPE", function () {
 
     it("is possible to check for non-membership", async function () {
       let elem = ethers.utils.randomBytes(32);
-      expect(await cape.callStatic._hasNullifierAlreadyBeenPublished(elem)).to.be.false;
+      expect(await cape.nullifiers(elem)).to.be.false;
 
       await cape._insertNullifier(elem);
-      expect(await cape.callStatic._hasNullifierAlreadyBeenPublished(elem)).to.be.true;
+      expect(await cape.nullifiers(elem)).to.be.true;
     });
 
     it("is possible to insert several elements", async function () {
@@ -25,9 +25,6 @@ describe("CAPE", function () {
       expect(elem1).not.equal(elem2);
 
       await cape._insertNullifier(elem1);
-
-      await expect(cape._insertNullifier(elem1)).to.be.reverted;
-
       expect(await cape._insertNullifier(elem2)).not.to.throw;
     });
   });

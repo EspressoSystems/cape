@@ -4,15 +4,15 @@ use ethers::prelude::*;
 
 abigen!(
     TestBN254,
-    "../artifacts/contracts/TestBN254.sol/TestBN254/abi.json",
+    "../artifacts/contracts/mocks/TestBN254.sol/TestBN254/abi.json",
     event_derives(serde::Deserialize, serde::Serialize);
 
     TestRecordsMerkleTree,
-    "../artifacts/contracts/TestRecordsMerkleTree.sol/TestRecordsMerkleTree/abi.json",
+    "../artifacts/contracts/mocks/TestRecordsMerkleTree.sol/TestRecordsMerkleTree/abi.json",
     event_derives(serde::Deserialize, serde::Serialize);
 
     TestTranscript,
-    "../artifacts/contracts/TestTranscript.sol/TestTranscript/abi.json",
+    "../artifacts/contracts/mocks/TestTranscript.sol/TestTranscript/abi.json",
     event_derives(serde::Deserialize, serde::Serialize);
 
     CAPE,
@@ -20,7 +20,7 @@ abigen!(
     event_derives(serde::Deserialize, serde::Serialize);
 
     // TestCAPE,
-    // "../artifacts/contracts/TestCAPE.sol/TestCAPE/abi.json",
+    // "../artifacts/contracts/mocks/TestCAPE.sol/TestCAPE/abi.json",
     // event_derives(serde::Deserialize, serde::Serialize);
 
     Greeter,

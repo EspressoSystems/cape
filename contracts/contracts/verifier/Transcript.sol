@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 import "hardhat/console.sol";
-import {Curve} from "./BN254.sol";
+import {BN254} from "../libraries/BN254.sol";
 
 library Transcript {
     struct TranscriptData {
@@ -74,7 +74,7 @@ library Transcript {
 
     function appendCommitments(
         TranscriptData memory self,
-        Curve.G1Point[] memory comms
+        BN254.G1Point[] memory comms
     ) internal pure {
         for (uint256 i = 0; i < comms.length; i++) {
             appendCommitment(self, comms[i]);
@@ -83,13 +83,13 @@ library Transcript {
 
     function appendCommitment(
         TranscriptData memory self,
-        Curve.G1Point memory comm
+        BN254.G1Point memory comm
     ) internal pure {
         bytes memory commBytes = g1Serialize(comm);
         appendMessage(self, commBytes);
     }
 
-    function g1Serialize(Curve.G1Point memory point)
+    function g1Serialize(BN254.G1Point memory point)
         internal
         pure
         returns (bytes memory)
@@ -98,13 +98,13 @@ library Transcript {
 
         // Set the 254-th bit to 1 for infinity
         // https://docs.rs/ark-serialize/0.3.0/src/ark_serialize/flags.rs.html#117
-        if (Curve.isInfinity(point)) {
+        if (BN254.isInfinity(point)) {
             mask |= 0x4000000000000000000000000000000000000000000000000000000000000000;
         }
 
         // Set the 255-th bit to 1 for positive Y
         // https://docs.rs/ark-serialize/0.3.0/src/ark_serialize/flags.rs.html#118
-        if (!Curve.isYNegative(point)) {
+        if (!BN254.isYNegative(point)) {
             mask = 0x8000000000000000000000000000000000000000000000000000000000000000;
         }
 
@@ -141,6 +141,6 @@ library Transcript {
             0,
             48
         );
-        return Curve.fromLeBytesModOrder(randomBytes);
+        return BN254.fromLeBytesModOrder(randomBytes);
     }
 }

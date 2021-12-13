@@ -12,7 +12,7 @@
 pragma solidity ^0.8.0;
 
 /// @notice Barreto-Naehrig curve over a 254 bit prime field
-library Curve {
+library BN254 {
     // use notation from https://datatracker.ietf.org/doc/draft-irtf-cfrg-pairing-friendly-curves/
     //
     // Elliptic curve is defined over a prime field GF(p), with embedding degree k.

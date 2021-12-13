@@ -5,8 +5,8 @@ import "hardhat/console.sol";
 
 // TODO: we have name collisions in src/bindings/mod.rs
 // Consider not pulling everything to top-level
-import {Curve} from "./BN254.sol";
-import {Transcript} from "./Transcript.sol";
+import {BN254} from "../libraries/BN254.sol";
+import {Transcript} from "../verifier/Transcript.sol";
 
 contract TestTranscript {
     using Transcript for Transcript.TranscriptData;
@@ -53,7 +53,7 @@ contract TestTranscript {
 
     function testAppendCommitmentAndGet(
         Transcript.TranscriptData memory transcript,
-        Curve.G1Point memory comm
+        BN254.G1Point memory comm
     ) public pure returns (uint256) {
         transcript.appendCommitment(comm);
         return transcript.getAndAppendChallenge();
@@ -61,7 +61,7 @@ contract TestTranscript {
 
     function testAppendCommitmentsAndGet(
         Transcript.TranscriptData memory transcript,
-        Curve.G1Point[] memory comms
+        BN254.G1Point[] memory comms
     ) public pure returns (uint256) {
         transcript.appendCommitments(comms);
         return transcript.getAndAppendChallenge();

@@ -20,7 +20,7 @@ async fn deploy() -> TestTranscript<SignerMiddleware<Provider<Http>, Wallet<Sign
     let client = ethereum::get_funded_deployer().await.unwrap();
     let contract = ethereum::deploy(
         client.clone(),
-        Path::new("../artifacts/contracts/TestTranscript.sol/TestTranscript"),
+        Path::new("../artifacts/contracts/mocks/TestTranscript.sol/TestTranscript"),
         (),
     )
     .await

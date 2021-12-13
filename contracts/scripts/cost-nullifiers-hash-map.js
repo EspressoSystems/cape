@@ -44,7 +44,7 @@ async function main() {
     // Measure how much it costs to check for membership
     let title = "Check for nullifiers. HASHMAP SIZE = " + i + " ";
     let test_nullifier = ethers.utils.randomBytes(32);
-    await print_report(owner, title, cape._hasNullifierAlreadyBeenPublished, [test_nullifier]);
+    await print_report(owner, title, cape._isPublished, [test_nullifier]);
 
     title = "Insert a nullifier. HASHMAP SIZE = " + i + " ";
     test_nullifier = ethers.utils.randomBytes(32);

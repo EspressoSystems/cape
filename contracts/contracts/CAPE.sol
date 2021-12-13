@@ -126,65 +126,54 @@ contract CAPE {
         BurnNote[] burnNotes; // TODO
     }
 
-    // Handling of nullifiers
-    // Check if a nullifier has already been inserted
-    function hasNullifierAlreadyBeenPublished(uint256 _nullifier)
-        public
-        view
-        returns (bool)
-    {
+    /// Check if a nullifier is published.
+    function isPublished(uint256 _nullifier) public view returns (bool) {
         return nullifiers[_nullifier];
     }
 
     /// Insert a nullifier into the set of nullifiers.
-    /// @notice Will revert if nullifier is already in nullifier set.
+    /// @dev Reverts if nullifier is already in nullifier set.
     function insertNullifier(uint256 _nullifier) internal {
         // This check is relied upon to prevent double spending of nullifiers
         // within the same note.
-        require(!nullifiers[_nullifier], "Nullifier already published");
+        require(!isPublished(_nullifier), "Nullifier already published");
         nullifiers[_nullifier] = true;
     }
 
-    /// Insert nullifiers into the set of nullifiers.
-    /// @notice Will revert if any nullifier is already in nullifier set.
-    function insertNullifiers(uint256[] memory _newNullifiers) internal {
-        for (uint256 j = 0; j < _newNullifiers.length; j++) {
-            insertNullifier(_newNullifiers[j]);
-        }
-    }
-
-    function isSpendable(uint256 _nullifier) internal view returns (bool) {
-        return !nullifiers[_nullifier];
-    }
-
-    function isSpendable(uint256[] memory _newNullifiers)
+    /// Check if a nullifier array contains previously published nullifiers.
+    /// @dev Does not check if the array contains duplicates.
+    function containsPublished(uint256[] memory _nullifiers)
         internal
         view
         returns (bool)
     {
-        for (uint256 j = 0; j < _newNullifiers.length; j++) {
-            if (!isSpendable(_newNullifiers[j])) {
-                return false;
+        for (uint256 j = 0; j < _nullifiers.length; j++) {
+            if (isPublished(_nullifiers[j])) {
+                return true;
             }
         }
-        return true;
+        return false;
     }
 
-    // @return true if the nullifiers were consumed (and note must be part of the block)
-    function spendIfUnspent(uint256[] memory nullifiers)
-        internal
-        returns (bool)
-    {
-        if (isSpendable(nullifiers)) {
-            insertNullifiers(nullifiers);
+    /// Publish an array of nullifiers if none of them have been published before
+    /// TODO the text after @ return does not show in docs, only the return type shows.
+    /// @return `true` if the nullifiers were published, `false` if one or more nullifiers were published before.
+    /// @dev Will revert if not all nullifiers can be published due to duplicates among them.
+    /// @dev A block creator must not submit notes with duplicate nullifiers.
+    function publish(uint256[] memory _nullifiers) internal returns (bool) {
+        if (!containsPublished(_nullifiers)) {
+            for (uint256 j = 0; j < _nullifiers.length; j++) {
+                insertNullifier(_nullifiers[j]);
+            }
             return true;
         }
         return false;
     }
 
-    // @return true if the nullifier was consumed (and note must be part of the block)
-    function spendIfUnspent(uint256 nullifier) internal returns (bool) {
-        if (isSpendable(nullifier)) {
+    /// Publish a nullifier if it hasn't been published before
+    /// @return `true` if the nullifier was published, `false` if it wasn't
+    function publish(uint256 nullifier) internal returns (bool) {
+        if (!isPublished(nullifier)) {
             insertNullifier(nullifier);
             return true;
         }
@@ -240,7 +229,7 @@ contract CAPE {
             if (noteType == NoteType.TRANSFER) {
                 TransferNote memory note = newBlock.transferNotes[transferIdx];
                 checkMerkleRootContained(note.auxInfo.merkleRoot);
-                if (spendIfUnspent(note.inputsNullifiers)) {
+                if (publish(note.inputsNullifiers)) {
                     // TODO collect note.outputCommitments
                     // TODO extract proof for batch verification
                 }
@@ -248,7 +237,7 @@ contract CAPE {
             } else if (noteType == NoteType.MINT) {
                 MintNote memory note = newBlock.mintNotes[mintIdx];
                 checkMerkleRootContained(note.auxInfo.merkleRoot);
-                if (spendIfUnspent(note.nullifier)) {
+                if (publish(note.nullifier)) {
                     // TODO collect note.mintComm
                     // TODO collect note.chgComm
                     // TODO extract proof for batch verification
@@ -257,7 +246,7 @@ contract CAPE {
             } else if (noteType == NoteType.FREEZE) {
                 FreezeNote memory note = newBlock.freezeNotes[freezeIdx];
                 checkMerkleRootContained(note.auxInfo.merkleRoot);
-                if (spendIfUnspent(note.inputNullifiers)) {
+                if (publish(note.inputNullifiers)) {
                     // TODO collect note.outputCommitments
                     // TODO extract proof for batch verification
                 }
@@ -268,7 +257,7 @@ contract CAPE {
                 checkMerkleRootContained(transfer.auxInfo.merkleRoot);
                 // TODO check burn prefix separator
                 // TODO check burn record opening matches second output commitment
-                if (spendIfUnspent(transfer.inputsNullifiers)) {
+                if (publish(transfer.inputsNullifiers)) {
                     // TODO collect transfer.outputCommitments
                     // TODO extract proof for batch verification
                 }

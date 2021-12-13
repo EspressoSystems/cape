@@ -279,6 +279,10 @@ Note that this requires compiled solidity contracts and a running geth node. For
 development it's convenient to keep `hivemind` running in a separate terminal
 for that purpose.
 
+To connect to various chains use `RPC_URL` and `MNEMONIC` env vars. For example
+
+    env MNEMONIC=$RINKEBY_MNEMONIC RPC_URL=$RINKEBY_URL cargo test
+
 To watch the rust files and compile on changes
 
     cargo watch

@@ -4,8 +4,8 @@ use ethers::{
     abi::{Abi, Tokenize},
     core::k256::ecdsa::SigningKey,
     prelude::{
-        Bytes, Contract, ContractFactory, Http, LocalWallet, Middleware, Provider, Signer,
-        SignerMiddleware, TransactionRequest, Wallet,
+        coins_bip39::English, Bytes, Contract, ContractFactory, Http, LocalWallet, Middleware,
+        MnemonicBuilder, Provider, Signer, SignerMiddleware, TransactionRequest, Wallet,
     },
 };
 use std::{convert::TryFrom, env, fs, path::Path, sync::Arc, time::Duration};
@@ -14,32 +14,39 @@ pub async fn get_funded_deployer(
 ) -> Result<Arc<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>> {
     let rpc_url = match env::var("RPC_URL") {
         Ok(val) => val,
-        Err(_e) => "http://localhost:8545".to_string(),
+        Err(_) => "http://localhost:8545".to_string(),
     };
 
-    let provider = Provider::<Http>::try_from(rpc_url)
-        .expect("could not instantiate HTTP Provider")
-        .interval(Duration::from_millis(100u64));
+    let mut provider =
+        Provider::<Http>::try_from(rpc_url.clone()).expect("could not instantiate HTTP Provider");
 
     let chain_id = provider.get_chainid().await.unwrap().as_u64();
 
-    // fund deployer account
-    let coinbase = provider.get_accounts().await.unwrap()[0];
-    let deployer_wallet = LocalWallet::new(&mut rand::thread_rng()).with_chain_id(chain_id); // XXX setting chain_id seems to be required
+    // If MNEMONIC is set, try to use it to create a wallet,
+    // otherwise create a random wallet.
+    let deployer_wallet = match env::var("MNEMONIC") {
+        Ok(val) => MnemonicBuilder::<English>::default()
+            .phrase(val.as_str())
+            .build()?,
+        Err(_) => LocalWallet::new(&mut rand::thread_rng()),
+    }
+    .with_chain_id(chain_id);
 
-    let tx = TransactionRequest::new()
-        .to(deployer_wallet.address())
-        .value(u64::pow(10, 18))
-        .from(coinbase);
+    // Fund the deployer if we have unlocked accounts
+    let accounts = provider.get_accounts().await.unwrap();
+    if !accounts.is_empty() {
+        let tx = TransactionRequest::new()
+            .to(deployer_wallet.address())
+            .value(u64::pow(10, 18))
+            .from(accounts[0]);
 
-    provider.send_transaction(tx, None).await?.await?;
+        // Set a lower polling interval to avoid very slow tests
+        provider = provider.interval(Duration::from_millis(100u64));
+        provider.send_transaction(tx, None).await?.await?;
+        println!("Sent funding tx to deployer");
+    }
 
-    println!("Sent funding tx to deployer");
-
-    Ok(Arc::new(SignerMiddleware::new(
-        provider,
-        deployer_wallet.clone(),
-    )))
+    Ok(Arc::new(SignerMiddleware::new(provider, deployer_wallet)))
 }
 
 async fn load_contract(path: &Path) -> Result<(Abi, Bytes)> {

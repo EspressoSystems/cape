@@ -2,8 +2,8 @@
 pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
-import "./Rescue.sol";
-import "./RecordsMerkleTree.sol";
+import "../Rescue.sol";
+import "../RecordsMerkleTree.sol";
 
 contract TestRecordsMerkleTree is RecordsMerkleTree {
     constructor(uint8 _height) RecordsMerkleTree(_height) {}

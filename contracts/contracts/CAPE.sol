@@ -7,8 +7,6 @@ pragma solidity ^0.8.0;
 /// @notice This is a notice.
 /// @dev Developers are awesome!
 
-import {Curve} from "./BN254.sol";
-
 contract CAPE {
     mapping(uint256 => bool) public nullifiers;
 

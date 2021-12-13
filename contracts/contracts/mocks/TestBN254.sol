@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: MIT OR Apache-2.0
 pragma solidity ^0.8.0;
 
-import {Curve as C} from "./BN254.sol";
+import {BN254 as C} from "../libraries/BN254.sol";
 
 contract TestBN254 {
     constructor() {}

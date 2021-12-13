@@ -22,7 +22,7 @@ async fn deploy_contract() -> Result<TestBN254<SignerMiddleware<Provider<Http>, 
     let client = get_funded_deployer().await.unwrap();
     let contract = deploy(
         client.clone(),
-        Path::new("../artifacts/contracts/TestBN254.sol/TestBN254"),
+        Path::new("../artifacts/contracts/mocks/TestBN254.sol/TestBN254"),
         (),
     )
     .await

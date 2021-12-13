@@ -10,7 +10,7 @@ pragma solidity ^0.8.0;
 import {Curve} from "./BN254.sol";
 
 contract CAPE {
-    mapping(uint256 => bool) private nullifiers;
+    mapping(uint256 => bool) public nullifiers;
 
     struct PlonkProof {
         // TODO
@@ -126,17 +126,12 @@ contract CAPE {
         BurnNote[] burnNotes; // TODO
     }
 
-    /// Check if a nullifier is published.
-    function isPublished(uint256 _nullifier) public view returns (bool) {
-        return nullifiers[_nullifier];
-    }
-
     /// Insert a nullifier into the set of nullifiers.
     /// @dev Reverts if nullifier is already in nullifier set.
     function insertNullifier(uint256 _nullifier) internal {
         // This check is relied upon to prevent double spending of nullifiers
         // within the same note.
-        require(!isPublished(_nullifier), "Nullifier already published");
+        require(!nullifiers[_nullifier], "Nullifier already published");
         nullifiers[_nullifier] = true;
     }
 
@@ -148,7 +143,7 @@ contract CAPE {
         returns (bool)
     {
         for (uint256 j = 0; j < _nullifiers.length; j++) {
-            if (isPublished(_nullifiers[j])) {
+            if (nullifiers[_nullifiers[j]]) {
                 return true;
             }
         }
@@ -172,12 +167,12 @@ contract CAPE {
 
     /// Publish a nullifier if it hasn't been published before
     /// @return `true` if the nullifier was published, `false` if it wasn't
-    function publish(uint256 nullifier) internal returns (bool) {
-        if (!isPublished(nullifier)) {
-            insertNullifier(nullifier);
-            return true;
+    function publish(uint256 _nullifier) internal returns (bool) {
+        if (nullifiers[_nullifier]) {
+            return false;
         }
-        return false;
+        insertNullifier(_nullifier);
+        return true;
     }
 
     /// @notice Check if an asset is already registered

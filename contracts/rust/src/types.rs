@@ -65,28 +65,6 @@ pub fn field_to_u256<F: PrimeField>(f: F) -> U256 {
     U256::from_little_endian(&to_bytes!(&f).unwrap())
 }
 
-// TODO: remove this once https://github.com/gakonst/ethers-rs/issues/661 is resolved
-impl From<(U256, U256)> for G1Point {
-    fn from(tuple: (U256, U256)) -> Self {
-        Self {
-            x: tuple.0,
-            y: tuple.1,
-        }
-    }
-}
-
-// TODO: remove this once https://github.com/gakonst/ethers-rs/issues/661 is resolved
-impl From<(U256, U256, U256, U256)> for G2Point {
-    fn from(tuple: (U256, U256, U256, U256)) -> Self {
-        Self {
-            x_0: tuple.0,
-            x_1: tuple.1,
-            y_0: tuple.2,
-            y_1: tuple.3,
-        }
-    }
-}
-
 #[cfg(test)]
 mod test {
     use super::*;

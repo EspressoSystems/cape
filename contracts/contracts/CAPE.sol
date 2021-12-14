@@ -7,6 +7,9 @@ pragma solidity ^0.8.0;
 /// @notice This is a notice.
 /// @dev Developers are awesome!
 
+// TODO Remove once functions are implemented
+/* solhint-disable no-unused-vars */
+
 contract CAPE {
     mapping(uint256 => bool) public nullifiers;
 
@@ -126,22 +129,22 @@ contract CAPE {
 
     /// Insert a nullifier into the set of nullifiers.
     /// @dev Reverts if nullifier is already in nullifier set.
-    function insertNullifier(uint256 _nullifier) internal {
+    function _insertNullifier(uint256 nullifier) internal {
         // This check is relied upon to prevent double spending of nullifiers
         // within the same note.
-        require(!nullifiers[_nullifier], "Nullifier already published");
-        nullifiers[_nullifier] = true;
+        require(!nullifiers[nullifier], "Nullifier already published");
+        nullifiers[nullifier] = true;
     }
 
     /// Check if a nullifier array contains previously published nullifiers.
     /// @dev Does not check if the array contains duplicates.
-    function containsPublished(uint256[] memory _nullifiers)
+    function _containsPublished(uint256[] memory newNullifiers)
         internal
         view
         returns (bool)
     {
-        for (uint256 j = 0; j < _nullifiers.length; j++) {
-            if (nullifiers[_nullifiers[j]]) {
+        for (uint256 j = 0; j < newNullifiers.length; j++) {
+            if (nullifiers[newNullifiers[j]]) {
                 return true;
             }
         }
@@ -153,10 +156,10 @@ contract CAPE {
     /// @return `true` if the nullifiers were published, `false` if one or more nullifiers were published before.
     /// @dev Will revert if not all nullifiers can be published due to duplicates among them.
     /// @dev A block creator must not submit notes with duplicate nullifiers.
-    function publish(uint256[] memory _nullifiers) internal returns (bool) {
-        if (!containsPublished(_nullifiers)) {
-            for (uint256 j = 0; j < _nullifiers.length; j++) {
-                insertNullifier(_nullifiers[j]);
+    function _publish(uint256[] memory newNullifiers) internal returns (bool) {
+        if (!_containsPublished(newNullifiers)) {
+            for (uint256 j = 0; j < newNullifiers.length; j++) {
+                _insertNullifier(newNullifiers[j]);
             }
             return true;
         }
@@ -165,37 +168,37 @@ contract CAPE {
 
     /// Publish a nullifier if it hasn't been published before
     /// @return `true` if the nullifier was published, `false` if it wasn't
-    function publish(uint256 _nullifier) internal returns (bool) {
-        if (nullifiers[_nullifier]) {
+    function _publish(uint256 nullifier) internal returns (bool) {
+        if (nullifiers[nullifier]) {
             return false;
         }
-        insertNullifier(_nullifier);
+        _insertNullifier(nullifier);
         return true;
     }
 
     /// @notice Check if an asset is already registered
     /// @param erc20Address erc20 token address corresponding to the asset type.
-    /// @param _newAsset asset type.
+    /// @param newAsset asset type.
     /// @return true if the asset type is registered, false otherwise
     function isCapeAssetRegistered(
         address erc20Address,
-        AssetDefinition memory _newAsset
+        AssetDefinition memory newAsset
     ) public returns (bool) {
         return true;
     }
 
     /// @notice create a new asset type associated to some erc20 token and register it in the contract so that it can be used later for wrapping.
-    /// @param _erc20Address erc20 token address of corresponding to the asset type.
-    /// @param _newAsset asset type to be registered in the contract.
+    /// @param erc20Address erc20 token address of corresponding to the asset type.
+    /// @param newAsset asset type to be registered in the contract.
     function sponsorCapeAsset(
-        address _erc20Address,
-        AssetDefinition memory _newAsset
+        address erc20Address,
+        AssetDefinition memory newAsset
     ) public {}
 
     /// @notice allows to wrap some erc20 tokens into some CAPE asset defined in the record opening
-    /// @param _ro record opening that will be inserted in the records merkle tree once the deposit is validated.
-    /// @param _erc20Address address of the ERC20 token corresponding to the deposit.
-    function depositErc20(RecordOpening memory _ro, address _erc20Address)
+    /// @param ro record opening that will be inserted in the records merkle tree once the deposit is validated.
+    /// @param erc20Address address of the ERC20 token corresponding to the deposit.
+    function depositErc20(RecordOpening memory ro, address erc20Address)
         public
     {
         address depositorAddress = msg.sender;
@@ -221,16 +224,16 @@ contract CAPE {
 
             if (noteType == NoteType.TRANSFER) {
                 TransferNote memory note = newBlock.transferNotes[transferIdx];
-                checkMerkleRootContained(note.auxInfo.merkleRoot);
-                if (publish(note.inputsNullifiers)) {
+                _checkMerkleRootContained(note.auxInfo.merkleRoot);
+                if (_publish(note.inputsNullifiers)) {
                     // TODO collect note.outputCommitments
                     // TODO extract proof for batch verification
                 }
                 transferIdx += 1;
             } else if (noteType == NoteType.MINT) {
                 MintNote memory note = newBlock.mintNotes[mintIdx];
-                checkMerkleRootContained(note.auxInfo.merkleRoot);
-                if (publish(note.nullifier)) {
+                _checkMerkleRootContained(note.auxInfo.merkleRoot);
+                if (_publish(note.nullifier)) {
                     // TODO collect note.mintComm
                     // TODO collect note.chgComm
                     // TODO extract proof for batch verification
@@ -238,8 +241,8 @@ contract CAPE {
                 mintIdx += 1;
             } else if (noteType == NoteType.FREEZE) {
                 FreezeNote memory note = newBlock.freezeNotes[freezeIdx];
-                checkMerkleRootContained(note.auxInfo.merkleRoot);
-                if (publish(note.inputNullifiers)) {
+                _checkMerkleRootContained(note.auxInfo.merkleRoot);
+                if (_publish(note.inputNullifiers)) {
                     // TODO collect note.outputCommitments
                     // TODO extract proof for batch verification
                 }
@@ -247,10 +250,10 @@ contract CAPE {
             } else if (noteType == NoteType.BURN) {
                 BurnNote memory note = newBlock.burnNotes[burnIdx];
                 TransferNote memory transfer = note.transferNote;
-                checkMerkleRootContained(transfer.auxInfo.merkleRoot);
+                _checkMerkleRootContained(transfer.auxInfo.merkleRoot);
                 // TODO check burn prefix separator
                 // TODO check burn record opening matches second output commitment
-                if (publish(transfer.inputsNullifiers)) {
+                if (_publish(transfer.inputsNullifiers)) {
                     // TODO collect transfer.outputCommitments
                     // TODO extract proof for batch verification
                 }
@@ -264,15 +267,15 @@ contract CAPE {
         // TODO batch insert record commitments
     }
 
-    function checkMerkleRootContained(uint256 root) internal view {
+    function _checkMerkleRootContained(uint256 root) internal view {
         // TODO revert if not contained
     }
 
-    function handleWithdrawal() internal {
+    function _handleWithdrawal() internal {
         // TODO
     }
 
-    function batchInsertRecordCommitments(uint256[] memory commitments)
+    function _batchInsertRecordCommitments(uint256[] memory commitments)
         internal
     {
         // TODO

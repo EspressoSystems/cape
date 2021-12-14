@@ -15,7 +15,7 @@ describe("CAPE", function () {
       let elem = ethers.utils.randomBytes(32);
       expect(await cape.nullifiers(elem)).to.be.false;
 
-      await cape._insertNullifier(elem);
+      await cape.insertNullifier(elem);
       expect(await cape.nullifiers(elem)).to.be.true;
     });
 
@@ -24,8 +24,8 @@ describe("CAPE", function () {
       let elem2 = ethers.utils.randomBytes(32);
       expect(elem1).not.equal(elem2);
 
-      await cape._insertNullifier(elem1);
-      expect(await cape._insertNullifier(elem2)).not.to.throw;
+      await cape.insertNullifier(elem1);
+      expect(await cape.insertNullifier(elem2)).not.to.throw;
     });
   });
 });

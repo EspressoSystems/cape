@@ -3,8 +3,17 @@
   "rules": {
     "no-inline-assembly": "off"
     , "compiler-version": "off"
-    , "no-empty-blocks": "off"
+    , "const-name-snakecase": "error"
+    , "contract-name-camelcase": "error"
+    , "event-name-camelcase": "error"
+    , "func-name-mixedcase": "error"
+    , "func-param-name-mixedcase": "error"
     , "func-visibility": [ "warn" , { "ignoreConstructors": true }]
-    , "no-unused-vars": "off"
+    , "imports-on-top": "error"
+    , "modifier-name-mixedcase": "error"
+    , "no-empty-blocks": "off"
+    , "no-unused-vars": "error"
+    , "private-vars-leading-underscore": ["error", { "strict": true }]
+    , "var-name-mixedcase": "error"
   }
 }

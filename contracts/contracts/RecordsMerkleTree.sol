@@ -21,34 +21,34 @@ contract RecordsMerkleTree is Rescue {
         uint64 right; // Pointer (index) to the right child
     }
 
-    uint256 internal rootValue;
-    uint64 internal numLeaves;
-    uint8 internal height;
+    uint256 internal _rootValue;
+    uint64 internal _numLeaves;
+    uint8 internal _height;
 
-    mapping(uint256 => uint256) private flattenedFrontier;
+    mapping(uint256 => uint256) private _flattenedFrontier;
 
     /// Instantiate a records merkle tree with its height
-    /// @param _height height of the merkle tree
-    constructor(uint8 _height) {
-        rootValue = 0;
-        numLeaves = 0;
-        height = _height;
+    /// @param height height of the merkle tree
+    constructor(uint8 height) {
+        _rootValue = 0;
+        _numLeaves = 0;
+        _height = height;
     }
 
-    function isTerminal(Node memory node) private pure returns (bool) {
+    function _isTerminal(Node memory node) private pure returns (bool) {
         return (node.left == 0) && (node.middle == 0) && (node.right == 0);
     }
 
-    function hasChildren(Node memory node) private pure returns (bool) {
-        return !isTerminal(node);
+    function _hasChildren(Node memory node) private pure returns (bool) {
+        return !_isTerminal(node);
     }
 
-    function isNull(Node memory node) private pure returns (bool) {
-        return (node.val == 0 && isTerminal(node));
+    function _isNull(Node memory node) private pure returns (bool) {
+        return (node.val == 0 && _isTerminal(node));
     }
 
     // Create the new "hole node" that points to the children already inserted in the array
-    function createHoleNode(uint64 cursor, Position posSibling)
+    function _createHoleNode(uint64 cursor, Position posSibling)
         private
         pure
         returns (Node memory)
@@ -70,13 +70,13 @@ contract RecordsMerkleTree is Rescue {
         return node;
     }
 
-    function buildTreeFromFrontier(Node[] memory nodes)
+    function _buildTreeFromFrontier(Node[] memory nodes)
         internal
         view
         returns (uint64)
     {
         // Tree is empty
-        if (numLeaves == 0) {
+        if (_numLeaves == 0) {
             nodes[0] = Node(0, 0, 0, 0); // Empty node
             nodes[1] = Node(0, 0, 0, 0); // Root node
             return 1;
@@ -88,14 +88,14 @@ contract RecordsMerkleTree is Rescue {
         nodes[0] = Node(0, 0, 0, 0);
 
         // Insert the leaf
-        nodes[1] = Node(flattenedFrontier[0], 0, 0, 0);
+        nodes[1] = Node(_flattenedFrontier[0], 0, 0, 0);
 
         // Insert the siblings
-        nodes[2] = Node(flattenedFrontier[1], 0, 0, 0);
-        nodes[3] = Node(flattenedFrontier[2], 0, 0, 0);
+        nodes[2] = Node(_flattenedFrontier[1], 0, 0, 0);
+        nodes[3] = Node(_flattenedFrontier[2], 0, 0, 0);
 
         // Compute the position of each node
-        uint64 absolutePosition = numLeaves - 1;
+        uint64 absolutePosition = _numLeaves - 1;
         uint8 localPosition = uint8(absolutePosition % 3);
 
         // We process the nodes of the Merkle path
@@ -103,18 +103,18 @@ contract RecordsMerkleTree is Rescue {
         uint64 cursorFrontier = 3;
 
         // Build the tree expect the root node
-        while (cursor < 3 * height + 1) {
-            nodes[cursor] = createHoleNode(cursor, Position(localPosition));
+        while (cursor < 3 * _height + 1) {
+            nodes[cursor] = _createHoleNode(cursor, Position(localPosition));
 
             // Create the siblings of the "hole node". These siblings have no children
             nodes[cursor + 1] = Node(
-                flattenedFrontier[cursorFrontier],
+                _flattenedFrontier[cursorFrontier],
                 0,
                 0,
                 0
             );
             nodes[cursor + 2] = Node(
-                flattenedFrontier[cursorFrontier + 1],
+                _flattenedFrontier[cursorFrontier + 1],
                 0,
                 0,
                 0
@@ -129,11 +129,11 @@ contract RecordsMerkleTree is Rescue {
         }
 
         // Add the root node
-        nodes[cursor] = createHoleNode(cursor, Position(localPosition));
+        nodes[cursor] = _createHoleNode(cursor, Position(localPosition));
         return cursor;
     }
 
-    function nextNodeIndex(
+    function _nextNodeIndex(
         Node[] memory nodes,
         uint64 nodeIndex,
         Position pos
@@ -153,7 +153,7 @@ contract RecordsMerkleTree is Rescue {
 
     // Update the child of a node based on the position (which child to select)
     // and an index to the new child.
-    function updateChildNode(
+    function _updateChildNode(
         Node memory node,
         uint64 newChildIndex,
         Position pos
@@ -168,13 +168,13 @@ contract RecordsMerkleTree is Rescue {
         }
     }
 
-    function computeNodePos(uint64 absolutePos, uint64 branchIndex)
+    function _computeNodePos(uint64 absolutePos, uint64 branchIndex)
         private
         view
         returns (uint64, uint64)
     {
         uint64 localPos;
-        uint64 divisor = uint64(3**(height - branchIndex - 1));
+        uint64 divisor = uint64(3**(_height - branchIndex - 1));
 
         localPos = absolutePos / divisor;
         absolutePos = absolutePos % divisor;
@@ -188,16 +188,16 @@ contract RecordsMerkleTree is Rescue {
     /// @param maxIndex index of the latest element inserted in the nodes array
     /// @param element value of the element to insert into the tree
     /// @return updated value of maxIndex
-    function pushElement(
+    function _pushElement(
         Node[] memory nodes,
         uint64 rootIndex,
         uint64 maxIndex,
         uint256 element
     ) private returns (uint64) {
-        require(numLeaves < 3**height, "The tree is full.");
+        require(_numLeaves < 3**_height, "The tree is full.");
 
         // Get the position of the leaf from the smart contract state
-        uint64 leafPos = numLeaves;
+        uint64 leafPos = _numLeaves;
         uint64 branchIndex = 0;
         uint64 currentNodeIndex = rootIndex;
         uint64 previousNodeIndex = rootIndex;
@@ -205,11 +205,11 @@ contract RecordsMerkleTree is Rescue {
         // Go down inside the tree until finding the first terminal node.
         uint64 absolutePos = leafPos;
         uint64 localPos = 0;
-        while (!isNull(nodes[currentNodeIndex])) {
-            (absolutePos, localPos) = computeNodePos(absolutePos, branchIndex);
+        while (!_isNull(nodes[currentNodeIndex])) {
+            (absolutePos, localPos) = _computeNodePos(absolutePos, branchIndex);
 
             previousNodeIndex = currentNodeIndex;
-            currentNodeIndex = nextNodeIndex(
+            currentNodeIndex = _nextNodeIndex(
                 nodes,
                 currentNodeIndex,
                 Position(localPos)
@@ -230,9 +230,9 @@ contract RecordsMerkleTree is Rescue {
             branchIndex -= 1;
         }
 
-        while (branchIndex < height - 1) {
+        while (branchIndex < _height - 1) {
             nodes[newNodeIndex] = Node(0, 0, 0, 0);
-            updateChildNode(
+            _updateChildNode(
                 nodes[previousNodeIndex],
                 newNodeIndex,
                 Position(localPos)
@@ -242,46 +242,46 @@ contract RecordsMerkleTree is Rescue {
             previousNodeIndex = newNodeIndex;
             newNodeIndex += 1;
             branchIndex += 1;
-            (absolutePos, localPos) = computeNodePos(absolutePos, branchIndex);
+            (absolutePos, localPos) = _computeNodePos(absolutePos, branchIndex);
         }
 
         // The last node contains the leaf value (compute the hash)
         // Remember position is computed with the remainder
 
-        // Leaf node where the value is hash(0,numLeaves,element)
-        uint256 val = hash(0, numLeaves, element);
+        // Leaf node where the value is hash(0,_numLeaves,element)
+        uint256 val = hash(0, _numLeaves, element);
         nodes[newNodeIndex] = Node(val, 0, 0, 0);
-        updateChildNode(
+        _updateChildNode(
             nodes[previousNodeIndex],
             newNodeIndex,
             Position(localPos)
         );
 
         // Increment the number of leaves
-        numLeaves += 1;
+        _numLeaves += 1;
 
         // Return the new value of maxIndex
         return newNodeIndex;
     }
 
     /// Updates the hash of the frontier based on the current tree structure.
-    function storeFrontier(Node[] memory nodes, uint64 rootIndex) private {
-        uint64 frontierSize = 2 * height + 1;
+    function _storeFrontier(Node[] memory nodes, uint64 rootIndex) private {
+        uint64 frontierSize = 2 * _height + 1;
 
         /// Collect the values from the root to the leaf but in reverse order
         uint64 currentNodeIndex = rootIndex;
         uint64 firstSiblingIndex = 0;
         uint64 secondSiblingIndex = 0;
         // Go down until the leaf
-        for (uint256 i = 0; i < height; i++) {
+        for (uint256 i = 0; i < _height; i++) {
             // Pick the non-empty node that is most right
             Node memory currentNode = nodes[currentNodeIndex];
-            if (!isNull(nodes[currentNode.right])) {
+            if (!_isNull(nodes[currentNode.right])) {
                 // Keep to the right
                 currentNodeIndex = currentNode.right;
                 firstSiblingIndex = currentNode.left;
                 secondSiblingIndex = currentNode.middle;
-            } else if (!isNull(nodes[currentNode.middle])) {
+            } else if (!_isNull(nodes[currentNode.middle])) {
                 // Keep to the middle
                 currentNodeIndex = currentNode.middle;
                 firstSiblingIndex = currentNode.left;
@@ -294,63 +294,64 @@ contract RecordsMerkleTree is Rescue {
             }
             uint256 secondSiblingPos = frontierSize - 1 - (2 * i);
             uint256 firstSiblingPos = secondSiblingPos - 1;
-            flattenedFrontier[secondSiblingPos] = nodes[secondSiblingIndex].val;
-            flattenedFrontier[firstSiblingPos] = nodes[firstSiblingIndex].val;
+            _flattenedFrontier[secondSiblingPos] = nodes[secondSiblingIndex]
+                .val;
+            _flattenedFrontier[firstSiblingPos] = nodes[firstSiblingIndex].val;
         }
         // currentNodeIndex points to the leaf
-        flattenedFrontier[0] = nodes[currentNodeIndex].val;
+        _flattenedFrontier[0] = nodes[currentNodeIndex].val;
     }
 
     /// Updates the state of the record merkle tree by inserting new elements
     /// @param elements list of elements to be appended to the current merkle tree described by the frontier.
-    function updateRecordsMerkleTree(uint256[] memory elements) internal {
+    function _updateRecordsMerkleTree(uint256[] memory elements) internal {
         // The total number of nodes is bounded by 3*height+1 + 3*N*height = 3*(N+1)*height + 1
         // where N is the number of new records
         uint256 numElements = elements.length;
-        Node[] memory nodes = new Node[](3 * (numElements + 1) * height + 2);
+        Node[] memory nodes = new Node[](3 * (numElements + 1) * _height + 2);
 
         /// Insert the new elements ///
 
         // maxIndex tracks the index of the last element inserted in the tree
-        uint64 rootIndex = buildTreeFromFrontier(nodes);
+        uint64 rootIndex = _buildTreeFromFrontier(nodes);
         uint64 maxIndex = rootIndex;
         for (uint32 i = 0; i < elements.length; i++) {
-            maxIndex = pushElement(nodes, rootIndex, maxIndex, elements[i]);
+            maxIndex = _pushElement(nodes, rootIndex, maxIndex, elements[i]);
         }
         //// Compute the root hash value ////
-        rootValue = computeRootValueAndUpdateTree(nodes, rootIndex);
+        _rootValue = _computeRootValueAndUpdateTree(nodes, rootIndex);
 
         //// Store the frontier
-        storeFrontier(nodes, rootIndex);
+        _storeFrontier(nodes, rootIndex);
     }
 
     // Returns the root value of the Merkle tree
     function getRootValue() public view returns (uint256) {
-        return rootValue;
+        return _rootValue;
     }
 
     /// Updates the tree by hashing the children of each node.
     /// @param nodes tree structure. Note that the nodes are updated by this function.
     /// @param rootNodePos index of the root node in the list of nodes.
     /// @return the value obtained at the root.
-    function computeRootValueAndUpdateTree(
+    function _computeRootValueAndUpdateTree(
         Node[] memory nodes,
         uint256 rootNodePos
     ) private returns (uint256) {
         // If the root node has no children return its value
         Node memory rootNode = nodes[rootNodePos];
-        if (isTerminal(rootNode)) {
+        if (_isTerminal(rootNode)) {
             return rootNode.val;
         } else {
-            uint256 valLeft = computeRootValueAndUpdateTree(
+            uint256 valLeft = _computeRootValueAndUpdateTree(
                 nodes,
                 rootNode.left
             );
-            uint256 valMiddle = computeRootValueAndUpdateTree(
+            uint256 valMiddle = _computeRootValueAndUpdateTree(
                 nodes,
                 rootNode.middle
             );
-            uint256 valRight = computeRootValueAndUpdateTree(
+            uint256 valRight = _computeRootValueAndUpdateTree(
                 nodes,
                 rootNode.right
             );

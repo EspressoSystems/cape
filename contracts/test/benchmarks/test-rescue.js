@@ -5,7 +5,7 @@ describe("Rescue benchmarks", function () {
   describe("Gas spent for computing the Rescue function", function () {
     for (const [contractName, gas] of [
       ["TestRescue", 87164],
-      ["TestRescueNonOptimized", 620094],
+      ["TestRescueNonOptimized", 620060],
     ]) {
       it(`checks gas usage of ${contractName}.hash`, async function () {
         const Rescue = await ethers.getContractFactory(contractName);

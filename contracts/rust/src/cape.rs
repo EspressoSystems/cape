@@ -105,26 +105,33 @@ fn get_note_types(notes: Vec<TransactionNote>) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ethers::prelude::Address;
     use itertools::Itertools;
 
     use crate::cap_jf::create_anon_xfr_2in_3out;
     use crate::ethereum::{deploy, get_funded_deployer};
     use crate::helpers::convert_nullifier_to_u256;
     use crate::types::{CapeBlock, CAPE};
+    use std::env;
     use std::path::Path;
 
     #[tokio::test]
     async fn test_submit_block_to_cape_contract() {
         let client = get_funded_deployer().await.unwrap();
-        let contract = deploy(
-            client.clone(),
-            Path::new("../artifacts/contracts/CAPE.sol/CAPE"),
-            (),
-        )
-        .await
-        .unwrap();
 
-        let contract = CAPE::new(contract.address(), client);
+        let contract_address: Address = match env::var("CAPE_ADDRESS") {
+            Ok(val) => val.parse::<Address>().unwrap(),
+            Err(_) => deploy(
+                client.clone(),
+                Path::new("../artifacts/contracts/CAPE.sol/CAPE"),
+                (),
+            )
+            .await
+            .unwrap()
+            .address(),
+        };
+
+        let contract = CAPE::new(contract_address, client);
 
         // Create two transactions
         let mut prng = ark_std::test_rng();

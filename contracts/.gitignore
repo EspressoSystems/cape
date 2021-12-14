@@ -24,3 +24,5 @@ __pycache__/
 
 # typescript contract bindings
 typechain-types/
+
+deployments/localhost/

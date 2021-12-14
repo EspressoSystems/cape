@@ -1,6 +1,7 @@
 import "@nomiclabs/hardhat-ethers";
 import "@nomiclabs/hardhat-waffle";
 import "@typechain/hardhat";
+import "hardhat-deploy";
 import "hardhat-gas-reporter";
 import { TASK_COMPILE_SOLIDITY_GET_SOLC_BUILD } from "hardhat/builtin-tasks/task-names";
 import { HardhatUserConfig, subtask, task } from "hardhat/config";
@@ -36,6 +37,9 @@ subtask(TASK_COMPILE_SOLIDITY_GET_SOLC_BUILD, async (args: any, _hre, runSuper) 
 
 const config: HardhatUserConfig = {
   defaultNetwork: "localhost",
+  namedAccounts: {
+    deployer: 0,
+  },
   networks: {
     hardhat: {
       accounts: {

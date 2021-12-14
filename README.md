@@ -18,6 +18,7 @@
     - [Separate hardhat node](#separate-hardhat-node)
     - [Hardhat node integrated in test command](#hardhat-node-integrated-in-test-command)
   - [Running scripts](#running-scripts)
+  - [Deployment](#deployment)
   - [Precompiled solidity binaries](#precompiled-solidity-binaries)
     - [Details about solidity compiler (solc) management](#details-about-solidity-compiler-solc-management)
   - [Ethereum contracts](#ethereum-contracts)
@@ -212,6 +213,16 @@ It's also possible to run the hardhat node and tests in one command
 Run a script that connects to the local network (on port 8545)
 
     hardhat run scripts/benchmark.js --network localhost
+
+## Deployment
+
+The CAPE contract can be deployed with
+
+    hardhat deploy
+
+The deployments are saved in `contracts/deployments`. If you deploy to localhost
+you have to remove `contracts/deployments/localhost` after you restart the geth
+node in order to re-deploy.
 
 ## Precompiled solidity binaries
 

@@ -1,7 +1,6 @@
 //! This crate describes the workflow and interfaces of a CAPE contract deployed on Ethereum.
 
 use ethers::prelude::*;
-use ethers::utils::keccak256;
 use jf_txn::keys::UserPubKey;
 use jf_txn::structs::{AssetDefinition, FreezeFlag, Nullifier, RecordCommitment, RecordOpening};
 use jf_txn::{MerkleCommitment, MerkleFrontier, NodeValue, TransactionNote};
@@ -14,6 +13,9 @@ mod relayer;
 use crate::constants::{burn_pub_key, MERKLE_ROOT_QUEUE_CAP};
 use crate::erc20::Erc20Contract;
 use crate::merkle_tree::RecordMerkleTree;
+
+#[derive(Debug, Clone)]
+pub struct NullifierRepeatedError;
 
 /// a block in CAPE blockchain
 #[derive(Default, Clone)]
@@ -28,11 +30,105 @@ pub struct CapeBlock {
     pub(crate) block_height: u64,
 }
 
+// TODO missing Plonk verifying keys
+fn batch_plonk_proofs_verification(_txn: &[TransactionNote]) -> bool {
+    // TODO
+    return true;
+}
+
+const CAPE_BURN_PREFIX_BYTES: &str = "TRICAPE burn";
+const CAPE_BURN_PREFIX_BYTES_LEN: usize = 12;
+
+// Check that the transaction note corresponds to a transfer and that the prefix of the auxiliary
+// information corresponds to some burn transaction.
+fn is_burn_txn(txn: &TransactionNote) -> bool {
+    match txn {
+        TransactionNote::Transfer(tx) => {
+            (*tx).aux_info.extra_proof_bound_data[0..CAPE_BURN_PREFIX_BYTES_LEN]
+                == *CAPE_BURN_PREFIX_BYTES.as_bytes()
+        }
+        TransactionNote::Mint(_) => false,
+        TransactionNote::Freeze(_) => false,
+    }
+}
+
 impl CapeBlock {
     // Refer to `validate_block()` in:
     // https://gitlab.com/translucence/crypto/jellyfish/-/blob/main/transactions/tests/examples.rs
-    pub fn validate(&self) -> bool {
-        // Prmarily a Plonk proof verification!
+    // Take a new block and remove the transactions that are not valid and update
+    // the list of record openings corresponding to burn transactions accordingly.
+    pub fn validate(
+        &self,
+        recent_merkle_roots: &LinkedList<NodeValue>,
+        burned_ros: Vec<RecordOpening>,
+        contract_nullifiers: &mut HashSet<Nullifier>,
+    ) -> (CapeBlock, Vec<RecordOpening>) {
+        // In order to avoid race conditions between block submitters (relayers or wallets), the CAPE contract
+        // discards invalid transactions but keeps the valid ones (instead of rejecting the full block).
+        // See https://gitlab.com/translucence/cap-on-ethereum/cape/-/issues/129 for more details.
+
+        let mut filtered_block = CapeBlock {
+            burn_txns: vec![],
+            txns: vec![],
+            miner: self.miner.clone(),
+            block_height: self.block_height,
+        };
+        let mut filtered_burn_ros = vec![];
+
+        // Ensure the proofs are checked against the latest root and are valid
+        // Standard transactions
+        for txn in &self.txns {
+            let merkle_root = txn.merkle_root();
+            if recent_merkle_roots.contains(&merkle_root)
+                && CapeBlock::check_nullifiers_are_fresh(&txn, contract_nullifiers)
+                && !is_burn_txn(&txn)
+            {
+                filtered_block.txns.push(txn.clone());
+            }
+        }
+        // Burn transactions
+        for (i, txn) in self.burn_txns.iter().enumerate() {
+            let merkle_root = txn.merkle_root();
+            if recent_merkle_roots.contains(&merkle_root)
+                && CapeBlock::check_nullifiers_are_fresh(&txn, contract_nullifiers)
+                && is_burn_txn(&txn)
+            {
+                filtered_block.burn_txns.push(txn.clone());
+                filtered_burn_ros.push(burned_ros[i].clone());
+            }
+        }
+
+        // Validate plonk proofs in batch
+        // We assume it is the responsibility of the relayer to ensure all the plonk proofs are valid
+        // If not the submitting relayer will simply loose the gas needed for processing the transaction
+        let mut all_txns = filtered_block.txns.clone();
+        all_txns.extend(filtered_block.burn_txns.clone());
+        // If the verification fails return an empty list of transactions and burned record openings
+        if !batch_plonk_proofs_verification(all_txns.as_slice()) {
+            (
+                CapeBlock {
+                    burn_txns: vec![],
+                    txns: vec![],
+                    miner: self.miner.clone(),
+                    block_height: 0,
+                },
+                vec![],
+            )
+        } else {
+            (filtered_block, filtered_burn_ros)
+        }
+    }
+
+    /// Checks that all the nullifiers of a transaction have not been published in a previous block
+    fn check_nullifiers_are_fresh(
+        txn: &TransactionNote,
+        contract_nullifiers: &HashSet<Nullifier>,
+    ) -> bool {
+        for n in txn.nullifiers().iter() {
+            if contract_nullifiers.contains(&n) {
+                return false;
+            }
+        }
         true
     }
 }
@@ -45,10 +141,10 @@ pub struct CapeContract {
     // TODO: should we further hash MerkleCommitment and only store a bytes32 in contract?
     // latest record merkle tree commitment (including merkle root, tree height and num of leaves)
     merkle_commitment: MerkleCommitment,
-    // hash of the latest merkle frontier
-    merkle_frontier_digest: [u8; 32],
+    // The merkle frontier is stored locally
+    mt_frontier: MerkleFrontier,
     // last X merkle root, allowing transaction building against recent merkle roots (instead of just
-    // the lastest merkle root) as a buffer.
+    // the latest merkle root) as a buffer.
     // where X is the capacity the Queue and can be specified during constructor. (rust doesn't have queue
     // so we use LinkedList to simulate)
     // NOTE: in Solidity, we can instantiate with a fixed array and an indexer to build a FIFO queue.
@@ -59,6 +155,22 @@ pub struct CapeContract {
 }
 
 impl CapeContract {
+    /// Inserts a nullifier in the nullifiers hash set.
+    /// If the nullifier has already been inserted previously return an error.
+    /// In practice (solidity code), the ethereum transaction will be reverted and the smart contract state will be restored.
+    /// This approach, compared to checking no duplicates appear in the list of nullifiers for a block, aims at saving ethereum gas in the concrete solidity implementation.
+    fn insert_nullifier_or_revert(
+        &mut self,
+        nullifier: &Nullifier,
+    ) -> Result<(), NullifierRepeatedError> {
+        if self.nullifiers.contains(nullifier) {
+            Err(NullifierRepeatedError)
+        } else {
+            self.nullifiers.insert(nullifier.clone());
+            Ok(())
+        }
+    }
+
     pub(crate) fn address(&self) -> Address {
         // NOTE: in Solidity, use expression: `address(this)`
         Address::from_low_u64_le(666u64)
@@ -118,36 +230,28 @@ impl CapeContract {
     pub fn submit_cape_block(
         &mut self,
         new_block: CapeBlock,
-        mt_frontier: MerkleFrontier,
         burned_ros: Vec<RecordOpening>,
-    ) {
+    ) -> Result<(), NullifierRepeatedError> {
         // 1. verify the block, and insert its input nullifiers and output record commitments
-        assert!(new_block.validate());
-        assert!(
-            new_block
-                .txns
-                .iter()
-                .chain(new_block.burn_txns.iter())
-                .all(|txn| self.recent_merkle_roots.contains(&txn.merkle_root())),
-            "should produce txn validity proof against recent merkle root",
-        );
-        assert_eq!(new_block.block_height, self.height + 1); // targetting the next block
-        assert_eq!(
-            keccak256(abi_encode(&mt_frontier)),
-            self.merkle_frontier_digest
-        ); // ensure mt_frontier is correct
+        let (new_block, new_burned_ros) =
+            new_block.validate(&self.recent_merkle_roots, burned_ros, &mut self.nullifiers);
+        // Check there is at least one valid transaction
+        assert!(new_block.txns.len() > 0 || new_block.burn_txns.len() > 0);
+
+        assert_eq!(new_block.block_height, self.height + 1); // targeting the next block
 
         let mut rc_to_be_inserted = vec![];
         for txn in new_block.txns.iter() {
             for &nf in txn.nullifiers().iter() {
-                self.nullifiers.insert(nf);
+                self.insert_nullifier_or_revert(&nf)
+                    .expect("Nullifiers should not be repeated inside a block.");
             }
             rc_to_be_inserted.extend_from_slice(&txn.output_commitments());
         }
 
         // 2. process all burn transaction and withdraw for user immediately
-        assert_eq!(new_block.burn_txns.len(), burned_ros.len());
-        for (burn_txn, burned_ro) in new_block.burn_txns.iter().zip(burned_ros.iter()) {
+        assert_eq!(new_block.burn_txns.len(), new_burned_ros.len());
+        for (burn_txn, burned_ro) in new_block.burn_txns.iter().zip(new_burned_ros.iter()) {
             // burn transaction is basically a "Transfer-to-dedicated-burn-pk" transaction
             if let TransactionNote::Transfer(note) = burn_txn {
                 // 2.1. validate the burned record opening against the burn transaction.
@@ -192,23 +296,22 @@ impl CapeContract {
         // and update the merkle root/commitment.
         rc_to_be_inserted.extend_from_slice(&self.pending_deposit_queue);
         let (updated_mt_comm, updated_mt_frontier) =
-            self.batch_insert_with_frontier(mt_frontier, &rc_to_be_inserted);
+            self.batch_insert_with_frontier(self.mt_frontier.clone(), &rc_to_be_inserted);
 
         // 4. update the blockchain state digest
         self.height += 1;
         self.merkle_commitment = updated_mt_comm;
-        self.merkle_frontier_digest = keccak256(abi_encode(updated_mt_frontier));
         if self.recent_merkle_roots.len() == MERKLE_ROOT_QUEUE_CAP {
             self.recent_merkle_roots.pop_front(); // remove the oldest root
         }
         self.recent_merkle_roots
             .push_back(updated_mt_comm.root_value); // add the new root
-    }
-}
 
-// Solidity equivalent of `abi.encode()`
-fn abi_encode<T>(_data: T) -> Vec<u8> {
-    unimplemented!();
+        // Store the new frontier
+        self.mt_frontier = updated_mt_frontier;
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -221,7 +324,6 @@ mod test {
     };
 
     use super::*;
-    use crate::relayer::Relayer;
     use constants::*;
 
     impl CapeContract {
@@ -235,7 +337,7 @@ mod test {
                     height: 20,
                     num_leaves: 0,
                 },
-                merkle_frontier_digest: [0u8; 32],
+                mt_frontier: MerkleFrontier::Empty { height: 0 },
                 recent_merkle_roots: LinkedList::default(),
                 wrapped_erc20_registrar: HashMap::default(),
                 pending_deposit_queue: vec![],
@@ -276,10 +378,10 @@ mod test {
     #[ignore = "ignore panic due to unimplemented logic"]
     fn asset_registration_workflow() {
         let mut cape_contract = CapeContract::mock();
-        // 1. sponser: design  the CAPE asset type (off-chain).
+        // 1. sponsor: design  the CAPE asset type (off-chain).
         let asset_def = usdc_cape_asset_def();
 
-        // 2. sponser: register the asset (on-L1-chain).
+        // 2. sponsor: register the asset (on-L1-chain).
         cape_contract.sponsor_cape_asset(usdc_address(), asset_def.clone());
     }
 
@@ -292,7 +394,6 @@ mod test {
 
         let cape_user_keypair = UserKeyPair::generate(&mut rng);
         let eth_user_address = Address::random();
-        let relayer = Relayer::new();
 
         // 1. user: fetch the CAPE asset definition from UI or sponsor.
         let asset_def = usdc_cape_asset_def();
@@ -318,7 +419,8 @@ mod test {
         // 4. relayer: build next block and user's deposit will be credited (inserted into
         // record merkle tree) when CAPE contract process the next valid block.
         let new_block = CapeBlock::build_next();
-        cape_contract.submit_cape_block(new_block, relayer.mt.frontier(), vec![]);
+        let _res = cape_contract.submit_cape_block(new_block, vec![]);
+        // Handle result of call to `submit_cape_block`.
     }
 
     #[test]
@@ -327,7 +429,6 @@ mod test {
         let mut rng = rand::thread_rng();
         let mut cape_contract = CapeContract::mock();
         let cape_user_keypair = UserKeyPair::generate(&mut rng);
-        let relayer = Relayer::new();
 
         // 1. user: build and send a burn transaction to relayer (off-chain)
         let asset_def = usdc_cape_asset_def();
@@ -351,7 +452,8 @@ mod test {
         let mut burned_ros = vec![];
         burned_ros.push(burned_ro);
 
-        cape_contract.submit_cape_block(new_block.clone(), relayer.mt.frontier(), burned_ros);
+        let _res = cape_contract.submit_cape_block(new_block.clone(), burned_ros);
+        // Handle result of call to `submit_cape_block`.
 
         // done! when CAPE contract process a new block,
         // it will automatically withdraw for user that has submitted the burn transaction.

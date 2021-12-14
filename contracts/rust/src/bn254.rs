@@ -1,6 +1,7 @@
 #![cfg(test)]
 
 use crate::{
+    assertion::Matcher,
     ethereum::{deploy, get_funded_deployer},
     types::{field_to_u256, G1Point, G2Point, TestBN254},
 };
@@ -156,14 +157,50 @@ async fn test_validate_g1_point() -> Result<()> {
     let p: G1Affine = G1Projective::rand(rng).into();
     contract.validate_g1_point(p.into()).call().await?;
 
+    // x = 0 should fail
     let mut bad_p = p.clone();
     bad_p.x = field_new!(Fq, "0");
-    // FIXME: add expect().to.revertWith("assert message") helper function
-    eprintln!(
-        "await result: {:?}",
-        contract.validate_g1_point(bad_p.into()).call().await
-    );
-    // contract.validate_g1_point(bad_p.into()).call().await?;
+    assert!(contract
+        .validate_g1_point(bad_p.into())
+        .call()
+        .await
+        .should_revert_with_message("Bn254: invalid G1 point"));
+
+    // y = 0 should fail
+    let mut bad_p = p.clone();
+    bad_p.y = field_new!(Fq, "0");
+    assert!(contract
+        .validate_g1_point(bad_p.into())
+        .call()
+        .await
+        .should_revert_with_message("Bn254: invalid G1 point"));
+
+    // x > p should fail
+    let mut bad_p_u256: G1Point = p.clone().into();
+    bad_p_u256.x = U256::MAX;
+    assert!(contract
+        .validate_g1_point(bad_p_u256)
+        .call()
+        .await
+        .should_revert_with_message("Bn254: invalid G1 point"));
+
+    // y > p should fail
+    let mut bad_p_u256: G1Point = p.clone().into();
+    bad_p_u256.y = U256::MAX;
+    assert!(contract
+        .validate_g1_point(bad_p_u256)
+        .call()
+        .await
+        .should_revert_with_message("Bn254: invalid G1 point"));
+
+    // not on curve point (y^2 = x^3 + 3 mod p) should fail
+    let bad_p = G1Affine::new(field_new!(Fq, "1"), field_new!(Fq, "3"), false);
+    assert!(contract
+        .validate_g1_point(bad_p.into())
+        .call()
+        .await
+        .should_revert_with_message("Bn254: invalid G1 point"));
+
     Ok(())
 }
 

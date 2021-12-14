@@ -184,6 +184,16 @@ library BN254 {
         require(isWellFormed, "Bn254: invalid G1 point");
     }
 
+    /// @dev Validate scalar field, revert if invalid (namely if fr > r_mod).
+    /// @notice Writing this inline instead of calling it might save gas.
+    function validateScalarField(uint256 fr) internal pure {
+        bool isValid;
+        assembly {
+            isValid := lt(fr, R_MOD)
+        }
+        require(isValid, "Bn254: invalid scalar field");
+    }
+
     /// @dev Evaluate the following pairing product:
     /// @dev e(a1, a2).e(-b1, b2) == 1
     /// @notice credit: Aztec, Spilsbury Holdings Ltd

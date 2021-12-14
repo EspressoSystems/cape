@@ -52,6 +52,10 @@ contract TestBN254 {
         C.validateG1Point(point);
     }
 
+    function validateScalarField(uint256 fr) public pure {
+        C.validateScalarField(fr);
+    }
+
     function pairingProd2(
         C.G1Point memory a1,
         C.G2Point memory a2,

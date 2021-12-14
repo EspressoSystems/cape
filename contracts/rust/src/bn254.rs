@@ -1,6 +1,7 @@
 #![cfg(test)]
 
 use crate::{
+    assertion::Matcher,
     ethereum::{deploy, get_funded_deployer},
     types::{field_to_u256, G1Point, G2Point, TestBN254},
 };
@@ -156,14 +157,64 @@ async fn test_validate_g1_point() -> Result<()> {
     let p: G1Affine = G1Projective::rand(rng).into();
     contract.validate_g1_point(p.into()).call().await?;
 
+    async fn should_fail_validation(
+        contract: &TestBN254<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>,
+        bad_p: G1Point,
+    ) {
+        assert!(contract
+            .validate_g1_point(bad_p)
+            .call()
+            .await
+            .should_revert_with_message("Bn254: invalid G1 point"));
+    }
+
+    // x = 0 should fail
     let mut bad_p = p.clone();
     bad_p.x = field_new!(Fq, "0");
-    // FIXME: add expect().to.revertWith("assert message") helper function
-    eprintln!(
-        "await result: {:?}",
-        contract.validate_g1_point(bad_p.into()).call().await
-    );
-    // contract.validate_g1_point(bad_p.into()).call().await?;
+    should_fail_validation(&contract, bad_p.into()).await;
+
+    // y = 0 should fail
+    let mut bad_p = p.clone();
+    bad_p.y = field_new!(Fq, "0");
+    should_fail_validation(&contract, bad_p.into()).await;
+
+    // x > p should fail
+    let mut bad_p_g1: G1Point = p.clone().into();
+    bad_p_g1.x = U256::MAX;
+    should_fail_validation(&contract, bad_p_g1).await;
+
+    // y > p should fail
+    let mut bad_p_g1: G1Point = p.clone().into();
+    bad_p_g1.y = U256::MAX;
+    should_fail_validation(&contract, bad_p_g1).await;
+
+    // not on curve point (y^2 = x^3 + 3 mod p) should fail
+    let bad_p = G1Affine::new(field_new!(Fq, "1"), field_new!(Fq, "3"), false);
+    should_fail_validation(&contract, bad_p.into()).await;
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_validate_scalar_field() -> Result<()> {
+    let rng = &mut ark_std::test_rng();
+    let contract = deploy_contract().await?;
+    let f = Fr::rand(rng);
+    contract
+        .validate_scalar_field(field_to_u256(f))
+        .call()
+        .await?;
+
+    contract
+        .validate_scalar_field(
+            U256::from_str_radix(
+                "21888242871839275222246405745257275088548364400416034343698204186575808495618",
+                10,
+            )
+            .unwrap(),
+        )
+        .call()
+        .await
+        .should_revert_with_message("Bn254: invalid scalar field");
     Ok(())
 }
 

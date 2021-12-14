@@ -1,3 +1,4 @@
+mod assertion;
 mod bn254;
 pub mod cap_jf;
 mod cape;

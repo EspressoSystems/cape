@@ -52,6 +52,9 @@ interface get_enc_pub_key_from_addr
 register_addr_and_enc_pub_key -down- MAPADDRENC
 get_enc_pub_key_from_addr -down- MAPADDRENC
 
+[Faucet] as F
+interface get_cape_fee_record
+get_cape_fee_record -down- F
 
 component ETHBlockchain {
 
@@ -61,15 +64,19 @@ component ETHBlockchain {
         interface submit_cape_block
         interface "sponsor_asset_type" as sponsor_asset_type_cape
         interface deposit_erc20
+        interface faucet
         submit_cape_block -down- CAPESC
         sponsor_asset_type_cape -down- CAPESC
         deposit_erc20 -down- CAPESC
+        faucet -down- CAPESC
+
 
         [ERC20 Smart Contract] as ERC20
         interface approve
         interface transfer_from
         interface transfer
         interface balance
+
 
         approve -down- ERC20
         transfer -down- ERC20
@@ -90,6 +97,8 @@ Relayer -down-> get_latest_aap_state
 Relayer -down-> get_nullifiers
 Relayer -down-> get_plonk_verif_keys
 
+F -down-> faucet
+
 CAPESC -down-> transfer_from
 CAPESC -down-> transfer
 CAPESC -down-> new_cape_block
@@ -107,6 +116,7 @@ UI -down-> get_enc_pub_key_from_addr
 UI -down-> get_latest_aap_state
 UI -down-> get_plonk_verif_keys
 UI -down..-> submit_cape_block: Optional \n ("Escape Hatch")
+UI -down-> get_cape_fee_record
 
 new_cape_block -up-> EQS
 

@@ -15,20 +15,16 @@ where
 {
     fn should_revert(self) -> bool {
         if self.is_err() {
-            let e = self.unwrap_err();
-            if format!("{}", e).contains("reverted") {
-                return true;
-            }
+            let e = format!("{}", self.unwrap_err());
+            return e.contains("reverted");
         }
         false
     }
 
     fn should_revert_with_message(self, message: &str) -> bool {
         if self.is_err() {
-            let e = self.unwrap_err();
-            if format!("{}", e).contains("reverted") && format!("{}", e).contains(message) {
-                return true;
-            }
+            let e = format!("{}", self.unwrap_err());
+            return e.contains("reverted") && e.contains(message);
         }
         false
     }

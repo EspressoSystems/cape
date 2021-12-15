@@ -21,5 +21,13 @@ nix-pre-commit-hooks.run {
       enable = true;
       entry = "treefmt --fail-on-change";
     };
+    # The hook "clippy" that ships with nix-precommit-hooks is outdated.
+    cargo-clippy = {
+      enable = true;
+      description = "Lint Rust code.";
+      entry = "cargo-clippy --workspace -- -D warnings";
+      files = "\\.rs$";
+      pass_filenames = false;
+    };
   };
 }

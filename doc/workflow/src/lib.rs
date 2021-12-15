@@ -33,7 +33,7 @@ pub struct CapeBlock {
 // TODO missing Plonk verifying keys
 fn batch_plonk_proofs_verification(_txn: &[TransactionNote]) -> bool {
     // TODO
-    return true;
+    true
 }
 
 const CAPE_BURN_PREFIX_BYTES: &str = "TRICAPE burn";
@@ -80,8 +80,8 @@ impl CapeBlock {
         for txn in &self.txns {
             let merkle_root = txn.merkle_root();
             if recent_merkle_roots.contains(&merkle_root)
-                && CapeBlock::check_nullifiers_are_fresh(&txn, contract_nullifiers)
-                && !is_burn_txn(&txn)
+                && CapeBlock::check_nullifiers_are_fresh(txn, contract_nullifiers)
+                && !is_burn_txn(txn)
             {
                 filtered_block.txns.push(txn.clone());
             }
@@ -90,8 +90,8 @@ impl CapeBlock {
         for (i, txn) in self.burn_txns.iter().enumerate() {
             let merkle_root = txn.merkle_root();
             if recent_merkle_roots.contains(&merkle_root)
-                && CapeBlock::check_nullifiers_are_fresh(&txn, contract_nullifiers)
-                && is_burn_txn(&txn)
+                && CapeBlock::check_nullifiers_are_fresh(txn, contract_nullifiers)
+                && is_burn_txn(txn)
             {
                 filtered_block.burn_txns.push(txn.clone());
                 filtered_burn_ros.push(burned_ros[i].clone());
@@ -125,7 +125,7 @@ impl CapeBlock {
         contract_nullifiers: &HashSet<Nullifier>,
     ) -> bool {
         for n in txn.nullifiers().iter() {
-            if contract_nullifiers.contains(&n) {
+            if contract_nullifiers.contains(n) {
                 return false;
             }
         }
@@ -166,7 +166,7 @@ impl CapeContract {
         if self.nullifiers.contains(nullifier) {
             Err(NullifierRepeatedError)
         } else {
-            self.nullifiers.insert(nullifier.clone());
+            self.nullifiers.insert(*nullifier);
             Ok(())
         }
     }
@@ -236,7 +236,7 @@ impl CapeContract {
         let (new_block, new_burned_ros) =
             new_block.validate(&self.recent_merkle_roots, burned_ros, &mut self.nullifiers);
         // Check there is at least one valid transaction
-        assert!(new_block.txns.len() > 0 || new_block.burn_txns.len() > 0);
+        assert!(!new_block.txns.is_empty() || !new_block.burn_txns.is_empty());
 
         assert_eq!(new_block.block_height, self.height + 1); // targeting the next block
 

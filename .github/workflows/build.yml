@@ -8,7 +8,7 @@ jobs:
   build:
     runs-on: self-hosted
     container:
-      image: nixos/nix
+      image: nixos/nix:2.3.12
       volumes:
         - github_nix:/nix
     steps:

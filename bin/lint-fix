@@ -3,3 +3,4 @@ set -euo pipefail
 
 (cd $CONTRACTS_DIR && solhint --fix 'contracts/**/*.sol')
 treefmt
+cargo-clippy --fix --workspace -- -D warnings

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
 set -euxo pipefail
 
+build-abi # clippy needs the contract ABIs
 pre-commit run --all-files

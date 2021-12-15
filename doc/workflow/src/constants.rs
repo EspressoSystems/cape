@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use ethers::prelude::*;
-use jf_txn::keys::UserPubKey;
+use jf_aap::keys::UserPubKey;
 
 // USDC contract on Ethereum, https://etherscan.io/address/0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48
 pub(crate) fn usdc_address() -> Address {

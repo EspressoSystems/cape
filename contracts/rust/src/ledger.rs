@@ -1,13 +1,13 @@
 use ark_serialize::*;
 use generic_array::GenericArray;
-use jf_txn::{structs::Nullifier, TransactionNote};
+use jf_aap::{structs::Nullifier, TransactionNote};
 use jf_utils::tagged_blob;
 use serde::{Deserialize, Serialize};
 use sha3::{Digest, Keccak256};
 use zerok_lib::{
     commit::{Commitment, Committable, RawCommitmentBuilder},
     ledger::traits::*,
-    ValidationError,
+    state::ValidationError,
 };
 
 // In CAPE, we don't store a sparse local copy of the nullifiers set; instead we use the on-ledger
@@ -42,9 +42,47 @@ impl Committable for CAPETransaction {
 #[derive(Clone, Debug, Hash, PartialEq, Eq, CanonicalSerialize, CanonicalDeserialize)]
 pub struct CAPETransactionHash(Commitment<CAPETransaction>);
 
+// TODO make this match actual CAPE logic
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, strum_macros::Display)]
+pub enum CAPETransactionKind {
+    Mint,
+    Freeze,
+    Unfreeze,
+    Send,
+    Receive,
+    Unknown,
+}
+
+impl zerok_lib::ledger::traits::TransactionKind for CAPETransactionKind {
+    fn send() -> Self {
+        Self::Send
+    }
+
+    fn receive() -> Self {
+        Self::Receive
+    }
+
+    fn mint() -> Self {
+        Self::Mint
+    }
+
+    fn freeze() -> Self {
+        Self::Freeze
+    }
+
+    fn unfreeze() -> Self {
+        Self::Unfreeze
+    }
+
+    fn unknown() -> Self {
+        Self::Unknown
+    }
+}
+
 impl Transaction for CAPETransaction {
     type NullifierSet = CAPENullifierSet;
     type Hash = CAPETransactionHash;
+    type Kind = CAPETransactionKind;
 
     fn new(note: TransactionNote, _proofs: Vec<()>) -> Self {
         Self(note)
@@ -63,6 +101,11 @@ impl Transaction for CAPETransaction {
 
     fn hash(&self) -> Self::Hash {
         CAPETransactionHash(self.commit())
+    }
+
+    fn kind(&self) -> Self::Kind {
+        // TODO
+        Self::Kind::Unknown
     }
 }
 

@@ -7,15 +7,14 @@ edition = "2018"
 doctest = false
 
 [dependencies]
-jf-txn = { git = "ssh://git@gitlab.com/translucence/crypto/jellyfish.git", rev = "4d7e1c38e3f41d83e5b93f0eca1ae0663f221a5e" }
-jf-utils = { git = "ssh://git@gitlab.com/translucence/crypto/jellyfish.git", rev = "4d7e1c38e3f41d83e5b93f0eca1ae0663f221a5e" }
-jf-rescue = { git = "ssh://git@gitlab.com/translucence/crypto/jellyfish.git", rev = "4d7e1c38e3f41d83e5b93f0eca1ae0663f221a5e" }
-jf-primitives = { git = "ssh://git@gitlab.com/translucence/crypto/jellyfish.git", rev = "4d7e1c38e3f41d83e5b93f0eca1ae0663f221a5e" }
-# Pin to branch cape-transcript-public with exposed transcript methods
-jf-plonk = { git = "ssh://git@gitlab.com/translucence/crypto/jellyfish.git", rev = "3dea8d7f5b2e6ebb29a66dc39b686e5f0eb19efe" }
-zerok_lib = { git = "ssh://git@gitlab.com/translucence/systems/system.git", rev="0c5be1a57f007e48f6380eebcd49220b6ff26a82" }
+jf-plonk = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git", rev = "529a2e41b06d39144885c8482b7c230143567d10"}
+jf-primitives = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git", rev = "529a2e41b06d39144885c8482b7c230143567d10"}
+jf-aap = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git", rev = "529a2e41b06d39144885c8482b7c230143567d10"}
+jf-rescue = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git", rev = "529a2e41b06d39144885c8482b7c230143567d10"}
+jf-utils = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git", rev = "529a2e41b06d39144885c8482b7c230143567d10"}
+zerok_lib = { git = "ssh://git@github.com/SpectrumXYZ/spectrum.git", rev="a94ea91118858f660d89180b1c6adf121619cbf5" }
 ethers = { git = "https://github.com/gakonst/ethers-rs", branch = "master" }
-itertools = "0.10.1" # needed for jf-txn to compile
+itertools = "0.10.1" # needed for jf-aap to compile
 ark-std = "0.3.0"
 serde_json = "1.0.67"
 bincode = "1.3.3"
@@ -37,6 +36,7 @@ sha3 = "0.9.1"
 async-std = { version = "1.10.0", features = ["unstable", "attributes"] }
 async-trait = "0.1.51"
 futures = "0.3.16"
+strum_macros = "0.20.1"
 
 # copied from jellyfish
 [dependencies.ark-poly-commit]

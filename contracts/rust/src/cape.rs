@@ -1,8 +1,8 @@
 use ethers::prelude::{Bytes, EthAbiType, U256};
-use jf_txn::transfer::{AuxInfo, TransferNote};
-use jf_txn::TransactionNote;
-use jf_txn::{freeze::FreezeNote, structs::AuditMemo, VerKey};
-use jf_txn::{keys::UserPubKey, mint::MintNote};
+use jf_aap::transfer::{AuxInfo, TransferNote};
+use jf_aap::TransactionNote;
+use jf_aap::{freeze::FreezeNote, structs::AuditMemo, VerKey};
+use jf_aap::{keys::UserPubKey, mint::MintNote};
 
 use crate::helpers::{convert_fr254_to_u256, convert_nullifier_to_u256};
 use crate::types as sol; // TODO figure out what to do about type collisions
@@ -11,7 +11,7 @@ use itertools::Itertools;
 const DUMMY_UINT: U256 = U256::zero();
 
 #[derive(Debug, Clone, PartialEq, EthAbiType)]
-enum NoteType {
+pub enum NoteType {
     Transfer,
     Mint,
     Freeze,

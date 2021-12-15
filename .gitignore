@@ -25,3 +25,4 @@ __pycache__/
 # static files should still be force added to that directory though
 /doc/contracts
 /doc/mdbook
+.*.sw*

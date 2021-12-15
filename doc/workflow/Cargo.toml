@@ -4,9 +4,9 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-jf-txn = { git = "ssh://git@gitlab.com/translucence/crypto/jellyfish.git" } # latest
-jf-utils = { git = "ssh://git@gitlab.com/translucence/crypto/jellyfish.git" } # latest
-jf-rescue = { git = "ssh://git@gitlab.com/translucence/crypto/jellyfish.git" } # latest
+jf-aap = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git", rev = "529a2e41b06d39144885c8482b7c230143567d10"}
+jf-utils = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git", rev = "529a2e41b06d39144885c8482b7c230143567d10"}
+jf-rescue = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git", rev = "529a2e41b06d39144885c8482b7c230143567d10"}
 ethers = { git = "https://github.com/gakonst/ethers-rs", features = ["abigen"] }
 
 serde_json = "1.0.67"

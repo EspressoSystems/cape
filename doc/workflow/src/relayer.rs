@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-use jf_txn::{keys::UserKeyPair, MerkleTree};
+use jf_aap::{keys::UserKeyPair, MerkleTree};
 
 use crate::constants::RECORD_MT_HEIGHT;
 

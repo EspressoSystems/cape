@@ -11,7 +11,7 @@ use ark_std::UniformRand;
 use ethers::core::k256::ecdsa::SigningKey;
 use ethers::prelude::{Http, Provider, SignerMiddleware, Wallet};
 use jf_plonk::transcript::PlonkTranscript;
-use jf_plonk::FiatShamirHash;
+use jf_plonk::transcript::SolidityTranscript;
 
 use ark_bn254::{g1::Parameters as G1, Bn254 as E, Fq, Fr, G1Affine, G1Projective};
 use rand::Rng;
@@ -28,8 +28,8 @@ async fn deploy() -> TestTranscript<SignerMiddleware<Provider<Http>, Wallet<Sign
     TestTranscript::new(contract.address(), client)
 }
 
-fn mk_empty_transcript() -> PlonkTranscript<Fq> {
-    PlonkTranscript::new(b"ignored", FiatShamirHash::SolidityKeccak)
+fn mk_empty_transcript() -> impl PlonkTranscript<Fq> {
+    <SolidityTranscript as PlonkTranscript<Fq>>::new(b"ignored")
 }
 
 #[tokio::test]

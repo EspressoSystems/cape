@@ -1,5 +1,5 @@
 use ark_std::rand::prelude::StdRng;
-use jf_txn::{
+use jf_aap::{
     keys::UserKeyPair,
     proof::{transfer::preprocess, universal_setup},
     structs::NoteType,

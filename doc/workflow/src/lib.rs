@@ -1,9 +1,9 @@
 //! This crate describes the workflow and interfaces of a CAPE contract deployed on Ethereum.
 
 use ethers::prelude::*;
-use jf_txn::keys::UserPubKey;
-use jf_txn::structs::{AssetDefinition, FreezeFlag, Nullifier, RecordCommitment, RecordOpening};
-use jf_txn::{MerkleCommitment, MerkleFrontier, NodeValue, TransactionNote};
+use jf_aap::keys::UserPubKey;
+use jf_aap::structs::{AssetDefinition, FreezeFlag, Nullifier, RecordCommitment, RecordOpening};
+use jf_aap::{MerkleCommitment, MerkleFrontier, NodeValue, TransactionNote};
 use std::collections::{HashMap, HashSet, LinkedList};
 
 mod constants;
@@ -316,7 +316,7 @@ impl CapeContract {
 
 #[cfg(test)]
 mod test {
-    use jf_txn::{
+    use jf_aap::{
         keys::{AuditorKeyPair, FreezerKeyPair, UserKeyPair},
         structs::{AssetCode, AssetCodeSeed, AssetPolicy, FreezeFlag},
         transfer::TransferNote,

@@ -2,7 +2,7 @@ use crate::ledger::*;
 use async_std::sync::{Mutex, MutexGuard};
 use async_trait::async_trait;
 use futures::stream::Stream;
-use jf_txn::{
+use jf_aap::{
     keys::{UserAddress, UserPubKey},
     structs::{Nullifier, ReceiverMemo},
     Signature,

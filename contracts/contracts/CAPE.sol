@@ -256,10 +256,7 @@ contract CAPE {
                 TransferNote memory transfer = note.transferNote;
                 _checkMerkleRootContained(transfer.auxInfo.merkleRoot);
 
-                require(
-                    _isBurn(transfer.auxInfo.extraProofBoundData),
-                    "Burn note not tagged"
-                );
+                _checkBurn(transfer.auxInfo.extraProofBoundData);
                 // TODO check burn record opening matches second output commitment
 
                 if (_publish(transfer.inputsNullifiers)) {
@@ -290,7 +287,18 @@ contract CAPE {
         // TODO
     }
 
-    function _isBurn(bytes memory extraProofBoundData) internal returns (bool) {
+    function _checkBurn(bytes memory extraProofBoundData) internal {
+        require(_hasBurnPrefix(extraProofBoundData), "Burn note not tagged");
+        require(
+            _hasBurnDestination(extraProofBoundData),
+            "Burn destination wrong"
+        );
+    }
+
+    function _hasBurnPrefix(bytes memory extraProofBoundData)
+        internal
+        returns (bool)
+    {
         if (extraProofBoundData.length < 12) {
             return false;
         }
@@ -299,5 +307,15 @@ contract CAPE {
                 BytesLib.slice(extraProofBoundData, 0, 12),
                 CAPE_BURN_MAGIC_BYTES
             );
+    }
+
+    function _hasBurnDestination(bytes memory extraProofBoundData)
+        internal
+        returns (bool)
+    {
+        if (extraProofBoundData.length < 32) {
+            return false;
+        }
+        return BytesLib.toAddress(extraProofBoundData, 12) == address(0);
     }
 }

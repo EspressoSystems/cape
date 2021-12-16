@@ -8,7 +8,21 @@ contract TestCAPE is CAPE {
         return _insertNullifier(nullifier);
     }
 
-    function isBurn(bytes memory extraProofBoundData) public returns (bool) {
-        return _isBurn(extraProofBoundData);
+    function checkBurn(bytes memory extraProofBoundData) public {
+        return _checkBurn(extraProofBoundData);
+    }
+
+    function hasBurnPrefix(bytes memory extraProofBoundData)
+        public
+        returns (bool)
+    {
+        return _hasBurnPrefix(extraProofBoundData);
+    }
+
+    function hasBurnDestination(bytes memory extraProofBoundData)
+        public
+        returns (bool)
+    {
+        return _hasBurnDestination(extraProofBoundData);
     }
 }

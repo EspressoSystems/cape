@@ -126,9 +126,62 @@ mod tests {
     use crate::cap_jf::create_anon_xfr_2in_3out;
     use crate::ethereum::{deploy, get_funded_deployer};
     use crate::helpers::convert_nullifier_to_u256;
-    use crate::types::{CapeBlock, TestCAPE, CAPE};
+    use crate::types::{CapeBlock, TestCAPE, TestCapeTypes, CAPE};
+    use anyhow::Result;
+    use ethers::core::k256::ecdsa::SigningKey;
+    use ethers::prelude::*;
     use std::env;
     use std::path::Path;
+
+    #[allow(dead_code)] // TODO: remove this
+    async fn deploy_cape_contract(
+    ) -> Result<TestCAPE<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>> {
+        let client = get_funded_deployer().await.unwrap();
+        let contract = deploy(
+            client.clone(),
+            Path::new("../artifacts/contracts/TestCAPE.sol/TestCAPE"),
+            (),
+        )
+        .await
+        .unwrap();
+        Ok(TestCAPE::new(contract.address(), client))
+    }
+
+    mod type_conversion {
+        use jf_txn::structs::Nullifier;
+
+        use super::*;
+
+        async fn deploy_type_contract(
+        ) -> Result<TestCapeTypes<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>> {
+            let client = get_funded_deployer().await.unwrap();
+            let contract = deploy(
+                client.clone(),
+                Path::new("../artifacts/contracts/mocks/TestCapeTypes.sol/TestCapeTypes"),
+                (),
+            )
+            .await
+            .unwrap();
+            Ok(TestCapeTypes::new(contract.address(), client))
+        }
+
+        #[tokio::test]
+        async fn test_nullifier() -> Result<()> {
+            let rng = &mut ark_std::test_rng();
+            let contract = deploy_type_contract().await?;
+            for _ in 0..5 {
+                let nf = Nullifier::random_for_test(rng);
+                let res: NullifierSol = contract
+                    .type_nullifier(Into::<NullifierSol>::into(nf).0)
+                    .call()
+                    .await?
+                    .into();
+                let res_nf: Nullifier = res.into();
+                assert_eq!(nf, res_nf);
+            }
+            Ok(())
+        }
+    }
 
     #[tokio::test]
     async fn test_submit_block_to_cape_contract() {

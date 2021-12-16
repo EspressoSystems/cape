@@ -1,6 +1,7 @@
-use ark_bn254::{G1Affine, G2Affine};
 use ark_ff::{to_bytes, PrimeField, Zero};
+use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ethers::prelude::*;
+use jf_txn::structs::Nullifier;
 
 abigen!(
     TestBN254,
@@ -19,6 +20,10 @@ abigen!(
     "../artifacts/contracts/CAPE.sol/CAPE/abi.json",
     event_derives(serde::Deserialize, serde::Serialize);
 
+    TestCapeTypes,
+    "../artifacts/contracts/mocks/TestCapeTypes.sol/TestCapeTypes/abi.json",
+    event_derives(serde::Deserialize, serde::Serialize);
+
     TestCAPE,
     "../artifacts/contracts/mocks/TestCAPE.sol/TestCAPE/abi.json",
     event_derives(serde::Deserialize, serde::Serialize);
@@ -28,8 +33,8 @@ abigen!(
     event_derives(serde::Deserialize, serde::Serialize);
 );
 
-impl From<G1Affine> for G1Point {
-    fn from(p: G1Affine) -> Self {
+impl From<ark_bn254::G1Affine> for G1Point {
+    fn from(p: ark_bn254::G1Affine) -> Self {
         if p.is_zero() {
             // Solidity precompile have a different affine repr for Point of Infinity
             Self {
@@ -45,8 +50,8 @@ impl From<G1Affine> for G1Point {
     }
 }
 
-impl From<G2Affine> for G2Point {
-    fn from(p: G2Affine) -> Self {
+impl From<ark_bn254::G2Affine> for G2Point {
+    fn from(p: ark_bn254::G2Affine) -> Self {
         // NOTE: in contract, x = x0 * z + x1, whereas in arkwork x = c0 + c1 * X.
         Self {
             x_0: U256::from_little_endian(&to_bytes!(p.x.c1).unwrap()[..]),
@@ -65,11 +70,48 @@ pub fn field_to_u256<F: PrimeField>(f: F) -> U256 {
     U256::from_little_endian(&to_bytes!(&f).unwrap())
 }
 
+impl From<ark_ed_on_bn254::EdwardsAffine> for EdOnBn254Point {
+    fn from(p: ark_ed_on_bn254::EdwardsAffine) -> Self {
+        Self {
+            x: U256::from_little_endian(&to_bytes!(p.x).unwrap()[..]),
+            y: U256::from_little_endian(&to_bytes!(p.y).unwrap()[..]),
+        }
+    }
+}
+
+/// Intermediate type used during conversion between Solidity's nullifier value to that in Jellyfish.
+pub struct NullifierSol(pub U256);
+
+impl From<Nullifier> for NullifierSol {
+    fn from(nf: Nullifier) -> Self {
+        let mut bytes = vec![];
+        nf.serialize(&mut bytes).unwrap();
+        Self(U256::from_little_endian(&bytes))
+    }
+}
+
+impl From<U256> for NullifierSol {
+    fn from(v: U256) -> Self {
+        Self(v)
+    }
+}
+
+impl From<NullifierSol> for Nullifier {
+    fn from(nf_sol: NullifierSol) -> Self {
+        let mut bytes = vec![0u8; 32];
+        nf_sol.0.to_little_endian(&mut bytes);
+        let nf: Nullifier = CanonicalDeserialize::deserialize(&bytes[..])
+            .expect("Failed to deserialze U256 to a Nullifier.");
+        nf
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
-    use ark_bn254::Fq;
+    use ark_bn254::{Fq, G1Affine, G2Affine};
     use ark_ec::AffineCurve;
+    use ark_ed_on_bn254::EdwardsAffine;
     use ark_ff::field_new;
     use ark_std::UniformRand;
 
@@ -134,6 +176,26 @@ mod test {
             p3_sol.y_1,
             U256::from_str_radix(
                 "0x12c85ea5db8c6deb4aab71808dcb408fe3d1e7690c43d37b4ce6cc0166fa7daa",
+                16
+            )
+            .unwrap()
+        );
+
+        // check ed_on_bn254 point conversion
+        let p4 = EdwardsAffine::prime_subgroup_generator();
+        let p4_sol: EdOnBn254Point = p4.into();
+        assert_eq!(
+            p4_sol.x,
+            U256::from_str_radix(
+                "0x2B8CFD91B905CAE31D41E7DEDF4A927EE3BC429AAD7E344D59D2810D82876C32",
+                16
+            )
+            .unwrap()
+        );
+        assert_eq!(
+            p4_sol.y,
+            U256::from_str_radix(
+                "0x2AAA6C24A758209E90ACED1F10277B762A7C1115DBC0E16AC276FC2C671A861F",
                 16
             )
             .unwrap()

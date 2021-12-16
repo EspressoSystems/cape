@@ -7,11 +7,15 @@ pragma solidity ^0.8.0;
 /// @notice This is a notice.
 /// @dev Developers are awesome!
 
+import "solidity-bytes-utils/contracts/BytesLib.sol";
+
 // TODO Remove once functions are implemented
 /* solhint-disable no-unused-vars */
 
 contract CAPE {
     mapping(uint256 => bool) public nullifiers;
+
+    bytes public constant CAPE_BURN_MAGIC_BYTES = "TRICAPE burn";
 
     struct PlonkProof {
         // TODO
@@ -251,8 +255,13 @@ contract CAPE {
                 BurnNote memory note = newBlock.burnNotes[burnIdx];
                 TransferNote memory transfer = note.transferNote;
                 _checkMerkleRootContained(transfer.auxInfo.merkleRoot);
-                // TODO check burn prefix separator
+
+                require(
+                    _isBurn(transfer.auxInfo.extraProofBoundData),
+                    "Burn note not tagged"
+                );
                 // TODO check burn record opening matches second output commitment
+
                 if (_publish(transfer.inputsNullifiers)) {
                     // TODO collect transfer.outputCommitments
                     // TODO extract proof for batch verification
@@ -279,5 +288,16 @@ contract CAPE {
         internal
     {
         // TODO
+    }
+
+    function _isBurn(bytes memory extraProofBoundData) internal returns (bool) {
+        if (extraProofBoundData.length < 12) {
+            return false;
+        }
+        return
+            BytesLib.equal(
+                BytesLib.slice(extraProofBoundData, 0, 12),
+                CAPE_BURN_MAGIC_BYTES
+            );
     }
 }

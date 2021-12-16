@@ -98,11 +98,6 @@ contract CAPE {
         EdOnBn254Point txnMemoVerKey;
     }
 
-    struct UserPubKey {
-        EdOnBn254Point address_; // "address" is a keyword in solidity
-        EdOnBn254Point encKey;
-    }
-
     struct AssetDefinition {
         uint256 code;
         AssetPolicy policy;
@@ -117,12 +112,15 @@ contract CAPE {
     }
 
     struct RecordOpening {
-        bool field;
-        // TODO (Philippe will take care of it)
+        uint64 amount;
+        AssetDefinition assetDef;
+        EdOnBn254Point userAddr;
+        bool freezeFlag;
+        uint256 blind;
     }
 
     struct CapeBlock {
-        UserPubKey miner; // TODO
+        EdOnBn254Point minerAddr; // TODO
         uint64 blockHeight; // TODO
         NoteType[] noteTypes;
         TransferNote[] transferNotes;

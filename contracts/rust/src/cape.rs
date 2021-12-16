@@ -1,8 +1,8 @@
 use ethers::prelude::{Bytes, U256};
+use jf_aap::mint::MintNote;
 use jf_aap::transfer::{AuxInfo, TransferNote};
 use jf_aap::TransactionNote;
 use jf_aap::{freeze::FreezeNote, structs::AuditMemo};
-use jf_aap::{keys::UserPubKey, mint::MintNote};
 
 use crate::helpers::{convert_fr254_to_u256, convert_nullifier_to_u256};
 use crate::types as sol;
@@ -61,13 +61,6 @@ impl From<FreezeNote> for sol::FreezeNote {
         unimplemented!() // TODO
     }
 }
-
-impl From<UserPubKey> for sol::UserPubKey {
-    fn from(_key: UserPubKey) -> Self {
-        Self::default() // TODO
-    }
-}
-
 impl From<AuxInfo> for sol::TransferAuxInfo {
     fn from(item: AuxInfo) -> Self {
         Self {
@@ -111,10 +104,6 @@ fn get_note_type(tx: TransactionNote) -> u8 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ethers::prelude::k256::ecdsa::SigningKey;
-    use ethers::prelude::{Address, Http, Provider, SignerMiddleware, Wallet};
-    use itertools::Itertools;
-
     use crate::assertion::Matcher;
     use crate::cap_jf::create_anon_xfr_2in_3out;
     use crate::ethereum::{deploy, get_funded_deployer};
@@ -123,6 +112,9 @@ mod tests {
     use anyhow::Result;
     use ethers::core::k256::ecdsa::SigningKey;
     use ethers::prelude::*;
+    use ethers::prelude::{Address, Http, Provider, SignerMiddleware, Wallet};
+    use itertools::Itertools;
+    use jf_aap::keys::UserPubKey;
     use std::env;
     use std::path::Path;
 
@@ -145,7 +137,9 @@ mod tests {
         use crate::types::GenericInto;
         use ark_std::UniformRand;
         use jf_aap::{
-            structs::{AssetCode, AssetDefinition, AssetPolicy, Nullifier, RecordCommitment},
+            structs::{
+                AssetCode, AssetDefinition, AssetPolicy, Nullifier, RecordCommitment, RecordOpening,
+            },
             BaseField, NodeValue,
         };
 
@@ -235,8 +229,8 @@ mod tests {
             let rng = &mut ark_std::test_rng();
             let contract = deploy_type_contract().await?;
             for _ in 0..5 {
-                // NOTE: sol::AssetPolicy is from abigen! on contract,
-                // it collides with jf_aap::structs::AssetPolicy
+                // NOTE: `sol::AssetPolicy` is from abigen! on contract,
+                // it collides with `jf_aap::structs::AssetPolicy`
                 let policy = AssetPolicy::rand_for_test(rng);
                 assert_eq!(
                     policy.clone(),
@@ -256,6 +250,28 @@ mod tests {
                         .await?
                         .generic_into::<AssetDefinition>()
                 );
+            }
+            Ok(())
+        }
+
+        #[tokio::test]
+        async fn test_record_opening() -> Result<()> {
+            let rng = &mut ark_std::test_rng();
+            let contract = deploy_type_contract().await?;
+            for _ in 0..5 {
+                // NOTE: `sol::RecordOpening` is from abigen! on contract,
+                // it collides with `jf_aap::structs::RecordOpening`
+                let ro = RecordOpening::rand_for_test(rng);
+                let res = contract
+                    .check_record_opening(ro.clone().generic_into::<sol::RecordOpening>())
+                    .call()
+                    .await?
+                    .generic_into::<RecordOpening>();
+                assert_eq!(ro.amount, res.amount);
+                assert_eq!(ro.asset_def, res.asset_def);
+                assert_eq!(ro.pub_key.address(), res.pub_key.address()); // not recovering pub_key.enc_key
+                assert_eq!(ro.freeze_flag, res.freeze_flag);
+                assert_eq!(ro.blind, res.blind);
             }
             Ok(())
         }
@@ -292,7 +308,7 @@ mod tests {
 
         // Convert the AAP transactions into some solidity friendly representation
         let block = CapeBlock {
-            miner: miner.into(),
+            miner_addr: miner.address().into(),
             block_height: 123u64,
             transfer_notes: notes.iter().map(|note| note.clone().into()).collect_vec(),
             note_types,

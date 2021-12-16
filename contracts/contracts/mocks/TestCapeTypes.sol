@@ -36,6 +36,14 @@ contract TestCapeTypes is CAPE {
         return def;
     }
 
+    function checkRecordOpening(CAPE.RecordOpening memory ro)
+        public
+        pure
+        returns (CAPE.RecordOpening memory)
+    {
+        return ro;
+    }
+
     function checkPlonkProof(CAPE.PlonkProof memory proof)
         public
         pure
@@ -90,14 +98,6 @@ contract TestCapeTypes is CAPE {
         returns (CAPE.EdOnBn254Point memory)
     {
         return p;
-    }
-
-    function checkUserPubKey(CAPE.UserPubKey memory pk)
-        public
-        pure
-        returns (CAPE.UserPubKey memory)
-    {
-        return pk;
     }
 
     function checkMintNote(CAPE.MintNote memory note)

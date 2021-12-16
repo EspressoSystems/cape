@@ -2,8 +2,8 @@ use ark_ff::{to_bytes, PrimeField, Zero};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ethers::prelude::*;
 use jf_aap::{
-    keys::{AuditorPubKey, CredIssuerPubKey, FreezerPubKey},
-    structs::{AssetCode, Nullifier, RecordCommitment, RevealMap},
+    keys::{AuditorPubKey, CredIssuerPubKey, FreezerPubKey, UserPubKey},
+    structs::{AssetCode, BlindFactor, FreezeFlag, Nullifier, RecordCommitment, RevealMap},
     NodeValue, VerKey,
 };
 
@@ -145,6 +145,9 @@ jf_conversion_for_u256_new_type!(MerkleRootSol, NodeValue);
 pub struct AssetCodeSol(pub U256);
 jf_conversion_for_u256_new_type!(AssetCodeSol, AssetCode);
 
+pub struct BlindFactorSol(pub U256);
+jf_conversion_for_u256_new_type!(BlindFactorSol, BlindFactor);
+
 macro_rules! jf_conversion_for_ed_on_bn254_new_type {
     ($jf_type:ident) => {
         impl From<EdOnBn254Point> for $jf_type {
@@ -221,6 +224,39 @@ impl From<AssetDefinition> for jf_aap::structs::AssetDefinition {
             def_sol.policy.into(),
         )
         .unwrap()
+    }
+}
+
+impl From<jf_aap::structs::RecordOpening> for RecordOpening {
+    fn from(ro: jf_aap::structs::RecordOpening) -> Self {
+        Self {
+            amount: ro.amount,
+            asset_def: ro.asset_def.into(),
+            user_addr: ro.pub_key.address().into(),
+            freeze_flag: ro.freeze_flag == FreezeFlag::Frozen,
+            blind: ro.blind.generic_into::<BlindFactorSol>().0,
+        }
+    }
+}
+
+impl From<RecordOpening> for jf_aap::structs::RecordOpening {
+    fn from(ro_sol: RecordOpening) -> Self {
+        let mut pub_key = UserPubKey::default();
+        pub_key.address = ro_sol.user_addr.into();
+        Self {
+            amount: ro_sol.amount,
+            asset_def: ro_sol.asset_def.into(),
+            pub_key,
+            freeze_flag: if ro_sol.freeze_flag {
+                FreezeFlag::Frozen
+            } else {
+                FreezeFlag::Unfrozen
+            },
+            blind: ro_sol
+                .blind
+                .generic_into::<BlindFactorSol>()
+                .generic_into::<BlindFactor>(),
+        }
     }
 }
 #[cfg(test)]

@@ -19,9 +19,9 @@ abigen!(
     "../artifacts/contracts/CAPE.sol/CAPE/abi.json",
     event_derives(serde::Deserialize, serde::Serialize);
 
-    // TestCAPE,
-    // "../artifacts/contracts/mocks/TestCAPE.sol/TestCAPE/abi.json",
-    // event_derives(serde::Deserialize, serde::Serialize);
+    TestCAPE,
+    "../artifacts/contracts/mocks/TestCAPE.sol/TestCAPE/abi.json",
+    event_derives(serde::Deserialize, serde::Serialize);
 
     Greeter,
     "../artifacts/contracts/Greeter.sol/Greeter/abi.json",

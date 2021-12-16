@@ -1,4 +1,4 @@
-use ethers::prelude::{Bytes, EthAbiType, U256};
+use ethers::prelude::{Bytes, U256};
 use jf_aap::transfer::{AuxInfo, TransferNote};
 use jf_aap::TransactionNote;
 use jf_aap::{freeze::FreezeNote, structs::AuditMemo, VerKey};
@@ -9,12 +9,11 @@ use crate::types as sol; // TODO figure out what to do about type collisions
 use itertools::Itertools;
 
 const DUMMY_UINT: U256 = U256::zero();
+pub const CAPE_BURN_MAGIC_BYTES: &str = "TRICAPE burn";
 
-#[derive(Debug, Clone, PartialEq, EthAbiType)]
-pub enum NoteType {
+#[derive(Debug, Clone, PartialEq)]
+pub enum TransferType {
     Transfer,
-    Mint,
-    Freeze,
     Burn,
 }
 
@@ -88,18 +87,32 @@ impl From<AuxInfo> for sol::AuxInfo {
     }
 }
 
+fn transfer_type(xfr: &TransferNote) -> TransferType {
+    let magic_bytes = CAPE_BURN_MAGIC_BYTES.as_bytes().to_vec();
+    let field_data = &xfr.aux_info.extra_proof_bound_data;
+
+    match field_data.len() {
+        32 => {
+            if field_data[..12] == magic_bytes[..] {
+                TransferType::Burn
+            } else {
+                TransferType::Transfer
+            }
+        }
+        _ => TransferType::Transfer,
+    }
+}
+
 #[allow(dead_code)]
-fn get_note_types(notes: Vec<TransactionNote>) -> Vec<u8> {
-    // TODO does ethers have better support for encoding an enum?
-    notes
-        .iter()
-        .map(|tx| match tx {
-            TransactionNote::Transfer(_) => 0u8,
-            // TODO Handle burn case => 3u8
-            TransactionNote::Mint(_) => 1u8,
-            TransactionNote::Freeze(_) => 2u8,
-        })
-        .collect_vec()
+fn get_note_type(tx: TransactionNote) -> u8 {
+    match tx {
+        TransactionNote::Transfer(note) => match transfer_type(&note) {
+            TransferType::Transfer => 0u8,
+            TransferType::Burn => 3u8,
+        },
+        TransactionNote::Mint(_) => 1u8,
+        TransactionNote::Freeze(_) => 2u8,
+    }
 }
 
 #[cfg(test)]
@@ -111,7 +124,7 @@ mod tests {
     use crate::cap_jf::create_anon_xfr_2in_3out;
     use crate::ethereum::{deploy, get_funded_deployer};
     use crate::helpers::convert_nullifier_to_u256;
-    use crate::types::{CapeBlock, CAPE};
+    use crate::types::{CapeBlock, TestCAPE, CAPE};
     use std::env;
     use std::path::Path;
 
@@ -137,12 +150,10 @@ mod tests {
         let mut prng = ark_std::test_rng();
         let notes = create_anon_xfr_2in_3out(&mut prng, 2);
 
-        let note_types = get_note_types(
-            notes
-                .iter()
-                .map(|note| TransactionNote::from(note.clone()))
-                .collect_vec(),
-        );
+        let note_types = notes
+            .iter()
+            .map(|note| get_note_type(TransactionNote::from(note.clone())))
+            .collect_vec();
 
         let miner = UserPubKey::default();
 
@@ -180,5 +191,47 @@ mod tests {
         let is_nullifier_inserted = contract.nullifiers(nullifier).call().await.unwrap();
 
         assert!(is_nullifier_inserted);
+    }
+
+    #[test]
+    fn test_note_types() {
+        // TODO
+        // let rng = ark_std::test_rng();
+        // assert_eq!(get_note_type(TransferNote::rand_for_test(&rng)), 0u8);
+        // assert_eq!(get_note_type(FreezeNote::rand_for_test(&rng)), 1u8);
+        // assert_eq!(get_note_type(MintNote::rand_for_test(&rng)), 2u8);
+        // assert_eq!(get_note_type(create_test_burn_note(&rng)), 3u8);
+    }
+
+    #[tokio::test]
+    async fn test_is_burn_tx_burn_prefix_check() {
+        let client = get_funded_deployer().await.unwrap();
+        let contract_address = deploy(
+            client.clone(),
+            Path::new("../artifacts/contracts/mocks/TestCAPE.sol/TestCAPE"),
+            (),
+        )
+        .await
+        .unwrap()
+        .address();
+        let contract = TestCAPE::new(contract_address, client);
+
+        for (input, expected) in [
+            ("", false),
+            ("x", false),
+            ("TRICAPE bur", false),
+            ("more data but but still not a burn", false),
+            (CAPE_BURN_MAGIC_BYTES, true),
+            (&(CAPE_BURN_MAGIC_BYTES.to_owned() + "more stuff"), true),
+        ] {
+            assert_eq!(
+                contract
+                    .is_burn(input.as_bytes().to_vec().into())
+                    .call()
+                    .await
+                    .unwrap(),
+                expected
+            )
+        }
     }
 }

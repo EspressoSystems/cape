@@ -118,9 +118,11 @@ fn get_note_type(tx: TransactionNote) -> u8 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ethers::prelude::Address;
+    use ethers::prelude::k256::ecdsa::SigningKey;
+    use ethers::prelude::{Address, Http, Provider, SignerMiddleware, Wallet};
     use itertools::Itertools;
 
+    use crate::assertion::Matcher;
     use crate::cap_jf::create_anon_xfr_2in_3out;
     use crate::ethereum::{deploy, get_funded_deployer};
     use crate::helpers::convert_nullifier_to_u256;
@@ -203,18 +205,21 @@ mod tests {
         // assert_eq!(get_note_type(create_test_burn_note(&rng)), 3u8);
     }
 
-    #[tokio::test]
-    async fn test_is_burn_tx_burn_prefix_check() {
+    async fn deploy_cape_test() -> TestCAPE<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>> {
         let client = get_funded_deployer().await.unwrap();
-        let contract_address = deploy(
+        let contract = deploy(
             client.clone(),
             Path::new("../artifacts/contracts/mocks/TestCAPE.sol/TestCAPE"),
             (),
         )
         .await
-        .unwrap()
-        .address();
-        let contract = TestCAPE::new(contract_address, client);
+        .unwrap();
+        TestCAPE::new(contract.address(), client)
+    }
+
+    #[tokio::test]
+    async fn test_has_burn_prefix() {
+        let contract = deploy_cape_test().await;
 
         for (input, expected) in [
             ("", false),
@@ -226,7 +231,7 @@ mod tests {
         ] {
             assert_eq!(
                 contract
-                    .is_burn(input.as_bytes().to_vec().into())
+                    .has_burn_prefix(input.as_bytes().to_vec().into())
                     .call()
                     .await
                     .unwrap(),
@@ -234,4 +239,65 @@ mod tests {
             )
         }
     }
+
+    #[tokio::test]
+    async fn test_has_burn_destination() {
+        let contract = deploy_cape_test().await;
+
+        for (input, expected) in [
+            (
+                // ok, zero address from byte 12 to 32
+                "ffffffffffffffffffffffff0000000000000000000000000000000000000000",
+                true,
+            ),
+            (
+                // ok, with more data
+                "ffffffffffffffffffffffff0000000000000000000000000000000000000000ff",
+                true,
+            ),
+            (
+                // wrong address
+                "ffffffffffffffffffffffff0000000000000000000000000000000000000001",
+                false,
+            ),
+            (
+                // address too short
+                "ffffffffffffffffffffffff00000000000000000000000000000000000000",
+                false,
+            ),
+        ] {
+            assert_eq!(
+                contract
+                    .has_burn_destination(hex::decode(input).unwrap().into())
+                    .call()
+                    .await
+                    .unwrap(),
+                expected
+            )
+        }
+    }
+
+    #[tokio::test]
+    async fn test_check_burn() {
+        let contract = deploy_cape_test().await;
+
+        let wrong_address =
+            CAPE_BURN_MAGIC_BYTES.to_owned() + "000000000000000000000000000000000000000f";
+        println!("wrong address {}", wrong_address);
+        assert!(contract
+            .check_burn(wrong_address.as_bytes().to_vec().into())
+            .call()
+            .await
+            .should_revert_with_message("destination wrong"));
+
+        let wrong_tag = "ffffffffffffffffffffffff0000000000000000000000000000000000000000";
+        assert!(contract
+            .check_burn(hex::decode(wrong_tag).unwrap().into())
+            .call()
+            .await
+            .should_revert_with_message("not tagged"));
+    }
+
+    // TODO integration test to check if check_burn is hooked up correctly in
+    // main block validaton loop.
 }

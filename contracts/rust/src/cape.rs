@@ -1,8 +1,6 @@
 use ethers::prelude::{Bytes, U256};
-use jf_aap::mint::MintNote;
 use jf_aap::transfer::{AuxInfo, TransferNote};
 use jf_aap::TransactionNote;
-use jf_aap::{freeze::FreezeNote, structs::AuditMemo};
 
 use crate::helpers::{convert_fr254_to_u256, convert_nullifier_to_u256};
 use crate::types as sol;
@@ -43,24 +41,6 @@ impl From<TransferNote> for sol::TransferNote {
     }
 }
 
-impl From<AuditMemo> for sol::AuditMemo {
-    fn from(_item: AuditMemo) -> Self {
-        // TODO
-        Self::default()
-    }
-}
-
-impl From<MintNote> for sol::MintNote {
-    fn from(_note: MintNote) -> Self {
-        unimplemented!() // TODO
-    }
-}
-
-impl From<FreezeNote> for sol::FreezeNote {
-    fn from(_note: FreezeNote) -> Self {
-        unimplemented!() // TODO
-    }
-}
 impl From<AuxInfo> for sol::TransferAuxInfo {
     fn from(item: AuxInfo) -> Self {
         Self {
@@ -112,7 +92,6 @@ mod tests {
     use anyhow::Result;
     use ethers::core::k256::ecdsa::SigningKey;
     use ethers::prelude::*;
-    use ethers::prelude::{Address, Http, Provider, SignerMiddleware, Wallet};
     use itertools::Itertools;
     use jf_aap::keys::UserPubKey;
     use std::env;
@@ -135,13 +114,16 @@ mod tests {
     mod type_conversion {
         use super::*;
         use crate::types::GenericInto;
+        use ark_bn254::Fr;
         use ark_std::UniformRand;
         use jf_aap::{
             structs::{
-                AssetCode, AssetDefinition, AssetPolicy, Nullifier, RecordCommitment, RecordOpening,
+                AssetCode, AssetDefinition, AssetPolicy, AuditMemo, Nullifier, RecordCommitment,
+                RecordOpening,
             },
             BaseField, NodeValue,
         };
+        use jf_primitives::elgamal;
 
         async fn deploy_type_contract(
         ) -> Result<TestCapeTypes<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>> {
@@ -272,6 +254,28 @@ mod tests {
                 assert_eq!(ro.pub_key.address(), res.pub_key.address()); // not recovering pub_key.enc_key
                 assert_eq!(ro.freeze_flag, res.freeze_flag);
                 assert_eq!(ro.blind, res.blind);
+            }
+            Ok(())
+        }
+
+        #[tokio::test]
+        async fn test_audit_memo() -> Result<()> {
+            let rng = &mut ark_std::test_rng();
+            let contract = deploy_type_contract().await?;
+            for _ in 0..5 {
+                let keypair = elgamal::KeyPair::generate(rng);
+                let message = Fr::rand(rng);
+                let ct = keypair.enc_key().encrypt(rng, &[message]);
+
+                let audit_memo = AuditMemo::new(ct);
+                assert_eq!(
+                    audit_memo.clone(),
+                    contract
+                        .check_audit_memo(audit_memo.generic_into::<sol::AuditMemo>())
+                        .call()
+                        .await?
+                        .generic_into::<AuditMemo>()
+                );
             }
             Ok(())
         }

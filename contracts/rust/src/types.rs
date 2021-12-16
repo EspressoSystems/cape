@@ -4,8 +4,9 @@ use ethers::prelude::*;
 use jf_aap::{
     keys::{AuditorPubKey, CredIssuerPubKey, FreezerPubKey, UserPubKey},
     structs::{AssetCode, BlindFactor, FreezeFlag, Nullifier, RecordCommitment, RevealMap},
-    NodeValue, VerKey,
+    CurveParam, NodeValue, VerKey,
 };
+use jf_primitives::elgamal::{self, EncKey};
 
 abigen!(
     TestBN254,
@@ -181,6 +182,8 @@ jf_conversion_for_ed_on_bn254_new_type!(AuditorPubKey);
 jf_conversion_for_ed_on_bn254_new_type!(CredIssuerPubKey);
 jf_conversion_for_ed_on_bn254_new_type!(FreezerPubKey);
 jf_conversion_for_ed_on_bn254_new_type!(VerKey);
+type EncKeyAAP = EncKey<CurveParam>;
+jf_conversion_for_ed_on_bn254_new_type!(EncKeyAAP);
 
 impl From<jf_aap::structs::AssetPolicy> for AssetPolicy {
     fn from(policy: jf_aap::structs::AssetPolicy) -> Self {
@@ -201,7 +204,7 @@ impl From<AssetPolicy> for jf_aap::structs::AssetPolicy {
             .set_cred_issuer_pub_key(policy_sol.cred_pk.into())
             .set_freezer_pub_key(policy_sol.freezer_pk.into())
             .set_reveal_threshold(policy_sol.reveal_threshold)
-            .set_reveal_map(RevealMap::from(policy_sol.reveal_map))
+            .set_reveal_map(RevealMap::new(policy_sol.reveal_map))
     }
 }
 
@@ -242,7 +245,7 @@ impl From<jf_aap::structs::RecordOpening> for RecordOpening {
 impl From<RecordOpening> for jf_aap::structs::RecordOpening {
     fn from(ro_sol: RecordOpening) -> Self {
         let mut pub_key = UserPubKey::default();
-        pub_key.address = ro_sol.user_addr.into();
+        pub_key.set_address(ro_sol.user_addr.into());
         Self {
             amount: ro_sol.amount,
             asset_def: ro_sol.asset_def.into(),
@@ -257,6 +260,34 @@ impl From<RecordOpening> for jf_aap::structs::RecordOpening {
                 .generic_into::<BlindFactorSol>()
                 .generic_into::<BlindFactor>(),
         }
+    }
+}
+
+impl From<jf_aap::structs::AuditMemo> for AuditMemo {
+    fn from(memo: jf_aap::structs::AuditMemo) -> Self {
+        let scalars = memo.internal().clone().to_scalars();
+        let ephemeral_key = EdOnBn254Point {
+            x: field_to_u256(scalars[0]),
+            y: field_to_u256(scalars[1]),
+        };
+        let data: Vec<U256> = scalars.iter().skip(2).map(|&f| field_to_u256(f)).collect();
+        Self {
+            ephemeral_key,
+            data,
+        }
+    }
+}
+
+impl From<AuditMemo> for jf_aap::structs::AuditMemo {
+    fn from(memo_sol: AuditMemo) -> Self {
+        let mut scalars = vec![
+            u256_to_field(memo_sol.ephemeral_key.x),
+            u256_to_field(memo_sol.ephemeral_key.y),
+        ];
+        for v in memo_sol.data {
+            scalars.push(u256_to_field(v));
+        }
+        Self::new(elgamal::Ciphertext::from_scalars(&scalars).unwrap())
     }
 }
 #[cfg(test)]

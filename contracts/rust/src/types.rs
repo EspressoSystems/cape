@@ -3,7 +3,7 @@ use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ethers::prelude::*;
 use jf_aap::{
     keys::{AuditorPubKey, CredIssuerPubKey, FreezerPubKey},
-    structs::{AssetCode, Nullifier, RecordCommitment},
+    structs::{AssetCode, Nullifier, RecordCommitment, RevealMap},
     NodeValue, VerKey,
 };
 
@@ -178,6 +178,51 @@ jf_conversion_for_ed_on_bn254_new_type!(AuditorPubKey);
 jf_conversion_for_ed_on_bn254_new_type!(CredIssuerPubKey);
 jf_conversion_for_ed_on_bn254_new_type!(FreezerPubKey);
 jf_conversion_for_ed_on_bn254_new_type!(VerKey);
+
+impl From<jf_aap::structs::AssetPolicy> for AssetPolicy {
+    fn from(policy: jf_aap::structs::AssetPolicy) -> Self {
+        Self {
+            auditor_pk: policy.auditor_pub_key().clone().into(),
+            cred_pk: policy.cred_issuer_pub_key().clone().into(),
+            freezer_pk: policy.freezer_pub_key().clone().into(),
+            reveal_map: policy.reveal_map().internal(),
+            reveal_threshold: policy.reveal_threshold(),
+        }
+    }
+}
+
+impl From<AssetPolicy> for jf_aap::structs::AssetPolicy {
+    fn from(policy_sol: AssetPolicy) -> Self {
+        jf_aap::structs::AssetPolicy::default()
+            .set_auditor_pub_key(policy_sol.auditor_pk.into())
+            .set_cred_issuer_pub_key(policy_sol.cred_pk.into())
+            .set_freezer_pub_key(policy_sol.freezer_pk.into())
+            .set_reveal_threshold(policy_sol.reveal_threshold)
+            .set_reveal_map(RevealMap::from(policy_sol.reveal_map))
+    }
+}
+
+impl From<jf_aap::structs::AssetDefinition> for AssetDefinition {
+    fn from(def: jf_aap::structs::AssetDefinition) -> Self {
+        Self {
+            code: def.code.generic_into::<AssetCodeSol>().0,
+            policy: def.policy_ref().clone().into(),
+        }
+    }
+}
+
+impl From<AssetDefinition> for jf_aap::structs::AssetDefinition {
+    fn from(def_sol: AssetDefinition) -> Self {
+        Self::new(
+            def_sol
+                .code
+                .generic_into::<AssetCodeSol>()
+                .generic_into::<AssetCode>(),
+            def_sol.policy.into(),
+        )
+        .unwrap()
+    }
+}
 #[cfg(test)]
 mod test {
     use super::*;

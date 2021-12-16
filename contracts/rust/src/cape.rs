@@ -145,8 +145,7 @@ mod tests {
         use crate::types::GenericInto;
         use ark_std::UniformRand;
         use jf_aap::{
-            keys::{AuditorKeyPair, AuditorPubKey, CredIssuerKeyPair, FreezerKeyPair},
-            structs::{AssetCode, AssetPolicy, Nullifier, RecordCommitment},
+            structs::{AssetCode, AssetDefinition, AssetPolicy, Nullifier, RecordCommitment},
             BaseField, NodeValue,
         };
 
@@ -232,15 +231,32 @@ mod tests {
         }
 
         #[tokio::test]
-        async fn test_asset_policy() -> Result<()> {
+        async fn test_asset_policy_and_definition() -> Result<()> {
             let rng = &mut ark_std::test_rng();
             let contract = deploy_type_contract().await?;
-            let auditor_keypair = AuditorKeyPair::generate(rng);
-            let auditor_pk = auditor_keypair.pub_key();
+            for _ in 0..5 {
+                // NOTE: sol::AssetPolicy is from abigen! on contract,
+                // it collides with jf_aap::structs::AssetPolicy
+                let policy = AssetPolicy::rand_for_test(rng);
+                assert_eq!(
+                    policy.clone(),
+                    contract
+                        .check_asset_policy(policy.generic_into::<sol::AssetPolicy>())
+                        .call()
+                        .await?
+                        .generic_into::<AssetPolicy>()
+                );
 
-            let p: sol::EdOnBn254Point = auditor_pk.clone().into();
-            let res: AuditorPubKey = p.into();
-            assert_eq!(res, auditor_pk);
+                let asset_def = AssetDefinition::rand_for_test(rng);
+                assert_eq!(
+                    asset_def.clone(),
+                    contract
+                        .check_asset_definition(asset_def.generic_into::<sol::AssetDefinition>())
+                        .call()
+                        .await?
+                        .generic_into::<AssetDefinition>()
+                );
+            }
             Ok(())
         }
     }

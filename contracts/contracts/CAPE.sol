@@ -109,11 +109,11 @@ contract CAPE {
     }
 
     struct AssetPolicy {
-        uint64 revealThreshold;
-        bool[12] revealMap; // ATTRS_LEN (8) + 3 + 1
         EdOnBn254Point auditorPk;
         EdOnBn254Point credPk;
         EdOnBn254Point freezerPk;
+        bool[12] revealMap; // ATTRS_LEN (8) + 3 + 1
+        uint64 revealThreshold;
     }
 
     struct RecordOpening {

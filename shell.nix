@@ -19,7 +19,7 @@ let
   ];
 
   stableToolchain = pkgs.rust-bin.stable."1.56.0".minimal.override {
-    extensions = [ "rustfmt" "clippy" "llvm-tools-preview" ];
+    extensions = [ "rustfmt" "clippy" "llvm-tools-preview" "rust-src" ];
   };
   rustDeps = with pkgs; [
     pkgconfig
@@ -62,7 +62,7 @@ mkShell
   ++ myPython
   ++ rustDeps;
 
-  RUST_SRC_PATH = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
+  RUST_SRC_PATH = "${stableToolchain}/lib/rustlib/src/rust/library";
   RUST_BACKTRACE = 1;
   RUST_LOG = "info";
 

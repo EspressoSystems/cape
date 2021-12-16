@@ -1,7 +1,7 @@
 use ethers::prelude::{Bytes, U256};
 use jf_aap::transfer::{AuxInfo, TransferNote};
 use jf_aap::TransactionNote;
-use jf_aap::{freeze::FreezeNote, structs::AuditMemo, VerKey};
+use jf_aap::{freeze::FreezeNote, structs::AuditMemo};
 use jf_aap::{keys::UserPubKey, mint::MintNote};
 
 use crate::helpers::{convert_fr254_to_u256, convert_nullifier_to_u256};
@@ -45,13 +45,6 @@ impl From<TransferNote> for sol::TransferNote {
 
 impl From<AuditMemo> for sol::AuditMemo {
     fn from(_item: AuditMemo) -> Self {
-        // TODO
-        Self::default()
-    }
-}
-
-impl From<VerKey> for sol::EdOnBn254Point {
-    fn from(_item: VerKey) -> Self {
         // TODO
         Self::default()
     }
@@ -152,7 +145,8 @@ mod tests {
         use crate::types::GenericInto;
         use ark_std::UniformRand;
         use jf_aap::{
-            structs::{AssetCode, Nullifier, RecordCommitment},
+            keys::{AuditorKeyPair, AuditorPubKey, CredIssuerKeyPair, FreezerKeyPair},
+            structs::{AssetCode, AssetPolicy, Nullifier, RecordCommitment},
             BaseField, NodeValue,
         };
 
@@ -234,6 +228,19 @@ mod tests {
                     .generic_into::<AssetCode>();
                 assert_eq!(ac, res);
             }
+            Ok(())
+        }
+
+        #[tokio::test]
+        async fn test_asset_policy() -> Result<()> {
+            let rng = &mut ark_std::test_rng();
+            let contract = deploy_type_contract().await?;
+            let auditor_keypair = AuditorKeyPair::generate(rng);
+            let auditor_pk = auditor_keypair.pub_key();
+
+            let p: sol::EdOnBn254Point = auditor_pk.clone().into();
+            let res: AuditorPubKey = p.into();
+            assert_eq!(res, auditor_pk);
             Ok(())
         }
     }

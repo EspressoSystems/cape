@@ -2,8 +2,9 @@ use ark_ff::{to_bytes, PrimeField, Zero};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ethers::prelude::*;
 use jf_aap::{
+    keys::{AuditorPubKey, CredIssuerPubKey, FreezerPubKey},
     structs::{AssetCode, Nullifier, RecordCommitment},
-    NodeValue,
+    NodeValue, VerKey,
 };
 
 abigen!(
@@ -73,6 +74,13 @@ pub fn field_to_u256<F: PrimeField>(f: F) -> U256 {
     U256::from_little_endian(&to_bytes!(&f).unwrap())
 }
 
+/// convert a U256 to a field element.
+pub fn u256_to_field<F: PrimeField>(v: U256) -> F {
+    let mut bytes = vec![0u8; 32];
+    v.to_little_endian(&mut bytes);
+    F::from_le_bytes_mod_order(&bytes)
+}
+
 impl From<ark_ed_on_bn254::EdwardsAffine> for EdOnBn254Point {
     fn from(p: ark_ed_on_bn254::EdwardsAffine) -> Self {
         Self {
@@ -137,6 +145,39 @@ jf_conversion_for_u256_new_type!(MerkleRootSol, NodeValue);
 pub struct AssetCodeSol(pub U256);
 jf_conversion_for_u256_new_type!(AssetCodeSol, AssetCode);
 
+macro_rules! jf_conversion_for_ed_on_bn254_new_type {
+    ($jf_type:ident) => {
+        impl From<EdOnBn254Point> for $jf_type {
+            fn from(p: EdOnBn254Point) -> Self {
+                let x: ark_bn254::Fr = u256_to_field(p.x);
+                let y: ark_bn254::Fr = u256_to_field(p.y);
+                let mut bytes = vec![];
+                (x, y)
+                    .serialize(&mut bytes)
+                    .expect("Failed to serialize EdOnBn254Point into bytes.");
+                assert_eq!(bytes.len(), 64); // 32 bytes for each coordinate
+                let pk: $jf_type = CanonicalDeserialize::deserialize_uncompressed(&bytes[..])
+                    .expect("Fail to deserialize EdOnBn254Point bytes into Jellyfish types.");
+                pk
+            }
+        }
+
+        impl From<$jf_type> for EdOnBn254Point {
+            fn from(pk: $jf_type) -> Self {
+                let mut bytes = vec![];
+                CanonicalSerialize::serialize_uncompressed(&pk, &mut bytes).unwrap();
+                let x = U256::from_little_endian(&bytes[..32]);
+                let y = U256::from_little_endian(&bytes[32..]);
+                Self { x, y }
+            }
+        }
+    };
+}
+
+jf_conversion_for_ed_on_bn254_new_type!(AuditorPubKey);
+jf_conversion_for_ed_on_bn254_new_type!(CredIssuerPubKey);
+jf_conversion_for_ed_on_bn254_new_type!(FreezerPubKey);
+jf_conversion_for_ed_on_bn254_new_type!(VerKey);
 #[cfg(test)]
 mod test {
     use super::*;
@@ -160,6 +201,9 @@ mod test {
             field_to_u256(f2),
             U256::from_little_endian(&to_bytes!(f2).unwrap())
         );
+
+        assert_eq!(f1, u256_to_field(field_to_u256(f1)));
+        assert_eq!(f2, u256_to_field(field_to_u256(f2)));
     }
 
     #[test]

@@ -1,7 +1,7 @@
 use ark_ff::{to_bytes, PrimeField, Zero};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ethers::prelude::*;
-use jf_txn::structs::Nullifier;
+use jf_aap::structs::Nullifier;
 
 abigen!(
     TestBN254,
@@ -79,6 +79,21 @@ impl From<ark_ed_on_bn254::EdwardsAffine> for EdOnBn254Point {
     }
 }
 
+/// a helper trait to help with fully-qualified generic into synatx:
+/// `x.generic_into::<DestType>();`
+/// This is particularly helpful in a chained `generic_into()` statements.
+pub trait GenericInto {
+    fn generic_into<T>(self) -> T
+    where
+        Self: Into<T>,
+    {
+        self.into()
+    }
+}
+
+// blanket implementation
+impl<T: ?Sized> GenericInto for T {}
+
 /// Intermediate type used during conversion between Solidity's nullifier value to that in Jellyfish.
 pub struct NullifierSol(pub U256);
 
@@ -105,6 +120,12 @@ impl From<NullifierSol> for Nullifier {
         nf
     }
 }
+
+pub struct RecordCommitmentSol(pub U256);
+
+pub struct MerkleRootSol(pub U256);
+
+pub struct AssetCodeSol(pub U256);
 
 #[cfg(test)]
 mod test {

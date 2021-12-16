@@ -5,7 +5,7 @@ use jf_aap::{freeze::FreezeNote, structs::AuditMemo, VerKey};
 use jf_aap::{keys::UserPubKey, mint::MintNote};
 
 use crate::helpers::{convert_fr254_to_u256, convert_nullifier_to_u256};
-use crate::types as sol; // TODO figure out what to do about type collisions
+use crate::types as sol;
 use itertools::Itertools;
 
 const DUMMY_UINT: U256 = U256::zero();
@@ -75,7 +75,7 @@ impl From<UserPubKey> for sol::UserPubKey {
     }
 }
 
-impl From<AuxInfo> for sol::AuxInfo {
+impl From<AuxInfo> for sol::TransferAuxInfo {
     fn from(item: AuxInfo) -> Self {
         Self {
             merkle_root: convert_fr254_to_u256(item.merkle_root.to_scalar()),
@@ -148,9 +148,9 @@ mod tests {
     }
 
     mod type_conversion {
-        use jf_txn::structs::Nullifier;
-
         use super::*;
+        use crate::types::GenericInto;
+        use jf_aap::structs::Nullifier;
 
         async fn deploy_type_contract(
         ) -> Result<TestCapeTypes<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>> {
@@ -171,13 +171,13 @@ mod tests {
             let contract = deploy_type_contract().await?;
             for _ in 0..5 {
                 let nf = Nullifier::random_for_test(rng);
-                let res: NullifierSol = contract
-                    .type_nullifier(Into::<NullifierSol>::into(nf).0)
+                let res: Nullifier = contract
+                    .check_nullifier(nf.generic_into::<sol::NullifierSol>().0)
                     .call()
                     .await?
-                    .into();
-                let res_nf: Nullifier = res.into();
-                assert_eq!(nf, res_nf);
+                    .generic_into::<sol::NullifierSol>()
+                    .generic_into::<Nullifier>();
+                assert_eq!(nf, res);
             }
             Ok(())
         }

@@ -44,7 +44,7 @@ contract CAPE {
         uint256[] outputCommitments;
         PlonkProof proof;
         AuditMemo auditMemo;
-        AuxInfo auxInfo;
+        TransferAuxInfo auxInfo;
     }
 
     struct BurnNote {
@@ -78,7 +78,7 @@ contract CAPE {
         FreezeAuxInfo auxInfo;
     }
 
-    struct AuxInfo {
+    struct TransferAuxInfo {
         uint256 merkleRoot;
         uint64 fee;
         uint64 validUntil;

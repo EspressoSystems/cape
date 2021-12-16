@@ -1,7 +1,10 @@
 use ark_ff::{to_bytes, PrimeField, Zero};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ethers::prelude::*;
-use jf_aap::structs::Nullifier;
+use jf_aap::{
+    structs::{AssetCode, Nullifier, RecordCommitment},
+    NodeValue,
+};
 
 abigen!(
     TestBN254,
@@ -94,38 +97,45 @@ pub trait GenericInto {
 // blanket implementation
 impl<T: ?Sized> GenericInto for T {}
 
+macro_rules! jf_conversion_for_u256_new_type {
+    ($new_type:ident, $jf_type:ident) => {
+        impl From<$jf_type> for $new_type {
+            fn from(v: $jf_type) -> Self {
+                let mut bytes = vec![];
+                v.serialize(&mut bytes).unwrap();
+                Self(U256::from_little_endian(&bytes))
+            }
+        }
+
+        impl From<U256> for $new_type {
+            fn from(v: U256) -> Self {
+                Self(v)
+            }
+        }
+
+        impl From<$new_type> for $jf_type {
+            fn from(v_sol: $new_type) -> Self {
+                let mut bytes = vec![0u8; 32];
+                v_sol.0.to_little_endian(&mut bytes);
+                let v: $jf_type = CanonicalDeserialize::deserialize(&bytes[..])
+                    .expect("Failed to deserialze U256.");
+                v
+            }
+        }
+    };
+}
 /// Intermediate type used during conversion between Solidity's nullifier value to that in Jellyfish.
 pub struct NullifierSol(pub U256);
-
-impl From<Nullifier> for NullifierSol {
-    fn from(nf: Nullifier) -> Self {
-        let mut bytes = vec![];
-        nf.serialize(&mut bytes).unwrap();
-        Self(U256::from_little_endian(&bytes))
-    }
-}
-
-impl From<U256> for NullifierSol {
-    fn from(v: U256) -> Self {
-        Self(v)
-    }
-}
-
-impl From<NullifierSol> for Nullifier {
-    fn from(nf_sol: NullifierSol) -> Self {
-        let mut bytes = vec![0u8; 32];
-        nf_sol.0.to_little_endian(&mut bytes);
-        let nf: Nullifier = CanonicalDeserialize::deserialize(&bytes[..])
-            .expect("Failed to deserialze U256 to a Nullifier.");
-        nf
-    }
-}
+jf_conversion_for_u256_new_type!(NullifierSol, Nullifier);
 
 pub struct RecordCommitmentSol(pub U256);
+jf_conversion_for_u256_new_type!(RecordCommitmentSol, RecordCommitment);
 
 pub struct MerkleRootSol(pub U256);
+jf_conversion_for_u256_new_type!(MerkleRootSol, NodeValue);
 
 pub struct AssetCodeSol(pub U256);
+jf_conversion_for_u256_new_type!(AssetCodeSol, AssetCode);
 
 #[cfg(test)]
 mod test {

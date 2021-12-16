@@ -150,7 +150,11 @@ mod tests {
     mod type_conversion {
         use super::*;
         use crate::types::GenericInto;
-        use jf_aap::structs::Nullifier;
+        use ark_std::UniformRand;
+        use jf_aap::{
+            structs::{AssetCode, Nullifier, RecordCommitment},
+            BaseField, NodeValue,
+        };
 
         async fn deploy_type_contract(
         ) -> Result<TestCapeTypes<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>> {
@@ -171,13 +175,64 @@ mod tests {
             let contract = deploy_type_contract().await?;
             for _ in 0..5 {
                 let nf = Nullifier::random_for_test(rng);
-                let res: Nullifier = contract
+                let res = contract
                     .check_nullifier(nf.generic_into::<sol::NullifierSol>().0)
                     .call()
                     .await?
                     .generic_into::<sol::NullifierSol>()
                     .generic_into::<Nullifier>();
                 assert_eq!(nf, res);
+            }
+            Ok(())
+        }
+
+        #[tokio::test]
+        async fn test_record_commitment() -> Result<()> {
+            let rng = &mut ark_std::test_rng();
+            let contract = deploy_type_contract().await?;
+            for _ in 0..5 {
+                let rc = RecordCommitment::from_field_element(BaseField::rand(rng));
+                let res = contract
+                    .check_record_commitment(rc.generic_into::<sol::RecordCommitmentSol>().0)
+                    .call()
+                    .await?
+                    .generic_into::<sol::RecordCommitmentSol>()
+                    .generic_into::<RecordCommitment>();
+                assert_eq!(rc, res);
+            }
+            Ok(())
+        }
+
+        #[tokio::test]
+        async fn test_merkle_root() -> Result<()> {
+            let rng = &mut ark_std::test_rng();
+            let contract = deploy_type_contract().await?;
+            for _ in 0..5 {
+                let root = NodeValue::rand(rng);
+                let res = contract
+                    .check_merkle_root(root.generic_into::<sol::MerkleRootSol>().0)
+                    .call()
+                    .await?
+                    .generic_into::<sol::MerkleRootSol>()
+                    .generic_into::<NodeValue>();
+                assert_eq!(root, res);
+            }
+            Ok(())
+        }
+
+        #[tokio::test]
+        async fn test_asset_code() -> Result<()> {
+            let rng = &mut ark_std::test_rng();
+            let contract = deploy_type_contract().await?;
+            for _ in 0..5 {
+                let (ac, _) = AssetCode::random(rng);
+                let res = contract
+                    .check_merkle_root(ac.generic_into::<sol::AssetCodeSol>().0)
+                    .call()
+                    .await?
+                    .generic_into::<sol::AssetCodeSol>()
+                    .generic_into::<AssetCode>();
+                assert_eq!(ac, res);
             }
             Ok(())
         }

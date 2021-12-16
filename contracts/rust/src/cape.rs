@@ -1,4 +1,8 @@
 use ethers::prelude::{Bytes, EthAbiType, U256};
+use itertools::Itertools;
+use jf_aap::freeze::FreezeAuxInfo;
+use jf_aap::mint::MintAuxInfo;
+use jf_aap::structs::{AssetDefinition, Nullifier, RecordCommitment};
 use jf_aap::transfer::{AuxInfo, TransferNote};
 use jf_aap::TransactionNote;
 use jf_aap::{freeze::FreezeNote, structs::AuditMemo, VerKey};
@@ -6,9 +10,6 @@ use jf_aap::{keys::UserPubKey, mint::MintNote};
 
 use crate::helpers::{convert_fr254_to_u256, convert_nullifier_to_u256};
 use crate::types as sol; // TODO figure out what to do about type collisions
-use itertools::Itertools;
-
-const DUMMY_UINT: U256 = U256::zero();
 
 #[derive(Debug, Clone, PartialEq, EthAbiType)]
 pub enum NoteType {
@@ -18,29 +19,58 @@ pub enum NoteType {
     Burn,
 }
 
+// TODO Move these conversion functions to types later
+
+fn nullifiers_to_u256(items: &[Nullifier]) -> Vec<U256> {
+    items.iter().map(convert_nullifier_to_u256).collect_vec()
+}
+
+fn rc_to_u256(c: &RecordCommitment) -> U256 {
+    convert_fr254_to_u256(c.to_field_element())
+}
+
+fn commitments_to_sol(items: &[RecordCommitment]) -> Vec<U256> {
+    items.iter().map(rc_to_u256).collect_vec()
+}
+
+// fn proof_to_sol<E>(proof: Proof<E>) -> sol::PlonkProof
+// where
+//     E: ark_ec::PairingEngine, // should this be PairingEngine from jf types ?
+// {
+//     // TODO
+//     sol::PlonkProof::default()
+// }
+
 impl From<TransferNote> for sol::TransferNote {
     fn from(note: TransferNote) -> Self {
         Self {
-            inputs_nullifiers: note
-                .inputs_nullifiers
-                .clone()
-                .iter()
-                .map(convert_nullifier_to_u256)
-                .collect_vec(),
-
-            output_commitments: note
-                .output_commitments
-                .clone()
-                .iter()
-                .map(|c| convert_fr254_to_u256(c.to_field_element()))
-                .collect_vec(),
-
-            // TODO
-            proof: sol::PlonkProof { dummy: DUMMY_UINT },
-
+            inputs_nullifiers: nullifiers_to_u256(&note.inputs_nullifiers),
+            output_commitments: commitments_to_sol(&note.output_commitments),
+            proof: sol::PlonkProof::default(), // TODO
             audit_memo: note.audit_memo.into(),
             aux_info: note.aux_info.into(),
         }
+    }
+}
+
+impl From<MintNote> for sol::MintNote {
+    fn from(note: MintNote) -> Self {
+        Self {
+            input_nullifier: convert_nullifier_to_u256(&note.input_nullifier),
+            chg_comm: rc_to_u256(&note.chg_comm),
+            mint_comm: rc_to_u256(&note.mint_comm),
+            mint_amount: note.mint_amount,
+            mint_assed_def: note.mint_asset_def.into(),
+            proof: sol::PlonkProof::default(), // TODO
+            audit_memo: note.audit_memo.into(),
+            aux_info: note.aux_info.into(),
+        }
+    }
+}
+
+impl From<FreezeNote> for sol::FreezeNote {
+    fn from(_note: FreezeNote) -> Self {
+        unimplemented!() // TODO
     }
 }
 
@@ -55,18 +85,6 @@ impl From<VerKey> for sol::EdOnBn254Point {
     fn from(_item: VerKey) -> Self {
         // TODO
         Self::default()
-    }
-}
-
-impl From<MintNote> for sol::MintNote {
-    fn from(_note: MintNote) -> Self {
-        unimplemented!() // TODO
-    }
-}
-
-impl From<FreezeNote> for sol::FreezeNote {
-    fn from(_note: FreezeNote) -> Self {
-        unimplemented!() // TODO
     }
 }
 
@@ -85,6 +103,27 @@ impl From<AuxInfo> for sol::AuxInfo {
             txn_memo_ver_key: item.txn_memo_ver_key.into(),
             extra_proof_bound_data: Bytes::from(b""),
         }
+    }
+}
+
+impl From<MintAuxInfo> for sol::MintAuxInfo {
+    fn from(_item: MintAuxInfo) -> Self {
+        // TODO
+        Self::default()
+    }
+}
+
+impl From<FreezeAuxInfo> for sol::FreezeAuxInfo {
+    fn from(_item: FreezeAuxInfo) -> Self {
+        // TODO
+        Self::default()
+    }
+}
+
+impl From<AssetDefinition> for sol::AssetDefinition {
+    fn from(_item: AssetDefinition) -> Self {
+        // TODO
+        Self::default()
     }
 }
 

@@ -334,6 +334,52 @@ impl From<TransferAuxInfo> for jf_aap::transfer::AuxInfo {
     }
 }
 
+impl From<jf_aap::mint::MintAuxInfo> for MintAuxInfo {
+    fn from(aux: jf_aap::mint::MintAuxInfo) -> Self {
+        Self {
+            merkle_root: aux.merkle_root.generic_into::<MerkleRootSol>().0,
+            fee: aux.fee,
+            txn_memo_ver_key: aux.txn_memo_ver_key.into(),
+        }
+    }
+}
+
+impl From<MintAuxInfo> for jf_aap::mint::MintAuxInfo {
+    fn from(aux_sol: MintAuxInfo) -> Self {
+        Self {
+            merkle_root: aux_sol
+                .merkle_root
+                .generic_into::<MerkleRootSol>()
+                .generic_into::<NodeValue>(),
+            fee: aux_sol.fee,
+            txn_memo_ver_key: aux_sol.txn_memo_ver_key.into(),
+        }
+    }
+}
+
+impl From<jf_aap::freeze::FreezeAuxInfo> for FreezeAuxInfo {
+    fn from(aux: jf_aap::freeze::FreezeAuxInfo) -> Self {
+        Self {
+            merkle_root: aux.merkle_root.generic_into::<MerkleRootSol>().0,
+            fee: aux.fee,
+            txn_memo_ver_key: aux.txn_memo_ver_key.into(),
+        }
+    }
+}
+
+impl From<FreezeAuxInfo> for jf_aap::freeze::FreezeAuxInfo {
+    fn from(aux_sol: FreezeAuxInfo) -> Self {
+        Self {
+            merkle_root: aux_sol
+                .merkle_root
+                .generic_into::<MerkleRootSol>()
+                .generic_into::<NodeValue>(),
+            fee: aux_sol.fee,
+            txn_memo_ver_key: aux_sol.txn_memo_ver_key.into(),
+        }
+    }
+}
+
 impl From<Proof<Bn254>> for PlonkProof {
     fn from(proof: Proof<Bn254>) -> Self {
         if proof.wires_poly_comms().len() != GATE_WIDTH + 1
@@ -457,6 +503,87 @@ impl From<TransferNote> for jf_aap::transfer::TransferNote {
             output_commitments,
             proof: note_sol.proof.into(),
             audit_memo: note_sol.audit_memo.into(),
+            aux_info: note_sol.aux_info.into(),
+        }
+    }
+}
+
+impl From<jf_aap::mint::MintNote> for MintNote {
+    fn from(note: jf_aap::mint::MintNote) -> Self {
+        Self {
+            input_nullifier: note.input_nullifier.generic_into::<NullifierSol>().0,
+            chg_comm: note.chg_comm.generic_into::<RecordCommitmentSol>().0,
+            mint_comm: note.mint_comm.generic_into::<RecordCommitmentSol>().0,
+            mint_amount: note.mint_amount,
+            mint_asset_def: note.mint_asset_def.into(),
+            proof: note.proof.into(),
+            audit_memo: note.audit_memo.into(),
+            aux_info: note.aux_info.into(),
+        }
+    }
+}
+
+impl From<MintNote> for jf_aap::mint::MintNote {
+    fn from(note_sol: MintNote) -> Self {
+        Self {
+            input_nullifier: note_sol
+                .input_nullifier
+                .generic_into::<NullifierSol>()
+                .into(),
+            chg_comm: note_sol
+                .chg_comm
+                .generic_into::<RecordCommitmentSol>()
+                .into(),
+            mint_comm: note_sol
+                .mint_comm
+                .generic_into::<RecordCommitmentSol>()
+                .into(),
+            mint_amount: note_sol.mint_amount,
+            mint_asset_def: note_sol.mint_asset_def.into(),
+            proof: note_sol.proof.into(),
+            audit_memo: note_sol.audit_memo.into(),
+            aux_info: note_sol.aux_info.into(),
+        }
+    }
+}
+
+impl From<jf_aap::freeze::FreezeNote> for FreezeNote {
+    fn from(note: jf_aap::freeze::FreezeNote) -> Self {
+        let input_nullifiers: Vec<U256> = note
+            .input_nullifiers
+            .iter()
+            .map(|&nf| nf.generic_into::<NullifierSol>().0)
+            .collect();
+        let output_commitments: Vec<U256> = note
+            .output_commitments
+            .iter()
+            .map(|&cm| cm.generic_into::<RecordCommitmentSol>().0)
+            .collect();
+        Self {
+            input_nullifiers,
+            output_commitments,
+            proof: note.proof.into(),
+            aux_info: note.aux_info.into(),
+        }
+    }
+}
+
+impl From<FreezeNote> for jf_aap::freeze::FreezeNote {
+    fn from(note_sol: FreezeNote) -> Self {
+        let input_nullifiers = note_sol
+            .input_nullifiers
+            .iter()
+            .map(|&nf| nf.generic_into::<NullifierSol>().into())
+            .collect();
+        let output_commitments = note_sol
+            .output_commitments
+            .iter()
+            .map(|&cm| cm.generic_into::<RecordCommitmentSol>().into())
+            .collect();
+        Self {
+            input_nullifiers,
+            output_commitments,
+            proof: note_sol.proof.into(),
             aux_info: note_sol.aux_info.into(),
         }
     }

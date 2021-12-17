@@ -77,7 +77,7 @@ contract CAPE {
 
     struct MintNote {
         /// nullifier for the input (i.e. transaction fee record)
-        uint256 nullifier;
+        uint256 inputNullifier;
         /// output commitment for the fee change
         uint256 chgComm;
         /// output commitment for the minted asset
@@ -85,7 +85,7 @@ contract CAPE {
         /// the amount of the minted asset
         uint64 mintAmount;
         /// the asset definition of the asset
-        AssetDefinition mintAssedDef;
+        AssetDefinition mintAssetDef;
         /// the validity proof of this note
         PlonkProof proof;
         /// memo for policy compliance specified for the designated auditor
@@ -258,7 +258,7 @@ contract CAPE {
             } else if (noteType == NoteType.MINT) {
                 MintNote memory note = newBlock.mintNotes[mintIdx];
                 _checkMerkleRootContained(note.auxInfo.merkleRoot);
-                if (_publish(note.nullifier)) {
+                if (_publish(note.inputNullifier)) {
                     // TODO collect note.mintComm
                     // TODO collect note.chgComm
                     // TODO extract proof for batch verification

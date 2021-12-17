@@ -74,6 +74,8 @@ mod tests {
         use ark_bn254::{Bn254, Fr};
         use ark_std::UniformRand;
         use jf_aap::{
+            freeze::FreezeNote,
+            mint::MintNote,
             structs::{
                 AssetCode, AssetDefinition, AssetPolicy, AuditMemo, Nullifier, RecordCommitment,
                 RecordOpening,
@@ -369,6 +371,39 @@ mod tests {
                         .await?
                         .generic_into::<Proof<Bn254>>()
                 );
+
+                match txn {
+                    TransactionNote::Transfer(note) => {
+                        assert_eq!(
+                            *note.clone(),
+                            contract
+                                .check_transfer_note((*note).generic_into::<sol::TransferNote>())
+                                .call()
+                                .await?
+                                .generic_into::<TransferNote>()
+                        )
+                    }
+                    TransactionNote::Mint(note) => {
+                        assert_eq!(
+                            *note.clone(),
+                            contract
+                                .check_mint_note((*note).generic_into::<sol::MintNote>())
+                                .call()
+                                .await?
+                                .generic_into::<MintNote>()
+                        )
+                    }
+                    TransactionNote::Freeze(note) => {
+                        assert_eq!(
+                            *note.clone(),
+                            contract
+                                .check_freeze_note((*note).generic_into::<sol::FreezeNote>())
+                                .call()
+                                .await?
+                                .generic_into::<FreezeNote>()
+                        )
+                    }
+                }
             }
 
     #[tokio::test]

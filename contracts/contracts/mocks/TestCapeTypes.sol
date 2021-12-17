@@ -60,30 +60,6 @@ contract TestCapeTypes is CAPE {
         return memo;
     }
 
-    function checkTransferAuxInfo(CAPE.TransferAuxInfo memory aux)
-        public
-        pure
-        returns (CAPE.TransferAuxInfo memory)
-    {
-        return aux;
-    }
-
-    function checkMintAuxInfo(CAPE.MintAuxInfo memory aux)
-        public
-        pure
-        returns (CAPE.MintAuxInfo memory)
-    {
-        return aux;
-    }
-
-    function checkFreezeAuxInfo(CAPE.FreezeAuxInfo memory aux)
-        public
-        pure
-        returns (CAPE.FreezeAuxInfo memory)
-    {
-        return aux;
-    }
-
     function checkNoteType(CAPE.NoteType t)
         public
         pure

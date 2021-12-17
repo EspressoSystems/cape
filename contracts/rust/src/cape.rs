@@ -1,44 +1,12 @@
-use ethers::prelude::U256;
 use jf_aap::transfer::TransferNote;
 use jf_aap::TransactionNote;
 
-use crate::helpers::{convert_fr254_to_u256, convert_nullifier_to_u256};
-use crate::types as sol;
-use itertools::Itertools;
-
-const DUMMY_UINT: U256 = U256::zero();
 pub const CAPE_BURN_MAGIC_BYTES: &str = "TRICAPE burn";
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TransferType {
     Transfer,
     Burn,
-}
-
-impl From<TransferNote> for sol::TransferNote {
-    fn from(note: TransferNote) -> Self {
-        Self {
-            inputs_nullifiers: note
-                .inputs_nullifiers
-                .clone()
-                .iter()
-                .map(convert_nullifier_to_u256)
-                .collect_vec(),
-
-            output_commitments: note
-                .output_commitments
-                .clone()
-                .iter()
-                .map(|c| convert_fr254_to_u256(c.to_field_element()))
-                .collect_vec(),
-
-            // TODO
-            proof: sol::PlonkProof { dummy: DUMMY_UINT },
-
-            audit_memo: note.audit_memo.into(),
-            aux_info: note.aux_info.into(),
-        }
-    }
 }
 
 fn transfer_type(xfr: &TransferNote) -> TransferType {
@@ -76,6 +44,7 @@ mod tests {
     use crate::cap_jf::create_anon_xfr_2in_3out;
     use crate::ethereum::{deploy, get_funded_deployer};
     use crate::helpers::convert_nullifier_to_u256;
+    use crate::types as sol;
     use crate::types::{CapeBlock, TestCAPE, TestCapeTypes, CAPE};
     use anyhow::Result;
     use ethers::core::k256::ecdsa::SigningKey;
@@ -102,15 +71,17 @@ mod tests {
     mod type_conversion {
         use super::*;
         use crate::types::GenericInto;
-        use ark_bn254::Fr;
+        use ark_bn254::{Bn254, Fr};
         use ark_std::UniformRand;
         use jf_aap::{
             structs::{
                 AssetCode, AssetDefinition, AssetPolicy, AuditMemo, Nullifier, RecordCommitment,
                 RecordOpening,
             },
+            utils::TxnsParams,
             BaseField, NodeValue,
         };
+        use jf_plonk::proof_system::structs::Proof;
         use jf_primitives::elgamal;
 
         async fn deploy_type_contract(
@@ -378,6 +349,27 @@ mod tests {
             )
         }
     }
+        #[tokio::test]
+        async fn test_plonk_proof_and_txn_notes() -> Result<()> {
+            let rng = &mut ark_std::test_rng();
+            let contract = deploy_type_contract().await?;
+            let num_transfer_txn = 1;
+            let num_mint_txn = 1;
+            let num_freeze_txn = 1;
+            let params =
+                TxnsParams::generate_txns(rng, num_transfer_txn, num_mint_txn, num_freeze_txn);
+
+            for txn in params.txns {
+                let proof = txn.validity_proof();
+                assert_eq!(
+                    proof.clone(),
+                    contract
+                        .check_plonk_proof(proof.into())
+                        .call()
+                        .await?
+                        .generic_into::<Proof<Bn254>>()
+                );
+            }
 
     #[tokio::test]
     async fn test_has_burn_destination() {
@@ -413,6 +405,7 @@ mod tests {
                     .unwrap(),
                 expected
             )
+            Ok(())
         }
     }
 

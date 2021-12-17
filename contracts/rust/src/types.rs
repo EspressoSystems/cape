@@ -1,4 +1,6 @@
+use ark_bn254::Bn254;
 use ark_ff::{to_bytes, PrimeField, Zero};
+use ark_poly_commit::kzg10::Commitment;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ethers::prelude::*;
 use jf_aap::{
@@ -6,7 +8,11 @@ use jf_aap::{
     structs::{AssetCode, BlindFactor, FreezeFlag, Nullifier, RecordCommitment, RevealMap},
     CurveParam, NodeValue, VerKey,
 };
+use jf_plonk::proof_system::structs::{Proof, ProofEvaluations};
 use jf_primitives::elgamal::{self, EncKey};
+
+// The number of input wires of TurboPlonk.
+const GATE_WIDTH: usize = 4;
 
 abigen!(
     TestBN254,
@@ -51,6 +57,16 @@ impl From<ark_bn254::G1Affine> for G1Point {
                 x: U256::from_little_endian(&to_bytes!(p.x).unwrap()[..]),
                 y: U256::from_little_endian(&to_bytes!(p.y).unwrap()[..]),
             }
+        }
+    }
+}
+
+impl From<G1Point> for ark_bn254::G1Affine {
+    fn from(p_sol: G1Point) -> Self {
+        if p_sol.x.is_zero() && p_sol.y.is_zero() {
+            Self::zero()
+        } else {
+            Self::new(u256_to_field(p_sol.x), u256_to_field(p_sol.y), false)
         }
     }
 }
@@ -318,6 +334,134 @@ impl From<TransferAuxInfo> for jf_aap::transfer::AuxInfo {
     }
 }
 
+impl From<Proof<Bn254>> for PlonkProof {
+    fn from(proof: Proof<Bn254>) -> Self {
+        if proof.wires_poly_comms().len() != GATE_WIDTH + 1
+            || proof.split_quot_poly_comms().len() != GATE_WIDTH + 1
+            || proof.poly_evals().wires_evals().len() != GATE_WIDTH + 1
+            || proof.poly_evals().wire_sigma_evals().len() != GATE_WIDTH
+        {
+            panic!("Malformed TurboPlonk proof");
+        }
+        Self {
+            wire_0: proof.wires_poly_comms()[0].0.into(),
+            wire_1: proof.wires_poly_comms()[1].0.into(),
+            wire_2: proof.wires_poly_comms()[2].0.into(),
+            wire_3: proof.wires_poly_comms()[3].0.into(),
+            wire_4: proof.wires_poly_comms()[4].0.into(),
+            prod_perm: proof.prod_perm_poly_comm().0.into(),
+            split_0: proof.split_quot_poly_comms()[0].0.into(),
+            split_1: proof.split_quot_poly_comms()[1].0.into(),
+            split_2: proof.split_quot_poly_comms()[2].0.into(),
+            split_3: proof.split_quot_poly_comms()[3].0.into(),
+            split_4: proof.split_quot_poly_comms()[4].0.into(),
+            zeta: proof.opening_proof().0.into(),
+            zeta_omega: proof.shifted_opening_proof().0.into(),
+            wire_eval_0: field_to_u256(proof.poly_evals().wires_evals()[0]),
+            wire_eval_1: field_to_u256(proof.poly_evals().wires_evals()[1]),
+            wire_eval_2: field_to_u256(proof.poly_evals().wires_evals()[2]),
+            wire_eval_3: field_to_u256(proof.poly_evals().wires_evals()[3]),
+            wire_eval_4: field_to_u256(proof.poly_evals().wires_evals()[4]),
+            sigma_eval_0: field_to_u256(proof.poly_evals().wire_sigma_evals()[0]),
+            sigma_eval_1: field_to_u256(proof.poly_evals().wire_sigma_evals()[1]),
+            sigma_eval_2: field_to_u256(proof.poly_evals().wire_sigma_evals()[2]),
+            sigma_eval_3: field_to_u256(proof.poly_evals().wire_sigma_evals()[3]),
+            prod_perm_zeta_omega_eval: field_to_u256(proof.poly_evals().perm_next_eval()),
+        }
+    }
+}
+
+impl From<PlonkProof> for Proof<Bn254> {
+    fn from(pf_sol: PlonkProof) -> Self {
+        let wires_poly_comms = vec![
+            Commitment(pf_sol.wire_0.into()),
+            Commitment(pf_sol.wire_1.into()),
+            Commitment(pf_sol.wire_2.into()),
+            Commitment(pf_sol.wire_3.into()),
+            Commitment(pf_sol.wire_4.into()),
+        ];
+        let prod_perm_poly_comm = Commitment(pf_sol.prod_perm.into());
+        let split_quot_poly_comms = vec![
+            Commitment(pf_sol.split_0.into()),
+            Commitment(pf_sol.split_1.into()),
+            Commitment(pf_sol.split_2.into()),
+            Commitment(pf_sol.split_3.into()),
+            Commitment(pf_sol.split_4.into()),
+        ];
+        let opening_proof = Commitment(pf_sol.zeta.into());
+        let shifted_opening_proof = Commitment(pf_sol.zeta_omega.into());
+        let wires_evals = vec![
+            u256_to_field(pf_sol.wire_eval_0),
+            u256_to_field(pf_sol.wire_eval_1),
+            u256_to_field(pf_sol.wire_eval_2),
+            u256_to_field(pf_sol.wire_eval_3),
+            u256_to_field(pf_sol.wire_eval_4),
+        ];
+        let wire_sigma_evals = vec![
+            u256_to_field(pf_sol.sigma_eval_0),
+            u256_to_field(pf_sol.sigma_eval_1),
+            u256_to_field(pf_sol.sigma_eval_2),
+            u256_to_field(pf_sol.sigma_eval_3),
+        ];
+        let perm_next_eval = u256_to_field(pf_sol.prod_perm_zeta_omega_eval);
+        let poly_evals =
+            ProofEvaluations::new_unchecked(wires_evals, wire_sigma_evals, perm_next_eval);
+        Self::new_unchecked(
+            wires_poly_comms,
+            prod_perm_poly_comm,
+            split_quot_poly_comms,
+            opening_proof,
+            shifted_opening_proof,
+            poly_evals,
+            None,
+        )
+    }
+}
+
+impl From<jf_aap::transfer::TransferNote> for TransferNote {
+    fn from(note: jf_aap::transfer::TransferNote) -> Self {
+        let input_nullifiers: Vec<U256> = note
+            .inputs_nullifiers
+            .iter()
+            .map(|&nf| nf.generic_into::<NullifierSol>().0)
+            .collect();
+        let output_commitments: Vec<U256> = note
+            .output_commitments
+            .iter()
+            .map(|&cm| cm.generic_into::<RecordCommitmentSol>().0)
+            .collect();
+        Self {
+            input_nullifiers,
+            output_commitments,
+            proof: note.proof.into(),
+            audit_memo: note.audit_memo.into(),
+            aux_info: note.aux_info.into(),
+        }
+    }
+}
+
+impl From<TransferNote> for jf_aap::transfer::TransferNote {
+    fn from(note_sol: TransferNote) -> Self {
+        let inputs_nullifiers = note_sol
+            .input_nullifiers
+            .iter()
+            .map(|&nf| nf.generic_into::<NullifierSol>().into())
+            .collect();
+        let output_commitments = note_sol
+            .output_commitments
+            .iter()
+            .map(|&cm| cm.generic_into::<RecordCommitmentSol>().into())
+            .collect();
+        Self {
+            inputs_nullifiers,
+            output_commitments,
+            proof: note_sol.proof.into(),
+            audit_memo: note_sol.audit_memo.into(),
+            aux_info: note_sol.aux_info.into(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -353,12 +497,14 @@ mod test {
         let p1_sol: G1Point = p1.into();
         assert_eq!(p1_sol.x, U256::from(0));
         assert_eq!(p1_sol.y, U256::from(0));
+        assert_eq!(p1, p1_sol.generic_into::<G1Affine>());
 
         // a point (not on the curve, which doesn't matter since we only check conversion)
         let p2 = G1Affine::new(field_new!(Fq, "12345"), field_new!(Fq, "2"), false);
         let p2_sol: G1Point = p2.into();
         assert_eq!(p2_sol.x, U256::from(12345));
         assert_eq!(p2_sol.y, U256::from(2));
+        assert_eq!(p2, p2_sol.generic_into::<G1Affine>());
 
         // check G2 point conversion
         let p3 = G2Affine::prime_subgroup_generator();

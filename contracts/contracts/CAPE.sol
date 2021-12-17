@@ -8,6 +8,7 @@ pragma solidity ^0.8.0;
 /// @dev Developers are awesome!
 
 import "solidity-bytes-utils/contracts/BytesLib.sol";
+import {BN254} from "./libraries/BN254.sol";
 
 // TODO Remove once functions are implemented
 /* solhint-disable no-unused-vars */
@@ -18,8 +19,30 @@ contract CAPE {
     bytes public constant CAPE_BURN_MAGIC_BYTES = "TRICAPE burn";
 
     struct PlonkProof {
-        // TODO
-        uint256 dummy;
+        // Flatten out TurboPlonk proof
+        BN254.G1Point wire0; // input wire poly com
+        BN254.G1Point wire1;
+        BN254.G1Point wire2;
+        BN254.G1Point wire3;
+        BN254.G1Point wire4; // output wire poly com
+        BN254.G1Point prodPerm; // product permutation poly com
+        BN254.G1Point split0; // split quotient poly com
+        BN254.G1Point split1;
+        BN254.G1Point split2;
+        BN254.G1Point split3;
+        BN254.G1Point split4;
+        BN254.G1Point zeta; // witness poly com for aggregated opening at `zeta`
+        BN254.G1Point zetaOmega; // witness poly com for shifted opening at `zeta * \omega`
+        uint256 wireEval0; // wire poly eval at `zeta`
+        uint256 wireEval1;
+        uint256 wireEval2;
+        uint256 wireEval3;
+        uint256 wireEval4;
+        uint256 sigmaEval0; // extended permutation (sigma) poly eval at `zeta`
+        uint256 sigmaEval1;
+        uint256 sigmaEval2;
+        uint256 sigmaEval3; // last (sigmaEval4) is saved by Maller Optimization
+        uint256 prodPermZetaOmegaEval; // product permutation poly eval at `zeta * \omega`
     }
 
     struct EdOnBn254Point {
@@ -40,7 +63,7 @@ contract CAPE {
     }
 
     struct TransferNote {
-        uint256[] inputsNullifiers;
+        uint256[] inputNullifiers;
         uint256[] outputCommitments;
         PlonkProof proof;
         AuditMemo auditMemo;
@@ -227,7 +250,7 @@ contract CAPE {
             if (noteType == NoteType.TRANSFER) {
                 TransferNote memory note = newBlock.transferNotes[transferIdx];
                 _checkMerkleRootContained(note.auxInfo.merkleRoot);
-                if (_publish(note.inputsNullifiers)) {
+                if (_publish(note.inputNullifiers)) {
                     // TODO collect note.outputCommitments
                     // TODO extract proof for batch verification
                 }
@@ -257,7 +280,7 @@ contract CAPE {
                 _checkBurn(transfer.auxInfo.extraProofBoundData);
                 // TODO check burn record opening matches second output commitment
 
-                if (_publish(transfer.inputsNullifiers)) {
+                if (_publish(transfer.inputNullifiers)) {
                     // TODO collect transfer.outputCommitments
                     // TODO extract proof for batch verification
                 }

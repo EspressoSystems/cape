@@ -143,13 +143,12 @@ contract CAPE {
     }
 
     struct CapeBlock {
-        EdOnBn254Point minerAddr; // TODO
-        uint64 blockHeight; // TODO
+        EdOnBn254Point minerAddr;
         NoteType[] noteTypes;
         TransferNote[] transferNotes;
         MintNote[] mintNotes;
         FreezeNote[] freezeNotes;
-        BurnNote[] burnNotes; // TODO
+        BurnNote[] burnNotes;
     }
 
     /// Insert a nullifier into the set of nullifiers.

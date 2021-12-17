@@ -1,39 +1,224 @@
+use crate::types as sol;
+use anyhow::{anyhow, bail, Result};
+use ark_serialize::*;
+use ethers::prelude::Address;
+use jf_aap::freeze::FreezeNote;
+use jf_aap::keys::UserAddress;
+use jf_aap::mint::MintNote;
+use jf_aap::structs::{RecordCommitment, RecordOpening};
 use jf_aap::transfer::TransferNote;
 use jf_aap::TransactionNote;
+use num_traits::{FromPrimitive, ToPrimitive};
+use std::str::from_utf8;
 
-pub const CAPE_BURN_MAGIC_BYTES: &str = "TRICAPE burn";
+pub const DOM_SEP_CAPE_BURN: &[u8] = b"TRICAPE burn";
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum TransferType {
-    Transfer,
-    Burn,
+/// Burning transaction structure for a single asset (with fee)
+#[derive(Debug, PartialEq, Eq, Hash, Clone, CanonicalSerialize, CanonicalDeserialize)]
+pub struct BurnNote {
+    /// Burn is effectively a transfer, this is the txn note.
+    pub transfer_note: TransferNote,
+    /// Record opening of the burned output (2nd in the transfer).
+    pub burned_ro: RecordOpening,
 }
 
-fn transfer_type(xfr: &TransferNote) -> TransferType {
-    let magic_bytes = CAPE_BURN_MAGIC_BYTES.as_bytes().to_vec();
-    let field_data = &xfr.aux_info.extra_proof_bound_data;
-
-    match field_data.len() {
-        32 => {
-            if field_data[..12] == magic_bytes[..] {
-                TransferType::Burn
-            } else {
-                TransferType::Transfer
-            }
+impl BurnNote {
+    /// Construct a `BurnNote` using the underlying transfer note and the burned
+    /// record opening (namely of the second output)
+    pub fn generate(note: TransferNote, burned_ro: RecordOpening) -> Result<Self> {
+        if note.output_commitments.len() < 2
+            || note.output_commitments[1] != RecordCommitment::from(&burned_ro)
+            || note.aux_info.extra_proof_bound_data.len() != 32
+            || !Self::is_burn_note(&note)
+        {
+            bail!("Malformed Burned Note parameters");
         }
-        _ => TransferType::Transfer,
+        Ok(Self {
+            transfer_note: note,
+            burned_ro,
+        })
+    }
+
+    /// Retrieve the Ethereum recipient address
+    pub fn withdraw_recipient(&self) -> Result<Address> {
+        from_utf8(&self.transfer_note.aux_info.extra_proof_bound_data[DOM_SEP_CAPE_BURN.len()..])?
+            .parse::<Address>()
+            .map_err(|_| anyhow!("Invalid Ethereum address!"))
+    }
+
+    /// utility function to check if a `TransferNote` is a `BurnNote`
+    pub fn is_burn_note(note: &TransferNote) -> bool {
+        note.aux_info
+            .extra_proof_bound_data
+            .starts_with(DOM_SEP_CAPE_BURN)
     }
 }
 
-#[allow(dead_code)]
-fn get_note_type(tx: TransactionNote) -> u8 {
-    match tx {
-        TransactionNote::Transfer(note) => match transfer_type(&note) {
-            TransferType::Transfer => 0u8,
-            TransferType::Burn => 3u8,
-        },
-        TransactionNote::Mint(_) => 1u8,
-        TransactionNote::Freeze(_) => 2u8,
+impl From<BurnNote> for sol::BurnNote {
+    fn from(note: BurnNote) -> Self {
+        Self {
+            transfer_note: note.transfer_note.into(),
+            record_opening: note.burned_ro.into(),
+        }
+    }
+}
+
+impl From<sol::BurnNote> for BurnNote {
+    fn from(note_sol: sol::BurnNote) -> Self {
+        Self {
+            transfer_note: note_sol.transfer_note.into(),
+            burned_ro: note_sol.record_opening.into(),
+        }
+    }
+}
+
+/// A cape block containing a batch of transaction notes.
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+pub struct CapeBlock {
+    /// miner (a.k.a fee collector)
+    pub miner_addr: UserAddress,
+    /// the ordering of txn within the block
+    pub note_types: Vec<NoteType>,
+    /// sorted transfer notes
+    pub transfer_notes: Vec<TransferNote>,
+    /// sorted mint notes
+    pub mint_notes: Vec<MintNote>,
+    /// sorted freeze notes
+    pub freeze_notes: Vec<FreezeNote>,
+    /// sorted burn notes
+    pub burn_notes: Vec<BurnNote>,
+}
+
+impl CapeBlock {
+    /// Generate a CapeBlock
+    pub fn generate(
+        notes: Vec<TransactionNote>,
+        burned_ros: Vec<RecordOpening>,
+        miner: UserAddress,
+    ) -> Result<Self> {
+        let mut transfer_notes = vec![];
+        let mut mint_notes = vec![];
+        let mut freeze_notes = vec![];
+        let mut burn_notes = vec![];
+        let mut note_types = vec![];
+        for note in notes {
+            match note {
+                TransactionNote::Transfer(n) => {
+                    if BurnNote::is_burn_note(&n) {
+                        burn_notes.push(*n);
+                        note_types.push(NoteType::Burn);
+                    } else {
+                        transfer_notes.push(*n);
+                        note_types.push(NoteType::Transfer);
+                    }
+                }
+                TransactionNote::Mint(n) => {
+                    mint_notes.push(*n);
+                    note_types.push(NoteType::Mint);
+                }
+                TransactionNote::Freeze(n) => {
+                    freeze_notes.push(*n);
+                    note_types.push(NoteType::Freeze);
+                }
+            }
+        }
+
+        if burn_notes.len() != burned_ros.len() {
+            bail!("Mismatched number of burned openings");
+        }
+        let burn_notes: Vec<BurnNote> = burn_notes
+            .iter()
+            .zip(burned_ros.iter())
+            .map(|(note, ro)| BurnNote::generate(note.clone(), ro.clone()).unwrap())
+            .collect();
+
+        Ok(Self {
+            miner_addr: miner,
+            note_types,
+            transfer_notes,
+            mint_notes,
+            freeze_notes,
+            burn_notes,
+        })
+    }
+}
+
+impl From<CapeBlock> for sol::CapeBlock {
+    fn from(blk: CapeBlock) -> Self {
+        Self {
+            miner_addr: blk.miner_addr.into(),
+            note_types: blk
+                .note_types
+                .iter()
+                .map(|t| t.to_u8().unwrap_or(0))
+                .collect(),
+            transfer_notes: blk
+                .transfer_notes
+                .iter()
+                .map(|n| n.clone().into())
+                .collect(),
+            mint_notes: blk.mint_notes.iter().map(|n| n.clone().into()).collect(),
+            freeze_notes: blk.freeze_notes.iter().map(|n| n.clone().into()).collect(),
+            burn_notes: blk.burn_notes.iter().map(|n| n.clone().into()).collect(),
+        }
+    }
+}
+
+impl From<sol::CapeBlock> for CapeBlock {
+    fn from(blk_sol: sol::CapeBlock) -> Self {
+        Self {
+            miner_addr: blk_sol.miner_addr.into(),
+            note_types: blk_sol
+                .note_types
+                .iter()
+                .map(|t| NoteType::from_u8(*t).unwrap_or(NoteType::Transfer))
+                .collect(),
+            transfer_notes: blk_sol
+                .transfer_notes
+                .iter()
+                .map(|n| n.clone().into())
+                .collect(),
+            mint_notes: blk_sol
+                .mint_notes
+                .iter()
+                .map(|n| n.clone().into())
+                .collect(),
+            freeze_notes: blk_sol
+                .freeze_notes
+                .iter()
+                .map(|n| n.clone().into())
+                .collect(),
+            burn_notes: blk_sol
+                .burn_notes
+                .iter()
+                .map(|n| n.clone().into())
+                .collect(),
+        }
+    }
+}
+
+/// Note type available in CAPE.
+#[derive(FromPrimitive, ToPrimitive, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum NoteType {
+    Transfer,
+    Mint,
+    Freeze,
+    Burn,
+}
+
+impl From<TransactionNote> for NoteType {
+    fn from(note: TransactionNote) -> Self {
+        match note {
+            TransactionNote::Transfer(n) => {
+                if BurnNote::is_burn_note(&n) {
+                    Self::Burn
+                } else {
+                    Self::Transfer
+                }
+            }
+            TransactionNote::Mint(_) => Self::Mint,
+            TransactionNote::Freeze(_) => Self::Freeze,
+        }
     }
 }
 
@@ -41,32 +226,180 @@ fn get_note_type(tx: TransactionNote) -> u8 {
 mod tests {
     use super::*;
     use crate::assertion::Matcher;
-    use crate::cap_jf::create_anon_xfr_2in_3out;
     use crate::ethereum::{deploy, get_funded_deployer};
-    use crate::helpers::convert_nullifier_to_u256;
-    use crate::types as sol;
-    use crate::types::{CapeBlock, TestCAPE, TestCapeTypes, CAPE};
+    use crate::types::{GenericInto, NullifierSol, TestCAPE, TestCapeTypes, CAPE};
     use anyhow::Result;
     use ethers::core::k256::ecdsa::SigningKey;
     use ethers::prelude::*;
-    use itertools::Itertools;
     use jf_aap::keys::UserPubKey;
+    use jf_aap::utils::TxnsParams;
     use std::env;
     use std::path::Path;
 
-    #[allow(dead_code)] // TODO: remove this
-    async fn deploy_cape_contract(
-    ) -> Result<TestCAPE<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>> {
+    // FIXME: remove this in future PR
+    const CAPE_BURN_MAGIC_BYTES: &str = "TRICAPE burn";
+
+    async fn deploy_cape_test() -> TestCAPE<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>> {
         let client = get_funded_deployer().await.unwrap();
         let contract = deploy(
             client.clone(),
-            Path::new("../artifacts/contracts/TestCAPE.sol/TestCAPE"),
+            Path::new("../artifacts/contracts/mocks/TestCAPE.sol/TestCAPE"),
             (),
         )
         .await
         .unwrap();
-        Ok(TestCAPE::new(contract.address(), client))
+        TestCAPE::new(contract.address(), client)
     }
+
+    #[tokio::test]
+    async fn test_submit_block_to_cape_contract() -> Result<()> {
+        let client = get_funded_deployer().await.unwrap();
+
+        let contract_address: Address = match env::var("CAPE_ADDRESS") {
+            Ok(val) => val.parse::<Address>().unwrap(),
+            Err(_) => deploy(
+                client.clone(),
+                Path::new("../artifacts/contracts/CAPE.sol/CAPE"),
+                (),
+            )
+            .await
+            .unwrap()
+            .address(),
+        };
+
+        let contract = CAPE::new(contract_address, client);
+
+        // Create two transactions
+        let rng = &mut ark_std::test_rng();
+        let num_transfer_txn = 1;
+        let num_mint_txn = 1;
+        let num_freeze_txn = 1;
+        let params = TxnsParams::generate_txns(rng, num_transfer_txn, num_mint_txn, num_freeze_txn);
+        let miner = UserPubKey::default();
+
+        let nf = params.txns[0].nullifiers()[0];
+        // temporarily no burn txn yet.
+        let cape_block = CapeBlock::generate(params.txns, vec![], miner.address())?;
+
+        // Check that some nullifier is not yet inserted
+        assert!(
+            !contract
+                .nullifiers(nf.generic_into::<NullifierSol>().0)
+                .call()
+                .await?
+        );
+
+        // Submit to the contract
+        contract
+            .submit_cape_block(cape_block.into(), vec![])
+            .legacy()
+            .send()
+            .await?
+            .await?;
+
+        // Check that now the nullifier has been inserted
+        assert!(
+            contract
+                .nullifiers(nf.generic_into::<NullifierSol>().0)
+                .call()
+                .await?
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_note_types() {
+        // TODO
+        // let rng = ark_std::test_rng();
+        // assert_eq!(get_note_type(TransferNote::rand_for_test(&rng)), 0u8);
+        // assert_eq!(get_note_type(FreezeNote::rand_for_test(&rng)), 1u8);
+        // assert_eq!(get_note_type(MintNote::rand_for_test(&rng)), 2u8);
+        // assert_eq!(get_note_type(create_test_burn_note(&rng)), 3u8);
+    }
+
+    #[tokio::test]
+    async fn test_has_burn_prefix() {
+        let contract = deploy_cape_test().await;
+
+        for (input, expected) in [
+            ("", false),
+            ("x", false),
+            ("TRICAPE bur", false),
+            ("more data but but still not a burn", false),
+            (CAPE_BURN_MAGIC_BYTES, true),
+            (&(CAPE_BURN_MAGIC_BYTES.to_owned() + "more stuff"), true),
+        ] {
+            assert_eq!(
+                contract
+                    .has_burn_prefix(input.as_bytes().to_vec().into())
+                    .call()
+                    .await
+                    .unwrap(),
+                expected
+            )
+        }
+    }
+
+    #[tokio::test]
+    async fn test_has_burn_destination() {
+        let contract = deploy_cape_test().await;
+
+        for (input, expected) in [
+            (
+                // ok, zero address from byte 12 to 32
+                "ffffffffffffffffffffffff0000000000000000000000000000000000000000",
+                true,
+            ),
+            (
+                // ok, with more data
+                "ffffffffffffffffffffffff0000000000000000000000000000000000000000ff",
+                true,
+            ),
+            (
+                // wrong address
+                "ffffffffffffffffffffffff0000000000000000000000000000000000000001",
+                false,
+            ),
+            (
+                // address too short
+                "ffffffffffffffffffffffff00000000000000000000000000000000000000",
+                false,
+            ),
+        ] {
+            assert_eq!(
+                contract
+                    .has_burn_destination(hex::decode(input).unwrap().into())
+                    .call()
+                    .await
+                    .unwrap(),
+                expected
+            )
+        }
+    }
+
+    #[tokio::test]
+    async fn test_check_burn() {
+        let contract = deploy_cape_test().await;
+
+        let wrong_address =
+            CAPE_BURN_MAGIC_BYTES.to_owned() + "000000000000000000000000000000000000000f";
+        println!("wrong address {}", wrong_address);
+        assert!(contract
+            .check_burn(wrong_address.as_bytes().to_vec().into())
+            .call()
+            .await
+            .should_revert_with_message("destination wrong"));
+
+        let wrong_tag = "ffffffffffffffffffffffff0000000000000000000000000000000000000000";
+        assert!(contract
+            .check_burn(hex::decode(wrong_tag).unwrap().into())
+            .call()
+            .await
+            .should_revert_with_message("not tagged"));
+    }
+
+    // TODO integration test to check if check_burn is hooked up correctly in
+    // main block validaton loop.
 
     mod type_conversion {
         use super::*;
@@ -240,117 +573,7 @@ mod tests {
             }
             Ok(())
         }
-    }
 
-    #[tokio::test]
-    async fn test_submit_block_to_cape_contract() {
-        let client = get_funded_deployer().await.unwrap();
-
-        let contract_address: Address = match env::var("CAPE_ADDRESS") {
-            Ok(val) => val.parse::<Address>().unwrap(),
-            Err(_) => deploy(
-                client.clone(),
-                Path::new("../artifacts/contracts/CAPE.sol/CAPE"),
-                (),
-            )
-            .await
-            .unwrap()
-            .address(),
-        };
-
-        let contract = CAPE::new(contract_address, client);
-
-        // Create two transactions
-        let mut prng = ark_std::test_rng();
-        let notes = create_anon_xfr_2in_3out(&mut prng, 2);
-
-        let note_types = notes
-            .iter()
-            .map(|note| get_note_type(TransactionNote::from(note.clone())))
-            .collect_vec();
-
-        let miner = UserPubKey::default();
-
-        // Convert the AAP transactions into some solidity friendly representation
-        let block = CapeBlock {
-            miner_addr: miner.address().into(),
-            block_height: 123u64,
-            transfer_notes: notes.iter().map(|note| note.clone().into()).collect_vec(),
-            note_types,
-            mint_notes: vec![],
-            freeze_notes: vec![],
-            burn_notes: vec![],
-        };
-
-        // Create dummy records openings arrary
-        let records_openings = vec![];
-
-        // Check that some nullifier is not yet inserted
-        let nullifier = convert_nullifier_to_u256(&notes[0].inputs_nullifiers[0]);
-        let is_nullifier_inserted = contract.nullifiers(nullifier).call().await.unwrap();
-        assert!(!is_nullifier_inserted);
-
-        // Submit to the contract
-        let _receipt = contract
-            .submit_cape_block(block, records_openings)
-            .legacy()
-            .send()
-            .await
-            .unwrap()
-            .await
-            .unwrap()
-            .expect("Failed to get tx receipt");
-
-        // Check that now the nullifier has been inserted
-        let is_nullifier_inserted = contract.nullifiers(nullifier).call().await.unwrap();
-
-        assert!(is_nullifier_inserted);
-    }
-
-    #[test]
-    fn test_note_types() {
-        // TODO
-        // let rng = ark_std::test_rng();
-        // assert_eq!(get_note_type(TransferNote::rand_for_test(&rng)), 0u8);
-        // assert_eq!(get_note_type(FreezeNote::rand_for_test(&rng)), 1u8);
-        // assert_eq!(get_note_type(MintNote::rand_for_test(&rng)), 2u8);
-        // assert_eq!(get_note_type(create_test_burn_note(&rng)), 3u8);
-    }
-
-    async fn deploy_cape_test() -> TestCAPE<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>> {
-        let client = get_funded_deployer().await.unwrap();
-        let contract = deploy(
-            client.clone(),
-            Path::new("../artifacts/contracts/mocks/TestCAPE.sol/TestCAPE"),
-            (),
-        )
-        .await
-        .unwrap();
-        TestCAPE::new(contract.address(), client)
-    }
-
-    #[tokio::test]
-    async fn test_has_burn_prefix() {
-        let contract = deploy_cape_test().await;
-
-        for (input, expected) in [
-            ("", false),
-            ("x", false),
-            ("TRICAPE bur", false),
-            ("more data but but still not a burn", false),
-            (CAPE_BURN_MAGIC_BYTES, true),
-            (&(CAPE_BURN_MAGIC_BYTES.to_owned() + "more stuff"), true),
-        ] {
-            assert_eq!(
-                contract
-                    .has_burn_prefix(input.as_bytes().to_vec().into())
-                    .call()
-                    .await
-                    .unwrap(),
-                expected
-            )
-        }
-    }
         #[tokio::test]
         async fn test_plonk_proof_and_txn_notes() -> Result<()> {
             let rng = &mut ark_std::test_rng();
@@ -406,65 +629,44 @@ mod tests {
                 }
             }
 
-    #[tokio::test]
-    async fn test_has_burn_destination() {
-        let contract = deploy_cape_test().await;
+            Ok(())
+        }
 
-        for (input, expected) in [
-            (
-                // ok, zero address from byte 12 to 32
-                "ffffffffffffffffffffffff0000000000000000000000000000000000000000",
-                true,
-            ),
-            (
-                // ok, with more data
-                "ffffffffffffffffffffffff0000000000000000000000000000000000000000ff",
-                true,
-            ),
-            (
-                // wrong address
-                "ffffffffffffffffffffffff0000000000000000000000000000000000000001",
-                false,
-            ),
-            (
-                // address too short
-                "ffffffffffffffffffffffff00000000000000000000000000000000000000",
-                false,
-            ),
-        ] {
+        #[tokio::test]
+        async fn test_note_type() -> Result<()> {
+            let contract = deploy_type_contract().await?;
+            let invalid = 10;
             assert_eq!(
                 contract
-                    .has_burn_destination(hex::decode(input).unwrap().into())
+                    .check_note_type(NoteType::Transfer.to_u8().unwrap_or_else(|| invalid))
                     .call()
-                    .await
-                    .unwrap(),
-                expected
-            )
+                    .await?,
+                0u8
+            );
+            assert_eq!(
+                contract
+                    .check_note_type(NoteType::Mint.to_u8().unwrap_or_else(|| invalid))
+                    .call()
+                    .await?,
+                1u8
+            );
+            assert_eq!(
+                contract
+                    .check_note_type(NoteType::Freeze.to_u8().unwrap_or_else(|| invalid))
+                    .call()
+                    .await?,
+                2u8
+            );
+
+            assert_eq!(
+                contract
+                    .check_note_type(NoteType::Burn.to_u8().unwrap_or_else(|| invalid))
+                    .call()
+                    .await?,
+                3u8
+            );
+
             Ok(())
         }
     }
-
-    #[tokio::test]
-    async fn test_check_burn() {
-        let contract = deploy_cape_test().await;
-
-        let wrong_address =
-            CAPE_BURN_MAGIC_BYTES.to_owned() + "000000000000000000000000000000000000000f";
-        println!("wrong address {}", wrong_address);
-        assert!(contract
-            .check_burn(wrong_address.as_bytes().to_vec().into())
-            .call()
-            .await
-            .should_revert_with_message("destination wrong"));
-
-        let wrong_tag = "ffffffffffffffffffffffff0000000000000000000000000000000000000000";
-        assert!(contract
-            .check_burn(hex::decode(wrong_tag).unwrap().into())
-            .call()
-            .await
-            .should_revert_with_message("not tagged"));
-    }
-
-    // TODO integration test to check if check_burn is hooked up correctly in
-    // main block validaton loop.
 }

@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate num_derive;
+
 mod assertion;
 mod bn254;
 pub mod cap_jf;

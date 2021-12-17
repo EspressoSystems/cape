@@ -9,13 +9,14 @@ use jf_aap::{
         AssetCode, BlindFactor, FreezeFlag, InternalAssetCode, Nullifier, RecordCommitment,
         RevealMap,
     },
-    CurveParam, NodeValue, VerKey,
+    BaseField, CurveParam, NodeValue, VerKey,
 };
 use jf_plonk::proof_system::structs::{Proof, ProofEvaluations};
 use jf_primitives::{
     aead,
     elgamal::{self, EncKey},
 };
+use std::convert::TryInto;
 
 // The number of input wires of TurboPlonk.
 const GATE_WIDTH: usize = 4;
@@ -27,6 +28,10 @@ abigen!(
 
     TestRecordsMerkleTree,
     "../artifacts/contracts/mocks/TestRecordsMerkleTree.sol/TestRecordsMerkleTree/abi.json",
+    event_derives(serde::Deserialize, serde::Serialize);
+
+    TestRescue,
+    "../artifacts/contracts/mocks/TestRescue.sol/TestRescue/abi.json",
     event_derives(serde::Deserialize, serde::Serialize);
 
     TestTranscript,
@@ -216,7 +221,7 @@ impl From<jf_aap::structs::AssetPolicy> for AssetPolicy {
             auditor_pk: policy.auditor_pub_key().clone().into(),
             cred_pk: policy.cred_issuer_pub_key().clone().into(),
             freezer_pk: policy.freezer_pub_key().clone().into(),
-            reveal_map: policy.reveal_map().internal(),
+            reveal_map: field_to_u256(BaseField::from(policy.reveal_map())),
             reveal_threshold: policy.reveal_threshold(),
         }
     }
@@ -229,7 +234,19 @@ impl From<AssetPolicy> for jf_aap::structs::AssetPolicy {
             .set_cred_issuer_pub_key(policy_sol.cred_pk.into())
             .set_freezer_pub_key(policy_sol.freezer_pk.into())
             .set_reveal_threshold(policy_sol.reveal_threshold)
-            .set_reveal_map_for_test(RevealMap::new(policy_sol.reveal_map))
+            .set_reveal_map_for_test({
+                let map_sol = policy_sol.reveal_map;
+                if map_sol >= U256::from(2).pow(12.into() /*TODO import from jellyfish?*/) {
+                    panic!("Reveal map has more than 12 bits")
+                }
+                let bits: [bool; 12] = (0..12)
+                    .map(|i| map_sol.bit(11 - i))
+                    .collect::<Vec<_>>()
+                    .try_into()
+                    .unwrap();
+
+                RevealMap::new(bits)
+            })
     }
 }
 

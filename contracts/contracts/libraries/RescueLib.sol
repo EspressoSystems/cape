@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "hardhat/console.sol";
-
-contract Rescue {
+library RescueLib {
     /// The constants are obtained from the Sage script
     /// https://gitlab.com/translucence/crypto/marvellous/-/blob/b0885058f0348171befcf6cf30533812c9f49e15/rescue254.sage
 
@@ -151,13 +149,13 @@ contract Rescue {
     // Recall that the scheduled key is precomputed in our case
     // @param input input for the permutation
     // @return permutation output
-    function _perm(
+    function perm(
         uint256 s0,
         uint256 s1,
         uint256 s2,
         uint256 s3
     )
-        private
+        internal
         view
         returns (
             uint256,
@@ -759,8 +757,26 @@ contract Rescue {
         uint256 a,
         uint256 b,
         uint256 c
-    ) public returns (uint256 o) {
-        (o, a, b, c) = _perm(a % _PRIME, b % _PRIME, c % _PRIME, 0);
+    ) internal view returns (uint256 o) {
+        (o, a, b, c) = perm(a % _PRIME, b % _PRIME, c % _PRIME, 0);
         o %= _PRIME;
+    }
+
+    function commit(uint256[15] memory inputs) internal view returns (uint256) {
+        uint256 a;
+        uint256 b;
+        uint256 c;
+        uint256 d;
+
+        for (uint256 i = 0; i < 5; i++) {
+            (a, b, c, d) = perm(
+                (a + inputs[3 * i + 0]) % _PRIME,
+                (b + inputs[3 * i + 1]) % _PRIME,
+                (c + inputs[3 * i + 2]) % _PRIME,
+                d % _PRIME
+            );
+        }
+
+        return a % _PRIME;
     }
 }

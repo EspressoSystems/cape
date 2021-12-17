@@ -225,19 +225,20 @@ impl From<TransactionNote> for NoteType {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ethers::prelude::k256::ecdsa::SigningKey;
+    use ethers::prelude::{Address, Http, Provider, SignerMiddleware, Wallet, U256};
+    use jf_aap::structs::RecordOpening;
+
     use crate::assertion::Matcher;
     use crate::ethereum::{deploy, get_funded_deployer};
-    use crate::types::{GenericInto, NullifierSol, TestCAPE, TestCapeTypes, CAPE};
+    use crate::types::{
+        GenericInto, NullifierSol, RecordCommitmentSol, TestCAPE, TestCapeTypes, CAPE,
+    };
     use anyhow::Result;
-    use ethers::core::k256::ecdsa::SigningKey;
-    use ethers::prelude::*;
     use jf_aap::keys::UserPubKey;
     use jf_aap::utils::TxnsParams;
     use std::env;
     use std::path::Path;
-
-    // FIXME: remove this in future PR
-    const CAPE_BURN_MAGIC_BYTES: &str = "TRICAPE burn";
 
     async fn deploy_cape_test() -> TestCAPE<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>> {
         let client = get_funded_deployer().await.unwrap();
@@ -318,20 +319,21 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_has_burn_prefix() {
+    async fn test_contains_burn_prefix() {
         let contract = deploy_cape_test().await;
 
+        let dom_sep_str = std::str::from_utf8(DOM_SEP_CAPE_BURN).unwrap();
         for (input, expected) in [
             ("", false),
             ("x", false),
             ("TRICAPE bur", false),
             ("more data but but still not a burn", false),
-            (CAPE_BURN_MAGIC_BYTES, true),
-            (&(CAPE_BURN_MAGIC_BYTES.to_owned() + "more stuff"), true),
+            (dom_sep_str, true),
+            (&(dom_sep_str.to_owned() + "more stuff"), true),
         ] {
             assert_eq!(
                 contract
-                    .has_burn_prefix(input.as_bytes().to_vec().into())
+                    .contains_burn_prefix(input.as_bytes().to_vec().into())
                     .call()
                     .await
                     .unwrap(),
@@ -341,7 +343,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_has_burn_destination() {
+    async fn test_contains_burn_destination() {
         let contract = deploy_cape_test().await;
 
         for (input, expected) in [
@@ -368,7 +370,7 @@ mod tests {
         ] {
             assert_eq!(
                 contract
-                    .has_burn_destination(hex::decode(input).unwrap().into())
+                    .contains_burn_destination(hex::decode(input).unwrap().into())
                     .call()
                     .await
                     .unwrap(),
@@ -378,28 +380,112 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_check_burn() {
+    async fn test_contains_burn_record() {
         let contract = deploy_cape_test().await;
 
-        let wrong_address =
-            CAPE_BURN_MAGIC_BYTES.to_owned() + "000000000000000000000000000000000000000f";
-        println!("wrong address {}", wrong_address);
-        assert!(contract
-            .check_burn(wrong_address.as_bytes().to_vec().into())
+        assert!(!contract
+            .contains_burn_record(sol::BurnNote::default())
             .call()
             .await
-            .should_revert_with_message("destination wrong"));
+            .unwrap());
 
-        let wrong_tag = "ffffffffffffffffffffffff0000000000000000000000000000000000000000";
-        assert!(contract
-            .check_burn(hex::decode(wrong_tag).unwrap().into())
-            .call()
-            .await
-            .should_revert_with_message("not tagged"));
+        // TODO test with a valid note
+        // let mut rng = ark_std::test_rng();
+        // let note = TransferNote::...
+        // let burned_ro = RecordOpening::rand_for_test(&mut rng);
+        // let burn_note = BurnNote::generate(note, burned_ro);
+        // assert!(contract.contains_burn_record(burn_note).call().await.unwrap());
     }
+
+    #[tokio::test]
+    async fn test_check_burn_bad_prefix() {
+        let contract = deploy_cape_test().await;
+        let mut note = sol::BurnNote::default();
+        let extra = [
+            hex::decode("ffffffffffffffffffffffff").unwrap(),
+            hex::decode(b"0000000000000000000000000000000000000000").unwrap(),
+        ]
+        .concat();
+        note.transfer_note.aux_info.extra_proof_bound_data = extra.into();
+
+        let call = contract.check_burn(note).call().await;
+        assert!(call.should_revert_with_message("Bad burn tag"));
+    }
+
+    #[tokio::test]
+    async fn test_check_burn_bad_destination() {
+        let contract = deploy_cape_test().await;
+        let mut note = sol::BurnNote::default();
+        let extra = [
+            DOM_SEP_CAPE_BURN.to_vec(),
+            hex::decode("000000000000000000000000000000000000000f").unwrap(),
+        ]
+        .concat();
+        note.transfer_note.aux_info.extra_proof_bound_data = extra.into();
+
+        let call = contract.check_burn(note).call().await;
+        assert!(call.should_revert_with_message("Bad burn destination"));
+    }
+
+    #[tokio::test]
+    async fn test_check_burn_bad_record_commitment() {
+        let contract = deploy_cape_test().await;
+        let mut note = sol::BurnNote::default();
+        let extra = [
+            DOM_SEP_CAPE_BURN.to_vec(),
+            hex::decode("0000000000000000000000000000000000000000").unwrap(),
+        ]
+        .concat();
+        note.transfer_note.aux_info.extra_proof_bound_data = extra.into();
+
+        note.transfer_note.output_commitments.push(U256::from(1));
+        note.transfer_note.output_commitments.push(U256::from(2));
+
+        let call = contract.check_burn(note).call().await;
+        assert!(call.should_revert_with_message("Bad record commitment"));
+    }
+
+    // TODO Add test for check_burn that passes
 
     // TODO integration test to check if check_burn is hooked up correctly in
     // main block validaton loop.
+
+    #[tokio::test]
+    async fn test_derive_record_commitment() {
+        let contract = deploy_cape_test().await;
+        let mut rng = ark_std::test_rng();
+
+        for _run in 0..10 {
+            let ro = RecordOpening::rand_for_test(&mut rng);
+            let rc = RecordCommitment::from(&ro);
+
+            let rc_u256 = contract
+                .derive_record_commitment(ro.into())
+                .call()
+                .await
+                .unwrap();
+
+            assert_eq!(
+                rc_u256
+                    .generic_into::<RecordCommitmentSol>()
+                    .generic_into::<RecordCommitment>(),
+                rc
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn test_derive_record_commitment_checks_reveal_map() {
+        let contract = deploy_cape_test().await;
+        let mut ro = sol::RecordOpening::default();
+        ro.asset_def.policy.reveal_map = U256::from(2).pow(12.into());
+
+        assert!(contract
+            .derive_record_commitment(ro)
+            .call()
+            .await
+            .should_revert_with_message("Reveal map exceeds 12 bits"))
+    }
 
     mod type_conversion {
         use super::*;

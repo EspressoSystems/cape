@@ -290,6 +290,34 @@ impl From<AuditMemo> for jf_aap::structs::AuditMemo {
         Self::new(elgamal::Ciphertext::from_scalars(&scalars).unwrap())
     }
 }
+
+impl From<jf_aap::transfer::AuxInfo> for TransferAuxInfo {
+    fn from(aux: jf_aap::transfer::AuxInfo) -> Self {
+        Self {
+            merkle_root: aux.merkle_root.generic_into::<MerkleRootSol>().0,
+            fee: aux.fee,
+            valid_until: aux.valid_until,
+            txn_memo_ver_key: aux.txn_memo_ver_key.into(),
+            extra_proof_bound_data: aux.extra_proof_bound_data.into(),
+        }
+    }
+}
+
+impl From<TransferAuxInfo> for jf_aap::transfer::AuxInfo {
+    fn from(aux_sol: TransferAuxInfo) -> Self {
+        Self {
+            merkle_root: aux_sol
+                .merkle_root
+                .generic_into::<MerkleRootSol>()
+                .generic_into::<NodeValue>(),
+            fee: aux_sol.fee,
+            valid_until: aux_sol.valid_until,
+            txn_memo_ver_key: aux_sol.txn_memo_ver_key.into(),
+            extra_proof_bound_data: aux_sol.extra_proof_bound_data.to_vec(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

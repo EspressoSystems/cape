@@ -1,5 +1,5 @@
-use ethers::prelude::{Bytes, U256};
-use jf_aap::transfer::{AuxInfo, TransferNote};
+use ethers::prelude::U256;
+use jf_aap::transfer::TransferNote;
 use jf_aap::TransactionNote;
 
 use crate::helpers::{convert_fr254_to_u256, convert_nullifier_to_u256};
@@ -37,18 +37,6 @@ impl From<TransferNote> for sol::TransferNote {
 
             audit_memo: note.audit_memo.into(),
             aux_info: note.aux_info.into(),
-        }
-    }
-}
-
-impl From<AuxInfo> for sol::TransferAuxInfo {
-    fn from(item: AuxInfo) -> Self {
-        Self {
-            merkle_root: convert_fr254_to_u256(item.merkle_root.to_scalar()),
-            fee: item.fee,
-            valid_until: item.valid_until,
-            txn_memo_ver_key: item.txn_memo_ver_key.into(),
-            extra_proof_bound_data: Bytes::from(b""),
         }
     }
 }

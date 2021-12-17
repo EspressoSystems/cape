@@ -1,14 +1,16 @@
 #[cfg(test)]
 mod tests {
 
+    use crate::ethereum;
     use crate::helpers::{convert_fr254_to_u256, convert_u256_to_bytes_le};
+    use crate::types::TestRescue;
     use ark_ed_on_bn254::Fq as Fr254;
     use ark_ff::{BigInteger, PrimeField, UniformRand, Zero};
+    use ethers::prelude::k256::ecdsa::SigningKey;
     use ethers::prelude::*;
     use jf_rescue::Permutation;
     use std::default::Default;
-
-    use crate::records_merkle_tree::get_contract_records_merkle_tree;
+    use std::path::Path;
 
     // From jellyfish rescue/src/lib.rs
     // hash output on vector [0, 0, 0, 0]
@@ -45,9 +47,22 @@ mod tests {
         assert_eq!(real_output, expected);
     }
 
+    async fn deploy_test_rescue() -> TestRescue<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>
+    {
+        let client = ethereum::get_funded_deployer().await.unwrap();
+        let contract = ethereum::deploy(
+            client.clone(),
+            Path::new("../artifacts/contracts/mocks/TestRescue.sol/TestRescue"),
+            (),
+        )
+        .await
+        .unwrap();
+        TestRescue::new(contract.address(), client)
+    }
+
     #[tokio::test]
     async fn test_rescue_hash_function_solidity_for_zero_vector_input() {
-        let contract = get_contract_records_merkle_tree(5).await;
+        let contract = deploy_test_rescue().await;
 
         let res: U256 = contract
             .hash(U256::from(0), U256::from(0), U256::from(0))
@@ -61,7 +76,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_rescue_hash_function_solidity_on_random_inputs() {
-        let contract = get_contract_records_merkle_tree(5).await;
+        let contract = deploy_test_rescue().await;
 
         let rescue = Permutation::default();
         let mut rng = ark_std::test_rng();

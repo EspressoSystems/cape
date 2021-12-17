@@ -4,7 +4,7 @@ const { ethers } = require("hardhat");
 describe("Rescue benchmarks", function () {
   describe("Gas spent for computing the Rescue function", function () {
     for (const [contractName, gas] of [
-      ["TestRescue", 87164],
+      ["TestRescue", 87214],
       ["TestRescueNonOptimized", 620060],
     ]) {
       it(`checks gas usage of ${contractName}.hash`, async function () {

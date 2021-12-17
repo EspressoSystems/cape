@@ -8,7 +8,8 @@ pragma solidity ^0.8.0;
 /// @dev Developers are awesome!
 
 import "solidity-bytes-utils/contracts/BytesLib.sol";
-import {BN254} from "./libraries/BN254.sol";
+import "./libraries/BN254.sol";
+import "./libraries/RescueLib.sol";
 
 // TODO Remove once functions are implemented
 /* solhint-disable no-unused-vars */
@@ -132,7 +133,7 @@ contract CAPE {
         EdOnBn254Point auditorPk;
         EdOnBn254Point credPk;
         EdOnBn254Point freezerPk;
-        bool[12] revealMap; // ATTRS_LEN (8) + 3 + 1
+        uint256 revealMap;
         uint64 revealThreshold;
     }
 
@@ -278,8 +279,7 @@ contract CAPE {
                 TransferNote memory transfer = note.transferNote;
                 _checkMerkleRootContained(transfer.auxInfo.merkleRoot);
 
-                _checkBurn(transfer.auxInfo.extraProofBoundData);
-                // TODO check burn record opening matches second output commitment
+                _checkBurn(note);
 
                 if (_publish(transfer.inputNullifiers)) {
                     // TODO collect transfer.outputCommitments
@@ -309,16 +309,16 @@ contract CAPE {
         // TODO
     }
 
-    function _checkBurn(bytes memory extraProofBoundData) internal {
-        require(_hasBurnPrefix(extraProofBoundData), "Burn note not tagged");
-        require(
-            _hasBurnDestination(extraProofBoundData),
-            "Burn destination wrong"
-        );
+    function _checkBurn(BurnNote memory note) internal view {
+        bytes memory extra = note.transferNote.auxInfo.extraProofBoundData;
+        require(_containsBurnPrefix(extra), "Bad burn tag");
+        require(_containsBurnDestination(extra), "Bad burn destination");
+        require(_containsBurnRecord(note), "Bad record commitment");
     }
 
-    function _hasBurnPrefix(bytes memory extraProofBoundData)
+    function _containsBurnPrefix(bytes memory extraProofBoundData)
         internal
+        pure
         returns (bool)
     {
         if (extraProofBoundData.length < 12) {
@@ -331,13 +331,63 @@ contract CAPE {
             );
     }
 
-    function _hasBurnDestination(bytes memory extraProofBoundData)
+    function _containsBurnDestination(bytes memory extraProofBoundData)
         internal
+        view
         returns (bool)
     {
         if (extraProofBoundData.length < 32) {
             return false;
         }
         return BytesLib.toAddress(extraProofBoundData, 12) == address(0);
+    }
+
+    function _containsBurnRecord(BurnNote memory note)
+        internal
+        view
+        returns (bool)
+    {
+        if (note.transferNote.outputCommitments.length < 2) {
+            return false;
+        }
+        uint256 rc = _deriveRecordCommitment(note.recordOpening);
+        return rc == note.transferNote.outputCommitments[1];
+    }
+
+    function _deriveRecordCommitment(RecordOpening memory ro)
+        internal
+        view
+        returns (uint256 rc)
+    {
+        require(
+            ro.assetDef.policy.revealMap < 2**12,
+            "Reveal map exceeds 12 bits"
+        );
+
+        // No overflow check, only 12 bits in reveal map
+        uint256 revealMapAndFreezeFlag = 2 *
+            ro.assetDef.policy.revealMap +
+            (ro.freezeFlag ? 1 : 0);
+
+        // blind in front of rest -> 13 elements, pad to 15 (5 x 3)
+        uint256[15] memory inputs = [
+            ro.blind,
+            ro.amount,
+            ro.assetDef.code,
+            ro.userAddr.x,
+            ro.userAddr.y,
+            ro.assetDef.policy.auditorPk.x,
+            ro.assetDef.policy.auditorPk.y,
+            ro.assetDef.policy.credPk.x,
+            ro.assetDef.policy.credPk.y,
+            ro.assetDef.policy.freezerPk.x,
+            ro.assetDef.policy.freezerPk.y,
+            revealMapAndFreezeFlag,
+            ro.assetDef.policy.revealThreshold,
+            0,
+            0
+        ];
+
+        return RescueLib.commit(inputs);
     }
 }

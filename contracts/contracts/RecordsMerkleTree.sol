@@ -2,9 +2,9 @@
 pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
-import "./Rescue.sol";
+import "./libraries/RescueLib.sol";
 
-contract RecordsMerkleTree is Rescue {
+contract RecordsMerkleTree {
     enum Position {
         LEFT,
         MIDDLE,
@@ -249,7 +249,7 @@ contract RecordsMerkleTree is Rescue {
         // Remember position is computed with the remainder
 
         // Leaf node where the value is hash(0,_numLeaves,element)
-        uint256 val = hash(0, _numLeaves, element);
+        uint256 val = RescueLib.hash(0, _numLeaves, element);
         nodes[newNodeIndex] = Node(val, 0, 0, 0);
         _updateChildNode(
             nodes[previousNodeIndex],
@@ -360,7 +360,7 @@ contract RecordsMerkleTree is Rescue {
             nodes[rootNode.middle].val = valMiddle;
             nodes[rootNode.right].val = valRight;
 
-            return hash(valLeft, valMiddle, valRight);
+            return RescueLib.hash(valLeft, valMiddle, valRight);
         }
     }
 }

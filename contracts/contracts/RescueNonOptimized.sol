@@ -234,10 +234,10 @@ contract RescueNonOptimized {
         return newState;
     }
 
-    // Computes the Rescue _permutation on some input
+    // Computes the Rescue permutation on some input
     // Recall that the scheduled key is precomputed in our case
-    // @param input input for the _permutation
-    // @return _permutation output
+    // @param input input for the permutation
+    // @return permutation output
     function _perm(
         uint256[_STATE_SIZE] memory input // TODO this should be made private/internal
     ) internal view returns (uint256[_STATE_SIZE] memory) {

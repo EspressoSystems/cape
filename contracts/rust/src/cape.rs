@@ -525,7 +525,7 @@ mod tests {
         note.transfer_note.aux_info.extra_proof_bound_data = extra.into();
 
         let call = contract.check_burn(note).call().await;
-        assert!(call.should_revert_with_message("Bad burn tag"));
+        call.should_revert_with_message("Bad burn tag");
     }
 
     #[tokio::test]
@@ -540,7 +540,7 @@ mod tests {
         note.transfer_note.aux_info.extra_proof_bound_data = extra.into();
 
         let call = contract.check_burn(note).call().await;
-        assert!(call.should_revert_with_message("Bad burn destination"));
+        call.should_revert_with_message("Bad burn destination");
     }
 
     #[tokio::test]
@@ -558,7 +558,7 @@ mod tests {
         note.transfer_note.output_commitments.push(U256::from(2));
 
         let call = contract.check_burn(note).call().await;
-        assert!(call.should_revert_with_message("Bad record commitment"));
+        call.should_revert_with_message("Bad record commitment");
     }
 
     // TODO Add test for check_burn that passes
@@ -623,7 +623,7 @@ mod tests {
         note.aux_info.extra_proof_bound_data = extra.into();
 
         let call = contract.check_transfer(note).call().await;
-        assert!(call.should_revert_with_message("Burn prefix in transfer note"));
+        call.should_revert_with_message("Burn prefix in transfer note");
     }
 
     #[tokio::test]
@@ -666,11 +666,11 @@ mod tests {
         let mut ro = sol::RecordOpening::default();
         ro.asset_def.policy.reveal_map = U256::from(2).pow(12.into());
 
-        assert!(contract
+        contract
             .derive_record_commitment(ro)
             .call()
             .await
-            .should_revert_with_message("Reveal map exceeds 12 bits"))
+            .should_revert_with_message("Reveal map exceeds 12 bits")
     }
 
     #[tokio::test]

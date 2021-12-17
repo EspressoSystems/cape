@@ -161,11 +161,11 @@ async fn test_validate_g1_point() -> Result<()> {
         contract: &TestBN254<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>,
         bad_p: G1Point,
     ) {
-        assert!(contract
+        contract
             .validate_g1_point(bad_p)
             .call()
             .await
-            .should_revert_with_message("Bn254: invalid G1 point"));
+            .should_revert_with_message("Bn254: invalid G1 point");
     }
 
     // x = 0 should fail

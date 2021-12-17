@@ -23,11 +23,11 @@ async fn test_root_store() -> Result<()> {
     assert!(!contract.contains_root(roots[0]).call().await?);
 
     // check reverts if root not found
-    assert!(contract
+    contract
         .check_contains_root(roots[0])
         .call()
         .await
-        .should_revert_with_message("Root not found"));
+        .should_revert_with_message("Root not found");
 
     contract.add_root(roots[0]).send().await?.await?;
 

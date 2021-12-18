@@ -8,11 +8,12 @@ pragma solidity ^0.8.0;
 /// @dev Developers are awesome!
 
 import "solidity-bytes-utils/contracts/BytesLib.sol";
+import "./RecordsMerkleTree.sol";
 
 // TODO Remove once functions are implemented
 /* solhint-disable no-unused-vars */
 
-contract CAPE {
+contract CAPE is RecordsMerkleTree {
     mapping(uint256 => bool) public nullifiers;
 
     bytes public constant CAPE_BURN_MAGIC_BYTES = "TRICAPE burn";
@@ -131,6 +132,8 @@ contract CAPE {
         BurnNote[] burnNotes; // TODO
     }
 
+    constructor(uint8 height) RecordsMerkleTree(height) {}
+
     /// Insert a nullifier into the set of nullifiers.
     /// @dev Reverts if nullifier is already in nullifier set.
     function _insertNullifier(uint256 nullifier) internal {
@@ -223,6 +226,10 @@ contract CAPE {
         uint256 freezeIdx = 0;
         uint256 burnIdx = 0;
 
+        // TODO compute upper bound of number of records commitments
+        uint256[] memory recordsCommToBeInserted = new uint256[](10);
+        uint256 recordsCommToBeInsertedIdx = 0;
+
         for (uint256 i = 0; i < newBlock.noteTypes.length; i++) {
             NoteType noteType = newBlock.noteTypes[i];
 
@@ -230,7 +237,18 @@ contract CAPE {
                 TransferNote memory note = newBlock.transferNotes[transferIdx];
                 _checkMerkleRootContained(note.auxInfo.merkleRoot);
                 if (_publish(note.inputsNullifiers)) {
-                    // TODO collect note.outputCommitments
+                    // collect note.outputCommitments
+                    for (
+                        uint256 i = 0;
+                        i < note.outputCommitments.length;
+                        i++
+                    ) {
+                        recordsCommToBeInserted[
+                            recordsCommToBeInsertedIdx
+                        ] = note.outputCommitments[i];
+                        recordsCommToBeInsertedIdx += 1;
+                    }
+
                     // TODO extract proof for batch verification
                 }
                 transferIdx += 1;
@@ -238,8 +256,14 @@ contract CAPE {
                 MintNote memory note = newBlock.mintNotes[mintIdx];
                 _checkMerkleRootContained(note.auxInfo.merkleRoot);
                 if (_publish(note.nullifier)) {
-                    // TODO collect note.mintComm
-                    // TODO collect note.chgComm
+                    // Collect note.mintComm
+                    recordsCommToBeInserted[recordsCommToBeInsertedIdx] = note
+                        .mintComm;
+                    recordsCommToBeInsertedIdx += 1;
+                    // Collect note.chgComm
+                    recordsCommToBeInserted[recordsCommToBeInsertedIdx] = note
+                        .chgComm;
+                    recordsCommToBeInsertedIdx += 1;
                     // TODO extract proof for batch verification
                 }
                 mintIdx += 1;
@@ -247,7 +271,18 @@ contract CAPE {
                 FreezeNote memory note = newBlock.freezeNotes[freezeIdx];
                 _checkMerkleRootContained(note.auxInfo.merkleRoot);
                 if (_publish(note.inputNullifiers)) {
-                    // TODO collect note.outputCommitments
+                    // Collect note.outputCommitments
+                    for (
+                        uint256 i = 0;
+                        i < note.outputCommitments.length;
+                        i++
+                    ) {
+                        recordsCommToBeInserted[
+                            recordsCommToBeInsertedIdx
+                        ] = note.outputCommitments[i];
+                        recordsCommToBeInsertedIdx += 1;
+                    }
+
                     // TODO extract proof for batch verification
                 }
                 freezeIdx += 1;
@@ -270,7 +305,9 @@ contract CAPE {
         }
 
         // TODO verify plonk proof
-        // TODO batch insert record commitments
+
+        // Batch insert record commitments
+        _updateRecordsMerkleTree(recordsCommToBeInserted);
     }
 
     function _checkMerkleRootContained(uint256 root) internal view {

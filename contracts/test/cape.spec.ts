@@ -8,7 +8,8 @@ describe("CAPE", function () {
 
     beforeEach(async function () {
       let capeFactory = await ethers.getContractFactory("TestCAPE");
-      cape = await capeFactory.deploy();
+      const TREE_HEIGHT = 20;
+      cape = await capeFactory.deploy(TREE_HEIGHT);
     });
 
     it("is possible to check for non-membership", async function () {

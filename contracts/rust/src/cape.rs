@@ -129,6 +129,7 @@ mod tests {
     use crate::types::{CapeBlock, TestCAPE, CAPE};
     use std::env;
     use std::path::Path;
+    const TREE_HEIGHT: u8 = 20;
 
     #[tokio::test]
     async fn test_submit_block_to_cape_contract() {
@@ -139,7 +140,7 @@ mod tests {
             Err(_) => deploy(
                 client.clone(),
                 Path::new("../artifacts/contracts/CAPE.sol/CAPE"),
-                (),
+                TREE_HEIGHT,
             )
             .await
             .unwrap()
@@ -210,7 +211,7 @@ mod tests {
         let contract = deploy(
             client.clone(),
             Path::new("../artifacts/contracts/mocks/TestCAPE.sol/TestCAPE"),
-            (),
+            TREE_HEIGHT,
         )
         .await
         .unwrap();

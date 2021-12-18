@@ -125,11 +125,37 @@ mod tests {
     use crate::assertion::Matcher;
     use crate::cap_jf::create_anon_xfr_2in_3out;
     use crate::ethereum::{deploy, get_funded_deployer};
-    use crate::helpers::convert_nullifier_to_u256;
-    use crate::types::{CapeBlock, TestCAPE, CAPE};
+    use crate::helpers::{convert_nullifier_to_u256, convert_u256_to_bytes_le};
+    use crate::types::{CapeBlock, TestCAPE};
+    use ark_ed_on_bn254::Fq as Fr254;
+    use ark_ff::BigInteger;
+    use ark_ff::PrimeField;
+    use jf_primitives::merkle_tree::MerkleTree;
     use std::env;
     use std::path::Path;
+
     const TREE_HEIGHT: u8 = 20;
+
+    // TODO refactor with compare_roots from records_merkle_tree module
+    async fn compare_roots(
+        mt: &MerkleTree<Fr254>,
+        contract: &TestCAPE<
+            SignerMiddleware<Provider<Http>, Wallet<ethers::core::k256::ecdsa::SigningKey>>,
+        >,
+        should_be_equal: bool,
+    ) {
+        let root_fr254 = mt.commitment().root_value;
+        let root_value_u256 = contract.get_root_value().call().await.unwrap();
+
+        assert_eq!(
+            should_be_equal,
+            (convert_u256_to_bytes_le(root_value_u256).as_slice()
+                == root_fr254.to_scalar().into_repr().to_bytes_le())
+        );
+    }
+
+    // TODO should we cut this test is several ones. In particular we must test the behaviour
+    // for different blocks, i.e. make the block a parameter of the test
 
     #[tokio::test]
     async fn test_submit_block_to_cape_contract() {
@@ -139,7 +165,7 @@ mod tests {
             Ok(val) => val.parse::<Address>().unwrap(),
             Err(_) => deploy(
                 client.clone(),
-                Path::new("../artifacts/contracts/CAPE.sol/CAPE"),
+                Path::new("../artifacts/contracts/mocks/TestCAPE.sol/TestCAPE"),
                 TREE_HEIGHT,
             )
             .await
@@ -147,7 +173,7 @@ mod tests {
             .address(),
         };
 
-        let contract = CAPE::new(contract_address, client);
+        let contract = TestCAPE::new(contract_address, client);
 
         // Create two transactions
         let mut prng = ark_std::test_rng();
@@ -171,7 +197,7 @@ mod tests {
             burn_notes: vec![],
         };
 
-        // Create dummy records openings arrary
+        // Create dummy records openings array
         let records_openings = vec![];
 
         // Check that some nullifier is not yet inserted
@@ -192,8 +218,20 @@ mod tests {
 
         // Check that now the nullifier has been inserted
         let is_nullifier_inserted = contract.nullifiers(nullifier).call().await.unwrap();
-
         assert!(is_nullifier_inserted);
+
+        // TODO add all the types of transactions to ensure no record commitment is missed
+        // Check that the records Merkle tree has been updated correctly
+        let mut record_commitments_to_insert = vec![];
+        record_commitments_to_insert.extend(notes[0].clone().output_commitments);
+        record_commitments_to_insert.extend(notes[1].clone().output_commitments);
+        let mut mt = MerkleTree::<Fr254>::new(TREE_HEIGHT).unwrap();
+        for r in record_commitments_to_insert {
+            mt.push(r.to_field_element());
+        }
+        compare_roots(&mt, &contract, true).await;
+
+        // TODO check frontier is stored correctly
     }
 
     #[test]
@@ -300,5 +338,5 @@ mod tests {
     }
 
     // TODO integration test to check if check_burn is hooked up correctly in
-    // main block validaton loop.
+    // main block validation loop.
 }

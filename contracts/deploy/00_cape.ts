@@ -5,9 +5,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
+  const treeDepth = 26;
+  const nRoots = 10;
   await deploy("CAPE", {
     from: deployer,
-    args: [],
+    args: [treeDepth, nRoots],
     log: true,
   });
 };

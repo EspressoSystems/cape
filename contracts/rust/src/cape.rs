@@ -242,17 +242,37 @@ impl From<TransactionNote> for NoteType {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub(crate) struct CAPEConstructorArgs {
+    height: u8,
+    n_roots: u64,
+}
+
+#[allow(dead_code)]
+impl CAPEConstructorArgs {
+    pub(crate) fn new(height: u8, n_roots: u64) -> Self {
+        Self { height, n_roots }
+    }
+}
+
+impl From<CAPEConstructorArgs> for (u8, u64) {
+    fn from(args: CAPEConstructorArgs) -> (u8, u64) {
+        (args.height, args.n_roots)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use ethers::prelude::k256::ecdsa::SigningKey;
     use ethers::prelude::{Address, Http, Provider, SignerMiddleware, Wallet, U256};
     use jf_aap::structs::RecordOpening;
+    use rand::Rng;
 
     use crate::assertion::Matcher;
     use crate::ethereum::{deploy, get_funded_deployer};
     use crate::types::{
-        GenericInto, NullifierSol, RecordCommitmentSol, TestCAPE, TestCapeTypes, CAPE,
+        GenericInto, MerkleRootSol, NullifierSol, RecordCommitmentSol, TestCAPE, TestCapeTypes,
     };
     use anyhow::Result;
     use jf_aap::keys::UserPubKey;
@@ -262,13 +282,13 @@ mod tests {
 
     async fn deploy_cape_test() -> TestCAPE<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>> {
         let client = get_funded_deployer().await.unwrap();
-        let contract = deploy(
+        let call = deploy(
             client.clone(),
             Path::new("../artifacts/contracts/mocks/TestCAPE.sol/TestCAPE"),
-            (),
+            CAPEConstructorArgs::new(5, 2).generic_into::<(u8, u64)>(),
         )
-        .await
-        .unwrap();
+        .await;
+        let contract = call.unwrap();
         TestCAPE::new(contract.address(), client)
     }
 
@@ -280,15 +300,16 @@ mod tests {
             Ok(val) => val.parse::<Address>().unwrap(),
             Err(_) => deploy(
                 client.clone(),
-                Path::new("../artifacts/contracts/CAPE.sol/CAPE"),
-                (),
+                // TODO using mock contract to be able to manually add root
+                Path::new("../artifacts/contracts/mocks/TestCAPE.sol/TestCAPE"),
+                CAPEConstructorArgs::new(5, 2).generic_into::<(u8, u64)>(),
             )
             .await
             .unwrap()
             .address(),
         };
 
-        let contract = CAPE::new(contract_address, client);
+        let contract = TestCAPE::new(contract_address, client);
 
         // Create two transactions
         let rng = &mut ark_std::test_rng();
@@ -299,6 +320,8 @@ mod tests {
         let miner = UserPubKey::default();
 
         let nf = params.txns[0].nullifiers()[0];
+        let root = params.txns[0].merkle_root();
+
         // temporarily no burn txn yet.
         let cape_block = CapeBlock::generate(params.txns, vec![], miner.address())?;
 
@@ -310,10 +333,16 @@ mod tests {
                 .await?
         );
 
+        // TODO should not require to manually submit the root here
+        contract
+            .add_root(root.generic_into::<MerkleRootSol>().0)
+            .send()
+            .await?
+            .await?;
+
         // Submit to the contract
         contract
             .submit_cape_block(cape_block.into(), vec![])
-            .legacy()
             .send()
             .await?
             .await?;
@@ -530,6 +559,70 @@ mod tests {
             .call()
             .await
             .should_revert_with_message("Reveal map exceeds 12 bits"))
+    }
+
+    #[tokio::test]
+    async fn test_compute_max_commitments() {
+        let contract = deploy_cape_test().await;
+        let rng = &mut ark_std::test_rng();
+
+        for _run in 0..10 {
+            let mut num_comms = 0;
+
+            let burn_notes = (0..rng.gen_range(0..2))
+                .map(|_| {
+                    let mut note = sol::BurnNote::default();
+                    let n = rng.gen_range(0..10);
+                    note.transfer_note.output_commitments = [U256::from(0)].repeat(n);
+                    num_comms += n;
+                    note
+                })
+                .collect();
+
+            let transfer_notes = (0..rng.gen_range(0..2))
+                .map(|_| {
+                    let mut note = sol::TransferNote::default();
+                    let n = rng.gen_range(0..10);
+                    note.output_commitments = [U256::from(0)].repeat(n);
+                    num_comms += n;
+                    note
+                })
+                .collect();
+
+            let freeze_notes = (0..rng.gen_range(0..2))
+                .map(|_| {
+                    let mut note = sol::FreezeNote::default();
+                    let n = rng.gen_range(0..10);
+                    note.output_commitments = [U256::from(0)].repeat(n);
+                    num_comms += n;
+                    note
+                })
+                .collect();
+
+            let mint_notes = (0..rng.gen_range(0..2))
+                .map(|_| {
+                    num_comms += 2; // change and mint
+                    sol::MintNote::default()
+                })
+                .collect();
+
+            let cape_block = sol::CapeBlock {
+                transfer_notes,
+                mint_notes,
+                freeze_notes,
+                burn_notes,
+                note_types: vec![],
+                miner_addr: UserPubKey::default().address().into(),
+            };
+
+            let max_comms_sol = contract
+                .compute_max_commitments(cape_block)
+                .call()
+                .await
+                .unwrap();
+
+            assert_eq!(max_comms_sol, U256::from(num_comms));
+        }
     }
 
     mod type_conversion {

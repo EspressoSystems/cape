@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import "../CAPE.sol";
 import "../interfaces/IPlonkVerifier.sol";
 
-contract TestCapeTypes is CAPE {
+contract TestCapeTypes {
     function checkNullifier(uint256 nf) public pure returns (uint256) {
         return nf;
     }

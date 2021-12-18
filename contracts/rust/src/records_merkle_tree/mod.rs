@@ -71,7 +71,7 @@ pub(crate) async fn get_contract_records_merkle_tree(
 /// * `returns` - flattened frontier. If the frontier is empty, returns an empty vector.
 ///
 #[allow(dead_code)]
-fn flatten_frontier(frontier: &MerkleFrontier<Fr254>, uid: u64) -> Vec<Fr254> {
+pub(crate) fn flatten_frontier(frontier: &MerkleFrontier<Fr254>, uid: u64) -> Vec<Fr254> {
     match frontier {
         MerkleFrontier::Proof(lap) => {
             let mut res: Vec<Fr254> = vec![];

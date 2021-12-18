@@ -23,7 +23,6 @@
     - [Details about solidity compiler (solc) management](#details-about-solidity-compiler-solc-management)
   - [Ethereum contracts](#ethereum-contracts)
   - [Rust](#rust)
-  - [Examples](#examples)
   - [Linting & Formatting](#linting--formatting)
   - [Updating dependencies](#updating-dependencies)
   - [Alternative nix installation methods](#alternative-nix-installation-methods)
@@ -299,17 +298,6 @@ To watch the rust files and compile on changes
     cargo watch
 
 The command (`check` by default) can be changed with `-x` (for example `cargo watch -x test`).
-
-## Examples
-
-Generate a `jf_aap::transfer::TransferNote` and save it to a file `my_note.bin`.
-Building with the `--release` flag make this a lot faster.
-
-    cargo run -p cap-rust-sandbox --example create_note --release
-
-Load the file:
-
-    cargo run -p cap-rust-sandbox --example read_note
 
 ## Linting & Formatting
 

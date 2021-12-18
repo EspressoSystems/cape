@@ -5,7 +5,7 @@ use ethers::{
     core::k256::ecdsa::SigningKey,
     prelude::{
         coins_bip39::English, Bytes, Contract, ContractFactory, Http, LocalWallet, Middleware,
-        MnemonicBuilder, Provider, Signer, SignerMiddleware, TransactionRequest, Wallet,
+        MnemonicBuilder, Provider, Signer, SignerMiddleware, TransactionRequest, Wallet, U256,
     },
 };
 use std::{convert::TryFrom, env, fs, path::Path, sync::Arc, time::Duration};
@@ -37,7 +37,7 @@ pub async fn get_funded_deployer(
     if !accounts.is_empty() {
         let tx = TransactionRequest::new()
             .to(deployer_wallet.address())
-            .value(u64::pow(10, 18))
+            .value(ethers::utils::parse_ether(U256::from(1))?)
             .from(accounts[0]);
 
         // Set a lower polling interval to avoid very slow tests

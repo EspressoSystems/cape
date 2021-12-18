@@ -18,7 +18,8 @@ describe("Records Merkle Tree Benchmarks", function () {
       await rmtContract.deployed();
     });
 
-    it("shows how much gas is spent by updateRecordsMerkleTree", async function () {
+    // TODO re-enable once we have have split contract deployment
+    it.skip("shows how much gas is spent by updateRecordsMerkleTree", async function () {
       let elems = [1, 2, 3, 4, 5];
 
       const txEmpty = await rmtContract.testUpdateRecordsMerkleTree([]);

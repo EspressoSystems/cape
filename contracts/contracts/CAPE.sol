@@ -7,16 +7,22 @@ pragma solidity ^0.8.0;
 /// @notice This is a notice.
 /// @dev Developers are awesome!
 
+import "hardhat/console.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
+import "./libraries/AccumulatingArray.sol";
 import "./libraries/BN254.sol";
 import "./libraries/RescueLib.sol";
 import "./interfaces/IPlonkVerifier.sol";
+import "./RecordsMerkleTree.sol";
+import "./RootStore.sol";
 
 // TODO Remove once functions are implemented
 /* solhint-disable no-unused-vars */
 
-contract CAPE {
+contract CAPE is RecordsMerkleTree, RootStore {
     mapping(uint256 => bool) public nullifiers;
+
+    using AccumulatingArray for AccumulatingArray.Data;
 
     bytes public constant CAPE_BURN_MAGIC_BYTES = "TRICAPE burn";
 
@@ -128,6 +134,11 @@ contract CAPE {
         BurnNote[] burnNotes;
     }
 
+    constructor(uint8 height, uint64 nRoots)
+        RecordsMerkleTree(height)
+        RootStore(nRoots)
+    {}
+
     /// Insert a nullifier into the set of nullifiers.
     /// @dev Reverts if nullifier is already in nullifier set.
     function _insertNullifier(uint256 nullifier) internal {
@@ -220,72 +231,105 @@ contract CAPE {
         uint256 freezeIdx = 0;
         uint256 burnIdx = 0;
 
+        AccumulatingArray.Data memory comms = AccumulatingArray.create(
+            _computeMaxCommitments(newBlock)
+        );
+
         for (uint256 i = 0; i < newBlock.noteTypes.length; i++) {
             NoteType noteType = newBlock.noteTypes[i];
 
             if (noteType == NoteType.TRANSFER) {
                 TransferNote memory note = newBlock.transferNotes[transferIdx];
-                _checkMerkleRootContained(note.auxInfo.merkleRoot);
+                _checkContainsRoot(note.auxInfo.merkleRoot);
                 _checkTransfer(note);
                 if (_publish(note.inputNullifiers)) {
-                    // TODO collect note.outputCommitments
+                    comms.add(note.outputCommitments);
+
                     // TODO extract proof for batch verification
                 }
+
                 transferIdx += 1;
             } else if (noteType == NoteType.MINT) {
                 MintNote memory note = newBlock.mintNotes[mintIdx];
-                _checkMerkleRootContained(note.auxInfo.merkleRoot);
+                _checkContainsRoot(note.auxInfo.merkleRoot);
                 if (_publish(note.inputNullifier)) {
-                    // TODO collect note.mintComm
-                    // TODO collect note.chgComm
+                    comms.add(note.mintComm);
+                    comms.add(note.chgComm);
                     // TODO extract proof for batch verification
                 }
+
                 mintIdx += 1;
             } else if (noteType == NoteType.FREEZE) {
                 FreezeNote memory note = newBlock.freezeNotes[freezeIdx];
-                _checkMerkleRootContained(note.auxInfo.merkleRoot);
+                _checkContainsRoot(note.auxInfo.merkleRoot);
+
                 if (_publish(note.inputNullifiers)) {
-                    // TODO collect note.outputCommitments
+                    comms.add(note.outputCommitments);
+
                     // TODO extract proof for batch verification
                 }
+
                 freezeIdx += 1;
             } else if (noteType == NoteType.BURN) {
                 BurnNote memory note = newBlock.burnNotes[burnIdx];
                 TransferNote memory transfer = note.transferNote;
-                _checkMerkleRootContained(transfer.auxInfo.merkleRoot);
+                _checkContainsRoot(transfer.auxInfo.merkleRoot);
 
                 _checkBurn(note);
 
                 if (_publish(transfer.inputNullifiers)) {
-                    // TODO collect transfer.outputCommitments
+                    // TODO do we need a special logic for how to handle outputs record commitments with BURN notes
+                    comms.add(transfer.outputCommitments);
                     // TODO extract proof for batch verification
                 }
+
                 // TODO handle withdrawal (better done at end if call is external
                 //      or have other reentrancy protection)
+
                 burnIdx += 1;
             }
         }
 
         // TODO verify plonk proof
-        // TODO batch insert record commitments
-    }
 
-    function _checkMerkleRootContained(uint256 root) internal view {
-        // TODO revert if not contained
+        // Batch insert record commitments
+
+        // Check that this is correct
+        _updateRecordsMerkleTree(comms.toArray());
+
+        _addRoot(_rootValue);
     }
 
     function _handleWithdrawal() internal {
         // TODO
     }
 
-    function _batchInsertRecordCommitments(uint256[] memory commitments)
+    /// @dev Compute an upper bound on the number of records to be inserted
+    function _computeMaxCommitments(CapeBlock memory newBlock)
         internal
+        pure
+        returns (uint256)
     {
-        // TODO
+        // MintNote always has 2 commitments: mint_comm, chg_comm
+        uint256 maxComms = 2 * newBlock.mintNotes.length;
+        for (uint256 i = 0; i < newBlock.transferNotes.length; i++) {
+            maxComms += newBlock.transferNotes[i].outputCommitments.length;
+        }
+        for (uint256 i = 0; i < newBlock.burnNotes.length; i++) {
+            maxComms += newBlock
+                .burnNotes[i]
+                .transferNote
+                .outputCommitments
+                .length;
+        }
+        for (uint256 i = 0; i < newBlock.freezeNotes.length; i++) {
+            maxComms += newBlock.freezeNotes[i].outputCommitments.length;
+        }
+        return maxComms;
     }
 
     function _checkTransfer(TransferNote memory note) internal pure {
-        // TODO consider moving _checkMerkleRootContained into _check[NoteType] functions
+        // TODO consider moving _checkContainsRoot into _check[NoteType] functions
         require(
             !_containsBurnPrefix(note.auxInfo.extraProofBoundData),
             "Burn prefix in transfer note"

@@ -69,7 +69,7 @@ mkShell
   SOLCX_BINARY_PATH = "${mySolc}/bin";
   SOLC_VERSION = mySolc.version;
   SOLC_PATH = "${mySolc}/bin/solc";
-  SOLC_OPTIMIZER_RUNS = "1000000";
+  SOLC_OPTIMIZER_RUNS = "10000"; # TODO increase this once we have split up contract deployment
 
   shellHook = ''
     echo "Ensuring node dependencies are installed"

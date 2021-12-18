@@ -33,6 +33,10 @@ abigen!(
     "../artifacts/contracts/mocks/TestRescue.sol/TestRescue/abi.json",
     event_derives(serde::Deserialize, serde::Serialize);
 
+    TestRootStore,
+    "../artifacts/contracts/mocks/TestRootStore.sol/TestRootStore/abi.json",
+    event_derives(serde::Deserialize, serde::Serialize);
+
     TestTranscript,
     "../artifacts/contracts/mocks/TestTranscript.sol/TestTranscript/abi.json",
     event_derives(serde::Deserialize, serde::Serialize);

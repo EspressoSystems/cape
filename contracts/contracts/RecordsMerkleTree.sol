@@ -25,7 +25,7 @@ contract RecordsMerkleTree {
     uint64 internal _numLeaves;
     uint8 internal _height;
 
-    mapping(uint256 => uint256) private _flattenedFrontier;
+    mapping(uint256 => uint256) internal _flattenedFrontier;
 
     /// Instantiate a records merkle tree with its height
     /// @param height height of the merkle tree

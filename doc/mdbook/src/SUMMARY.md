@@ -8,7 +8,8 @@
 - [SimpleToken](./SimpleToken.md)
 - [Wrapper](./Wrapper.md)
 - [Ancillary Material](./ANCILLARY.md)
-  - [Curve](./Curve.md)
+  - [AccumulatingArray](./libraries/AccumulatingArray.md)
+  - [BN254](./libraries/BN254.md)
   - [DummyCAPE](./DummyCAPE.md)
   - [Greeter](./Greeter.md)
   - [RescueNonOptimized](./RescueNonOptimized.md)
@@ -18,4 +19,3 @@
   - [TestRecordsMerkleTree](./TestRecordsMerkleTree.md)
   - [TestRescueNonOptimized](./TestRescueNonOptimized.md)
   - [TestRescue](./TestRescue.md)
-

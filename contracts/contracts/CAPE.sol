@@ -17,6 +17,11 @@ import "./RecordsMerkleTree.sol";
 contract CAPE is RecordsMerkleTree {
     mapping(uint256 => bool) public nullifiers;
 
+    // The last N roots are managed with a circular buffer
+    uint256[] internal _roots;
+    uint64 internal _nRoots;
+    uint64 internal _rootsWriteIndex;
+
     bytes public constant CAPE_BURN_MAGIC_BYTES = "TRICAPE burn";
 
     struct PlonkProof {
@@ -133,7 +138,20 @@ contract CAPE is RecordsMerkleTree {
         BurnNote[] burnNotes; // TODO
     }
 
-    constructor(uint8 height) RecordsMerkleTree(height) {}
+    constructor(uint8 height, uint64 nRoots) RecordsMerkleTree(height) {
+        // Set up the circular buffer for handling the last N roots
+        _roots = new uint256[](nRoots);
+        _nRoots = nRoots;
+
+        require(_nRoots > 1, "A least 2 roots required");
+        _rootsWriteIndex = 1; // The first root value is 0 when the tree is empty
+    }
+
+    /// Update the list of roots
+    function _updateRootsList(uint256 lastRoot) private {
+        _roots[_rootsWriteIndex] = lastRoot;
+        _rootsWriteIndex = (_rootsWriteIndex + 1) % _nRoots;
+    }
 
     /// Insert a nullifier into the set of nullifiers.
     /// @dev Reverts if nullifier is already in nullifier set.
@@ -375,6 +393,9 @@ contract CAPE is RecordsMerkleTree {
 
         // Check that this is correct
         _updateRecordsMerkleTree(recordsCommToBeInsertedTrimmed);
+
+        // Update the list of roots
+        _updateRootsList(_rootValue);
     }
 
     function _checkMerkleRootContained(uint256 root) internal view {

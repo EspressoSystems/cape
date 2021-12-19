@@ -136,8 +136,8 @@ mod tests {
     use std::path::Path;
 
     const TREE_HEIGHT: u8 = 20;
+    const N_ROOTS: u8 = 3;
 
-    // TODO refactor with compare_roots from records_merkle_tree module
     async fn compare_roots(
         mt: &MerkleTree<Fr254>,
         contract: &TestCAPE<
@@ -155,6 +155,59 @@ mod tests {
         );
     }
 
+    async fn submit_cape_block_to_contract(
+        contract: &TestCAPE<
+            SignerMiddleware<Provider<Http>, Wallet<ethers::core::k256::ecdsa::SigningKey>>,
+        >,
+        notes: Vec<TransactionNote>,
+    ) {
+        let note_types = notes
+            .iter()
+            .map(|note| get_note_type(note.clone()))
+            .collect_vec();
+
+        let miner = UserPubKey::default();
+
+        let mut transfer_notes = vec![];
+        let mut mint_notes = vec![];
+        let mut freeze_notes = vec![];
+        let mut burn_notes = vec![];
+
+        for note in notes.clone() {
+            match note.clone() {
+                // TODO handle burn notes
+                TransactionNote::Transfer(n) => transfer_notes.push((*n).clone().into()),
+                TransactionNote::Freeze(n) => freeze_notes.push((*n).clone().into()),
+                TransactionNote::Mint(n) => mint_notes.push((*n).clone().into()),
+            }
+        }
+
+        // Create dummy records openings array
+        let records_openings = vec![];
+
+        // Convert the AAP transactions into some solidity friendly representation
+        let block = CapeBlock {
+            miner: miner.into(),
+            block_height: 123u64,
+            transfer_notes,
+            note_types,
+            mint_notes,
+            freeze_notes,
+            burn_notes,
+        };
+
+        // Submit to the contract
+        let _receipt = contract
+            .submit_cape_block(block, records_openings)
+            .legacy()
+            .send()
+            .await
+            .unwrap()
+            .await
+            .unwrap()
+            .expect("Failed to get tx receipt");
+    }
+
     /// Performs some verifications when sending a block to the CAPE contract
     /// * `notes` - list of notes conforming the block to be submitted
     /// * `idx_invalid_txs` - list of indexes corresponding to invalid transactions.
@@ -167,7 +220,7 @@ mod tests {
             Err(_) => deploy(
                 client.clone(),
                 Path::new("../artifacts/contracts/mocks/TestCAPE.sol/TestCAPE"),
-                TREE_HEIGHT,
+                (TREE_HEIGHT, N_ROOTS),
             )
             .await
             .unwrap()
@@ -199,41 +252,6 @@ mod tests {
                 .expect("Failed to get tx receipt");
         }
 
-        let note_types = notes
-            .iter()
-            .map(|note| get_note_type(note.clone()))
-            .collect_vec();
-
-        let miner = UserPubKey::default();
-
-        let mut transfer_notes = vec![];
-        let mut mint_notes = vec![];
-        let mut freeze_notes = vec![];
-        let mut burn_notes = vec![];
-
-        for note in notes.clone() {
-            match note.clone() {
-                // TODO handle burn notes
-                TransactionNote::Transfer(n) => transfer_notes.push((*n).clone().into()),
-                TransactionNote::Freeze(n) => freeze_notes.push((*n).clone().into()),
-                TransactionNote::Mint(n) => mint_notes.push((*n).clone().into()),
-            }
-        }
-
-        // Convert the AAP transactions into some solidity friendly representation
-        let block = CapeBlock {
-            miner: miner.into(),
-            block_height: 123u64,
-            transfer_notes,
-            note_types,
-            mint_notes,
-            freeze_notes,
-            burn_notes,
-        };
-
-        // Create dummy records openings array
-        let records_openings = vec![];
-
         // Check that the first nullifier of the first transaction is not yet inserted
         let nullifier = match notes[0].clone() {
             TransactionNote::Transfer(n) => {
@@ -245,16 +263,7 @@ mod tests {
         let is_nullifier_inserted = contract.nullifiers(nullifier).call().await.unwrap();
         assert!(!is_nullifier_inserted);
 
-        // Submit to the contract
-        let _receipt = contract
-            .submit_cape_block(block, records_openings)
-            .legacy()
-            .send()
-            .await
-            .unwrap()
-            .await
-            .unwrap()
-            .expect("Failed to get tx receipt");
+        submit_cape_block_to_contract(&contract, notes.clone()).await;
 
         // Check that now the first nullifier of the first transaction has been inserted
         let is_nullifier_inserted = contract.nullifiers(nullifier).call().await.unwrap();
@@ -310,6 +319,43 @@ mod tests {
         // Create new ticket ^^^
     }
 
+    #[tokio::test]
+    async fn test_storage_of_n_roots() {
+        let contract = deploy_cape_test().await;
+
+        let mut prng = ark_std::test_rng();
+
+        const N_BLOCKS: u32 = 4;
+
+        // We create blocks of a single transaction each
+        let notes = create_anon_xfr_2in_3out(&mut prng, N_BLOCKS);
+
+        // Check the roots are initially all set to 0
+        let (roots, index) = contract.get_roots().call().await.unwrap();
+        assert_eq!(roots, vec![U256::from(0); 3]);
+        assert_eq!(index, U256::from(1));
+
+        let mut root_values_after_each_update = vec![];
+
+        // Submit four blocks.
+        for i in 0..(N_BLOCKS as usize) {
+            submit_cape_block_to_contract(&contract, vec![TransactionNote::from(notes[i].clone())])
+                .await;
+            let root_value_u256 = contract.get_root_value().call().await.unwrap();
+            root_values_after_each_update.push(root_value_u256);
+        }
+
+        // Check that the last three roots are stored correctly.
+        let (roots, index) = contract.get_roots().call().await.unwrap();
+        let expected_roots = [
+            root_values_after_each_update[2],
+            root_values_after_each_update[3],
+            root_values_after_each_update[1],
+        ];
+        assert_eq!(roots, expected_roots);
+        assert_eq!(index, U256::from(2));
+    }
+
     #[test]
     fn test_note_types() {
         // TODO
@@ -325,7 +371,7 @@ mod tests {
         let contract = deploy(
             client.clone(),
             Path::new("../artifacts/contracts/mocks/TestCAPE.sol/TestCAPE"),
-            TREE_HEIGHT,
+            (TREE_HEIGHT, N_ROOTS),
         )
         .await
         .unwrap();

@@ -155,7 +155,11 @@ mod tests {
         );
     }
 
-    async fn check_block(notes: Vec<TransactionNote>) {
+    /// Performs some verifications when sending a block to the CAPE contract
+    /// * `notes` - list of notes conforming the block to be submitted
+    /// * `idx_invalid_txs` - list of indexes corresponding to invalid transactions.
+    /// We simulate the invalidity of those transactions by inserting one of their nullifiers into the contract state before sending the block.
+    async fn check_block(notes: Vec<TransactionNote>, idx_invalid_txs: Vec<usize>) {
         let client = get_funded_deployer().await.unwrap();
 
         let contract_address: Address = match env::var("CAPE_ADDRESS") {
@@ -172,6 +176,29 @@ mod tests {
 
         let contract = TestCAPE::new(contract_address, client);
 
+        // Simulate invalid transactions by inserting one of their nullifiers into the contract state.
+        let mut already_published_nullifiers = vec![];
+        for i in &idx_invalid_txs {
+            let null = &notes.clone()[*i].nullifiers()[0];
+            already_published_nullifiers.push(null.clone());
+        }
+
+        let u256_nullifiers = already_published_nullifiers
+            .iter()
+            .map(|n| convert_nullifier_to_u256(&n))
+            .collect_vec();
+        for null in u256_nullifiers {
+            let _receipt = contract
+                .insert_nullifier(null)
+                .legacy()
+                .send()
+                .await
+                .unwrap()
+                .await
+                .unwrap()
+                .expect("Failed to get tx receipt");
+        }
+
         let note_types = notes
             .iter()
             .map(|note| get_note_type(note.clone()))
@@ -185,7 +212,7 @@ mod tests {
         let mut burn_notes = vec![];
 
         for note in notes.clone() {
-            match note {
+            match note.clone() {
                 // TODO handle burn notes
                 TransactionNote::Transfer(n) => transfer_notes.push((*n).clone().into()),
                 TransactionNote::Freeze(n) => freeze_notes.push((*n).clone().into()),
@@ -207,7 +234,7 @@ mod tests {
         // Create dummy records openings array
         let records_openings = vec![];
 
-        // Check that the first nullifier is not yet inserted
+        // Check that the first nullifier of the first transaction is not yet inserted
         let nullifier = match notes[0].clone() {
             TransactionNote::Transfer(n) => {
                 convert_nullifier_to_u256(&(*n).clone().inputs_nullifiers[0])
@@ -229,14 +256,18 @@ mod tests {
             .unwrap()
             .expect("Failed to get tx receipt");
 
-        // Check that now the nullifier has been inserted
+        // Check that now the first nullifier of the first transaction has been inserted
         let is_nullifier_inserted = contract.nullifiers(nullifier).call().await.unwrap();
         assert!(is_nullifier_inserted);
 
         // Check that the records Merkle tree has been updated correctly
         let mut record_commitments_to_insert = vec![];
-        for note in notes.iter() {
-            record_commitments_to_insert.extend(note.clone().output_commitments());
+        for (i, note) in notes.iter().enumerate() {
+            if !idx_invalid_txs.contains(&i)
+            // We skip invalid transactions
+            {
+                record_commitments_to_insert.extend(note.clone().output_commitments());
+            }
         }
 
         let mut mt = MerkleTree::<Fr254>::new(TREE_HEIGHT).unwrap();
@@ -258,20 +289,25 @@ mod tests {
 
     #[tokio::test]
     async fn test_submit_block_to_cape_contract() {
-        // Two transfer transactions
         let mut prng = ark_std::test_rng();
+
+        // Two transfer transactions
         let notes = create_anon_xfr_2in_3out(&mut prng, 2);
         let transaction_notes = notes
             .iter()
             .map(|n| TransactionNote::from(n.clone()))
             .collect_vec();
-        check_block(transaction_notes).await;
+        check_block(transaction_notes.clone(), vec![]).await;
 
-        // Two transaction with one invalid (has an already published nullifier)
+        // Two transactions with one invalid (the second transaction has an already published nullifier)
+        // We reuse the notes created above
+        check_block(transaction_notes, vec![1]).await;
 
         // One transaction of each type (Transfer,Mint,Freeze,Burn)
 
-        // TODO more test cases to capture different combinations of transactions (different types, valid and invalid transactions, different number of inputs/outputs,....)
+        // TODO more test cases to capture different combinations of transactions
+        // (different types, valid and invalid transactions, different number of inputs/outputs,....)
+        // Create new ticket ^^^
     }
 
     #[test]

@@ -7,6 +7,7 @@ pragma solidity ^0.8.0;
 /// @notice This is a notice.
 /// @dev Developers are awesome!
 
+import "hardhat/console.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 import "./RecordsMerkleTree.sol";
 
@@ -173,6 +174,29 @@ contract CAPE is RecordsMerkleTree {
         return false;
     }
 
+    /// Trim the array of records commitment from the 0 values at the end
+    function _trimArrayRightZeroes(uint256[] memory input)
+        private
+        returns (uint256[] memory)
+    {
+        // Compute new size of array after trimming
+        uint256 size = 0;
+        for (uint256 i = 0; i < input.length; i++) {
+            if (input[i] != 0) {
+                size += 1;
+            }
+        }
+        // Allocate memory for the output array
+        uint256[] memory output = new uint256[](size);
+
+        // Copy values into new array
+        for (uint256 i = 0; i < size; i++) {
+            output[i] = input[i];
+        }
+
+        return output;
+    }
+
     /// Publish a nullifier if it hasn't been published before
     /// @return `true` if the nullifier was published, `false` if it wasn't
     function _publish(uint256 nullifier) internal returns (bool) {
@@ -251,7 +275,6 @@ contract CAPE is RecordsMerkleTree {
                 TransferNote memory note = newBlock.transferNotes[transferIdx];
                 _checkMerkleRootContained(note.auxInfo.merkleRoot);
                 if (_publish(note.inputsNullifiers)) {
-                    // TODO extract function
                     // Collect note.outputCommitments
                     for (
                         uint256 i = 0;
@@ -285,7 +308,6 @@ contract CAPE is RecordsMerkleTree {
                 FreezeNote memory note = newBlock.freezeNotes[freezeIdx];
                 _checkMerkleRootContained(note.auxInfo.merkleRoot);
                 if (_publish(note.inputNullifiers)) {
-                    // TODO extract function
                     // Collect note.outputCommitments
                     for (
                         uint256 i = 0;
@@ -334,9 +356,25 @@ contract CAPE is RecordsMerkleTree {
         // TODO verify plonk proof
 
         // Batch insert record commitments
-        // TODO trim the array of the 0 values at the end (because not all transactions are necessary valid)
+
+        console.log(
+            "recordsCommToBeInserted.length: %s",
+            recordsCommToBeInserted.length
+        );
+
+        // Not all transactions are necessary valid so it is needed to remove all the zero values of the array
+        // (which should be contiguous to the right)
+        // Note: we assume that a record commitment cannot have value 0.
+        uint256[] memory recordsCommToBeInsertedTrimmed = _trimArrayRightZeroes(
+            recordsCommToBeInserted
+        );
+        console.log(
+            "recordsCommToBeInsertedTrimmed.length: %s",
+            recordsCommToBeInsertedTrimmed.length
+        );
+
         // Check that this is correct
-        _updateRecordsMerkleTree(recordsCommToBeInserted);
+        _updateRecordsMerkleTree(recordsCommToBeInsertedTrimmed);
     }
 
     function _checkMerkleRootContained(uint256 root) internal view {

@@ -27,4 +27,13 @@ contract TestCAPE is CAPE {
     {
         return _hasBurnDestination(extraProofBoundData);
     }
+
+    function getFlattenedFrontier() public returns (uint256[] memory) {
+        uint256 frontierSize = 2 * _height + 1;
+        uint256[] memory flattenedFrontier = new uint256[](frontierSize);
+        for (uint256 i = 0; i < frontierSize; i++) {
+            flattenedFrontier[i] = _flattenedFrontier[i];
+        }
+        return flattenedFrontier;
+    }
 }

@@ -126,6 +126,7 @@ mod tests {
     use crate::cap_jf::create_anon_xfr_2in_3out;
     use crate::ethereum::{deploy, get_funded_deployer};
     use crate::helpers::{convert_nullifier_to_u256, convert_u256_to_bytes_le};
+    use crate::records_merkle_tree::flatten_frontier;
     use crate::types::{CapeBlock, TestCAPE};
     use ark_ed_on_bn254::Fq as Fr254;
     use ark_ff::BigInteger;
@@ -244,7 +245,15 @@ mod tests {
         }
         compare_roots(&mt, &contract, true).await;
 
-        // TODO check frontier is stored correctly
+        // Check the frontier has been stored correctly
+        let flattened_frontier_from_contract =
+            contract.get_flattened_frontier().call().await.unwrap();
+        let pos = mt.num_leaves() - 1;
+        let flattened_frontier = flatten_frontier(&mt.frontier(), pos)
+            .iter()
+            .map(|v| convert_fr254_to_u256((*v).clone()))
+            .collect_vec();
+        assert_eq!(flattened_frontier_from_contract, flattened_frontier);
     }
 
     #[tokio::test]

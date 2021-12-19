@@ -154,11 +154,7 @@ mod tests {
         );
     }
 
-    // TODO should we cut this test is several ones. In particular we must test the behaviour
-    // for different blocks, i.e. make the block a parameter of the test
-
-    #[tokio::test]
-    async fn test_submit_block_to_cape_contract() {
+    async fn check_block(notes: Vec<TransactionNote>) {
         let client = get_funded_deployer().await.unwrap();
 
         let contract_address: Address = match env::var("CAPE_ADDRESS") {
@@ -175,33 +171,49 @@ mod tests {
 
         let contract = TestCAPE::new(contract_address, client);
 
-        // Create two transactions
-        let mut prng = ark_std::test_rng();
-        let notes = create_anon_xfr_2in_3out(&mut prng, 2);
-
         let note_types = notes
             .iter()
-            .map(|note| get_note_type(TransactionNote::from(note.clone())))
+            .map(|note| get_note_type(note.clone()))
             .collect_vec();
 
         let miner = UserPubKey::default();
+
+        let mut transfer_notes = vec![];
+        let mut mint_notes = vec![];
+        let mut freeze_notes = vec![];
+        let mut burn_notes = vec![];
+
+        for note in notes.clone() {
+            match note {
+                // TODO handle burn notes
+                TransactionNote::Transfer(n) => transfer_notes.push((*n).clone().into()),
+                TransactionNote::Freeze(n) => freeze_notes.push((*n).clone().into()),
+                TransactionNote::Mint(n) => mint_notes.push((*n).clone().into()),
+            }
+        }
 
         // Convert the AAP transactions into some solidity friendly representation
         let block = CapeBlock {
             miner: miner.into(),
             block_height: 123u64,
-            transfer_notes: notes.iter().map(|note| note.clone().into()).collect_vec(),
+            transfer_notes,
             note_types,
-            mint_notes: vec![],
-            freeze_notes: vec![],
-            burn_notes: vec![],
+            mint_notes,
+            freeze_notes,
+            burn_notes,
         };
 
         // Create dummy records openings array
         let records_openings = vec![];
 
-        // Check that some nullifier is not yet inserted
-        let nullifier = convert_nullifier_to_u256(&notes[0].inputs_nullifiers[0]);
+        // Check that the first nullifier is not yet inserted
+        let nullifier = match notes[0].clone() {
+            TransactionNote::Transfer(n) => {
+                convert_nullifier_to_u256(&(*n).clone().inputs_nullifiers[0])
+            }
+            _ => panic!("The first note should be a transfer note"),
+        };
+
         let is_nullifier_inserted = contract.nullifiers(nullifier).call().await.unwrap();
         assert!(!is_nullifier_inserted);
 
@@ -220,11 +232,12 @@ mod tests {
         let is_nullifier_inserted = contract.nullifiers(nullifier).call().await.unwrap();
         assert!(is_nullifier_inserted);
 
-        // TODO add all the types of transactions to ensure no record commitment is missed
         // Check that the records Merkle tree has been updated correctly
         let mut record_commitments_to_insert = vec![];
-        record_commitments_to_insert.extend(notes[0].clone().output_commitments);
-        record_commitments_to_insert.extend(notes[1].clone().output_commitments);
+        for note in notes.iter() {
+            record_commitments_to_insert.extend(note.clone().output_commitments());
+        }
+
         let mut mt = MerkleTree::<Fr254>::new(TREE_HEIGHT).unwrap();
         for r in record_commitments_to_insert {
             mt.push(r.to_field_element());
@@ -232,6 +245,24 @@ mod tests {
         compare_roots(&mt, &contract, true).await;
 
         // TODO check frontier is stored correctly
+    }
+
+    #[tokio::test]
+    async fn test_submit_block_to_cape_contract() {
+        // Two transfer transactions
+        let mut prng = ark_std::test_rng();
+        let notes = create_anon_xfr_2in_3out(&mut prng, 2);
+        let transaction_notes = notes
+            .iter()
+            .map(|n| TransactionNote::from(n.clone()))
+            .collect_vec();
+        check_block(transaction_notes).await;
+
+        // Two transaction with one invalid (has an already published nullifier)
+
+        // One transaction of each type (Transfer,Mint,Freeze,Burn)
+
+        // TODO more test cases to capture different combinations of transactions (different types, valid and invalid transactions, different number of inputs/outputs,....)
     }
 
     #[test]

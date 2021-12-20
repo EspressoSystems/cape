@@ -318,7 +318,7 @@ impl CapeContract {
 mod test {
     use jf_aap::{
         keys::{AuditorKeyPair, FreezerKeyPair, UserKeyPair},
-        structs::{AssetCode, AssetCodeSeed, AssetPolicy, FreezeFlag},
+        structs::{AssetCode, AssetPolicy, FreezeFlag},
         transfer::TransferNote,
         NodeValue,
     };
@@ -354,8 +354,7 @@ mod test {
 
     fn usdc_cape_asset_def() -> AssetDefinition {
         let mut rng = rand::thread_rng();
-        let asset_code_seed = AssetCodeSeed::generate(&mut rng);
-        let asset_code = AssetCode::new(asset_code_seed, b"Official wrapped USDC in CAPE system.");
+        let asset_code = AssetCode::new_foreign(b"Official wrapped USDC in CAPE system.");
         let usdc_freezer = FreezerKeyPair::generate(&mut rng);
         let usdc_auditor = AuditorKeyPair::generate(&mut rng);
         // USDC have freezer, auditor, but temporarily leave credential issuer as empty

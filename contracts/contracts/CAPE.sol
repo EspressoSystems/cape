@@ -1,4 +1,4 @@
-//SPDX-License-Identifier: Unlicense
+//SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 /// @title Configurable Anonymous Payments on Ethereum
@@ -8,6 +8,7 @@ pragma solidity ^0.8.0;
 /// @dev Developers are awesome!
 
 import "solidity-bytes-utils/contracts/BytesLib.sol";
+import {BN254} from "./libraries/BN254.sol";
 
 // TODO Remove once functions are implemented
 /* solhint-disable no-unused-vars */
@@ -18,8 +19,30 @@ contract CAPE {
     bytes public constant CAPE_BURN_MAGIC_BYTES = "TRICAPE burn";
 
     struct PlonkProof {
-        // TODO
-        uint256 dummy;
+        // Flatten out TurboPlonk proof
+        BN254.G1Point wire0; // input wire poly com
+        BN254.G1Point wire1;
+        BN254.G1Point wire2;
+        BN254.G1Point wire3;
+        BN254.G1Point wire4; // output wire poly com
+        BN254.G1Point prodPerm; // product permutation poly com
+        BN254.G1Point split0; // split quotient poly com
+        BN254.G1Point split1;
+        BN254.G1Point split2;
+        BN254.G1Point split3;
+        BN254.G1Point split4;
+        BN254.G1Point zeta; // witness poly com for aggregated opening at `zeta`
+        BN254.G1Point zetaOmega; // witness poly com for shifted opening at `zeta * \omega`
+        uint256 wireEval0; // wire poly eval at `zeta`
+        uint256 wireEval1;
+        uint256 wireEval2;
+        uint256 wireEval3;
+        uint256 wireEval4;
+        uint256 sigmaEval0; // extended permutation (sigma) poly eval at `zeta`
+        uint256 sigmaEval1;
+        uint256 sigmaEval2;
+        uint256 sigmaEval3; // last (sigmaEval4) is saved by Maller Optimization
+        uint256 prodPermZetaOmegaEval; // product permutation poly eval at `zeta * \omega`
     }
 
     struct EdOnBn254Point {
@@ -40,11 +63,11 @@ contract CAPE {
     }
 
     struct TransferNote {
-        uint256[] inputsNullifiers;
+        uint256[] inputNullifiers;
         uint256[] outputCommitments;
         PlonkProof proof;
         AuditMemo auditMemo;
-        AuxInfo auxInfo;
+        TransferAuxInfo auxInfo;
     }
 
     struct BurnNote {
@@ -54,7 +77,7 @@ contract CAPE {
 
     struct MintNote {
         /// nullifier for the input (i.e. transaction fee record)
-        uint256 nullifier;
+        uint256 inputNullifier;
         /// output commitment for the fee change
         uint256 chgComm;
         /// output commitment for the minted asset
@@ -62,7 +85,9 @@ contract CAPE {
         /// the amount of the minted asset
         uint64 mintAmount;
         /// the asset definition of the asset
-        AssetDefinition mintAssedDef;
+        AssetDefinition mintAssetDef;
+        /// Intenral asset code
+        uint256 mintInternalAssetCode;
         /// the validity proof of this note
         PlonkProof proof;
         /// memo for policy compliance specified for the designated auditor
@@ -78,7 +103,7 @@ contract CAPE {
         FreezeAuxInfo auxInfo;
     }
 
-    struct AuxInfo {
+    struct TransferAuxInfo {
         uint256 merkleRoot;
         uint64 fee;
         uint64 validUntil;
@@ -98,37 +123,34 @@ contract CAPE {
         EdOnBn254Point txnMemoVerKey;
     }
 
-    struct UserPubKey {
-        EdOnBn254Point address_; // "address" is a keyword in solidity
-        EdOnBn254Point encKey;
-    }
-
     struct AssetDefinition {
         uint256 code;
         AssetPolicy policy;
     }
 
     struct AssetPolicy {
-        uint64 revealThreshold;
-        bool[12] revealMap; // ATTRS_LEN (8) + 3 + 1
         EdOnBn254Point auditorPk;
         EdOnBn254Point credPk;
         EdOnBn254Point freezerPk;
+        bool[12] revealMap; // ATTRS_LEN (8) + 3 + 1
+        uint64 revealThreshold;
     }
 
     struct RecordOpening {
-        bool field;
-        // TODO (Philippe will take care of it)
+        uint64 amount;
+        AssetDefinition assetDef;
+        EdOnBn254Point userAddr;
+        bool freezeFlag;
+        uint256 blind;
     }
 
     struct CapeBlock {
-        UserPubKey miner; // TODO
-        uint64 blockHeight; // TODO
+        EdOnBn254Point minerAddr;
         NoteType[] noteTypes;
         TransferNote[] transferNotes;
         MintNote[] mintNotes;
         FreezeNote[] freezeNotes;
-        BurnNote[] burnNotes; // TODO
+        BurnNote[] burnNotes;
     }
 
     /// Insert a nullifier into the set of nullifiers.
@@ -229,7 +251,7 @@ contract CAPE {
             if (noteType == NoteType.TRANSFER) {
                 TransferNote memory note = newBlock.transferNotes[transferIdx];
                 _checkMerkleRootContained(note.auxInfo.merkleRoot);
-                if (_publish(note.inputsNullifiers)) {
+                if (_publish(note.inputNullifiers)) {
                     // TODO collect note.outputCommitments
                     // TODO extract proof for batch verification
                 }
@@ -237,7 +259,7 @@ contract CAPE {
             } else if (noteType == NoteType.MINT) {
                 MintNote memory note = newBlock.mintNotes[mintIdx];
                 _checkMerkleRootContained(note.auxInfo.merkleRoot);
-                if (_publish(note.nullifier)) {
+                if (_publish(note.inputNullifier)) {
                     // TODO collect note.mintComm
                     // TODO collect note.chgComm
                     // TODO extract proof for batch verification
@@ -259,7 +281,7 @@ contract CAPE {
                 _checkBurn(transfer.auxInfo.extraProofBoundData);
                 // TODO check burn record opening matches second output commitment
 
-                if (_publish(transfer.inputsNullifiers)) {
+                if (_publish(transfer.inputNullifiers)) {
                     // TODO collect transfer.outputCommitments
                     // TODO extract proof for batch verification
                 }

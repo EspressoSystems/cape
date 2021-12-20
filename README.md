@@ -302,7 +302,7 @@ The command (`check` by default) can be changed with `-x` (for example `cargo wa
 
 ## Examples
 
-Generate a `jf_txn::transfer::TransferNote` and save it to a file `my_note.bin`.
+Generate a `jf_aap::transfer::TransferNote` and save it to a file `my_note.bin`.
 Building with the `--release` flag make this a lot faster.
 
     cargo run -p cap-rust-sandbox --example create_note --release

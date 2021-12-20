@@ -7,12 +7,12 @@ edition = "2018"
 doctest = false
 
 [dependencies]
-jf-plonk = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git", rev = "529a2e41b06d39144885c8482b7c230143567d10"}
-jf-primitives = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git", rev = "529a2e41b06d39144885c8482b7c230143567d10"}
-jf-aap = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git", rev = "529a2e41b06d39144885c8482b7c230143567d10"}
-jf-rescue = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git", rev = "529a2e41b06d39144885c8482b7c230143567d10"}
-jf-utils = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git", rev = "529a2e41b06d39144885c8482b7c230143567d10"}
-zerok_lib = { git = "ssh://git@github.com/SpectrumXYZ/spectrum.git", rev="a94ea91118858f660d89180b1c6adf121619cbf5" }
+jf-plonk = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git", rev = "22da19226bc05ada38cef1b1cf3c6774ba40e25e"}
+jf-primitives = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git", rev = "22da19226bc05ada38cef1b1cf3c6774ba40e25e"}
+jf-aap = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git", rev = "22da19226bc05ada38cef1b1cf3c6774ba40e25e"}
+jf-rescue = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git", rev = "22da19226bc05ada38cef1b1cf3c6774ba40e25e"}
+jf-utils = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git", rev = "22da19226bc05ada38cef1b1cf3c6774ba40e25e"}
+zerok_lib = { git = "ssh://git@github.com/SpectrumXYZ/spectrum.git", rev="a1f7aebdc62837989b9a6c0b90c1abf1e48edeb5" }
 ethers = { git = "https://github.com/gakonst/ethers-rs", branch = "master" }
 itertools = "0.10.1" # needed for jf-aap to compile
 ark-std = "0.3.0"

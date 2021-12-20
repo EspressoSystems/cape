@@ -79,24 +79,14 @@ impl zerok_lib::ledger::traits::TransactionKind for CAPETransactionKind {
     }
 }
 
+#[allow(unused_variables)] // FIXME: remove this
 impl Transaction for CAPETransaction {
     type NullifierSet = CAPENullifierSet;
     type Hash = CAPETransactionHash;
     type Kind = CAPETransactionKind;
 
-    fn new(note: TransactionNote, _proofs: Vec<()>) -> Self {
+    fn aap(note: TransactionNote, _proofs: Vec<()>) -> Self {
         Self(note)
-    }
-
-    fn note(&self) -> &TransactionNote {
-        &self.0
-    }
-
-    fn proofs(&self) -> Vec<()> {
-        // There are no nullifier proofs in CAPE. The validator contract stores the full nullifiers
-        // set on the blockchain and does not require authentication for spending new nullifiers.
-        // Thus, we just need to return a list of () of the appropriate length.
-        vec![(); self.0.nullifiers().len()]
     }
 
     fn hash(&self) -> Self::Hash {
@@ -106,6 +96,30 @@ impl Transaction for CAPETransaction {
     fn kind(&self) -> Self::Kind {
         // TODO
         Self::Kind::Unknown
+    }
+
+    fn open_audit_memo(
+        &self,
+        auditable_assets: &std::collections::HashMap<
+            jf_aap::structs::AssetCode,
+            jf_aap::structs::AssetDefinition,
+        >,
+        auditor_keys: &std::collections::HashMap<
+            jf_aap::keys::AuditorPubKey,
+            jf_aap::keys::AuditorKeyPair,
+        >,
+    ) -> Result<zerok_lib::ledger::AuditMemoOpening, zerok_lib::ledger::AuditError> {
+        unimplemented!();
+    }
+
+    fn proven_nullifiers(&self) -> Vec<(Nullifier, <Self::NullifierSet as NullifierSet>::Proof)> {
+        unimplemented!();
+    }
+    fn output_commitments(&self) -> Vec<jf_aap::structs::RecordCommitment> {
+        unimplemented!();
+    }
+    fn set_proofs(&mut self, proofs: Vec<<Self::NullifierSet as NullifierSet>::Proof>) {
+        unimplemented!();
     }
 }
 

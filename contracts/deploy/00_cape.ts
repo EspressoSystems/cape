@@ -7,7 +7,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployer } = await getNamedAccounts();
   await deploy("CAPE", {
     from: deployer,
-    args: [],
+    args: [5, 2],
     log: true,
   });
 };

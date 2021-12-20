@@ -1,4 +1,4 @@
-use ethers::prelude::{Bytes, U256};
+use ethers::prelude::U256;
 use jf_aap::transfer::{AuxInfo, TransferNote};
 use jf_aap::TransactionNote;
 use jf_aap::{freeze::FreezeNote, structs::AuditMemo, VerKey};
@@ -82,7 +82,7 @@ impl From<AuxInfo> for sol::AuxInfo {
             fee: item.fee,
             valid_until: item.valid_until,
             txn_memo_ver_key: item.txn_memo_ver_key.into(),
-            extra_proof_bound_data: Bytes::from(b""),
+            extra_proof_bound_data: item.extra_proof_bound_data.into(),
         }
     }
 }

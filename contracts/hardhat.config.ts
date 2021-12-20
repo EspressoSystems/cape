@@ -42,6 +42,7 @@ const config: HardhatUserConfig = {
   },
   networks: {
     hardhat: {
+      allowUnlimitedContractSize: true,
       accounts: {
         mnemonic: process.env.TEST_MNEMONIC,
       },

@@ -18,7 +18,7 @@ if is-listening $RPC_PORT; then
    echo "Using node running at $RPC_PORT"
 else
    echo "Starting hardhat node"
-   hardhat node --port $RPC_PORT &
+   hardhat node --network hardhat --port $RPC_PORT &
    node_pid=$!
    wait-port $RPC_PORT
 fi

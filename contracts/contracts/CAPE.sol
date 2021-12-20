@@ -271,32 +271,26 @@ contract CAPE is RecordsMerkleTree {
         // Compute an upper bound on the number of records to be inserted
         // TODO should let the relayer submit this value?
         //     If it's too low, tx will revert, if too high some wasted gas.
-        uint256 maxNRecordsToBeInserted = 2 * newBlock.mintNotes.length;
+        uint256 maxComms = 2 * newBlock.mintNotes.length;
         for (uint256 i = 0; i < newBlock.transferNotes.length; i++) {
-            maxNRecordsToBeInserted += newBlock
-                .transferNotes[i]
-                .outputCommitments
-                .length;
+            maxComms += newBlock.transferNotes[i].outputCommitments.length;
         }
         for (uint256 i = 0; i < newBlock.burnNotes.length; i++) {
-            maxNRecordsToBeInserted += newBlock
+            maxComms += newBlock
                 .burnNotes[i]
                 .transferNote
                 .outputCommitments // TODO is this always of same length?
                 .length;
         }
         for (uint256 i = 0; i < newBlock.freezeNotes.length; i++) {
-            maxNRecordsToBeInserted += newBlock
+            maxComms += newBlock
                 .freezeNotes[i]
                 .outputCommitments // TODO is this always of same length?
                 .length;
         }
 
-        uint256[] memory recordsCommToBeInserted = new uint256[](
-            maxNRecordsToBeInserted
-        );
-
-        uint256 recordsCommToBeInsertedIdx = 0;
+        uint256[] memory comms = new uint256[](maxComms);
+        uint256 commsIdx = 0;
 
         for (uint256 i = 0; i < newBlock.noteTypes.length; i++) {
             NoteType noteType = newBlock.noteTypes[i];
@@ -304,18 +298,13 @@ contract CAPE is RecordsMerkleTree {
             if (noteType == NoteType.TRANSFER) {
                 TransferNote memory note = newBlock.transferNotes[transferIdx];
                 _checkMerkleRootContained(note.auxInfo.merkleRoot);
+
                 if (_publish(note.inputsNullifiers)) {
-                    // Collect note.outputCommitments
-                    for (
-                        uint256 i = 0;
-                        i < note.outputCommitments.length;
-                        i++
-                    ) {
-                        recordsCommToBeInserted[
-                            recordsCommToBeInsertedIdx
-                        ] = note.outputCommitments[i];
-                        recordsCommToBeInsertedIdx += 1;
-                    }
+                    commsIdx = _appendCommitments(
+                        comms,
+                        note.outputCommitments,
+                        commsIdx
+                    );
 
                     // TODO extract proof for batch verification
                 }
@@ -323,35 +312,29 @@ contract CAPE is RecordsMerkleTree {
             } else if (noteType == NoteType.MINT) {
                 MintNote memory note = newBlock.mintNotes[mintIdx];
                 _checkMerkleRootContained(note.auxInfo.merkleRoot);
+
                 if (_publish(note.nullifier)) {
-                    // Collect note.mintComm
-                    recordsCommToBeInserted[recordsCommToBeInsertedIdx] = note
-                        .mintComm;
-                    // Collect note.chgComm
-                    recordsCommToBeInserted[recordsCommToBeInsertedIdx] = note
-                        .chgComm;
-                    recordsCommToBeInsertedIdx += 2;
+                    comms[commsIdx] = note.mintComm;
+                    comms[commsIdx] = note.chgComm;
+                    commsIdx += 2;
                     // TODO extract proof for batch verification
                 }
+
                 mintIdx += 1;
             } else if (noteType == NoteType.FREEZE) {
                 FreezeNote memory note = newBlock.freezeNotes[freezeIdx];
                 _checkMerkleRootContained(note.auxInfo.merkleRoot);
+
                 if (_publish(note.inputNullifiers)) {
-                    // Collect note.outputCommitments
-                    for (
-                        uint256 i = 0;
-                        i < note.outputCommitments.length;
-                        i++
-                    ) {
-                        recordsCommToBeInserted[
-                            recordsCommToBeInsertedIdx
-                        ] = note.outputCommitments[i];
-                        recordsCommToBeInsertedIdx += 1;
-                    }
+                    commsIdx = _appendCommitments(
+                        comms,
+                        note.outputCommitments,
+                        commsIdx
+                    );
 
                     // TODO extract proof for batch verification
                 }
+
                 freezeIdx += 1;
             } else if (noteType == NoteType.BURN) {
                 BurnNote memory note = newBlock.burnNotes[burnIdx];
@@ -362,19 +345,13 @@ contract CAPE is RecordsMerkleTree {
                 // TODO check burn record opening matches second output commitment
 
                 if (_publish(transfer.inputsNullifiers)) {
-                    // TODO extract function
                     // TODO collect transfer.outputCommitments
                     // TODO do we need a special logic for how to handle outputs record commitments with BURN notes
-                    for (
-                        uint256 i = 0;
-                        i < note.transferNote.outputCommitments.length;
-                        i++
-                    ) {
-                        recordsCommToBeInserted[
-                            recordsCommToBeInsertedIdx
-                        ] = note.transferNote.outputCommitments[i];
-                        recordsCommToBeInsertedIdx += 1;
-                    }
+                    commsIdx = _appendCommitments(
+                        comms,
+                        note.transferNote.outputCommitments,
+                        commsIdx
+                    );
                     // TODO extract proof for batch verification
                 }
                 // TODO handle withdrawal (better done at end if call is external
@@ -387,27 +364,32 @@ contract CAPE is RecordsMerkleTree {
 
         // Batch insert record commitments
 
-        console.log(
-            "recordsCommToBeInserted.length: %s",
-            recordsCommToBeInserted.length
-        );
+        console.log("comms.length: %s", comms.length);
 
         // Not all transactions are necessary valid so it is needed to remove all the zero values of the array
         // (which should be contiguous to the right)
         // Note: we assume that a record commitment cannot have value 0.
-        uint256[] memory recordsCommToBeInsertedTrimmed = _trimArrayRightZeroes(
-            recordsCommToBeInserted
-        );
-        console.log(
-            "recordsCommToBeInsertedTrimmed.length: %s",
-            recordsCommToBeInsertedTrimmed.length
-        );
+        uint256[] memory commsTrimmed = _trimArrayRightZeroes(comms);
+        console.log("commsTrimmed.length: %s", commsTrimmed.length);
 
         // Check that this is correct
-        _updateRecordsMerkleTree(recordsCommToBeInsertedTrimmed);
+        _updateRecordsMerkleTree(commsTrimmed);
 
         // Update the list of roots
         _updateRootsList(_rootValue);
+    }
+
+    /// @dev Appends `newComms` to `comms` starting at `start`
+    /// @return index where next commitments should be inserted (the value of `start` for next invocation)
+    function _appendCommitments(
+        uint256[] memory comms,
+        uint256[] memory newComms,
+        uint256 start
+    ) internal pure returns (uint256) {
+        for (uint256 i = 0; i < newComms.length; i++) {
+            comms[start + i] = newComms[i];
+        }
+        return start + newComms.length;
     }
 
     function _checkMerkleRootContained(uint256 root) internal view {

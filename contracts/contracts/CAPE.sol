@@ -308,6 +308,7 @@ contract CAPE is RecordsMerkleTree {
 
                     // TODO extract proof for batch verification
                 }
+
                 transferIdx += 1;
             } else if (noteType == NoteType.MINT) {
                 MintNote memory note = newBlock.mintNotes[mintIdx];
@@ -345,7 +346,6 @@ contract CAPE is RecordsMerkleTree {
                 // TODO check burn record opening matches second output commitment
 
                 if (_publish(transfer.inputsNullifiers)) {
-                    // TODO collect transfer.outputCommitments
                     // TODO do we need a special logic for how to handle outputs record commitments with BURN notes
                     commsIdx = _appendCommitments(
                         comms,
@@ -354,8 +354,10 @@ contract CAPE is RecordsMerkleTree {
                     );
                     // TODO extract proof for batch verification
                 }
+
                 // TODO handle withdrawal (better done at end if call is external
                 //      or have other reentrancy protection)
+
                 burnIdx += 1;
             }
         }
@@ -364,13 +366,10 @@ contract CAPE is RecordsMerkleTree {
 
         // Batch insert record commitments
 
-        console.log("comms.length: %s", comms.length);
-
         // Not all transactions are necessary valid so it is needed to remove all the zero values of the array
         // (which should be contiguous to the right)
         // Note: we assume that a record commitment cannot have value 0.
         uint256[] memory commsTrimmed = _trimArrayRightZeroes(comms);
-        console.log("commsTrimmed.length: %s", commsTrimmed.length);
 
         // Check that this is correct
         _updateRecordsMerkleTree(commsTrimmed);
@@ -393,7 +392,13 @@ contract CAPE is RecordsMerkleTree {
     }
 
     function _checkMerkleRootContained(uint256 root) internal view {
-        // TODO revert if not contained
+        // TODO uncomment
+        // for (uint256 i = 0; i < _roots.length; i++) {
+        //     if (_roots[i] == root) {
+        //         return;
+        //     }
+        // }
+        // revert("Root not found");
     }
 
     function _handleWithdrawal() internal {
@@ -403,7 +408,7 @@ contract CAPE is RecordsMerkleTree {
     function _batchInsertRecordCommitments(uint256[] memory commitments)
         internal
     {
-        // TODO
+        // TODO  (I think this can be removed because done in _updateRecordsMerkleTree)
     }
 
     function _checkBurn(bytes memory extraProofBoundData) internal {

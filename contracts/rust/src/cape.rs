@@ -362,8 +362,8 @@ mod tests {
             root_values_after_each_update[3],
             root_values_after_each_update[1],
         ];
-        assert_eq!(roots, expected_roots);
         assert_eq!(index, U256::from(2));
+        assert_eq!(roots, expected_roots);
     }
 
     #[test]

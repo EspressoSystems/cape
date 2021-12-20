@@ -269,15 +269,27 @@ contract CAPE is RecordsMerkleTree {
         uint256 burnIdx = 0;
 
         // Compute an upper bound on the number of records to be inserted
-        uint256 maxNRecordsToBeInserted = 0;
-        for (uint256 i = 0; i < newBlock.noteTypes.length; i++) {
-            NoteType noteType = newBlock.noteTypes[i];
-            if (noteType == NoteType.MINT) {
-                maxNRecordsToBeInserted += 2;
-            } else {
-                TransferNote memory note = newBlock.transferNotes[transferIdx];
-                maxNRecordsToBeInserted += note.outputCommitments.length;
-            }
+        // TODO should let the relayer submit this value?
+        //     If it's too low, tx will revert, if too high some wasted gas.
+        uint256 maxNRecordsToBeInserted = 2 * newBlock.mintNotes.length;
+        for (uint256 i = 0; i < newBlock.transferNotes.length; i++) {
+            maxNRecordsToBeInserted += newBlock
+                .transferNotes[i]
+                .outputCommitments
+                .length;
+        }
+        for (uint256 i = 0; i < newBlock.burnNotes.length; i++) {
+            maxNRecordsToBeInserted += newBlock
+                .burnNotes[i]
+                .transferNote
+                .outputCommitments // TODO is this always of same length?
+                .length;
+        }
+        for (uint256 i = 0; i < newBlock.freezeNotes.length; i++) {
+            maxNRecordsToBeInserted += newBlock
+                .freezeNotes[i]
+                .outputCommitments // TODO is this always of same length?
+                .length;
         }
 
         uint256[] memory recordsCommToBeInserted = new uint256[](

@@ -86,6 +86,8 @@ contract CAPE {
         uint64 mintAmount;
         /// the asset definition of the asset
         AssetDefinition mintAssetDef;
+        /// Intenral asset code
+        uint256 mintInternalAssetCode;
         /// the validity proof of this note
         PlonkProof proof;
         /// memo for policy compliance specified for the designated auditor

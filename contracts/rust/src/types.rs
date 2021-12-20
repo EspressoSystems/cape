@@ -5,11 +5,17 @@ use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ethers::prelude::*;
 use jf_aap::{
     keys::{AuditorPubKey, CredIssuerPubKey, FreezerPubKey, UserPubKey},
-    structs::{AssetCode, BlindFactor, FreezeFlag, Nullifier, RecordCommitment, RevealMap},
+    structs::{
+        AssetCode, BlindFactor, FreezeFlag, InternalAssetCode, Nullifier, RecordCommitment,
+        RevealMap,
+    },
     CurveParam, NodeValue, VerKey,
 };
 use jf_plonk::proof_system::structs::{Proof, ProofEvaluations};
-use jf_primitives::elgamal::{self, EncKey};
+use jf_primitives::{
+    aead,
+    elgamal::{self, EncKey},
+};
 
 // The number of input wires of TurboPlonk.
 const GATE_WIDTH: usize = 4;
@@ -162,6 +168,9 @@ jf_conversion_for_u256_new_type!(MerkleRootSol, NodeValue);
 pub struct AssetCodeSol(pub U256);
 jf_conversion_for_u256_new_type!(AssetCodeSol, AssetCode);
 
+pub struct InternalAssetCodeSol(pub U256);
+jf_conversion_for_u256_new_type!(InternalAssetCodeSol, InternalAssetCode);
+
 pub struct BlindFactorSol(pub U256);
 jf_conversion_for_u256_new_type!(BlindFactorSol, BlindFactor);
 
@@ -220,7 +229,7 @@ impl From<AssetPolicy> for jf_aap::structs::AssetPolicy {
             .set_cred_issuer_pub_key(policy_sol.cred_pk.into())
             .set_freezer_pub_key(policy_sol.freezer_pk.into())
             .set_reveal_threshold(policy_sol.reveal_threshold)
-            .set_reveal_map(RevealMap::new(policy_sol.reveal_map))
+            .set_reveal_map_for_test(RevealMap::new(policy_sol.reveal_map))
     }
 }
 
@@ -260,8 +269,8 @@ impl From<jf_aap::structs::RecordOpening> for RecordOpening {
 
 impl From<RecordOpening> for jf_aap::structs::RecordOpening {
     fn from(ro_sol: RecordOpening) -> Self {
-        let mut pub_key = UserPubKey::default();
-        pub_key.set_address(ro_sol.user_addr.into());
+        let pub_key = UserPubKey::new(ro_sol.user_addr.into(), aead::EncKey::default());
+
         Self {
             amount: ro_sol.amount,
             asset_def: ro_sol.asset_def.into(),
@@ -516,6 +525,10 @@ impl From<jf_aap::mint::MintNote> for MintNote {
             mint_comm: note.mint_comm.generic_into::<RecordCommitmentSol>().0,
             mint_amount: note.mint_amount,
             mint_asset_def: note.mint_asset_def.into(),
+            mint_internal_asset_code: note
+                .mint_internal_asset_code
+                .generic_into::<InternalAssetCodeSol>()
+                .0,
             proof: note.proof.into(),
             audit_memo: note.audit_memo.into(),
             aux_info: note.aux_info.into(),
@@ -540,6 +553,10 @@ impl From<MintNote> for jf_aap::mint::MintNote {
                 .into(),
             mint_amount: note_sol.mint_amount,
             mint_asset_def: note_sol.mint_asset_def.into(),
+            mint_internal_asset_code: note_sol
+                .mint_internal_asset_code
+                .generic_into::<InternalAssetCodeSol>()
+                .into(),
             proof: note_sol.proof.into(),
             audit_memo: note_sol.audit_memo.into(),
             aux_info: note_sol.aux_info.into(),

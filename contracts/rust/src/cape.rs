@@ -127,7 +127,7 @@ mod tests {
     use crate::ethereum::{deploy, get_funded_deployer};
     use crate::helpers::{convert_nullifier_to_u256, convert_u256_to_bytes_le};
     use crate::records_merkle_tree::flatten_frontier;
-    use crate::types::{CapeBlock, TestCAPE};
+    use crate::types::{BurnNote, CapeBlock, RecordOpening, TestCAPE};
     use ark_ed_on_bn254::Fq as Fr254;
     use ark_ff::BigInteger;
     use ark_ff::PrimeField;
@@ -175,8 +175,18 @@ mod tests {
 
         for note in notes.clone() {
             match note.clone() {
-                // TODO handle burn notes
-                TransactionNote::Transfer(n) => transfer_notes.push((*n).clone().into()),
+                TransactionNote::Transfer(n) => match transfer_type(&n) {
+                    TransferType::Transfer => transfer_notes.push((*n).clone().into()),
+                    TransferType::Burn => {
+                        let note = (*n).clone().into();
+                        let ro = RecordOpening { field: true }; // TODO real implementation
+                        let burn_note = BurnNote {
+                            transfer_note: note,
+                            record_opening: ro,
+                        };
+                        burn_notes.push(burn_note);
+                    }
+                },
                 TransactionNote::Freeze(n) => freeze_notes.push((*n).clone().into()),
                 TransactionNote::Mint(n) => mint_notes.push((*n).clone().into()),
             }

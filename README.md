@@ -190,7 +190,7 @@ yourself and let hardhat connect to it.
 
 Start the hardhat node in separate terminal
 
-    hardhat node
+    hardhat node --network hardhat
 
 When running tests against this hardhat node
 

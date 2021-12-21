@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "../CAPE.sol";
+import "../interfaces/IPlonkVerifier.sol";
 
 contract TestCapeTypes is CAPE {
     function checkNullifier(uint256 nf) public pure returns (uint256) {
@@ -44,10 +45,10 @@ contract TestCapeTypes is CAPE {
         return ro;
     }
 
-    function checkPlonkProof(CAPE.PlonkProof memory proof)
+    function checkPlonkProof(IPlonkVerifier.PlonkProof memory proof)
         public
         pure
-        returns (CAPE.PlonkProof memory)
+        returns (IPlonkVerifier.PlonkProof memory)
     {
         return proof;
     }

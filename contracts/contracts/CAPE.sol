@@ -10,6 +10,7 @@ pragma solidity ^0.8.0;
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 import "./libraries/BN254.sol";
 import "./libraries/RescueLib.sol";
+import "./interfaces/IPlonkVerifier.sol";
 
 // TODO Remove once functions are implemented
 /* solhint-disable no-unused-vars */
@@ -18,33 +19,6 @@ contract CAPE {
     mapping(uint256 => bool) public nullifiers;
 
     bytes public constant CAPE_BURN_MAGIC_BYTES = "TRICAPE burn";
-
-    struct PlonkProof {
-        // Flatten out TurboPlonk proof
-        BN254.G1Point wire0; // input wire poly com
-        BN254.G1Point wire1;
-        BN254.G1Point wire2;
-        BN254.G1Point wire3;
-        BN254.G1Point wire4; // output wire poly com
-        BN254.G1Point prodPerm; // product permutation poly com
-        BN254.G1Point split0; // split quotient poly com
-        BN254.G1Point split1;
-        BN254.G1Point split2;
-        BN254.G1Point split3;
-        BN254.G1Point split4;
-        BN254.G1Point zeta; // witness poly com for aggregated opening at `zeta`
-        BN254.G1Point zetaOmega; // witness poly com for shifted opening at `zeta * \omega`
-        uint256 wireEval0; // wire poly eval at `zeta`
-        uint256 wireEval1;
-        uint256 wireEval2;
-        uint256 wireEval3;
-        uint256 wireEval4;
-        uint256 sigmaEval0; // extended permutation (sigma) poly eval at `zeta`
-        uint256 sigmaEval1;
-        uint256 sigmaEval2;
-        uint256 sigmaEval3; // last (sigmaEval4) is saved by Maller Optimization
-        uint256 prodPermZetaOmegaEval; // product permutation poly eval at `zeta * \omega`
-    }
 
     struct EdOnBn254Point {
         uint256 x;
@@ -66,7 +40,7 @@ contract CAPE {
     struct TransferNote {
         uint256[] inputNullifiers;
         uint256[] outputCommitments;
-        PlonkProof proof;
+        IPlonkVerifier.PlonkProof proof;
         AuditMemo auditMemo;
         TransferAuxInfo auxInfo;
     }
@@ -90,7 +64,7 @@ contract CAPE {
         /// Intenral asset code
         uint256 mintInternalAssetCode;
         /// the validity proof of this note
-        PlonkProof proof;
+        IPlonkVerifier.PlonkProof proof;
         /// memo for policy compliance specified for the designated auditor
         AuditMemo auditMemo;
         /// auxiliary information
@@ -100,7 +74,7 @@ contract CAPE {
     struct FreezeNote {
         uint256[] inputNullifiers;
         uint256[] outputCommitments;
-        PlonkProof proof;
+        IPlonkVerifier.PlonkProof proof;
         FreezeAuxInfo auxInfo;
     }
 

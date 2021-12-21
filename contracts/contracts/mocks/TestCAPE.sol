@@ -8,12 +8,17 @@ contract TestCAPE is CAPE {
         return _insertNullifier(nullifier);
     }
 
-    function checkBurn(BurnNote memory note) public {
+    function checkTransfer(TransferNote memory note) public view {
+        return _checkTransfer(note);
+    }
+
+    function checkBurn(BurnNote memory note) public view {
         return _checkBurn(note);
     }
 
     function containsBurnPrefix(bytes memory extraProofBoundData)
         public
+        view
         returns (bool)
     {
         return _containsBurnPrefix(extraProofBoundData);
@@ -21,17 +26,23 @@ contract TestCAPE is CAPE {
 
     function containsBurnDestination(bytes memory extraProofBoundData)
         public
+        view
         returns (bool)
     {
         return _containsBurnDestination(extraProofBoundData);
     }
 
-    function containsBurnRecord(BurnNote memory note) public returns (bool) {
+    function containsBurnRecord(BurnNote memory note)
+        public
+        view
+        returns (bool)
+    {
         return _containsBurnRecord(note);
     }
 
     function deriveRecordCommitment(RecordOpening memory ro)
         public
+        view
         returns (uint256)
     {
         return _deriveRecordCommitment(ro);

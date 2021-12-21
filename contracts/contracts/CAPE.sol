@@ -252,6 +252,7 @@ contract CAPE {
             if (noteType == NoteType.TRANSFER) {
                 TransferNote memory note = newBlock.transferNotes[transferIdx];
                 _checkMerkleRootContained(note.auxInfo.merkleRoot);
+                _checkTransfer(note);
                 if (_publish(note.inputNullifiers)) {
                     // TODO collect note.outputCommitments
                     // TODO extract proof for batch verification
@@ -307,6 +308,14 @@ contract CAPE {
         internal
     {
         // TODO
+    }
+
+    function _checkTransfer(TransferNote memory note) internal pure {
+        // TODO consider moving _checkMerkleRootContained into _check[NoteType] functions
+        require(
+            !_containsBurnPrefix(note.auxInfo.extraProofBoundData),
+            "Burn prefix in transfer note"
+        );
     }
 
     function _checkBurn(BurnNote memory note) internal view {

@@ -451,6 +451,31 @@ mod tests {
     // main block validaton loop.
 
     #[tokio::test]
+    async fn test_check_transfer_note_with_burn_prefix_rejected() {
+        let contract = deploy_cape_test().await;
+        let mut note = sol::TransferNote::default();
+        let extra = [
+            DOM_SEP_CAPE_BURN.to_vec(),
+            hex::decode("0000000000000000000000000000000000000000").unwrap(),
+        ]
+        .concat();
+        note.aux_info.extra_proof_bound_data = extra.into();
+
+        let call = contract.check_transfer(note).call().await;
+        assert!(call.should_revert_with_message("Burn prefix in transfer note"));
+    }
+
+    #[tokio::test]
+    async fn test_check_transfer_without_burn_prefix_accepted() {
+        let contract = deploy_cape_test().await;
+        let note = sol::TransferNote::default();
+        assert!(contract.check_transfer(note).call().await.is_ok());
+    }
+
+    // TODO integration test to check if check_transfer is hooked up correctly in
+    // main block validaton loop.
+
+    #[tokio::test]
     async fn test_derive_record_commitment() {
         let contract = deploy_cape_test().await;
         let mut rng = ark_std::test_rng();

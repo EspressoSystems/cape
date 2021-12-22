@@ -1,6 +1,5 @@
 use ark_bn254::Bn254;
 use ark_ff::{to_bytes, PrimeField, Zero};
-use ark_poly_commit::kzg10::Commitment;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ethers::prelude::*;
 use jf_aap::{
@@ -11,7 +10,7 @@ use jf_aap::{
     },
     BaseField, CurveParam, NodeValue, VerKey,
 };
-use jf_plonk::proof_system::structs::{Proof, ProofEvaluations};
+use jf_plonk::proof_system::structs::Proof;
 use jf_primitives::{
     aead,
     elgamal::{self, EncKey},
@@ -408,60 +407,75 @@ impl From<FreezeAuxInfo> for jf_aap::freeze::FreezeAuxInfo {
 
 impl From<Proof<Bn254>> for PlonkProof {
     fn from(proof: Proof<Bn254>) -> Self {
-        if proof.wires_poly_comms().len() != GATE_WIDTH + 1
-            || proof.split_quot_poly_comms().len() != GATE_WIDTH + 1
-            || proof.poly_evals().wires_evals().len() != GATE_WIDTH + 1
-            || proof.poly_evals().wire_sigma_evals().len() != GATE_WIDTH
-        {
+        // both wires_poly_comms and split_quot_poly_comms are (GATE_WIDTH +1)
+        // Commitments, each point takes two base fields elements;
+        // 3 individual commitment points;
+        // (GATE_WIDTH + 1) * 2 scalar fields in poly_evals are  converted to base
+        // fields.
+        // NOTE: we reorder the points in proof a bit, please refer to
+        // https://github.com/SpectrumXYZ/jellyfish/blob/2a40d01c938cdcc716071af5a0dc9b3242181c2c/plonk/src/proof_system/structs.rs#L91
+        const TURBO_PLONK_LEN: usize = (GATE_WIDTH + 1) * 2 * 2 + 2 * 3 + (GATE_WIDTH + 1) * 2;
+        const NUM_G1_POINT: usize = 13;
+        const NUM_EVAL: usize = 10;
+        assert_eq!(TURBO_PLONK_LEN, NUM_G1_POINT * 2 + NUM_EVAL);
+
+        let fields: Vec<ark_bn254::Fq> = proof.into();
+        if fields.len() != TURBO_PLONK_LEN {
             panic!("Malformed TurboPlonk proof");
         }
+        let points: Vec<G1Point> = fields[..2 * NUM_G1_POINT]
+            .chunks_exact(2)
+            .map(|chunk| {
+                if chunk.len() == 2 {
+                    G1Point {
+                        x: field_to_u256(chunk[0]),
+                        y: field_to_u256(chunk[1]),
+                    }
+                } else {
+                    unreachable!();
+                }
+            })
+            .collect();
+        let evals: Vec<U256> = fields[2 * NUM_G1_POINT..]
+            .iter()
+            .map(|f| field_to_u256(*f))
+            .collect();
+
         Self {
-            wire_0: proof.wires_poly_comms()[0].0.into(),
-            wire_1: proof.wires_poly_comms()[1].0.into(),
-            wire_2: proof.wires_poly_comms()[2].0.into(),
-            wire_3: proof.wires_poly_comms()[3].0.into(),
-            wire_4: proof.wires_poly_comms()[4].0.into(),
-            prod_perm: proof.prod_perm_poly_comm().0.into(),
-            split_0: proof.split_quot_poly_comms()[0].0.into(),
-            split_1: proof.split_quot_poly_comms()[1].0.into(),
-            split_2: proof.split_quot_poly_comms()[2].0.into(),
-            split_3: proof.split_quot_poly_comms()[3].0.into(),
-            split_4: proof.split_quot_poly_comms()[4].0.into(),
-            zeta: proof.opening_proof().0.into(),
-            zeta_omega: proof.shifted_opening_proof().0.into(),
-            wire_eval_0: field_to_u256(proof.poly_evals().wires_evals()[0]),
-            wire_eval_1: field_to_u256(proof.poly_evals().wires_evals()[1]),
-            wire_eval_2: field_to_u256(proof.poly_evals().wires_evals()[2]),
-            wire_eval_3: field_to_u256(proof.poly_evals().wires_evals()[3]),
-            wire_eval_4: field_to_u256(proof.poly_evals().wires_evals()[4]),
-            sigma_eval_0: field_to_u256(proof.poly_evals().wire_sigma_evals()[0]),
-            sigma_eval_1: field_to_u256(proof.poly_evals().wire_sigma_evals()[1]),
-            sigma_eval_2: field_to_u256(proof.poly_evals().wire_sigma_evals()[2]),
-            sigma_eval_3: field_to_u256(proof.poly_evals().wire_sigma_evals()[3]),
-            prod_perm_zeta_omega_eval: field_to_u256(proof.poly_evals().perm_next_eval()),
+            wire_0: points[0].clone(),
+            wire_1: points[1].clone(),
+            wire_2: points[2].clone(),
+            wire_3: points[3].clone(),
+            wire_4: points[4].clone(),
+            prod_perm: points[10].clone(),
+            split_0: points[5].clone(),
+            split_1: points[6].clone(),
+            split_2: points[7].clone(),
+            split_3: points[8].clone(),
+            split_4: points[9].clone(),
+            zeta: points[11].clone(),
+            zeta_omega: points[12].clone(),
+            wire_eval_0: evals[0],
+            wire_eval_1: evals[1],
+            wire_eval_2: evals[2],
+            wire_eval_3: evals[3],
+            wire_eval_4: evals[4],
+            sigma_eval_0: evals[5],
+            sigma_eval_1: evals[6],
+            sigma_eval_2: evals[7],
+            sigma_eval_3: evals[8],
+            prod_perm_zeta_omega_eval: evals[9],
         }
     }
 }
 
 impl From<PlonkProof> for Proof<Bn254> {
     fn from(pf_sol: PlonkProof) -> Self {
-        let wires_poly_comms = vec![
-            Commitment(pf_sol.wire_0.into()),
-            Commitment(pf_sol.wire_1.into()),
-            Commitment(pf_sol.wire_2.into()),
-            Commitment(pf_sol.wire_3.into()),
-            Commitment(pf_sol.wire_4.into()),
-        ];
-        let prod_perm_poly_comm = Commitment(pf_sol.prod_perm.into());
-        let split_quot_poly_comms = vec![
-            Commitment(pf_sol.split_0.into()),
-            Commitment(pf_sol.split_1.into()),
-            Commitment(pf_sol.split_2.into()),
-            Commitment(pf_sol.split_3.into()),
-            Commitment(pf_sol.split_4.into()),
-        ];
-        let opening_proof = Commitment(pf_sol.zeta.into());
-        let shifted_opening_proof = Commitment(pf_sol.zeta_omega.into());
+        fn g1_point_to_fields(p: G1Point) -> Vec<ark_bn254::Fq> {
+            let p: ark_bn254::G1Affine = p.into();
+            vec![p.x, p.y]
+        }
+
         let wires_evals = vec![
             u256_to_field(pf_sol.wire_eval_0),
             u256_to_field(pf_sol.wire_eval_1),
@@ -476,17 +490,30 @@ impl From<PlonkProof> for Proof<Bn254> {
             u256_to_field(pf_sol.sigma_eval_3),
         ];
         let perm_next_eval = u256_to_field(pf_sol.prod_perm_zeta_omega_eval);
-        let poly_evals =
-            ProofEvaluations::new_unchecked(wires_evals, wire_sigma_evals, perm_next_eval);
-        Self::new_unchecked(
-            wires_poly_comms,
-            prod_perm_poly_comm,
-            split_quot_poly_comms,
-            opening_proof,
-            shifted_opening_proof,
-            poly_evals,
-            None,
-        )
+
+        let fields: Vec<ark_bn254::Fq> = [
+            g1_point_to_fields(pf_sol.wire_0),
+            g1_point_to_fields(pf_sol.wire_1),
+            g1_point_to_fields(pf_sol.wire_2),
+            g1_point_to_fields(pf_sol.wire_3),
+            g1_point_to_fields(pf_sol.wire_4),
+            g1_point_to_fields(pf_sol.split_0),
+            g1_point_to_fields(pf_sol.split_1),
+            g1_point_to_fields(pf_sol.split_2),
+            g1_point_to_fields(pf_sol.split_3),
+            g1_point_to_fields(pf_sol.split_4),
+            g1_point_to_fields(pf_sol.prod_perm),
+            g1_point_to_fields(pf_sol.zeta),
+            g1_point_to_fields(pf_sol.zeta_omega),
+            wires_evals,
+            wire_sigma_evals,
+            vec![perm_next_eval],
+        ]
+        .concat();
+
+        fields
+            .try_into()
+            .expect("Failed to convert base fields to Proof.")
     }
 }
 

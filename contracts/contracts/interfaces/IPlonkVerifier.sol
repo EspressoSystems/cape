@@ -31,15 +31,39 @@ interface IPlonkVerifier {
         uint256 prodPermZetaOmegaEval; // product permutation poly eval at `zeta * \omega`
     }
 
+    // The verifying key for Plonk proofs.
+    struct VerifyingKey {
+        uint256 domainSize;
+        uint256 numInputs;
+        BN254.G1Point sigma0; // commitment to extended perm (sigma) poly
+        BN254.G1Point sigma1;
+        BN254.G1Point sigma2;
+        BN254.G1Point sigma3;
+        BN254.G1Point sigma4;
+        BN254.G1Point q1; // commitment to selector poly
+        BN254.G1Point q2; // first 4 are linear combination selector
+        BN254.G1Point q3;
+        BN254.G1Point q4;
+        BN254.G1Point qM12; // multiplication selector for 1st, 2nd wire
+        BN254.G1Point qM34; // multiplication selector for 3rd, 4th wire
+        BN254.G1Point qO; // output selector
+        BN254.G1Point qC; // constant term selector
+        BN254.G1Point qH1; // rescue selector qH1 * w_ai^5
+        BN254.G1Point qH2; // rescue selector qH2 * w_bi^5
+        BN254.G1Point qH3; // rescue selector qH3 * w_ci^5
+        BN254.G1Point qH4; // rescue selector qH4 * w_di^5
+        BN254.G1Point qEcc; // elliptic curve selector
+    }
+
     /// @dev Verify a single TurboPlonk proof.
     function verify(
-        bytes memory verifyingKey,
+        VerifyingKey memory verifyingKey,
         uint256[] memory publicInput,
         PlonkProof memory proof,
         bytes memory extraTranscriptInitMsg
     ) external returns (bool);
 
-    // // TODO: To be refined, we might be able to merge some part of verifying keys.
+    // TODO: To be refined, we might be able to merge some part of verifying keys.
     // /// @dev Batch verify multiple TurboPlonk proofs.
     // function batchVerify(
     //     bytes[] memory verifyingKey,

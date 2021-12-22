@@ -41,6 +41,10 @@ abigen!(
     "../artifacts/contracts/CAPE.sol/CAPE/abi.json",
     event_derives(serde::Deserialize, serde::Serialize);
 
+    PlonkVerifier,
+    "../artifacts/contracts/verifier/PlonkVerifier.sol/PlonkVerifier/abi.json",
+    event_derives(serde::Deserialize, serde::Serialize);
+
     TestCapeTypes,
     "../artifacts/contracts/mocks/TestCapeTypes.sol/TestCapeTypes/abi.json",
     event_derives(serde::Deserialize, serde::Serialize);
@@ -649,6 +653,13 @@ impl From<FreezeNote> for jf_aap::freeze::FreezeNote {
         }
     }
 }
+
+// TODO: add conversion when https://github.com/SpectrumXYZ/jellyfish/issues/54 is resolved
+// impl From<jf_aap::VerifyingKey> for VerifyingKey {
+//     fn from(vk: jf_aap::VerifyingKey) -> Self {
+
+//     }
+// }
 
 #[cfg(test)]
 mod test {

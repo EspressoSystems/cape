@@ -10,6 +10,7 @@ use jf_aap::transfer::TransferNote;
 use jf_aap::TransactionNote;
 use num_traits::{FromPrimitive, ToPrimitive};
 use std::str::from_utf8;
+use zerok_lib::cape_state::CapeTransaction;
 
 pub const DOM_SEP_CAPE_BURN: &[u8] = b"TRICAPE burn";
 
@@ -140,6 +141,25 @@ impl CapeBlock {
             freeze_notes,
             burn_notes,
         })
+    }
+
+    pub fn from_cape_transactions(
+        transactions: Vec<CapeTransaction>,
+        miner: UserAddress,
+    ) -> Result<Self> {
+        let mut burned_ros = vec![];
+        let mut notes = vec![];
+
+        for tx in transactions {
+            match tx {
+                CapeTransaction::AAP(note) => notes.push(note),
+                CapeTransaction::Burn { xfr, ro } => {
+                    notes.push(TransactionNote::from(*xfr));
+                    burned_ros.push(*ro);
+                }
+            }
+        }
+        Self::generate(notes, burned_ros, miner)
     }
 }
 

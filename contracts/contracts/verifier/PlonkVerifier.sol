@@ -19,21 +19,15 @@ contract PlonkVerifier is IPlonkVerifier {
     uint256 private constant _COSET_K4 =
         0x2e2b91456103698adf57b799969dea1c8f739da5d8d40dd3eb9222db7c81e881;
 
-    // Parsed from Aztec's Ignition CRS, h, and beta_h \in G2 where \beta is the trapdoor
+    // Parsed from Aztec's Ignition CRS,
+    // `beta_h` \in G2 where \beta is the trapdoor, h is G2 generator `BN254.P2()`
     // See parsing code: https://github.com/alxiong/crs
-    BN254.G2Point private _h =
+    BN254.G2Point private _betaH =
         BN254.G2Point({
             x0: 0x260e01b251f6f1c7e7ff4e580791dee8ea51d87a358e038b4efe30fac09383c1,
             x1: 0x0118c4d5b837bcc2bc89b5b398b5974e9f5944073b32078b7e231fec938883b0,
             y0: 0x04fc6369f7110fe3d25156c1bb9a72859cf2a04641f99ba4ee413c80da6a5fe4,
             y1: 0x22febda3c0c0632a56475b4214e5615e11e6dd3f96e6cea2854a87d4dacc5e55
-        });
-    BN254.G2Point private _betaH =
-        BN254.G2Point({
-            x0: 0x1707756245e1c1a75e9d5352d4578cdfe3eb4cf549aabc7d6a3f436fb23ff7c7,
-            x1: 0x0cc682cd46253b7563e7d4cc5fe1c37c57b8c1dec87b0055c363412282aff918,
-            y0: 0x14a1e37b40582309e97cddc77e30bc3aca00e6df8818a29b9ab77c1ea1fabc5d,
-            y1: 0x02a1c25af215de209da884638f08b13fa3a89ebab77a0f95f7f0d9945439ee0e
         });
 
     /// @dev Verify a plonk proof

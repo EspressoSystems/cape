@@ -680,6 +680,17 @@ mod tests {
         println!("Transfer generated: {}s", now.elapsed().as_secs_f32());
         let now = Instant::now();
 
+        let nullifiers = TransactionNote::Transfer(Box::new(txn1.clone())).nullifiers();
+
+        for nf in nullifiers.iter() {
+            assert!(
+                !contract
+                    .nullifiers(nf.clone().generic_into::<NullifierSol>().0)
+                    .call()
+                    .await?
+            );
+        }
+
         let new_recs = txn1.output_commitments.to_vec();
 
         let txn1_cape = CapeTransaction::AAP(TransactionNote::Transfer(Box::new(txn1)));
@@ -725,6 +736,26 @@ mod tests {
             new_state.ledger.record_merkle_commitment,
             wallet_merkle_tree.commitment()
         );
+
+        assert_eq!(
+            contract.get_root_value().call().await.unwrap(),
+            field_to_u256(
+                new_state
+                    .ledger
+                    .record_merkle_commitment
+                    .root_value
+                    .to_scalar()
+            )
+        );
+
+        for nf in nullifiers.iter() {
+            assert!(
+                contract
+                    .nullifiers(nf.clone().generic_into::<NullifierSol>().0)
+                    .call()
+                    .await?
+            );
+        }
 
         let _bob_rec = TransferNoteInput {
             ro: bob_rec,

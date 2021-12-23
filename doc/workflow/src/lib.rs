@@ -26,8 +26,6 @@ pub struct CapeBlock {
     pub(crate) txns: Vec<TransactionNote>,
     // fee_blind: BlindFactor,
     pub(crate) miner: UserPubKey,
-    // targeting block height
-    pub(crate) block_height: u64,
 }
 
 // TODO missing Plonk verifying keys
@@ -71,7 +69,6 @@ impl CapeBlock {
             burn_txns: vec![],
             txns: vec![],
             miner: self.miner.clone(),
-            block_height: self.block_height,
         };
         let mut filtered_burn_ros = vec![];
 
@@ -110,7 +107,6 @@ impl CapeBlock {
                     burn_txns: vec![],
                     txns: vec![],
                     miner: self.miner.clone(),
-                    block_height: 0,
                 },
                 vec![],
             )
@@ -237,8 +233,6 @@ impl CapeContract {
             new_block.validate(&self.recent_merkle_roots, burned_ros, &mut self.nullifiers);
         // Check there is at least one valid transaction
         assert!(!new_block.txns.is_empty() || !new_block.burn_txns.is_empty());
-
-        assert_eq!(new_block.block_height, self.height + 1); // targeting the next block
 
         let mut rc_to_be_inserted = vec![];
         for txn in new_block.txns.iter() {

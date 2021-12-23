@@ -6,6 +6,15 @@ import "../CAPE.sol";
 contract TestCAPE is CAPE {
     constructor(uint8 height, uint64 nRoots) CAPE(height, nRoots) {}
 
+    function testOnlyGetNumLeaves() public view returns (uint256) {
+        return _numLeaves;
+    }
+
+    function testOnlyInsertRecordCommitments(uint256[] memory elements) public {
+        _updateRecordsMerkleTree(elements);
+        _roots[0] = _rootValue;
+    }
+
     function insertNullifier(uint256 nullifier) public {
         return _insertNullifier(nullifier);
     }

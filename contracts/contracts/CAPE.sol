@@ -21,6 +21,7 @@ import "./RootStore.sol";
 
 contract CAPE is RecordsMerkleTree, RootStore {
     mapping(uint256 => bool) public nullifiers;
+    uint64 public height;
 
     using AccumulatingArray for AccumulatingArray.Data;
 
@@ -242,9 +243,9 @@ contract CAPE is RecordsMerkleTree, RootStore {
                 TransferNote memory note = newBlock.transferNotes[transferIdx];
                 _checkContainsRoot(note.auxInfo.merkleRoot);
                 _checkTransfer(note);
-                if (_publish(note.inputNullifiers)) {
+                // NOTE: expiry must be checked before publishing the nullifiers
+                if (!_isExpired(note) && _publish(note.inputNullifiers)) {
                     comms.add(note.outputCommitments);
-
                     // TODO extract proof for batch verification
                 }
 
@@ -292,12 +293,10 @@ contract CAPE is RecordsMerkleTree, RootStore {
 
         // TODO verify plonk proof
 
-        // Batch insert record commitments
-
         // Check that this is correct
         _updateRecordsMerkleTree(comms.toArray());
-
         _addRoot(_rootValue);
+        height += 1;
     }
 
     function _handleWithdrawal() internal {
@@ -334,6 +333,10 @@ contract CAPE is RecordsMerkleTree, RootStore {
             !_containsBurnPrefix(note.auxInfo.extraProofBoundData),
             "Burn prefix in transfer note"
         );
+    }
+
+    function _isExpired(TransferNote memory note) internal view returns (bool) {
+        return note.auxInfo.validUntil < height;
     }
 
     function _checkBurn(BurnNote memory note) internal view {

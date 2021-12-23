@@ -10,7 +10,7 @@ contract TestCAPE is CAPE {
         return _insertNullifier(nullifier);
     }
 
-    function checkTransfer(TransferNote memory note) public view {
+    function checkTransfer(TransferNote memory note) public pure {
         return _checkTransfer(note);
     }
 
@@ -52,6 +52,10 @@ contract TestCAPE is CAPE {
 
     function addRoot(uint256 root) public {
         return _addRoot(root);
+    }
+
+    function setHeight(uint64 newHeight) public {
+        height = newHeight;
     }
 
     function computeMaxCommitments(CapeBlock memory newBlock)

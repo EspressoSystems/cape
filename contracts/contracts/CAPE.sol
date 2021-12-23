@@ -27,6 +27,8 @@ contract CAPE is RecordsMerkleTree, RootStore {
 
     bytes public constant CAPE_BURN_MAGIC_BYTES = "TRICAPE burn";
 
+    event BlockCommitted(uint64 indexed height, bool[] includedNotes);
+
     struct EdOnBn254Point {
         uint256 x;
         uint256 y;
@@ -224,13 +226,12 @@ contract CAPE is RecordsMerkleTree, RootStore {
         CapeBlock memory newBlock,
         RecordOpening[] memory burnedRos
     ) public {
-        // TODO check block height
-
         // Preserve the ordering of the (sub) arrays of notes.
         uint256 transferIdx = 0;
         uint256 mintIdx = 0;
         uint256 freezeIdx = 0;
         uint256 burnIdx = 0;
+        bool[] memory includedNotes = new bool[](newBlock.noteTypes.length);
 
         AccumulatingArray.Data memory comms = AccumulatingArray.create(
             _computeMaxCommitments(newBlock)
@@ -246,6 +247,7 @@ contract CAPE is RecordsMerkleTree, RootStore {
                 // NOTE: expiry must be checked before publishing the nullifiers
                 if (!_isExpired(note) && _publish(note.inputNullifiers)) {
                     comms.add(note.outputCommitments);
+                    includedNotes[i] = true;
                     // TODO extract proof for batch verification
                 }
 
@@ -256,6 +258,7 @@ contract CAPE is RecordsMerkleTree, RootStore {
                 if (_publish(note.inputNullifier)) {
                     comms.add(note.mintComm);
                     comms.add(note.chgComm);
+                    includedNotes[i] = true;
                     // TODO extract proof for batch verification
                 }
 
@@ -266,7 +269,7 @@ contract CAPE is RecordsMerkleTree, RootStore {
 
                 if (_publish(note.inputNullifiers)) {
                     comms.add(note.outputCommitments);
-
+                    includedNotes[i] = true;
                     // TODO extract proof for batch verification
                 }
 
@@ -281,6 +284,7 @@ contract CAPE is RecordsMerkleTree, RootStore {
                 if (_publish(transfer.inputNullifiers)) {
                     // TODO do we need a special logic for how to handle outputs record commitments with BURN notes
                     comms.add(transfer.outputCommitments);
+                    includedNotes[i] = true;
                     // TODO extract proof for batch verification
                 }
 
@@ -297,6 +301,7 @@ contract CAPE is RecordsMerkleTree, RootStore {
         _updateRecordsMerkleTree(comms.toArray());
         _addRoot(_rootValue);
         height += 1;
+        emit BlockCommitted(height, includedNotes);
     }
 
     function _handleWithdrawal() internal {

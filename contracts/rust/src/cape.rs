@@ -387,6 +387,42 @@ mod tests {
         Ok(())
     }
 
+    #[tokio::test]
+    async fn test_event_block_committed() -> Result<()> {
+        let contract = deploy_cape_test().await;
+
+        let rng = &mut ark_std::test_rng();
+        let params = TxnsParams::generate_txns(rng, 1, 0, 0);
+        let miner = UserPubKey::default();
+
+        let root = params.txns[0].merkle_root();
+        let cape_block = CapeBlock::generate(params.txns, vec![], miner.address())?;
+
+        // TODO should not require to manually submit the root here
+        contract
+            .add_root(root.generic_into::<MerkleRootSol>().0)
+            .send()
+            .await?
+            .await?;
+
+        contract
+            .submit_cape_block(cape_block.into(), vec![])
+            .send()
+            .await?
+            .await?;
+
+        let logs = contract
+            .block_committed_filter()
+            .from_block(0u64)
+            .query()
+            .await?;
+        assert_eq!(logs[0].height, 1);
+        assert_eq!(logs[0].included_notes, vec![true]);
+        Ok(())
+    }
+
+    // TODO add a test to check if includedNotes is computed correctly
+
     #[test]
     fn test_note_types() {
         // TODO

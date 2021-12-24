@@ -1,8 +1,47 @@
 [package]
-name = "wallet"
+name = "multi_machine"
 version = "0.1.0"
-edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+authors = ["Keyao Shen <keyao@translucence.net>", "corbett@pictographer.com"]
+edition = "2018"
+license = "Copyright © 2021 Translucence Research, Inc. All rights reserved."
+default-run = "multi_machine"
 
 [dependencies]
+async-std = { version = "1.9.0", features = ["unstable", "attributes"] }
+async-trait = "0.1.51"
+async-tungstenite = { version = "0.15.0", features = ["async-std-runtime"] }
+bincode = "1.3.3"
+futures = "0.3.0"
+futures-util = "0.3.8"
+itertools = "0.10.1"
+jf-plonk = { features=["std"], git = "ssh://git@gitlab.com/translucence/crypto/jellyfish.git", rev = "4d7e1c38e3f41d83e5b93f0eca1ae0663f221a5e"}
+jf-primitives = { features=["std"], git = "ssh://git@gitlab.com/translucence/crypto/jellyfish.git", rev = "4d7e1c38e3f41d83e5b93f0eca1ae0663f221a5e"}
+jf-txn = { features=["std"], git = "ssh://git@gitlab.com/translucence/crypto/jellyfish.git", rev = "4d7e1c38e3f41d83e5b93f0eca1ae0663f221a5e"}
+jf-utils = { features=["std"], git = "ssh://git@gitlab.com/translucence/crypto/jellyfish.git", rev = "4d7e1c38e3f41d83e5b93f0eca1ae0663f221a5e"}
+markdown = "0.3"
+# phaselock = { version = "0.0.2", registry = "translucence"}
+phaselock = { git = "ssh://git@gitlab.com/translucence/systems/phaselock.git", rev = "14586ed218a35cb48675b73d4a34ae7ae55c67e6" }
+rand_chacha = "0.2.2"
+serde = { version = "1.0.123", features = ["derive", "rc"] }
+serde_derive = "1.0.118"
+serde_json = "1.0.61"
+shellexpand = "2.0"
+snafu = { version = "0.6.10", features = ["backtraces"] }
+structopt = { version = "0.3", features = ["paw"] }
+strum = "0.20"
+strum_macros = "0.20.1"
+surf = "2.3.1"
+tagged-base64 = { git = "ssh://git@gitlab.com/translucence/common/tagged-base64.git", branch = "main"}
+tempdir = "0.3.7"
+threshold_crypto = "0.4.0"
+tide = "0.16.0"
+tide-websockets = "0.4.0"
+toml = "0.5"
+tracing = "0.1.26"
+tracing-distributed = "0.3.1"
+tracing-futures = "0.2"
+tracing-subscriber = "0.2.19"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+procfs = "0.11.0"
+

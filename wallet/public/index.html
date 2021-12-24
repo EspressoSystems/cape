@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Transaction Mockup</title>
+    <meta charset="utf-8">
+    <style>
+      body {
+          font-family: Arial, Helvetica, sans-serif;
+          padding: 16px;
+      }
+      input[type=button], input[type=submit], input[type=reset] {
+          padding: 4px;
+          margin: 4px;
+          cursor: pointer;
+      }
+      label {
+          margin-top:16px;
+          display:inline-block
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Spectrum Transfer</h1>
+    <div style="width:50%;min-width:300px">
+      <div style="background-color:#f4f4f4;margin:16px;padding:16px;border:1px solid black;box-shadow:4px 4px lightgray">
+        <form action="/transfer/" method="get">
+          <fieldset style="background-color:#f6f6f6">
+            <legend >Anonymous Jellybean Transfer</legend>
+            <div align="right">
+              <label for="saddr">Payer's address:</label>
+              <input type="text" id="saddr" name="saddr" value="LA~fe9350s"><br>
+            </div>
+            <br>
+            <div align="right">
+              <label for="raddr">Recipient's address:</label>
+              <input type="text" id="raddr" name="raddr" value="LA~whatever"><br>
+            </div>
+            <br>
+            <div align="right">
+              <label for="amt">Amount:</label>
+              <input type="text" id="amt" name="amt" value="2"><br><br>
+              <p>Account Balance: 100 jellybeans</p>
+            </div>
+            <div align="right" style="float:right">
+              <input type="button"
+                     name="submit"
+                     onclick="redirectClean()"
+                     value="Send">
+            </div><br>
+          </fieldset>
+        </form>
+      </div>
+    <h2>Status</h2>
+    <input type="button"
+           name="submit"
+           onclick="onSend()"
+           value="Web Socket Send">
+    <textarea id="events" name="events" rows="10" style="width:100%;min-width:300px;margin:16px;padding:4px"></textarea>
+    </div>
+    <!-- TODO !corbett One of these will work. Need a better way. -->
+    <script src="public/js/ws.js"></script>
+    <script src="../../../public/js/ws.js"></script>
+  </body>
+</html>

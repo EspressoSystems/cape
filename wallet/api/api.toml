@@ -1,0 +1,227 @@
+# API and messages
+#
+# Work-in-progress based on
+# https://www.notion.so/translucence/Query-service-v1-API-sketch-203581e934334ff48f639d4fd523668d
+#
+# TOML specification: https://github.com/kezhuw/toml-spec
+
+[meta]
+FORMAT_VERSION = "0.1.0"
+
+# Logo is 1093x230
+
+HTML_TOP = """
+<!DOCTYPE html>
+<html lang='en'>
+  <head>
+    <meta charset='utf-8'>
+    <title>Spectrum CAPE Web Help</title>
+    <link rel='stylesheet' href='public/css/style.css'>
+    <script src='public/js/script.js'></script>
+  </head>
+  <body>
+    <div><img src='public/media/Horizontal02.png'
+              alt='Spectrum Logo'
+              height='115'/></div>
+    <h1>Spectrum CAPE Web Interface</h1>
+    <p>The Spectrum CAPE Web Inteface provides a way to create and interact with a local wallet that can be used to build, submit, and track transactions, as well as creating and managing new types of assets.</p>
+"""
+
+HTML_BOTTOM = """
+  </body>
+</html>
+"""
+
+HEADING_ROUTES = "Routes"
+HEADING_PARAMETERS = "Parameters"
+HEADING_DESCRIPTION = "Description"
+
+# TODO !corbett How do transaction notifications work in CAPE?
+# TODO !corbett Where do fees fit in? Do we need fees in more places?
+# TODO !corbett Need a better way to send the password than in the URL.
+# TODO !corbett Consider increasing the syntaxtic distance between freeze and unfreeze. Two letters isn't much and easy to mess up with copy/paste or not reading slowly enough.
+# TODO !corbett getinfo isn't the only entry point for getting information. How do we make it consistent?
+# TODO !corbett several entries have 'get' as a prefix. Some don't. It's unclear whether 'get' is useful.
+# TODO !corbett Among the words 'transfer', 'spend', and 'send', we use transfer more often, but send seems more specific and intuitive. Send is also shorter. Is spend better?
+# TODO !corbett Selective reveal interface is needed
+# TODO !corbett TaggedBase64 ends up being a catch-all for structured parameters and parameters that may include spaces. Do we need more specific types?
+# TOOD !corbett Document the prefix on all TaggedBase64 values.
+# TODO !corbett The caller never needs to type the parameter names, so should we add underscores for readability?
+# TODO !corbett Document errors.
+# TODO !corbett the toml reader alphabetizes the routes. Not ideal.
+# TODO !corbett the toml reader alphabetizes the parameters. Also not ideal.
+# TODO !corbett How do we lookup existing asset definitions?
+# TODO !corbett How do we generate a one-time receiving address?
+# TODO !corbett Better way to specify optional elements to avoid combinatorial explosion. See newasset for an example.
+
+[route.newwallet]
+PATH = ["newwallet/:mnemonic"]
+":mnemonic" = "TaggedBase64"
+DOC = """
+Creates and opens a new the wallet with the given mnemonic.
+"""
+
+[route.openwallet]
+PATH = ["openwallet/:mnemonic", "openwallet/:mnemonic/path/:path"]
+":path" = "TaggedBase64"
+":mnemonic" = "String"
+DOC = """
+Open the wallet from local storage with the given mnemonic and path.
+"""
+
+[route.closewallet]
+PATH = ["closewallet"]
+DOC = """
+Close the current wallet.
+"""
+
+[route.getaddress]
+PATH = ["getaddress"]
+DOC = """
+Get the addresses for the current wallet.
+"""
+
+[route.getbalance]
+PATH = ["getbalance/all", "getbalance/address/:address", "getbalance/address/:address/asset/:asset"]
+":address" = "TaggedBase64"
+":asset" = "TaggedBase64"
+DOC = """
+Get all balances for the current wallet, all the balances for a given address, or the balance for a given address and asset type.
+"""
+
+[route.getinfo]
+PATH = ["getinfo", "getinfo/address", "getinfo/key", "getinfo/asset", "getinfo/asset/:asset", "getinfo/freezekey", "getinfo/sendkey", "getinfo/tracekey"]
+DOC = """
+Get the addresses, public keys, and asset types for the current wallet.
+"""
+
+[route.newkey]
+PATH = ["newkey/send", "newkey/trace", "newkey/freeze"]
+DOC = """
+Generate a key of the given type to be used to define assets.
+"""
+
+[route.importkey]
+PATH = ["importkey/freeze/:freeze", "importkey/send/:send", "importkey/send/:send/:index", "importkey/trace/:trace" ]
+":freeze" = "TaggedBase64"
+":send" = "TaggedBase64"
+":index" = "Integer"
+":trace" = "TaggedBase64"
+DOC = """
+Import the given key into the current wallet. For transfer (send) keys, the optional scan index give a block index at which to begin scanning. If omitted, the entire ledger is scanned for transactions using the key.
+"""
+
+[route.send]
+PATH = ["send/sender/:sender/amount/:amount/asset/:asset/recipient/:recipient"]
+":sender" = "TaggedBase64"
+":amount" = "Integer"
+":asset" = "TaggedBase64"
+":recipient" = "TaggedBase64"
+DOC = """
+Transfer amount units of the given asset from the sender to the recipient. Returns a serialized receipt which can be used to track the transaction through the validation process.
+"""
+
+[route.wrap]
+PATH = ["wrap/address/:address/amount/:amount/asset/:asset"]
+":address" = "TaggedBase64"
+":amount" = "Integer"
+":asset" = "TaggedBase64"
+DOC = """
+Wrap amount units of the given asset from the address. Returns a serialized receipt which can be used to track the transaction through the validation process.
+"""
+
+[route.unwrap]
+PATH = ["unwrap/asset/:asset/amount/:amount/erc20/:erc20"]
+":asset" = "TaggedBase64"
+":amount" = "Integer"
+":erc20" = "TaggedBase64"
+DOC = """
+Unwrap amount units of the given asset into the given ERC-20 address. Returns a serialized receipt which can be used to track the transaction through the validation process.
+"""
+
+[route.newasset]
+PATH = [
+     "newasset/erc20/:erc20/symbol/:symbol/:description/issuer/:issuer/amount/:amount/sendkey/:sendkey/freezekey/:freezekey/tracekey/:tracekey/traceamount/:trace_amount/traceaddress/:trace_address",
+     "newasset/erc20/:erc20/symbol/:symbol/:description/issuer/:issuer/amount/:amount/sendkey/:sendkey/freezekey/:freezekey/tracekey/:tracekey/traceamount/:trace_amount/traceaddress/:trace_address",
+     "newasset/erc20/:erc20/symbol/:symbol/description/:description/issuer/:issuer/amount/:amount/sendkey/:sendkey/freezekey/:freezekey",
+     "newasset/erc20/:erc20/symbol/:symbol/description/:description/issuer/:issuer/amount/:amount/sendkey/:sendkey/freezekey/:freezekey",
+     "newasset/erc20/:erc20/symbol/:symbol/description/:description/issuer/:issuer/amount/:amount/sendkey/:sendkey/tracekey/:tracekey/traceamount/:trace_amount/traceaddress/:trace_address",
+     "newasset/erc20/:erc20/symbol/:symbol/description/:description/issuer/:issuer/amount/:amount/sendkey/:sendkey/tracekey/:tracekey/traceamount/:trace_amount/traceaddress/:trace_address",
+     "newasset/symbol/:symbol/:description/issuer/:issuer/amount/:amount/sendkey/:sendkey/freezekey/:freezekey/tracekey/:tracekey/traceamount/:trace_amount/traceaddress/:trace_address",
+     "newasset/symbol/:symbol/:description/issuer/:issuer/amount/:amount/sendkey/:sendkey/freezekey/:freezekey/tracekey/:tracekey/traceamount/:trace_amount/traceaddress/:trace_address",
+     "newasset/symbol/:symbol/description/:description/issuer/:issuer/amount/:amount/sendkey/:sendkey/freezekey/:freezekey",
+     "newasset/symbol/:symbol/description/:description/issuer/:issuer/amount/:amount/sendkey/:sendkey/freezekey/:freezekey",
+     "newasset/symbol/:symbol/description/:description/issuer/:issuer/amount/:amount/sendkey/:sendkey/tracekey/:tracekey/traceamount/:trace_amount/traceaddress/:trace_address",
+     "newasset/symbol/:symbol/description/:description/issuer/:issuer/amount/:amount/sendkey/:sendkey/tracekey/:tracekey/traceamount/:trace_amount/traceaddress/:trace_address"
+]
+":erc20" = "TaggedBase64"
+":symbol" = "String"
+":description" = "TaggedBase64"
+":issuer" = "String"
+":amount" = "Integer"
+":sendkey" = "TaggedBase64"
+":freezekey" = "TaggedBase64"
+":tracekey" = "TaggedBase64"
+":trace_amount" = "Boolean"
+":trace_address" = "Boolean"
+DOC = """
+Mint amount units of a given asset code controlled by the current wallet. Reports the asset code associated with the given keys. Keys are generated with *newkey*.
+"""
+
+[route.mint]
+PATH = ["mint/asset/:asset/amount/:amount/sendkey/:send_key/freezekey/:freeze_key/tracekey/:trace_key"]
+":asset" = "TaggedBase64"
+":amount" = "Integer"
+":send_key" = "TaggedBase64"
+":freeze_key" = "TaggedBase64"
+":trace_key" = "TaggedBase64"
+DOC = """
+Mint amount units of a given asset code controlled by the current wallet. Reports the asset code associated with the given keys. Keys are generated with *newkey*.
+"""
+
+# TODO !corbett This is also called sponsor, but that seems harder to understand than 'deposit' or 'wrap'.
+[route.deposit]
+PATH = ["deposit/asset/:asset/erc20/:erc20/amount/:amount"]
+":asset" = "TaggedBase64"
+":erc20" = "TaggedBase64"
+":amount" = "Integer"
+DOC = """
+Deposit (wrap) ERC-20 into CAPE.
+"""
+
+[route.freeze]
+PATH = ["freeze/:address/:asset/fee/:fee_address/:fee_amount"]
+":address" = "TaggedBase64"
+":asset" = "TaggedBase64"
+":fee_address" = "TaggedBase64"
+":fee_amount" = "Integer"
+DOC = """
+Freeze the asset associated with the given address and asset type. Assumes the asset was defined with a freezing key. 
+"""
+
+[route.unfreeze]
+PATH = ["unfreeze/:address/:asset/fee/:fee_address/:fee_amount"]
+":address" = "TaggedBase64"
+":asset" = "TaggedBase64"
+":fee_address" = "TaggedBase64"
+":fee_amount" = "Integer"
+DOC = """
+Unfreeze the asset associated with the given address and asset type. Assumes the asset was defined with a freezing key. 
+"""
+
+[route.trace]
+PATH = ["trace/:asset", "trace/key/:key"]
+":asset" = "TaggedBase64"
+":key" = "TaggedBase64"
+DOC = """
+Trace the given asset or trace the asset associated with the given tracing key.
+"""
+
+[route.transaction]
+PATH = ["transaction/list", "transaction/list/:from/:count", "transaction/status/:receipt", "transaction/await/:reciept"]
+":from" = "TaggedBase64"
+":reciept" = "TaggedBase64"
+":count" = "Integer"
+DOC = """
+List transactions, poll the status of a given transaction, or await events for a given transaction.
+"""

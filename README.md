@@ -307,12 +307,17 @@ Lint the code using all formatters and linters in one shot
 
 ## Updating dependencies
 
-To update the pinned version of `nixpkgs` run `nix/update-nix`, optionally
-passing a github owner and revision as arguments. The default is:
-`nix/update-nix nixos master`. Make sure to commit any changed files in the
-`./nix` directory afterwards.
+Run `nix flake update` if you would like to pin other version edit `flake.nix`
+beforehand. Commit the lock file when happy.
 
-The rust overlay can be updated by running `nix/update-rust-overlay`.
+To update only a single input specify it as argument, for example
+
+    nix flake update github:oxalica/rust-overlay
+
+To make use of newly released `solc` version run
+
+    cd nix/solc-bin
+    ./update-sources.sh
 
 ## Alternative nix installation methods
 

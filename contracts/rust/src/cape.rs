@@ -601,7 +601,7 @@ mod tests {
         assert_eq!(alice_rec_path.nodes.len(), MERKLE_HEIGHT as usize);
 
         contract
-            .test_only_insert_record_commitments(vec![field_to_u256(alice_rec_field_elem)])
+            .insert_record_commitments(vec![field_to_u256(alice_rec_field_elem)])
             .send()
             .await
             .unwrap()
@@ -611,7 +611,7 @@ mod tests {
         let first_root = t.commitment().root_value;
 
         assert_eq!(
-            contract.test_only_get_num_leaves().call().await.unwrap(),
+            contract.get_num_leaves().call().await.unwrap(),
             U256::from(1)
         );
 

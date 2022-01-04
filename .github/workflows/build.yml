@@ -8,9 +8,12 @@ jobs:
   build:
     runs-on: self-hosted
     container:
-      image: nixos/nix:2.3.12
+      image: ghcr.io/spectrumxyz/nix:main
+      credentials:
+         username: ancient123
+         password: ${{ secrets.ORG_GITHUB_PAT }}
       volumes:
-        - github_nix:/nix
+        - github_nix_251:/nix
     steps:
       - uses: styfle/cancel-workflow-action@0.9.1
         name: Cancel Outdated Builds
@@ -19,10 +22,10 @@ jobs:
           access_token: ${{ github.token }}
 
       - name: Install Tools
+        # git not installed by default
+        # alpine default tar is not compatible: https://stackoverflow.com/a/64187955
         run: |
-          apk add git
-          # alpine tar is not compatible: https://stackoverflow.com/a/64187955
-          apk add --no-cache tar
+          apk add --no-cache tar git
 
       - uses: actions/checkout@v2
         name: Checkout Repository

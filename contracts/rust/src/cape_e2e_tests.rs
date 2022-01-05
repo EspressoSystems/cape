@@ -30,8 +30,7 @@ mod tests {
     use zerok_lib::state::{key_set, key_set::KeySet, VerifierKeySet, MERKLE_HEIGHT};
     use zerok_lib::universal_params::UNIVERSAL_PARAM;
 
-    #[tokio::test]
-    async fn test_2user() -> Result<()> {
+    async fn test_2user_maybe_submit(should_submit: bool) -> Result<()> {
         let now = Instant::now();
 
         println!("generating params");
@@ -47,12 +46,12 @@ mod tests {
         let (freeze_prove_key, freeze_verif_key, _) =
             jf_aap::proof::freeze::preprocess(univ_setup, 2, MERKLE_HEIGHT).unwrap();
 
-        for (l, k) in vec![
+        for (label, key) in vec![
             ("xfr", CanonicalBytes::from(xfr_verif_key.clone())),
             ("mint", CanonicalBytes::from(mint_verif_key.clone())),
             ("freeze", CanonicalBytes::from(freeze_verif_key.clone())),
         ] {
-            println!("{}: {} bytes", l, k.0.len());
+            println!("{}: {} bytes", label, key.0.len());
         }
 
         let prove_keys = ProverKeySet::<key_set::OrderByInputs> {
@@ -74,218 +73,30 @@ mod tests {
         println!("CRS set up: {}s", now.elapsed().as_secs_f32());
         let now = Instant::now();
 
-        let alice_key = UserKeyPair::generate(&mut prng);
-        let bob_key = UserKeyPair::generate(&mut prng);
+        let contract = if should_submit {
+            let client = get_funded_deployer().await.unwrap();
 
-        let coin = AssetDefinition::native();
-
-        let alice_rec_builder = RecordOpening::new(
-            &mut prng,
-            2,
-            coin.clone(),
-            alice_key.pub_key(),
-            FreezeFlag::Unfrozen,
-        );
-
-        let alice_rec1 = alice_rec_builder;
-
-        let mut t = MerkleTree::new(MERKLE_HEIGHT).unwrap();
-        assert_eq!(
-            t.commitment(),
-            MerkleTree::new(MERKLE_HEIGHT).unwrap().commitment()
-        );
-        let alice_rec_elem = RecordCommitment::from(&alice_rec1);
-        // dbg!(&RecordCommitment::from(&alice_rec1));
-        assert_eq!(
-            RecordCommitment::from(&alice_rec1),
-            RecordCommitment::from(&alice_rec1)
-        );
-        t.push(RecordCommitment::from(&alice_rec1).to_field_element());
-        let alice_rec_path = t.get_leaf(0).expect_ok().unwrap().1.path;
-        assert_eq!(alice_rec_path.nodes.len(), MERKLE_HEIGHT as usize);
-
-        println!("Tree set up: {}s", now.elapsed().as_secs_f32());
-        let now = Instant::now();
-
-        let first_root = t.commitment().root_value;
-
-        let alice_rec_final = TransferNoteInput {
-            ro: alice_rec1,
-            owner_keypair: &alice_key,
-            cred: None,
-            acc_member_witness: AccMemberWitness {
-                merkle_path: alice_rec_path.clone(),
-                root: first_root,
-                uid: 0,
-            },
-        };
-
-        let mut wallet_merkle_tree = t.clone();
-        let validator = CapeContractState::new(verif_keys, t);
-
-        println!("Validator set up: {}s", now.elapsed().as_secs_f32());
-        let now = Instant::now();
-
-        MerkleTree::check_proof(
-            validator.ledger.record_merkle_commitment.root_value,
-            0,
-            &MerkleLeafProof::new(alice_rec_elem.to_field_element(), alice_rec_path),
-        )
-        .unwrap();
-
-        println!("Path checked: {}s", now.elapsed().as_secs_f32());
-        let now = Instant::now();
-
-        let ((txn1, _, _), bob_rec) = {
-            let bob_rec = RecordOpening::new(
-                &mut prng,
-                1, /* 1 less, for the transaction fee */
-                coin,
-                bob_key.pub_key(),
-                FreezeFlag::Unfrozen,
-            );
-
-            let txn = TransferNote::generate_native(
-                &mut prng,
-                /* inputs:         */ vec![alice_rec_final],
-                /* outputs:        */ &[bob_rec.clone()],
-                /* fee:            */ 1,
-                /* valid_until:    */ 2,
-                /* proving_key:    */ prove_keys.xfr.key_for_size(1, 2).unwrap(),
-            )
-            .unwrap();
-            (txn, bob_rec)
-        };
-
-        println!("Transfer has {} outputs", txn1.output_commitments.len());
-        // println!(
-        //     "Transfer is {} bytes long",
-        //     canonical::serialize(&txn1).unwrap().len()
-        // );
-
-        println!("Transfer generated: {}s", now.elapsed().as_secs_f32());
-        let now = Instant::now();
-
-        let new_recs = txn1.output_commitments.to_vec();
-
-        let txn1_cape = CapeTransaction::AAP(TransactionNote::Transfer(Box::new(txn1)));
-
-        let (new_state, effects) = validator
-            .submit_operations(vec![CapeOperation::SubmitBlock(vec![txn1_cape.clone()])])
-            .unwrap();
-
-        println!(
-            "Transfer validated & applied: {}s",
-            now.elapsed().as_secs_f32()
-        );
-        let now = Instant::now();
-
-        assert_eq!(effects.len(), 1);
-        if let CapeEthEffect::Emit(CapeEvent::BlockCommitted {
-            wraps: wrapped_commitments,
-            txns: filtered_txns,
-        }) = effects[0].clone()
-        {
-            assert_eq!(wrapped_commitments, vec![]);
-            assert_eq!(filtered_txns.len(), 1);
-            assert_eq!(filtered_txns[0], txn1_cape);
-        } else {
-            panic!("Transaction emitted the wrong event!");
-        }
-
-        for r in new_recs {
-            wallet_merkle_tree.push(r.to_field_element());
-        }
-
-        assert_eq!(
-            new_state.ledger.record_merkle_commitment,
-            wallet_merkle_tree.commitment()
-        );
-
-        let _bob_rec = TransferNoteInput {
-            ro: bob_rec,
-            owner_keypair: &bob_key,
-            cred: None,
-            acc_member_witness: AccMemberWitness {
-                merkle_path: wallet_merkle_tree.get_leaf(2).expect_ok().unwrap().1.path,
-                root: new_state.ledger.record_merkle_commitment.root_value,
-                uid: 2,
-            },
-        };
-
-        println!(
-            "New record merkle path retrieved: {}s",
-            now.elapsed().as_secs_f32()
-        );
-        println!("Old state: {:?}", validator);
-        println!("New state: {:?}", new_state);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_2user_and_submit() -> Result<()> {
-        let now = Instant::now();
-
-        println!("generating params");
-
-        let mut prng = ChaChaRng::from_seed([0x8au8; 32]);
-
-        let univ_setup = &*UNIVERSAL_PARAM;
-
-        let (xfr_prove_key, xfr_verif_key, _) =
-            jf_aap::proof::transfer::preprocess(univ_setup, 1, 2, MERKLE_HEIGHT).unwrap();
-        let (mint_prove_key, mint_verif_key, _) =
-            jf_aap::proof::mint::preprocess(univ_setup, MERKLE_HEIGHT).unwrap();
-        let (freeze_prove_key, freeze_verif_key, _) =
-            jf_aap::proof::freeze::preprocess(univ_setup, 2, MERKLE_HEIGHT).unwrap();
-
-        for (l, k) in vec![
-            ("xfr", CanonicalBytes::from(xfr_verif_key.clone())),
-            ("mint", CanonicalBytes::from(mint_verif_key.clone())),
-            ("freeze", CanonicalBytes::from(freeze_verif_key.clone())),
-        ] {
-            println!("{}: {} bytes", l, k.0.len());
-        }
-
-        let prove_keys = ProverKeySet::<key_set::OrderByInputs> {
-            mint: mint_prove_key,
-            xfr: KeySet::new(vec![xfr_prove_key].into_iter()).unwrap(),
-            freeze: KeySet::new(vec![freeze_prove_key].into_iter()).unwrap(),
-        };
-
-        let verif_keys = VerifierKeySet {
-            mint: TransactionVerifyingKey::Mint(mint_verif_key),
-            xfr: KeySet::new(vec![TransactionVerifyingKey::Transfer(xfr_verif_key)].into_iter())
-                .unwrap(),
-            freeze: KeySet::new(
-                vec![TransactionVerifyingKey::Freeze(freeze_verif_key)].into_iter(),
-            )
-            .unwrap(),
-        };
-
-        println!("CRS set up: {}s", now.elapsed().as_secs_f32());
-        let now = Instant::now();
-
-        let client = get_funded_deployer().await.unwrap();
-
-        let contract_address: Address = match env::var("CAPE_ADDRESS") {
-            Ok(val) => val.parse::<Address>().unwrap(),
-            Err(_) => deploy(
-                client.clone(),
-                // TODO using mock contract to be able to manually add root
-                Path::new("../artifacts/contracts/mocks/TestCAPE.sol/TestCAPE"),
-                CAPEConstructorArgs::new(
-                    MERKLE_HEIGHT,
-                    CapeContractState::RECORD_ROOT_HISTORY_SIZE as u64,
+            let contract_address: Address = match env::var("CAPE_ADDRESS") {
+                Ok(val) => val.parse::<Address>().unwrap(),
+                Err(_) => deploy(
+                    client.clone(),
+                    // TODO using mock contract to be able to manually add root
+                    Path::new("../artifacts/contracts/mocks/TestCAPE.sol/TestCAPE"),
+                    CAPEConstructorArgs::new(
+                        MERKLE_HEIGHT,
+                        CapeContractState::RECORD_ROOT_HISTORY_SIZE as u64,
+                    )
+                    .generic_into::<(u8, u64)>(),
                 )
-                .generic_into::<(u8, u64)>(),
-            )
-            .await
-            .unwrap()
-            .address(),
-        };
+                .await
+                .unwrap()
+                .address(),
+            };
 
-        let contract = TestCAPE::new(contract_address, client);
+            Some(TestCAPE::new(contract_address, client))
+        } else {
+            None
+        };
 
         println!("Contract set up: {}s", now.elapsed().as_secs_f32());
         let now = Instant::now();
@@ -295,7 +106,7 @@ mod tests {
 
         let coin = AssetDefinition::native();
 
-        let alice_rec_builder = RecordOpening::new(
+        let alice_rec1 = RecordOpening::new(
             &mut prng,
             2,
             coin.clone(),
@@ -303,46 +114,45 @@ mod tests {
             FreezeFlag::Unfrozen,
         );
 
-        let alice_rec1 = alice_rec_builder;
-
         let mut t = MerkleTree::new(MERKLE_HEIGHT).unwrap();
         assert_eq!(
             t.commitment(),
             MerkleTree::new(MERKLE_HEIGHT).unwrap().commitment()
         );
-        let alice_rec_elem = RecordCommitment::from(&alice_rec1);
-        // dbg!(&RecordCommitment::from(&alice_rec1));
-        assert_eq!(
-            RecordCommitment::from(&alice_rec1),
-            RecordCommitment::from(&alice_rec1)
-        );
-        let alice_rec_field_elem = RecordCommitment::from(&alice_rec1).to_field_element();
+        let alice_rec_comm = RecordCommitment::from(&alice_rec1);
+        let alice_rec_field_elem = alice_rec_comm.to_field_element();
+        // check that RecordCommitment::from is deterministic
+        assert_eq!(alice_rec_comm, RecordCommitment::from(&alice_rec1));
         t.push(alice_rec_field_elem);
         let alice_rec_path = t.get_leaf(0).expect_ok().unwrap().1.path;
         assert_eq!(alice_rec_path.nodes.len(), MERKLE_HEIGHT as usize);
 
-        contract
-            .insert_record_commitments(vec![field_to_u256(alice_rec_field_elem)])
-            .send()
-            .await
-            .unwrap()
-            .await
-            .unwrap();
+        if let Some(contract) = contract.as_ref() {
+            contract
+                .insert_record_commitments(vec![field_to_u256(alice_rec_field_elem)])
+                .send()
+                .await
+                .unwrap()
+                .await
+                .unwrap();
 
-        let first_root = t.commitment().root_value;
+            let first_root = t.commitment().root_value;
 
-        assert_eq!(
-            contract.get_num_leaves().call().await.unwrap(),
-            U256::from(1)
-        );
+            assert_eq!(
+                contract.get_num_leaves().call().await.unwrap(),
+                U256::from(1)
+            );
 
-        assert_eq!(
-            contract.get_root_value().call().await.unwrap(),
-            field_to_u256(first_root.to_scalar())
-        );
+            assert_eq!(
+                contract.get_root_value().call().await.unwrap(),
+                field_to_u256(first_root.to_scalar())
+            );
+        }
 
         println!("Tree set up: {}s", now.elapsed().as_secs_f32());
         let now = Instant::now();
+
+        let first_root = t.commitment().root_value;
 
         let alice_rec_final = TransferNoteInput {
             ro: alice_rec1,
@@ -364,11 +174,11 @@ mod tests {
         MerkleTree::check_proof(
             validator.ledger.record_merkle_commitment.root_value,
             0,
-            &MerkleLeafProof::new(alice_rec_elem.to_field_element(), alice_rec_path),
+            &MerkleLeafProof::new(alice_rec_field_elem, alice_rec_path),
         )
         .unwrap();
 
-        println!("Path checked: {}s", now.elapsed().as_secs_f32());
+        println!("Merkle path checked: {}s", now.elapsed().as_secs_f32());
         let now = Instant::now();
 
         let ((txn1, _, _), bob_rec) = {
@@ -393,23 +203,20 @@ mod tests {
         };
 
         println!("Transfer has {} outputs", txn1.output_commitments.len());
-        // println!(
-        //     "Transfer is {} bytes long",
-        //     canonical::serialize(&txn1).unwrap().len()
-        // );
-
         println!("Transfer generated: {}s", now.elapsed().as_secs_f32());
         let now = Instant::now();
 
         let nullifiers = TransactionNote::Transfer(Box::new(txn1.clone())).nullifiers();
 
-        for nf in nullifiers.iter() {
-            assert!(
-                !contract
-                    .nullifiers(nf.clone().generic_into::<NullifierSol>().0)
-                    .call()
-                    .await?
-            );
+        if let Some(contract) = contract.as_ref() {
+            for nf in nullifiers.iter() {
+                assert!(
+                    !contract
+                        .nullifiers(nf.clone().generic_into::<NullifierSol>().0)
+                        .call()
+                        .await?
+                );
+            }
         }
 
         let new_recs = txn1.output_commitments.to_vec();
@@ -420,15 +227,17 @@ mod tests {
             .submit_operations(vec![CapeOperation::SubmitBlock(vec![txn1_cape.clone()])])
             .unwrap();
 
-        let miner = UserPubKey::default();
-        let cape_block =
-            CapeBlock::from_cape_transactions(vec![txn1_cape.clone()], miner.address())?;
-        // Submit to the contract
-        contract
-            .submit_cape_block(cape_block.into(), vec![])
-            .send()
-            .await?
-            .await?;
+        if let Some(contract) = contract.as_ref() {
+            let miner = UserPubKey::default();
+            let cape_block =
+                CapeBlock::from_cape_transactions(vec![txn1_cape.clone()], miner.address())?;
+            // Submit to the contract
+            contract
+                .submit_cape_block(cape_block.into(), vec![])
+                .send()
+                .await?
+                .await?;
+        }
 
         println!(
             "Transfer validated & applied: {}s",
@@ -458,27 +267,29 @@ mod tests {
             wallet_merkle_tree.commitment()
         );
 
-        assert_eq!(
-            contract.get_root_value().call().await.unwrap(),
-            field_to_u256(
-                new_state
-                    .ledger
-                    .record_merkle_commitment
-                    .root_value
-                    .to_scalar()
-            )
-        );
-
-        for nf in nullifiers.iter() {
-            assert!(
-                contract
-                    .nullifiers(nf.clone().generic_into::<NullifierSol>().0)
-                    .call()
-                    .await?
+        if let Some(contract) = contract.as_ref() {
+            assert_eq!(
+                contract.get_root_value().call().await.unwrap(),
+                field_to_u256(
+                    new_state
+                        .ledger
+                        .record_merkle_commitment
+                        .root_value
+                        .to_scalar()
+                )
             );
+
+            for nf in nullifiers.iter() {
+                assert!(
+                    contract
+                        .nullifiers(nf.clone().generic_into::<NullifierSol>().0)
+                        .call()
+                        .await?
+                );
+            }
         }
 
-        let _bob_rec = TransferNoteInput {
+        let bob_rec = TransferNoteInput {
             ro: bob_rec,
             owner_keypair: &bob_key,
             cred: None,
@@ -489,12 +300,33 @@ mod tests {
             },
         };
 
+        MerkleTree::check_proof(
+            bob_rec.acc_member_witness.root,
+            bob_rec.acc_member_witness.uid,
+            &MerkleLeafProof::new(
+                RecordCommitment::from(&bob_rec.ro).to_field_element(),
+                bob_rec.acc_member_witness.merkle_path,
+            ),
+        )
+        .unwrap();
+
         println!(
-            "New record merkle path retrieved: {}s",
+            "New record merkle path retrieved and checked: {}s",
             now.elapsed().as_secs_f32()
         );
+
         println!("Old state: {:?}", validator);
         println!("New state: {:?}", new_state);
         Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_2user_and_submit() -> Result<()> {
+        test_2user_maybe_submit(true).await
+    }
+
+    #[tokio::test]
+    async fn test_2user_no_submit() -> Result<()> {
+        test_2user_maybe_submit(false).await
     }
 }

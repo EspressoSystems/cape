@@ -65,10 +65,7 @@ contract Sponge {
             require(inputs[i] < prime, "elements do not belong to the field");
         }
 
-        require(
-            inputLength % r == 0,
-            "Number of field elements is not divisible by r."
-        );
+        require(inputLength % r == 0, "Number of field elements is not divisible by r.");
 
         uint256[] memory state = new uint256[](m);
         for (uint256 i = 0; i < m; i++) {

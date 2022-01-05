@@ -137,10 +137,7 @@ contract CAPE is RecordsMerkleTree, RootStore {
         BurnNote[] burnNotes;
     }
 
-    constructor(uint8 height, uint64 nRoots)
-        RecordsMerkleTree(height)
-        RootStore(nRoots)
-    {}
+    constructor(uint8 height, uint64 nRoots) RecordsMerkleTree(height) RootStore(nRoots) {}
 
     /// Insert a nullifier into the set of nullifiers.
     /// @dev Reverts if nullifier is already in nullifier set.
@@ -153,11 +150,7 @@ contract CAPE is RecordsMerkleTree, RootStore {
 
     /// Check if a nullifier array contains previously published nullifiers.
     /// @dev Does not check if the array contains duplicates.
-    function _containsPublished(uint256[] memory newNullifiers)
-        internal
-        view
-        returns (bool)
-    {
+    function _containsPublished(uint256[] memory newNullifiers) internal view returns (bool) {
         for (uint256 j = 0; j < newNullifiers.length; j++) {
             if (nullifiers[newNullifiers[j]]) {
                 return true;
@@ -195,37 +188,29 @@ contract CAPE is RecordsMerkleTree, RootStore {
     /// @param erc20Address erc20 token address corresponding to the asset type.
     /// @param newAsset asset type.
     /// @return true if the asset type is registered, false otherwise
-    function isCapeAssetRegistered(
-        address erc20Address,
-        AssetDefinition memory newAsset
-    ) public returns (bool) {
+    function isCapeAssetRegistered(address erc20Address, AssetDefinition memory newAsset)
+        public
+        returns (bool)
+    {
         return true;
     }
 
     /// @notice create a new asset type associated to some erc20 token and register it in the contract so that it can be used later for wrapping.
     /// @param erc20Address erc20 token address of corresponding to the asset type.
     /// @param newAsset asset type to be registered in the contract.
-    function sponsorCapeAsset(
-        address erc20Address,
-        AssetDefinition memory newAsset
-    ) public {}
+    function sponsorCapeAsset(address erc20Address, AssetDefinition memory newAsset) public {}
 
     /// @notice allows to wrap some erc20 tokens into some CAPE asset defined in the record opening
     /// @param ro record opening that will be inserted in the records merkle tree once the deposit is validated.
     /// @param erc20Address address of the ERC20 token corresponding to the deposit.
-    function depositErc20(RecordOpening memory ro, address erc20Address)
-        public
-    {
+    function depositErc20(RecordOpening memory ro, address erc20Address) public {
         address depositorAddress = msg.sender;
     }
 
     /// @notice submit a new block to the CAPE contract. Transactions are validated and the blockchain state is updated. Moreover burn transactions trigger the unwrapping of cape asset records into erc20 tokens.
     /// @param newBlock block to be processed by the CAPE contract.
     /// @param burnedRos record opening of the second outputs of the burn transactions. The information contained in these records opening allow the contract to transfer the erc20 tokens.
-    function submitCapeBlock(
-        CapeBlock memory newBlock,
-        RecordOpening[] memory burnedRos
-    ) public {
+    function submitCapeBlock(CapeBlock memory newBlock, RecordOpening[] memory burnedRos) public {
         // Preserve the ordering of the (sub) arrays of notes.
         uint256 transferIdx = 0;
         uint256 mintIdx = 0;
@@ -309,22 +294,14 @@ contract CAPE is RecordsMerkleTree, RootStore {
     }
 
     /// @dev Compute an upper bound on the number of records to be inserted
-    function _computeMaxCommitments(CapeBlock memory newBlock)
-        internal
-        pure
-        returns (uint256)
-    {
+    function _computeMaxCommitments(CapeBlock memory newBlock) internal pure returns (uint256) {
         // MintNote always has 2 commitments: mint_comm, chg_comm
         uint256 maxComms = 2 * newBlock.mintNotes.length;
         for (uint256 i = 0; i < newBlock.transferNotes.length; i++) {
             maxComms += newBlock.transferNotes[i].outputCommitments.length;
         }
         for (uint256 i = 0; i < newBlock.burnNotes.length; i++) {
-            maxComms += newBlock
-                .burnNotes[i]
-                .transferNote
-                .outputCommitments
-                .length;
+            maxComms += newBlock.burnNotes[i].transferNote.outputCommitments.length;
         }
         for (uint256 i = 0; i < newBlock.freezeNotes.length; i++) {
             maxComms += newBlock.freezeNotes[i].outputCommitments.length;
@@ -351,19 +328,11 @@ contract CAPE is RecordsMerkleTree, RootStore {
         require(_containsBurnRecord(note), "Bad record commitment");
     }
 
-    function _containsBurnPrefix(bytes memory extraProofBoundData)
-        internal
-        pure
-        returns (bool)
-    {
+    function _containsBurnPrefix(bytes memory extraProofBoundData) internal pure returns (bool) {
         if (extraProofBoundData.length < 12) {
             return false;
         }
-        return
-            BytesLib.equal(
-                BytesLib.slice(extraProofBoundData, 0, 12),
-                CAPE_BURN_MAGIC_BYTES
-            );
+        return BytesLib.equal(BytesLib.slice(extraProofBoundData, 0, 12), CAPE_BURN_MAGIC_BYTES);
     }
 
     function _containsBurnDestination(bytes memory extraProofBoundData)
@@ -377,11 +346,7 @@ contract CAPE is RecordsMerkleTree, RootStore {
         return BytesLib.toAddress(extraProofBoundData, 12) == address(0);
     }
 
-    function _containsBurnRecord(BurnNote memory note)
-        internal
-        view
-        returns (bool)
-    {
+    function _containsBurnRecord(BurnNote memory note) internal view returns (bool) {
         if (note.transferNote.outputCommitments.length < 2) {
             return false;
         }
@@ -389,15 +354,8 @@ contract CAPE is RecordsMerkleTree, RootStore {
         return rc == note.transferNote.outputCommitments[1];
     }
 
-    function _deriveRecordCommitment(RecordOpening memory ro)
-        internal
-        view
-        returns (uint256 rc)
-    {
-        require(
-            ro.assetDef.policy.revealMap < 2**12,
-            "Reveal map exceeds 12 bits"
-        );
+    function _deriveRecordCommitment(RecordOpening memory ro) internal view returns (uint256 rc) {
+        require(ro.assetDef.policy.revealMap < 2**12, "Reveal map exceeds 12 bits");
 
         // No overflow check, only 12 bits in reveal map
         uint256 revealMapAndFreezeFlag = 2 *

@@ -70,11 +70,7 @@ contract RecordsMerkleTree {
         return node;
     }
 
-    function _buildTreeFromFrontier(Node[] memory nodes)
-        internal
-        view
-        returns (uint64)
-    {
+    function _buildTreeFromFrontier(Node[] memory nodes) internal view returns (uint64) {
         // Tree is empty
         if (_numLeaves == 0) {
             nodes[0] = Node(0, 0, 0, 0); // Empty node
@@ -107,18 +103,8 @@ contract RecordsMerkleTree {
             nodes[cursor] = _createHoleNode(cursor, Position(localPosition));
 
             // Create the siblings of the "hole node". These siblings have no children
-            nodes[cursor + 1] = Node(
-                _flattenedFrontier[cursorFrontier],
-                0,
-                0,
-                0
-            );
-            nodes[cursor + 2] = Node(
-                _flattenedFrontier[cursorFrontier + 1],
-                0,
-                0,
-                0
-            );
+            nodes[cursor + 1] = Node(_flattenedFrontier[cursorFrontier], 0, 0, 0);
+            nodes[cursor + 2] = Node(_flattenedFrontier[cursorFrontier + 1], 0, 0, 0);
 
             // Move forward
             absolutePosition /= 3;
@@ -209,11 +195,7 @@ contract RecordsMerkleTree {
             (absolutePos, localPos) = _computeNodePos(absolutePos, branchIndex);
 
             previousNodeIndex = currentNodeIndex;
-            currentNodeIndex = _nextNodeIndex(
-                nodes,
-                currentNodeIndex,
-                Position(localPos)
-            );
+            currentNodeIndex = _nextNodeIndex(nodes, currentNodeIndex, Position(localPos));
 
             branchIndex += 1;
         }
@@ -232,11 +214,7 @@ contract RecordsMerkleTree {
 
         while (branchIndex < _height - 1) {
             nodes[newNodeIndex] = Node(0, 0, 0, 0);
-            _updateChildNode(
-                nodes[previousNodeIndex],
-                newNodeIndex,
-                Position(localPos)
-            );
+            _updateChildNode(nodes[previousNodeIndex], newNodeIndex, Position(localPos));
 
             // Prepare the next iteration of the loop
             previousNodeIndex = newNodeIndex;
@@ -251,11 +229,7 @@ contract RecordsMerkleTree {
         // Leaf node where the value is hash(0,_numLeaves,element)
         uint256 val = RescueLib.hash(0, _numLeaves, element);
         nodes[newNodeIndex] = Node(val, 0, 0, 0);
-        _updateChildNode(
-            nodes[previousNodeIndex],
-            newNodeIndex,
-            Position(localPos)
-        );
+        _updateChildNode(nodes[previousNodeIndex], newNodeIndex, Position(localPos));
 
         // Increment the number of leaves
         _numLeaves += 1;
@@ -294,8 +268,7 @@ contract RecordsMerkleTree {
             }
             uint256 secondSiblingPos = frontierSize - 1 - (2 * i);
             uint256 firstSiblingPos = secondSiblingPos - 1;
-            _flattenedFrontier[secondSiblingPos] = nodes[secondSiblingIndex]
-                .val;
+            _flattenedFrontier[secondSiblingPos] = nodes[secondSiblingIndex].val;
             _flattenedFrontier[firstSiblingPos] = nodes[firstSiblingIndex].val;
         }
         // currentNodeIndex points to the leaf
@@ -334,27 +307,18 @@ contract RecordsMerkleTree {
     /// @param nodes tree structure. Note that the nodes are updated by this function.
     /// @param rootNodePos index of the root node in the list of nodes.
     /// @return the value obtained at the root.
-    function _computeRootValueAndUpdateTree(
-        Node[] memory nodes,
-        uint256 rootNodePos
-    ) private returns (uint256) {
+    function _computeRootValueAndUpdateTree(Node[] memory nodes, uint256 rootNodePos)
+        private
+        returns (uint256)
+    {
         // If the root node has no children return its value
         Node memory rootNode = nodes[rootNodePos];
         if (_isTerminal(rootNode)) {
             return rootNode.val;
         } else {
-            uint256 valLeft = _computeRootValueAndUpdateTree(
-                nodes,
-                rootNode.left
-            );
-            uint256 valMiddle = _computeRootValueAndUpdateTree(
-                nodes,
-                rootNode.middle
-            );
-            uint256 valRight = _computeRootValueAndUpdateTree(
-                nodes,
-                rootNode.right
-            );
+            uint256 valLeft = _computeRootValueAndUpdateTree(nodes, rootNode.left);
+            uint256 valMiddle = _computeRootValueAndUpdateTree(nodes, rootNode.middle);
+            uint256 valRight = _computeRootValueAndUpdateTree(nodes, rootNode.right);
 
             nodes[rootNode.left].val = valLeft;
             nodes[rootNode.middle].val = valMiddle;

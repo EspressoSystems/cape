@@ -77,10 +77,11 @@ contract STARK_Friendly_Hash_Challenge_Rescue_S256b is Base, Sponge {
         }
     }
 
-    function permutation_func(
-        uint256[] memory auxData,
-        uint256[] memory elements
-    ) internal view returns (uint256[] memory) {
+    function permutation_func(uint256[] memory auxData, uint256[] memory elements)
+        internal
+        view
+        returns (uint256[] memory)
+    {
         uint256 length = elements.length;
         require(length == m, "elements length is not equal to m.");
 
@@ -96,11 +97,7 @@ contract STARK_Friendly_Hash_Challenge_Rescue_S256b is Base, Sponge {
             for (uint256 i = 0; i < m; i++) {
                 uint256 element = elements[i];
                 if (round % 2 != 0) {
-                    workingArea[i] = mulmod(
-                        mulmod(element, element, prime_),
-                        element,
-                        prime_
-                    );
+                    workingArea[i] = mulmod(mulmod(element, element, prime_), element, prime_);
                 } else {
                     assembly {
                         function expmod(base, exponent, modulus) -> res {
@@ -112,9 +109,7 @@ contract STARK_Friendly_Hash_Challenge_Rescue_S256b is Base, Sponge {
                             mstore(add(p, 0x80), exponent) // Exponent.
                             mstore(add(p, 0xa0), modulus) // Modulus.
                             // Call modexp precompile.
-                            if iszero(
-                                staticcall(not(0), 0x05, p, 0xc0, p, 0x20)
-                            ) {
+                            if iszero(staticcall(not(0), 0x05, p, 0xc0, p, 0x20)) {
                                 revert(0, 0)
                             }
                             res := mload(p)
@@ -166,11 +161,7 @@ contract STARK_Friendly_Hash_Challenge_Rescue_S256b is Base, Sponge {
             }
 
             for (uint256 i = 0; i < length; i++) {
-                elements[i] = addmod(
-                    elements[i],
-                    auxData[length * (round + 1) + i],
-                    prime_
-                );
+                elements[i] = addmod(elements[i], auxData[length * (round + 1) + i], prime_);
             }
         }
 

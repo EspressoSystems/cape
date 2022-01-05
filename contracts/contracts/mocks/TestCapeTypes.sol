@@ -61,11 +61,7 @@ contract TestCapeTypes {
         return memo;
     }
 
-    function checkNoteType(CAPE.NoteType t)
-        public
-        pure
-        returns (CAPE.NoteType)
-    {
+    function checkNoteType(CAPE.NoteType t) public pure returns (CAPE.NoteType) {
         return t;
     }
 
@@ -77,11 +73,7 @@ contract TestCapeTypes {
         return p;
     }
 
-    function checkMintNote(CAPE.MintNote memory note)
-        public
-        pure
-        returns (CAPE.MintNote memory)
-    {
+    function checkMintNote(CAPE.MintNote memory note) public pure returns (CAPE.MintNote memory) {
         return note;
     }
 
@@ -93,11 +85,7 @@ contract TestCapeTypes {
         return note;
     }
 
-    function checkBurnNote(CAPE.BurnNote memory note)
-        public
-        pure
-        returns (CAPE.BurnNote memory)
-    {
+    function checkBurnNote(CAPE.BurnNote memory note) public pure returns (CAPE.BurnNote memory) {
         return note;
     }
 
@@ -109,11 +97,7 @@ contract TestCapeTypes {
         return note;
     }
 
-    function checkCapeBlock(CAPE.CapeBlock memory b)
-        public
-        pure
-        returns (CAPE.CapeBlock memory)
-    {
+    function checkCapeBlock(CAPE.CapeBlock memory b) public pure returns (CAPE.CapeBlock memory) {
         return b;
     }
 }

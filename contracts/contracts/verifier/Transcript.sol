@@ -11,89 +11,59 @@ library Transcript {
         bytes32[2] state;
     }
 
-    function appendMessage(TranscriptData memory self, bytes memory message)
-        internal
-        pure
-    {
+    function appendMessage(TranscriptData memory self, bytes memory message) internal pure {
         self.transcript = abi.encodePacked(self.transcript, message);
     }
 
-    function reverseEndianness(uint256 input)
-        internal
-        pure
-        returns (uint256 v)
-    {
+    function reverseEndianness(uint256 input) internal pure returns (uint256 v) {
         v = input;
 
         // swap bytes
         v =
-            ((v &
-                0xFF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00) >>
-                8) |
-            ((v &
-                0x00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF) <<
-                8);
+            ((v & 0xFF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00) >> 8) |
+            ((v & 0x00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF) << 8);
 
         // swap 2-byte long pairs
         v =
-            ((v &
-                0xFFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000) >>
-                16) |
-            ((v &
-                0x0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF) <<
-                16);
+            ((v & 0xFFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000) >> 16) |
+            ((v & 0x0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF) << 16);
 
         // swap 4-byte long pairs
         v =
-            ((v &
-                0xFFFFFFFF00000000FFFFFFFF00000000FFFFFFFF00000000FFFFFFFF00000000) >>
-                32) |
-            ((v &
-                0x00000000FFFFFFFF00000000FFFFFFFF00000000FFFFFFFF00000000FFFFFFFF) <<
-                32);
+            ((v & 0xFFFFFFFF00000000FFFFFFFF00000000FFFFFFFF00000000FFFFFFFF00000000) >> 32) |
+            ((v & 0x00000000FFFFFFFF00000000FFFFFFFF00000000FFFFFFFF00000000FFFFFFFF) << 32);
 
         // swap 8-byte long pairs
         v =
-            ((v &
-                0xFFFFFFFFFFFFFFFF0000000000000000FFFFFFFFFFFFFFFF0000000000000000) >>
-                64) |
-            ((v &
-                0x0000000000000000FFFFFFFFFFFFFFFF0000000000000000FFFFFFFFFFFFFFFF) <<
-                64);
+            ((v & 0xFFFFFFFFFFFFFFFF0000000000000000FFFFFFFFFFFFFFFF0000000000000000) >> 64) |
+            ((v & 0x0000000000000000FFFFFFFFFFFFFFFF0000000000000000FFFFFFFFFFFFFFFF) << 64);
 
         // swap 16-byte long pairs
         v = (v >> 128) | (v << 128);
     }
 
-    function appendChallenge(TranscriptData memory self, uint256 challenge)
-        internal
-        pure
-    {
+    function appendChallenge(TranscriptData memory self, uint256 challenge) internal pure {
         appendMessage(self, abi.encodePacked(reverseEndianness(challenge)));
     }
 
-    function appendCommitments(
-        TranscriptData memory self,
-        BN254.G1Point[] memory comms
-    ) internal pure {
+    function appendCommitments(TranscriptData memory self, BN254.G1Point[] memory comms)
+        internal
+        pure
+    {
         for (uint256 i = 0; i < comms.length; i++) {
             appendCommitment(self, comms[i]);
         }
     }
 
-    function appendCommitment(
-        TranscriptData memory self,
-        BN254.G1Point memory comm
-    ) internal pure {
+    function appendCommitment(TranscriptData memory self, BN254.G1Point memory comm)
+        internal
+        pure
+    {
         bytes memory commBytes = g1Serialize(comm);
         appendMessage(self, commBytes);
     }
 
-    function g1Serialize(BN254.G1Point memory point)
-        internal
-        pure
-        returns (bytes memory)
-    {
+    function g1Serialize(BN254.G1Point memory point) internal pure returns (bytes memory) {
         uint256 mask;
 
         // Set the 254-th bit to 1 for infinity
@@ -111,36 +81,18 @@ library Transcript {
         return abi.encodePacked(reverseEndianness(point.x | mask));
     }
 
-    function getAndAppendChallenge(TranscriptData memory self)
-        internal
-        pure
-        returns (uint256)
-    {
+    function getAndAppendChallenge(TranscriptData memory self) internal pure returns (uint256) {
         bytes32 h1 = keccak256(
-            abi.encodePacked(
-                self.state[0],
-                self.state[1],
-                self.transcript,
-                uint8(0)
-            )
+            abi.encodePacked(self.state[0], self.state[1], self.transcript, uint8(0))
         );
         bytes32 h2 = keccak256(
-            abi.encodePacked(
-                self.state[0],
-                self.state[1],
-                self.transcript,
-                uint8(1)
-            )
+            abi.encodePacked(self.state[0], self.state[1], self.transcript, uint8(1))
         );
 
         self.state[0] = h1;
         self.state[1] = h2;
 
-        bytes memory randomBytes = BytesLib.slice(
-            abi.encodePacked(h1, h2),
-            0,
-            48
-        );
+        bytes memory randomBytes = BytesLib.slice(abi.encodePacked(h1, h2), 0, 48);
         return BN254.fromLeBytesModOrder(randomBytes);
     }
 }

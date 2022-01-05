@@ -40,13 +40,8 @@ contract Base {
     }
 
     function register(bytes32 commitment) public {
-        require(
-            reveal_timestamps[msg.sender][commitment] == 0,
-            "Entry already registered."
-        );
-        reveal_timestamps[msg.sender][commitment] =
-            now +
-            MINIMUM_TIME_TO_REVEAL;
+        require(reveal_timestamps[msg.sender][commitment] == 0, "Entry already registered.");
+        reveal_timestamps[msg.sender][commitment] = now + MINIMUM_TIME_TO_REVEAL;
     }
 
     /*
@@ -54,17 +49,9 @@ contract Base {
       the current time.
     */
     function verifyTimelyRegistration(bytes32 commitment) internal view {
-        uint256 registrationMaturationTime = reveal_timestamps[msg.sender][
-            commitment
-        ];
-        require(
-            registrationMaturationTime != 0,
-            "Commitment is not registered."
-        );
-        require(
-            now >= registrationMaturationTime,
-            "Time for reveal has not passed yet."
-        );
+        uint256 registrationMaturationTime = reveal_timestamps[msg.sender][commitment];
+        require(registrationMaturationTime != 0, "Commitment is not registered.");
+        require(now >= registrationMaturationTime, "Time for reveal has not passed yet.");
     }
 
     /*
@@ -72,16 +59,15 @@ contract Base {
       Creating a transaction that invokes this function might reveal the collision and make it
       subject to front-running.
     */
-    function calcCommitment(
-        uint256[] memory firstInput,
-        uint256[] memory secondInput
-    ) public view returns (bytes32 commitment) {
+    function calcCommitment(uint256[] memory firstInput, uint256[] memory secondInput)
+        public
+        view
+        returns (bytes32 commitment)
+    {
         address sender = msg.sender;
         uint256 firstLength = firstInput.length;
         uint256 secondLength = secondInput.length;
-        uint256[] memory hash_elements = new uint256[](
-            1 + firstLength + secondLength
-        );
+        uint256[] memory hash_elements = new uint256[](1 + firstLength + secondLength);
         hash_elements[0] = uint256(sender);
         uint256 offset = 1;
         for (uint256 i = 0; i < firstLength; i++) {
@@ -106,10 +92,7 @@ contract Base {
         );
         require(firstInput.length > 0, "First input cannot be empty.");
         require(secondInput.length > 0, "Second input cannot be empty.");
-        require(
-            firstInput.length == secondInput.length,
-            "Input lengths are not equal."
-        );
+        require(firstInput.length == secondInput.length, "Input lengths are not equal.");
         uint256 inputLength = firstInput.length;
         bool sameInput = true;
         for (uint256 i = 0; i < inputLength; i++) {
@@ -121,10 +104,7 @@ contract Base {
         bool sameHash = true;
         uint256[] memory firstHash = applyHash(firstInput);
         uint256[] memory secondHash = applyHash(secondInput);
-        require(
-            firstHash.length == secondHash.length,
-            "Output lengths are not equal."
-        );
+        require(firstHash.length == secondHash.length, "Output lengths are not equal.");
         uint256 outputLength = firstHash.length;
         for (uint256 i = 0; i < outputLength; i++) {
             if (firstHash[i] != secondHash[i]) {

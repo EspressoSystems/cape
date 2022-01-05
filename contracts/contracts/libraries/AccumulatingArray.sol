@@ -34,11 +34,7 @@ library AccumulatingArray {
     }
 
     /// @return array with all the accumulated items
-    function toArray(Data memory self)
-        internal
-        pure
-        returns (uint256[] memory)
-    {
+    function toArray(Data memory self) internal pure returns (uint256[] memory) {
         uint256[] memory out = new uint256[](self.index);
         for (uint256 i = 0; i < self.index; i++) {
             out[i] = self.items[i];

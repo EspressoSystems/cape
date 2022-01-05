@@ -18,35 +18,19 @@ contract TestCAPE is CAPE {
         return _checkBurn(note);
     }
 
-    function containsBurnPrefix(bytes memory extraProofBoundData)
-        public
-        view
-        returns (bool)
-    {
+    function containsBurnPrefix(bytes memory extraProofBoundData) public view returns (bool) {
         return _containsBurnPrefix(extraProofBoundData);
     }
 
-    function containsBurnDestination(bytes memory extraProofBoundData)
-        public
-        view
-        returns (bool)
-    {
+    function containsBurnDestination(bytes memory extraProofBoundData) public view returns (bool) {
         return _containsBurnDestination(extraProofBoundData);
     }
 
-    function containsBurnRecord(BurnNote memory note)
-        public
-        view
-        returns (bool)
-    {
+    function containsBurnRecord(BurnNote memory note) public view returns (bool) {
         return _containsBurnRecord(note);
     }
 
-    function deriveRecordCommitment(RecordOpening memory ro)
-        public
-        view
-        returns (uint256)
-    {
+    function deriveRecordCommitment(RecordOpening memory ro) public view returns (uint256) {
         return _deriveRecordCommitment(ro);
     }
 
@@ -58,11 +42,7 @@ contract TestCAPE is CAPE {
         height = newHeight;
     }
 
-    function computeMaxCommitments(CapeBlock memory newBlock)
-        public
-        pure
-        returns (uint256)
-    {
+    function computeMaxCommitments(CapeBlock memory newBlock) public pure returns (uint256) {
         return _computeMaxCommitments(newBlock);
     }
 }

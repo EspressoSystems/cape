@@ -9,8 +9,7 @@ contract RescueNonOptimized {
 
     uint256 internal constant _N_ROUNDS = 12;
     uint256 internal constant _STATE_SIZE = 4;
-    uint256 internal constant _SCHEDULED_KEY_SIZE =
-        (2 * _N_ROUNDS + 1) * _STATE_SIZE;
+    uint256 internal constant _SCHEDULED_KEY_SIZE = (2 * _N_ROUNDS + 1) * _STATE_SIZE;
     uint256 internal constant _MDS_SIZE = _STATE_SIZE * _STATE_SIZE;
 
     // Obtained by running KeyScheduling([0,0,0,0]). See Algorithm 2 of AT specification document.
@@ -194,10 +193,11 @@ contract RescueNonOptimized {
         }
     }
 
-    function _addVectors(
-        uint256[_STATE_SIZE] memory v1,
-        uint256[_STATE_SIZE] memory v2
-    ) internal pure returns (uint256[_STATE_SIZE] memory) {
+    function _addVectors(uint256[_STATE_SIZE] memory v1, uint256[_STATE_SIZE] memory v2)
+        internal
+        pure
+        returns (uint256[_STATE_SIZE] memory)
+    {
         uint256[_STATE_SIZE] memory v;
 
         for (uint256 j = 0; j < _STATE_SIZE; j++) {
@@ -208,10 +208,11 @@ contract RescueNonOptimized {
     }
 
     // _MDS is hardcoded
-    function _linearOp(
-        uint256[_STATE_SIZE] memory state,
-        uint256[_STATE_SIZE] memory key
-    ) private view returns (uint256[_STATE_SIZE] memory) {
+    function _linearOp(uint256[_STATE_SIZE] memory state, uint256[_STATE_SIZE] memory key)
+        private
+        view
+        returns (uint256[_STATE_SIZE] memory)
+    {
         uint256[_STATE_SIZE] memory newState = [uint256(0), 0, 0, 0];
 
         // TODO remove loop to save gas?
@@ -219,11 +220,7 @@ contract RescueNonOptimized {
         for (uint256 i = 0; i < _STATE_SIZE; i++) {
             uint256 sum = uint256(0);
             for (uint256 j = 0; j < _STATE_SIZE; j++) {
-                sum = addmod(
-                    sum,
-                    mulmod(_MDS[i * _STATE_SIZE + j], state[j], _PRIME),
-                    _PRIME
-                );
+                sum = addmod(sum, mulmod(_MDS[i * _STATE_SIZE + j], state[j], _PRIME), _PRIME);
             }
             newState[i] = sum;
         }

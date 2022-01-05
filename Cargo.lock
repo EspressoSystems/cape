@@ -3673,12 +3673,12 @@ dependencies = [
  "futures",
  "futures-util",
  "itertools 0.10.3",
- "jf-plonk 0.0.1 (git+ssh://git@gitlab.com/translucence/crypto/jellyfish.git?rev=4d7e1c38e3f41d83e5b93f0eca1ae0663f221a5e)",
- "jf-primitives 0.0.1 (git+ssh://git@gitlab.com/translucence/crypto/jellyfish.git?rev=4d7e1c38e3f41d83e5b93f0eca1ae0663f221a5e)",
+ "jf-plonk 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?rev=2a40d01c938cdcc716071af5a0dc9b3242181c2c)",
+ "jf-primitives 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?rev=2a40d01c938cdcc716071af5a0dc9b3242181c2c)",
  "jf-txn",
- "jf-utils 0.0.1 (git+ssh://git@gitlab.com/translucence/crypto/jellyfish.git?rev=4d7e1c38e3f41d83e5b93f0eca1ae0663f221a5e)",
+ "jf-utils 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?rev=2a40d01c938cdcc716071af5a0dc9b3242181c2c)",
  "markdown",
- "phaselock 0.0.5 (git+ssh://git@gitlab.com/translucence/systems/phaselock.git?rev=14586ed218a35cb48675b73d4a34ae7ae55c67e6)",
+ "phaselock 0.0.5-dev",
  "procfs",
  "rand_chacha 0.2.2",
  "serde",
@@ -3690,7 +3690,7 @@ dependencies = [
  "strum",
  "strum_macros",
  "surf",
- "tagged-base64 0.1.0 (git+ssh://git@gitlab.com/translucence/common/tagged-base64.git?branch=main)",
+ "tagged-base64 0.1.0 (git+ssh://git@github.com/SpectrumXYZ/tagged-base64.git?branch=main)",
  "tempdir",
  "threshold_crypto",
  "tide",
@@ -4091,8 +4091,8 @@ dependencies = [
 
 [[package]]
 name = "phaselock"
-version = "0.0.5"
-source = "git+ssh://git@github.com/SpectrumXYZ/phaselock.git?rev=14586ed218a35cb48675b73d4a34ae7ae55c67e6#14586ed218a35cb48675b73d4a34ae7ae55c67e6"
+version = "0.0.5-dev"
+source = "git+ssh://git@github.com/SpectrumXYZ/phaselock.git?branch=main#7487789a26b1e9034b62c3ca1ce4befcf31d7f31"
 dependencies = [
  "ark-ec",
  "ark-ed-on-bls12-381",
@@ -4119,7 +4119,7 @@ dependencies = [
 [[package]]
 name = "phaselock"
 version = "0.0.5"
-source = "git+ssh://git@gitlab.com/translucence/systems/phaselock.git?rev=14586ed218a35cb48675b73d4a34ae7ae55c67e6#14586ed218a35cb48675b73d4a34ae7ae55c67e6"
+source = "git+ssh://git@github.com/SpectrumXYZ/phaselock.git?rev=14586ed218a35cb48675b73d4a34ae7ae55c67e6#14586ed218a35cb48675b73d4a34ae7ae55c67e6"
 dependencies = [
  "ark-ec",
  "ark-ed-on-bls12-381",
@@ -6479,7 +6479,7 @@ dependencies = [
  "jf-utils 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?rev=2a40d01c938cdcc716071af5a0dc9b3242181c2c)",
  "lazy_static",
  "mnemonic",
- "phaselock 0.0.5 (git+ssh://git@github.com/SpectrumXYZ/phaselock.git?rev=14586ed218a35cb48675b73d4a34ae7ae55c67e6)",
+ "phaselock 0.0.5",
  "procfs",
  "rand 0.7.3",
  "rand_chacha 0.3.1",

@@ -14,13 +14,13 @@ bincode = "1.3.3"
 futures = "0.3.0"
 futures-util = "0.3.8"
 itertools = "0.10.1"
-jf-plonk = { features=["std"], git = "ssh://git@gitlab.com/translucence/crypto/jellyfish.git", rev = "4d7e1c38e3f41d83e5b93f0eca1ae0663f221a5e"}
-jf-primitives = { features=["std"], git = "ssh://git@gitlab.com/translucence/crypto/jellyfish.git", rev = "4d7e1c38e3f41d83e5b93f0eca1ae0663f221a5e"}
+jf-plonk = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git", rev = "2a40d01c938cdcc716071af5a0dc9b3242181c2c"}
+jf-primitives = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git", rev = "2a40d01c938cdcc716071af5a0dc9b3242181c2c"}
 jf-txn = { features=["std"], git = "ssh://git@gitlab.com/translucence/crypto/jellyfish.git", rev = "4d7e1c38e3f41d83e5b93f0eca1ae0663f221a5e"}
-jf-utils = { features=["std"], git = "ssh://git@gitlab.com/translucence/crypto/jellyfish.git", rev = "4d7e1c38e3f41d83e5b93f0eca1ae0663f221a5e"}
+jf-utils = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git", rev = "2a40d01c938cdcc716071af5a0dc9b3242181c2c"}
 markdown = "0.3"
 # phaselock = { version = "0.0.2", registry = "translucence"}
-phaselock = { git = "ssh://git@gitlab.com/translucence/systems/phaselock.git", rev = "14586ed218a35cb48675b73d4a34ae7ae55c67e6" }
+phaselock = { git = "ssh://git@github.com/SpectrumXYZ/phaselock.git", branch = "main"}
 rand_chacha = "0.2.2"
 serde = { version = "1.0.123", features = ["derive", "rc"] }
 serde_derive = "1.0.118"
@@ -31,7 +31,7 @@ structopt = { version = "0.3", features = ["paw"] }
 strum = "0.20"
 strum_macros = "0.20.1"
 surf = "2.3.1"
-tagged-base64 = { git = "ssh://git@gitlab.com/translucence/common/tagged-base64.git", branch = "main"}
+tagged-base64 = { git = "ssh://git@github.com/SpectrumXYZ/tagged-base64.git", branch = "main"}
 tempdir = "0.3.7"
 threshold_crypto = "0.4.0"
 tide = "0.16.0"

@@ -10,9 +10,12 @@ contract TestCAPE is CAPE {
         return _numLeaves;
     }
 
-    function insertRecordCommitments(uint256[] memory elements) public {
+    function setInitialRecordCommitments(uint256[] memory elements) public {
+        require(_rootValue == 0, "Merkle tree is nonempty");
         _updateRecordsMerkleTree(elements);
-        _roots[0] = _rootValue;
+        for (uint256 i = 0; i < _roots.length; ++i) {
+            _roots[i] = _rootValue;
+        }
     }
 
     function insertNullifier(uint256 nullifier) public {
@@ -25,6 +28,10 @@ contract TestCAPE is CAPE {
 
     function checkBurn(BurnNote memory note) public view {
         return _checkBurn(note);
+    }
+
+    function containsRoot(uint256 root) public view returns (bool) {
+        return _containsRoot(root);
     }
 
     function containsBurnPrefix(bytes memory extraProofBoundData)

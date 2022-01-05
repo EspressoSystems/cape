@@ -4,6 +4,7 @@ extern crate num_derive;
 mod assertion;
 mod bn254;
 mod cape;
+#[cfg(test)]
 mod cape_e2e_tests;
 pub mod ethereum;
 pub mod helpers;

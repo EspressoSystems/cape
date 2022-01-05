@@ -1,2 +1,5 @@
 # Format javascript and solidity files
 c18658b2f1c1020dc447af8aa261efab2c1252ae
+
+# Reformat solidity code with longer line width
+6291c215497e93e3daa22754288dda851e10dfb0

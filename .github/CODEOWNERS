@@ -1,0 +1,14 @@
+# A review from the corresponding users is requested whenever
+# a (non-draft) PR modifies a matching file.
+#
+# The last match in this file is the one that takes precendence.
+#
+# See
+#    https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+# for more details.
+
+* alxiong philippecamacho sveitser
+/wallet/ jbearer shenkeyao
+/relayer/ nyospe
+/doc/ pictographer
+/.github/ Ancient123

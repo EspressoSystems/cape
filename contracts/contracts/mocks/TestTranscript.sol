@@ -11,18 +11,20 @@ import {Transcript} from "../verifier/Transcript.sol";
 contract TestTranscript {
     using Transcript for Transcript.TranscriptData;
 
-    function appendMessage(
-        Transcript.TranscriptData memory transcript,
-        bytes memory message
-    ) public pure returns (Transcript.TranscriptData memory) {
+    function appendMessage(Transcript.TranscriptData memory transcript, bytes memory message)
+        public
+        pure
+        returns (Transcript.TranscriptData memory)
+    {
         transcript.appendMessage(message);
         return transcript;
     }
 
-    function appendChallenge(
-        Transcript.TranscriptData memory transcript,
-        uint256 challenge
-    ) public pure returns (Transcript.TranscriptData memory) {
+    function appendChallenge(Transcript.TranscriptData memory transcript, uint256 challenge)
+        public
+        pure
+        returns (Transcript.TranscriptData memory)
+    {
         transcript.appendChallenge(challenge);
         return transcript;
     }

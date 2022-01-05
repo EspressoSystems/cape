@@ -20,27 +20,15 @@ contract TestBN254 {
         return C.isInfinity(point);
     }
 
-    function negate(C.G1Point memory p)
-        public
-        pure
-        returns (C.G1Point memory r)
-    {
+    function negate(C.G1Point memory p) public pure returns (C.G1Point memory r) {
         return C.negate(p);
     }
 
-    function add(C.G1Point memory p1, C.G1Point memory p2)
-        public
-        view
-        returns (C.G1Point memory)
-    {
+    function add(C.G1Point memory p1, C.G1Point memory p2) public view returns (C.G1Point memory) {
         return C.add(p1, p2);
     }
 
-    function scalarMul(C.G1Point memory p, uint256 s)
-        public
-        view
-        returns (C.G1Point memory r)
-    {
+    function scalarMul(C.G1Point memory p, uint256 s) public view returns (C.G1Point memory r) {
         return C.scalarMul(p, s);
     }
 
@@ -65,11 +53,7 @@ contract TestBN254 {
         return C.pairingProd2(a1, a2, b1, b2);
     }
 
-    function fromLeBytesModOrder(bytes memory leBytes)
-        public
-        pure
-        returns (uint256)
-    {
+    function fromLeBytesModOrder(bytes memory leBytes) public pure returns (uint256) {
         return C.fromLeBytesModOrder(leBytes);
     }
 

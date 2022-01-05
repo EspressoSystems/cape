@@ -74,11 +74,7 @@ library BN254 {
     /// @notice precompile bn256Add at address(6) takes (0, 0) as Point of Infinity,
     /// some crypto libraries (such as arkwork) uses a boolean flag to mark PoI, and
     /// just use (0, 1) as affine coordinates (not on curve) to represents PoI.
-    function isInfinity(G1Point memory point)
-        internal
-        pure
-        returns (bool result)
-    {
+    function isInfinity(G1Point memory point) internal pure returns (bool result) {
         assembly {
             let x := mload(point)
             let y := mload(add(point, 0x20))
@@ -95,11 +91,7 @@ library BN254 {
     }
 
     /// @return r the sum of two points of G1
-    function add(G1Point memory p1, G1Point memory p2)
-        internal
-        view
-        returns (G1Point memory r)
-    {
+    function add(G1Point memory p1, G1Point memory p2) internal view returns (G1Point memory r) {
         uint256[4] memory input;
         input[0] = p1.x;
         input[1] = p1.y;
@@ -119,11 +111,7 @@ library BN254 {
 
     /// @return r the product of a point on G1 and a scalar, i.e.
     /// p == p.mul(1) and p.add(p) == p.mul(2) for all points p.
-    function scalarMul(G1Point memory p, uint256 s)
-        internal
-        view
-        returns (G1Point memory r)
-    {
+    function scalarMul(G1Point memory p, uint256 s) internal view returns (G1Point memory r) {
         uint256[3] memory input;
         input[0] = p.x;
         input[1] = p.y;
@@ -229,19 +217,11 @@ library BN254 {
         return (out != 0);
     }
 
-    function fromLeBytesModOrder(bytes memory leBytes)
-        internal
-        pure
-        returns (uint256 ret)
-    {
+    function fromLeBytesModOrder(bytes memory leBytes) internal pure returns (uint256 ret) {
         // TODO: Can likely be gas optimized by copying the first 31 bytes directly.
         for (uint256 i = 0; i < leBytes.length; i++) {
             ret = mulmod(ret, 256, R_MOD);
-            ret = addmod(
-                ret,
-                uint256(uint8(leBytes[leBytes.length - 1 - i])),
-                R_MOD
-            );
+            ret = addmod(ret, uint256(uint8(leBytes[leBytes.length - 1 - i])), R_MOD);
         }
     }
 

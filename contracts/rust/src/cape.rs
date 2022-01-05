@@ -265,8 +265,9 @@ impl From<CAPEConstructorArgs> for (u8, u64) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ethers::prelude::k256::ecdsa::SigningKey;
-    use ethers::prelude::{Address, Http, Provider, SignerMiddleware, Wallet, U256};
+    use ethers::prelude::{
+        k256::ecdsa::SigningKey, Address, Http, Provider, SignerMiddleware, Wallet, U256,
+    };
     use jf_aap::structs::RecordOpening;
     use rand::Rng;
 
@@ -357,6 +358,71 @@ mod tests {
         );
         Ok(())
     }
+
+    #[tokio::test]
+    async fn test_block_height() -> Result<()> {
+        let contract = deploy_cape_test().await;
+        assert_eq!(contract.height().call().await?, 0u64);
+
+        let rng = &mut ark_std::test_rng();
+        let params = TxnsParams::generate_txns(rng, 1, 0, 0);
+        let miner = UserPubKey::default();
+
+        let root = params.txns[0].merkle_root();
+        let cape_block = CapeBlock::generate(params.txns, vec![], miner.address())?;
+
+        // TODO should not require to manually submit the root here
+        contract
+            .add_root(root.generic_into::<MerkleRootSol>().0)
+            .send()
+            .await?
+            .await?;
+
+        contract
+            .submit_cape_block(cape_block.into(), vec![])
+            .send()
+            .await?
+            .await?;
+
+        assert_eq!(contract.height().call().await?, 1u64);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_event_block_committed() -> Result<()> {
+        let contract = deploy_cape_test().await;
+
+        let rng = &mut ark_std::test_rng();
+        let params = TxnsParams::generate_txns(rng, 1, 0, 0);
+        let miner = UserPubKey::default();
+
+        let root = params.txns[0].merkle_root();
+        let cape_block = CapeBlock::generate(params.txns, vec![], miner.address())?;
+
+        // TODO should not require to manually submit the root here
+        contract
+            .add_root(root.generic_into::<MerkleRootSol>().0)
+            .send()
+            .await?
+            .await?;
+
+        contract
+            .submit_cape_block(cape_block.into(), vec![])
+            .send()
+            .await?
+            .await?;
+
+        let logs = contract
+            .block_committed_filter()
+            .from_block(0u64)
+            .query()
+            .await?;
+        assert_eq!(logs[0].height, 1);
+        assert_eq!(logs[0].included_notes, vec![true]);
+        Ok(())
+    }
+
+    // TODO add a test to check if includedNotes is computed correctly
 
     #[test]
     fn test_note_types() {
@@ -499,6 +565,51 @@ mod tests {
 
     // TODO integration test to check if check_burn is hooked up correctly in
     // main block validaton loop.
+
+    #[tokio::test]
+    async fn test_check_transfer_expired_note_removed() -> Result<()> {
+        let contract = deploy_cape_test().await;
+
+        let rng = &mut ark_std::test_rng();
+        let params = TxnsParams::generate_txns(rng, 1, 0, 0);
+        let miner = UserPubKey::default();
+
+        let tx = params.txns[0].clone();
+        let root = tx.merkle_root();
+        let nf = tx.nullifiers()[0];
+        let cape_block = CapeBlock::generate(params.txns, vec![], miner.address())?;
+        let valid_until = match tx {
+            TransactionNote::Transfer(note) => note.aux_info.valid_until,
+            TransactionNote::Mint(_) => todo!(),
+            TransactionNote::Freeze(_) => todo!(),
+        };
+
+        // Set the height to expire note
+        contract.set_height(valid_until + 1).send().await?.await?;
+        contract
+            .add_root(root.generic_into::<MerkleRootSol>().0)
+            .send()
+            .await?
+            .await?;
+
+        contract
+            .submit_cape_block(cape_block.into(), vec![])
+            .send()
+            .await?
+            .await?;
+
+        // Verify nullifier *not* spent
+        assert!(
+            !contract
+                .nullifiers(nf.generic_into::<NullifierSol>().0)
+                .call()
+                .await?
+        );
+
+        // Check that the height increased by one
+        assert_eq!(contract.height().call().await?, valid_until + 2);
+        Ok(())
+    }
 
     #[tokio::test]
     async fn test_check_transfer_note_with_burn_prefix_rejected() {

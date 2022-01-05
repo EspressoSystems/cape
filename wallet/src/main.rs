@@ -74,18 +74,18 @@ fn default_api_path() -> PathBuf {
 
 #[derive(Clone)]
 struct Connection {
-    id: String,
-    wsc: WebSocketConnection,
+    _id: String,
+    _wsc: WebSocketConnection,
 }
 
 #[derive(Clone)]
 struct DummyNode {
-    node_state: u8,
+    _node_state: u8,
 }
 
 #[derive(Clone)]
 pub struct WebState {
-    connections: Arc<RwLock<HashMap<String, Connection>>>,
+    _connections: Arc<RwLock<HashMap<String, Connection>>>,
     web_path: PathBuf,
     api: toml::Value,
     node: Arc<RwLock<DummyNode>>,
@@ -280,10 +280,10 @@ async fn main() -> Result<(), std::io::Error> {
     };
     println!("Web path: {:?}", web_path);
     let api = disco::load_messages(&api_path);
-    let dummy_node = Arc::new(RwLock::new(DummyNode { node_state: 0 }));
+    let dummy_node = Arc::new(RwLock::new(DummyNode { _node_state: 0 }));
     let mut web_server = tide::with_state(WebState {
-        connections: Default::default(),
-        web_path: PathBuf::from(web_path.clone()),
+        _connections: Default::default(),
+        web_path: web_path.clone(),
         api: api.clone(),
         node: dummy_node.clone(),
     });

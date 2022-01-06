@@ -8,7 +8,12 @@ describe("Records Merkle Tree Benchmarks", function () {
     beforeEach(async function () {
       [owner] = await ethers.getSigners();
 
-      const RMT = await ethers.getContractFactory("TestRecordsMerkleTree");
+      let rescue = await (await ethers.getContractFactory("RescueLib")).deploy();
+      const RMT = await ethers.getContractFactory("TestRecordsMerkleTree", {
+        libraries: {
+          RescueLib: rescue.address,
+        },
+      });
       TREE_HEIGHT = 20;
       rmtContract = await RMT.deploy(TREE_HEIGHT);
 
@@ -18,8 +23,7 @@ describe("Records Merkle Tree Benchmarks", function () {
       await rmtContract.deployed();
     });
 
-    // TODO re-enable once we have have split contract deployment
-    it.skip("shows how much gas is spent by updateRecordsMerkleTree", async function () {
+    it("shows how much gas is spent by updateRecordsMerkleTree", async function () {
       let elems = [1, 2, 3, 4, 5];
 
       const txEmpty = await rmtContract.testUpdateRecordsMerkleTree([]);
@@ -34,8 +38,10 @@ describe("Records Merkle Tree Benchmarks", function () {
       const doNothingTxReceipt = await doNothingTx.wait();
       let doNothingGasUsed = doNothingTxReceipt.gasUsed;
 
+      // TODO It is really troublesome to update this test if the gas usage changes!
+
       // Total gas used to insert all the records, read from and store into the frontier
-      expect(totalGasUsed).to.be.equal(2772947);
+      expect(totalGasUsed).to.be.equal(2791063);
 
       // Gas used just to handle the frontier (no records inserted)
       expect(emptyGasUsed).to.be.equal(159189);
@@ -46,11 +52,11 @@ describe("Records Merkle Tree Benchmarks", function () {
 
       // Gas used to handle the frontier and insert records but without "base" cost
       let updateRecordsMerkleTreeWithoutBaseCost = totalGasUsed - doNothingGasUsed;
-      expect(updateRecordsMerkleTreeWithoutBaseCost).to.be.equal(2751785);
+      expect(updateRecordsMerkleTreeWithoutBaseCost).to.be.equal(2769901);
 
       // Gas used to insert the records
       let insertRecordsGasUsed = totalGasUsed - emptyGasUsed;
-      expect(insertRecordsGasUsed).to.be.equal(2613758);
+      expect(insertRecordsGasUsed).to.be.equal(2631874);
     });
   });
 });

@@ -1,11 +1,13 @@
 #![cfg_attr(debug_assertions, allow(dead_code))]
 use anyhow::Result;
+use async_recursion::async_recursion;
 use ethers::{
     abi::{Abi, Tokenize},
     core::k256::ecdsa::SigningKey,
     prelude::{
-        coins_bip39::English, Bytes, Contract, ContractFactory, Http, LocalWallet, Middleware,
-        MnemonicBuilder, Provider, Signer, SignerMiddleware, TransactionRequest, Wallet, U256,
+        artifacts::BytecodeObject, coins_bip39::English, Address, Contract, ContractFactory, Http,
+        LocalWallet, Middleware, MnemonicBuilder, Provider, Signer, SignerMiddleware,
+        TransactionRequest, Wallet, U256,
     },
 };
 use std::{convert::TryFrom, env, fs, path::Path, sync::Arc, time::Duration};
@@ -49,7 +51,7 @@ pub async fn get_funded_deployer(
     Ok(Arc::new(SignerMiddleware::new(provider, deployer_wallet)))
 }
 
-async fn load_contract(path: &Path) -> Result<(Abi, Bytes)> {
+async fn load_contract(path: &Path) -> Result<(Abi, BytecodeObject)> {
     let abi_path = path.join("abi.json");
     let bin_path = path.join("bin.txt");
 
@@ -63,26 +65,55 @@ async fn load_contract(path: &Path) -> Result<(Abi, Bytes)> {
         Err(_) => panic!("Unable to read from path {:?}", bin_path),
     };
     let trimmed = bytecode_str.trim().trim_start_matches("0x");
-    let bytecode = match hex::decode(&trimmed) {
-        Ok(v) => v,
-        Err(_) => {
-            panic!("Cannot parse hex {:?}", trimmed)
-        }
-    }
-    .into();
+    let bytecode: BytecodeObject = serde_json::from_value(serde_json::json!(trimmed)).unwrap();
 
     Ok((abi, bytecode))
 }
 
+async fn link_unlinked_libraries<M: 'static + Middleware>(
+    bytecode: &mut BytecodeObject,
+    client: Arc<M>,
+) -> Result<()> {
+    if bytecode.contains_fully_qualified_placeholder("contracts/libraries/RescueLib.sol:RescueLib")
+    {
+        // Connect to linked library if env var with address is set
+        // otherwise, deploy the library.
+        let lib_address = match env::var("RESCUE_LIB_ADDRESS") {
+            Ok(val) => val.parse::<Address>()?,
+            Err(_) => deploy(
+                client.clone(),
+                Path::new("../artifacts/contracts/libraries/RescueLib.sol/RescueLib"),
+                (),
+            )
+            .await?
+            .address(),
+        };
+        bytecode
+            .link(
+                "contracts/libraries/RescueLib.sol",
+                "RescueLib",
+                lib_address,
+            )
+            .resolve();
+    };
+
+    Ok(())
+}
+
 // TODO: why do we need 'static ?
 // https://docs.rs/anyhow/1.0.44/anyhow/struct.Error.html ?
-pub async fn deploy<C: 'static + Middleware, T: Tokenize>(
-    client: Arc<C>,
+#[async_recursion(?Send)]
+pub async fn deploy<M: 'static + Middleware, T: Tokenize>(
+    client: Arc<M>,
     path: &Path,
     constructor_args: T,
-) -> Result<Contract<C>> {
-    let (abi, bytecode) = load_contract(path).await?;
-    let factory = ContractFactory::new(abi.clone(), bytecode.clone(), client.clone());
+) -> Result<Contract<M>> {
+    let (abi, mut bytecode) = load_contract(path).await?;
+
+    // TODO remove client clones, pass reference instead?
+    link_unlinked_libraries(&mut bytecode, client.clone()).await?;
+
+    let factory = ContractFactory::new(abi.clone(), bytecode.into_bytes().unwrap(), client.clone());
     let contract = factory
         .deploy(constructor_args)?
         .legacy() // XXX This is required!

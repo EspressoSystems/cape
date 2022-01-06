@@ -292,24 +292,15 @@ async fn test_2user_maybe_submit(should_submit: bool) -> Result<()> {
         }
     }
 
-    let bob_rec = TransferNoteInput {
-        ro: bob_rec,
-        owner_keypair: &bob_key,
-        cred: None,
-        acc_member_witness: AccMemberWitness {
-            merkle_path: wallet_merkle_tree.get_leaf(2).expect_ok().unwrap().1.path,
-            root: new_state.ledger.record_merkle_commitment.root_value,
-            uid: 2,
-        },
-    };
+    let ro = bob_rec;
+    let merkle_path = wallet_merkle_tree.get_leaf(2).expect_ok().unwrap().1.path;
+    let merkle_root = new_state.ledger.record_merkle_commitment.root_value;
+    let uid = 2;
 
     MerkleTree::check_proof(
-        bob_rec.acc_member_witness.root,
-        bob_rec.acc_member_witness.uid,
-        &MerkleLeafProof::new(
-            RecordCommitment::from(&bob_rec.ro).to_field_element(),
-            bob_rec.acc_member_witness.merkle_path,
-        ),
+        merkle_root,
+        uid,
+        &MerkleLeafProof::new(RecordCommitment::from(&ro).to_field_element(), merkle_path),
     )
     .unwrap();
 

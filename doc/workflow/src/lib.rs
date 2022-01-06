@@ -231,6 +231,12 @@ impl CapeContract {
         // 1. verify the block, and insert its input nullifiers and output record commitments
         let (new_block, new_burned_ros) =
             new_block.validate(&self.recent_merkle_roots, burned_ros, &mut self.nullifiers);
+
+        // We allow empty blocks. See discussion https://github.com/SpectrumXYZ/cape/issues/156
+        // Summary:
+        // * Empty blocks allow to flush the queue of asset records to be inserted into the merkle tree after some call to wrap/faucet
+        // * As the block height is our proxy for time it looks desirable to be able to create new blocks even though no new transactions are produced
+
         // Check there is at least one valid transaction
         assert!(!new_block.txns.is_empty() || !new_block.burn_txns.is_empty());
 

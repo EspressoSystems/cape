@@ -265,6 +265,7 @@ impl From<CAPEConstructorArgs> for (u8, u64) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ark_std::sync::Arc;
     use ethers::prelude::{
         k256::ecdsa::SigningKey, Address, Http, Provider, SignerMiddleware, Wallet, U256,
     };
@@ -294,11 +295,10 @@ mod tests {
         TestCAPE::new(contract.address(), client)
     }
 
-    #[tokio::test]
-    async fn test_submit_block_to_cape_contract() -> Result<()> {
-        let client = get_funded_deployer().await.unwrap();
-
-        let contract_address: Address = match env::var("CAPE_ADDRESS") {
+    async fn get_cape_contract_address(
+        client: &Arc<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>,
+    ) -> Address {
+        match env::var("CAPE_ADDRESS") {
             Ok(val) => val.parse::<Address>().unwrap(),
             Err(_) => deploy(
                 client.clone(),
@@ -309,11 +309,43 @@ mod tests {
             .await
             .unwrap()
             .address(),
-        };
+        }
+    }
+
+    #[tokio::test]
+    async fn test_submit_empty_block_to_cape_contract() -> Result<()> {
+        let client = get_funded_deployer().await.unwrap();
+
+        let contract_address = get_cape_contract_address(&client).await;
 
         let contract = TestCAPE::new(contract_address, client);
 
-        // Create two transactions
+        // Create an empty block transactions
+        let rng = &mut ark_std::test_rng();
+        let params = TxnsParams::generate_txns(rng, 0, 0, 0);
+        let miner = UserPubKey::default();
+
+        let cape_block = CapeBlock::generate(params.txns, vec![], miner.address())?;
+
+        // Submitting an empty block does not yield a reject from the contract
+        contract
+            .submit_cape_block(cape_block.into(), vec![])
+            .send()
+            .await?
+            .await?;
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_submit_block_to_cape_contract() -> Result<()> {
+        let client = get_funded_deployer().await.unwrap();
+
+        let contract_address = get_cape_contract_address(&client).await;
+
+        let contract = TestCAPE::new(contract_address, client);
+
+        // Create three transactions
         let rng = &mut ark_std::test_rng();
         let num_transfer_txn = 1;
         let num_mint_txn = 1;

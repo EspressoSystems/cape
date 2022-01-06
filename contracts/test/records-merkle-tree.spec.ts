@@ -10,7 +10,12 @@ describe("Records Merkle Tree tests", function () {
   };
 
   beforeEach(async function () {
-    rmtFactory = await ethers.getContractFactory("TestRecordsMerkleTree");
+    let rescue = await (await ethers.getContractFactory("RescueLib")).deploy();
+    rmtFactory = await ethers.getContractFactory("TestRecordsMerkleTree", {
+      libraries: {
+        RescueLib: rescue.address,
+      },
+    });
   });
 
   it("inserts all 27 leaves into a merkle tree of height 3", async function () {

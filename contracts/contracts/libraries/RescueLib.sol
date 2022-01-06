@@ -704,12 +704,12 @@ library RescueLib {
         uint256 a,
         uint256 b,
         uint256 c
-    ) internal view returns (uint256 o) {
+    ) public view returns (uint256 o) {
         (o, a, b, c) = perm(a % _PRIME, b % _PRIME, c % _PRIME, 0);
         o %= _PRIME;
     }
 
-    function commit(uint256[15] memory inputs) internal view returns (uint256) {
+    function commit(uint256[15] memory inputs) public view returns (uint256) {
         uint256 a;
         uint256 b;
         uint256 c;

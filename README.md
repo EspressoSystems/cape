@@ -220,8 +220,15 @@ The CAPE contract can be deployed with
     hardhat deploy
 
 The deployments are saved in `contracts/deployments`. If you deploy to localhost
-you have to remove `contracts/deployments/localhost` after you restart the geth
-node in order to re-deploy.
+you have to use `hardhat deploy --reset` after you restart the geth node in
+order to re-deploy.
+
+### Linking to deployed contracts
+
+In order to avoid re-deploying the library contracts for each test you can pass
+the address obtained by running `hardhat deploy` as an env var
+
+    env RESCUE_LIB_ADDRESS=0x5FbDB2315678afecb367f032d93F642f64180aa3 cargo test --release
 
 ## Precompiled solidity binaries
 

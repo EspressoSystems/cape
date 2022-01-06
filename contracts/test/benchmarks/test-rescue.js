@@ -4,13 +4,18 @@ const { ethers } = require("hardhat");
 describe("Rescue benchmarks", function () {
   describe("Gas spent for computing the Rescue function", function () {
     for (const [contractName, gas] of [
-      ["TestRescue", 87214],
+      ["TestRescue", 90363],
       ["TestRescueNonOptimized", 620060],
     ]) {
-      // TODO re-enable once we have have split contract deployment
-      it.skip(`checks gas usage of ${contractName}.hash`, async function () {
-        const Rescue = await ethers.getContractFactory(contractName);
-        let rescueContract = await Rescue.deploy();
+      it(`checks gas usage of ${contractName}.hash`, async function () {
+        const libraries = {};
+        if (contractName == "TestRescue") {
+          let rescueLib = await (await ethers.getContractFactory("RescueLib")).deploy();
+          libraries["RescueLib"] = rescueLib.address;
+        }
+        const factory = await ethers.getContractFactory(contractName, { libraries });
+
+        let rescueContract = await factory.deploy();
 
         // Polling interval in ms.
         rescueContract.provider.pollingInterval = 20;

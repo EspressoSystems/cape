@@ -37,6 +37,7 @@ async-std = { version = "1.10.0", features = ["unstable", "attributes"] }
 async-trait = "0.1.51"
 futures = "0.3.16"
 strum_macros = "0.20.1"
+async-recursion = "1.0.0"
 
 # copied from jellyfish
 [dependencies.ark-poly-commit]

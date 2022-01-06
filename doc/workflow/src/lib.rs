@@ -237,9 +237,6 @@ impl CapeContract {
         // * Empty blocks allow to flush the queue of asset records to be inserted into the merkle tree after some call to wrap/faucet
         // * As the block height is our proxy for time it looks desirable to be able to create new blocks even though no new transactions are produced
 
-        // Check there is at least one valid transaction
-        assert!(!new_block.txns.is_empty() || !new_block.burn_txns.is_empty());
-
         let mut rc_to_be_inserted = vec![];
         for txn in new_block.txns.iter() {
             for &nf in txn.nullifiers().iter() {

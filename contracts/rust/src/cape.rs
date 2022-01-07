@@ -311,6 +311,9 @@ mod tests {
             .await?
             .await?;
 
+        // The height is incremented anyways.
+        assert_eq!(contract.height().call().await?, 1u64);
+
         Ok(())
     }
 

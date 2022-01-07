@@ -139,6 +139,15 @@ contract CAPE is RecordsMerkleTree, RootStore {
 
     constructor(uint8 height, uint64 nRoots) RecordsMerkleTree(height) RootStore(nRoots) {}
 
+    // Checks if a block is empty
+    function _isBlockEmpty(CapeBlock memory newBlock) internal returns (bool) {
+        bool res = (newBlock.transferNotes.length == 0 &&
+            newBlock.burnNotes.length == 0 &&
+            newBlock.freezeNotes.length == 0 &&
+            newBlock.mintNotes.length == 0);
+        return res;
+    }
+
     /// Insert a nullifier into the set of nullifiers.
     /// @dev Reverts if nullifier is already in nullifier set.
     function _insertNullifier(uint256 nullifier) internal {
@@ -282,9 +291,13 @@ contract CAPE is RecordsMerkleTree, RootStore {
 
         // TODO verify plonk proof
 
-        // Check that this is correct
-        _updateRecordsMerkleTree(comms.toArray());
-        _addRoot(_rootValue);
+        if (!_isBlockEmpty(newBlock)) {
+            // TODO Check that this is correct
+            _updateRecordsMerkleTree(comms.toArray());
+            _addRoot(_rootValue);
+        }
+
+        // In all cases (the block is empty or not), the height is incremented.
         height += 1;
         emit BlockCommitted(height, includedNotes);
     }

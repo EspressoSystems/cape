@@ -295,30 +295,11 @@ mod tests {
         TestCAPE::new(contract.address(), client)
     }
 
-    async fn get_cape_contract_address(
-        client: &Arc<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>,
-    ) -> Address {
-        match env::var("CAPE_ADDRESS") {
-            Ok(val) => val.parse::<Address>().unwrap(),
-            Err(_) => deploy(
-                client.clone(),
-                // TODO using mock contract to be able to manually add root
-                Path::new("../artifacts/contracts/mocks/TestCAPE.sol/TestCAPE"),
-                CAPEConstructorArgs::new(5, 2).generic_into::<(u8, u64)>(),
-            )
-            .await
-            .unwrap()
-            .address(),
-        }
-    }
-
     #[tokio::test]
     async fn test_submit_empty_block_to_cape_contract() -> Result<()> {
         let client = get_funded_deployer().await.unwrap();
 
-        let contract_address = get_cape_contract_address(&client).await;
-
-        let contract = TestCAPE::new(contract_address, client);
+        let contract = deploy_cape_test().await;
 
         // Create an empty block transactions
         let rng = &mut ark_std::test_rng();
@@ -341,9 +322,7 @@ mod tests {
     async fn test_submit_block_to_cape_contract() -> Result<()> {
         let client = get_funded_deployer().await.unwrap();
 
-        let contract_address = get_cape_contract_address(&client).await;
-
-        let contract = TestCAPE::new(contract_address, client);
+        let contract = deploy_cape_test().await;
 
         // Create three transactions
         let rng = &mut ark_std::test_rng();

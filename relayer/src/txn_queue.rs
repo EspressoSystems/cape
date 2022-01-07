@@ -1,12 +1,12 @@
 // when it comes to Condvar usage, clippy gets this so very, very wrong...
 #![allow(clippy::mutex_atomic)]
 
-use crate::shared_types::Transaction;
+use zerok_lib::cape_state::CapeTransaction;
 
 use std::sync::{Condvar, Mutex};
 
 pub struct TxnQueue {
-    txns: Vec<Transaction>,
+    txns: Vec<CapeTransaction>,
     block_ready: Mutex<bool>,
     block_notify: Condvar,
 }
@@ -20,7 +20,7 @@ impl TxnQueue {
         }
     }
 
-    pub fn push(&mut self, txn: Transaction) {
+    pub fn push(&mut self, txn: CapeTransaction) {
         self.txns.push(txn);
         if self.check_for_block_limit() {
             let mut ready = self.block_ready.lock().unwrap();
@@ -34,7 +34,7 @@ impl TxnQueue {
         true
     }
 
-    pub fn wait_for_block_ready(&self) -> Result<Vec<Transaction>, bool> {
+    pub fn wait_for_block_ready(&self) -> Result<Vec<CapeTransaction>, bool> {
         let mut ready = self.block_ready.lock().unwrap();
         while !*ready {
             ready = self.block_notify.wait(ready).unwrap();

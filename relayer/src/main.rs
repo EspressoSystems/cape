@@ -1,19 +1,22 @@
+#[macro_use]
+extern crate lazy_static;
+
 use crate::api_server::init_web_server;
 use crate::block_builder::Builder;
-use crate::configuration::{reset_state, store_path};
+use crate::configuration::{reset_state, store_path, verifier_keys};
 use crate::state_persistence::StatePersistence;
 use crate::txn_queue::TxnQueue;
-use crate::validation_state::ValidationState;
+
+use jf_aap::MerkleTree;
+use zerok_lib::cape_state::{CapeContractState, CAPE_MERKLE_HEIGHT};
 
 use async_std::sync::{Arc, RwLock};
 
 mod api_server;
 mod block_builder;
 mod configuration;
-mod shared_types;
 mod state_persistence;
 mod txn_queue;
-mod validation_state;
 
 #[async_std::main]
 async fn main() -> std::io::Result<()> {
@@ -24,7 +27,10 @@ async fn main() -> std::io::Result<()> {
     let (state_persistence, validation_state) = if reset_state() {
         (
             StatePersistence::new(&store_path(), "relayer").unwrap(),
-            ValidationState::new(),
+            CapeContractState::new(
+                verifier_keys(),
+                MerkleTree::new(CAPE_MERKLE_HEIGHT).unwrap(),
+            ),
         )
     } else {
         let state_persistence = StatePersistence::load(&store_path(), "relayer").unwrap();

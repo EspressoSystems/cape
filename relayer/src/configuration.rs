@@ -1,4 +1,12 @@
+use jf_aap::keys::{UserAddress, UserKeyPair};
+use jf_aap::TransactionVerifyingKey;
+use zerok_lib::cape_state::CAPE_MERKLE_HEIGHT;
+use zerok_lib::state::key_set::KeySet;
+use zerok_lib::state::VerifierKeySet;
+use zerok_lib::universal_params::UNIVERSAL_PARAM;
+
 use dirs::data_local_dir;
+use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
 use std::{env, path::PathBuf};
 use structopt::StructOpt;
 
@@ -56,4 +64,50 @@ pub(crate) fn store_path() -> PathBuf {
 
 pub(crate) fn reset_state() -> bool {
     RelayerOptions::from_args().reset_state_store
+}
+
+pub(crate) fn verifier_keys() -> VerifierKeySet {
+    // Set up the validator.
+    let univ_setup = &*UNIVERSAL_PARAM;
+    let (_, xfr_verif_key_12, _) =
+        jf_aap::proof::transfer::preprocess(univ_setup, 1, 2, CAPE_MERKLE_HEIGHT).unwrap();
+    let (_, xfr_verif_key_23, _) =
+        jf_aap::proof::transfer::preprocess(univ_setup, 2, 3, CAPE_MERKLE_HEIGHT).unwrap();
+    let (_, mint_verif_key, _) =
+        jf_aap::proof::mint::preprocess(univ_setup, CAPE_MERKLE_HEIGHT).unwrap();
+    let (_, freeze_verif_key, _) =
+        jf_aap::proof::freeze::preprocess(univ_setup, 2, CAPE_MERKLE_HEIGHT).unwrap();
+    VerifierKeySet {
+        mint: TransactionVerifyingKey::Mint(mint_verif_key),
+        xfr: KeySet::new(
+            vec![
+                TransactionVerifyingKey::Transfer(xfr_verif_key_12),
+                TransactionVerifyingKey::Transfer(xfr_verif_key_23),
+            ]
+            .into_iter(),
+        )
+        .unwrap(),
+        freeze: KeySet::new(vec![TransactionVerifyingKey::Freeze(freeze_verif_key)].into_iter())
+            .unwrap(),
+    }
+}
+
+lazy_static! {
+    static ref RELAYER_KEYPAIR: UserKeyPair = {
+        // TODO: this should only be for the first time; replace with store and recover
+        let mut prng = ChaChaRng::from_entropy();
+        UserKeyPair::generate(&mut prng)
+
+        // TODO: load from stored, default if not specified, unless not found or reset; output error if specified and not found
+
+        // let mut file = File::open(path.clone()).unwrap();
+        // let mut bytes = Vec::new();
+        // if let Err(err) = file.read_to_end(&mut bytes).unwrap();
+        // let owner_keys = bincode::deserialize::<UserKeyPair>(&bytes);
+        // owner_keys.address()
+    };
+}
+
+pub(crate) fn relayer_addr() -> UserAddress {
+    RELAYER_KEYPAIR.address()
 }

@@ -1,7 +1,7 @@
-use crate::validation_state::ValidationState;
 use atomic_store::{
     load_store::BincodeLoadStore, AppendLog, AtomicStore, AtomicStoreLoader, PersistenceError,
 };
+use zerok_lib::cape_state::CapeContractState;
 
 use std::path::{Path, PathBuf};
 
@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 
 pub struct StatePersistence {
     atomic_store: AtomicStore,
-    state_snapshot: AppendLog<BincodeLoadStore<ValidationState>>,
+    state_snapshot: AppendLog<BincodeLoadStore<CapeContractState>>,
 }
 
 impl StatePersistence {
@@ -40,13 +40,13 @@ impl StatePersistence {
         })
     }
 
-    pub fn store_latest_state(&mut self, state: &ValidationState) {
+    pub fn store_latest_state(&mut self, state: &CapeContractState) {
         self.state_snapshot.store_resource(state).unwrap();
         self.state_snapshot.commit_version().unwrap();
         self.atomic_store.commit_version().unwrap();
     }
 
-    pub fn load_latest_state(&self) -> Result<ValidationState, PersistenceError> {
+    pub fn load_latest_state(&self) -> Result<CapeContractState, PersistenceError> {
         self.state_snapshot.load_latest()
     }
 }

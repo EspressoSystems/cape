@@ -140,11 +140,11 @@ contract CAPE is RecordsMerkleTree, RootStore {
     constructor(uint8 height, uint64 nRoots) RecordsMerkleTree(height) RootStore(nRoots) {}
 
     // Checks if a block is empty
-    function _isBlockEmpty(CapeBlock memory newBlock) internal returns (bool) {
-        bool res = (newBlock.transferNotes.length == 0 &&
-            newBlock.burnNotes.length == 0 &&
-            newBlock.freezeNotes.length == 0 &&
-            newBlock.mintNotes.length == 0);
+    function _isBlockEmpty(CapeBlock memory block) internal returns (bool) {
+        bool res = (block.transferNotes.length == 0 &&
+            block.burnNotes.length == 0 &&
+            block.freezeNotes.length == 0 &&
+            block.mintNotes.length == 0);
         return res;
     }
 

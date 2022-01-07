@@ -107,14 +107,8 @@ async fn test_2user_maybe_submit(should_submit: bool) -> Result<()> {
     );
 
     let mut t = MerkleTree::new(MERKLE_HEIGHT).unwrap();
-    assert_eq!(
-        t.commitment(),
-        MerkleTree::new(MERKLE_HEIGHT).unwrap().commitment()
-    );
     let alice_rec_comm = RecordCommitment::from(&alice_rec1);
     let alice_rec_field_elem = alice_rec_comm.to_field_element();
-    // check that RecordCommitment::from is deterministic
-    assert_eq!(alice_rec_comm, RecordCommitment::from(&alice_rec1));
     t.push(alice_rec_field_elem);
     let alice_rec_path = t.get_leaf(0).expect_ok().unwrap().1.path;
     assert_eq!(alice_rec_path.nodes.len(), MERKLE_HEIGHT as usize);
@@ -261,6 +255,8 @@ async fn test_2user_maybe_submit(should_submit: bool) -> Result<()> {
         panic!("Transaction emitted the wrong event!");
     }
 
+    // Confirm that the ledger's merkle tree got updated in the way we
+    // expect
     for r in new_recs {
         wallet_merkle_tree.push(r.to_field_element());
     }
@@ -319,6 +315,9 @@ async fn test_2user_and_submit() -> Result<()> {
     test_2user_maybe_submit(true).await
 }
 
+// Test without submitting to make sure that the submission _should_
+// succeed, and to narrow down test failures that only have to do with the
+// contract interaction code.
 #[tokio::test]
 async fn test_2user_no_submit() -> Result<()> {
     test_2user_maybe_submit(false).await

@@ -265,9 +265,8 @@ impl From<CAPEConstructorArgs> for (u8, u64) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ark_std::sync::Arc;
     use ethers::prelude::{
-        k256::ecdsa::SigningKey, Address, Http, Provider, SignerMiddleware, Wallet, U256,
+        k256::ecdsa::SigningKey, Http, Provider, SignerMiddleware, Wallet, U256,
     };
     use jf_aap::structs::RecordOpening;
     use rand::Rng;
@@ -280,7 +279,6 @@ mod tests {
     use anyhow::Result;
     use jf_aap::keys::UserPubKey;
     use jf_aap::utils::TxnsParams;
-    use std::env;
     use std::path::Path;
 
     async fn deploy_cape_test() -> TestCAPE<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>> {
@@ -297,8 +295,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_submit_empty_block_to_cape_contract() -> Result<()> {
-        let client = get_funded_deployer().await.unwrap();
-
         let contract = deploy_cape_test().await;
 
         // Create an empty block transactions
@@ -320,8 +316,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_submit_block_to_cape_contract() -> Result<()> {
-        let client = get_funded_deployer().await.unwrap();
-
         let contract = deploy_cape_test().await;
 
         // Create three transactions

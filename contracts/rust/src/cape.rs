@@ -1,3 +1,4 @@
+#![deny(warnings)]
 use crate::types as sol;
 use anyhow::{anyhow, bail, Result};
 use ark_serialize::*;

@@ -82,7 +82,7 @@ async fn link_unlinked_libraries<M: 'static + Middleware>(
             Ok(val) => val.parse::<Address>()?,
             Err(_) => deploy(
                 client.clone(),
-                Path::new("../artifacts/contracts/libraries/RescueLib.sol/RescueLib"),
+                Path::new("../abi/contracts/libraries/RescueLib.sol/RescueLib"),
                 (),
             )
             .await?

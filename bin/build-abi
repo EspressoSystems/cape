@@ -1,40 +1,50 @@
-#!/usr/bin/env bash
-set -euo pipefail
+#!/usr/bin/env python
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
 
-echo "Compiling contracts ..."
+try:
+    subprocess.check_call(["hardhat", "compile"])
+except subprocess.CalledProcessError as exc:
+    print("Command 'hardhat compile' failed")
+    sys.exit(exc.returncode)
 
-cd $CONTRACTS_DIR
+# hardhat removes files in artifacts directory when compiling -> put these files elsewhere
+contracts_dir = Path(os.environ["CONTRACTS_DIR"])
+abi_dir = contracts_dir / "abi"
+artifacts_dir = contracts_dir / "artifacts"
 
-hardhat compile
+# For each solidity file (respectively its artifact output directory)
+for directory in artifacts_dir.rglob("*.sol"):
 
-# for recursive globbing
-shopt -s globstar
-
-# glob empty if no match, avoid matches like "*.sol"
-shopt -s nullglob
-
-# For each solidity file (or its artifact output directory)
-for directory in artifacts/**/*.sol; do
-
-    # For each contract in the solidity file
-    for combined in $directory/*.json; do
-
-        if [[ $combined == *.dbg.json ]]; then
+    for hardhat_json in directory.glob("*.json"):
+        if str(hardhat_json).endswith(".dbg.json"):
             continue
-        fi
 
-        basename_json="${combined##*/}"
-        basename="${basename_json/%.json}"
+        contract_name = hardhat_json.stem
+        contract_file = hardhat_json.parent
+        out_dir = abi_dir / contract_file.relative_to(artifacts_dir) / contract_name
 
-        outdir="$directory/$basename"
+        abi_out = out_dir / "abi.json"
 
-        echo "$combined -> $outdir"
-        mkdir -p "$outdir"
+        if abi_out.exists() and abi_out.stat().st_mtime > hardhat_json.stat().st_mtime:
+            print(f"Up to date: {contract_name}")
+            continue
 
-        # extract .abi and .bytecode fields
-        cat "$combined" | jq -r .abi > "$outdir/abi.json"
-        cat "$combined" | jq -r .bytecode > "$outdir/bin.txt"
-    done
-done
+        print(f"Extracting ABI for {contract_name}")
 
-echo "Finished extracting ABIs"
+        os.makedirs(out_dir, exist_ok=True)
+
+        with open(hardhat_json) as f:
+            output = json.load(f)
+
+        with open(abi_out, "w") as f:
+            json.dump(output["abi"], f)
+
+        with open(out_dir / "bin.txt", "w") as f:
+            print(output["bytecode"], file=f)
+
+
+print("Finished extracting ABIs")

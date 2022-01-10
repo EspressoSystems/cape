@@ -74,7 +74,7 @@ async fn test_2user_maybe_submit(should_submit: bool) -> Result<()> {
         let contract_address: Address = deploy(
             client.clone(),
             // TODO using mock contract to be able to manually add root
-            Path::new("../artifacts/contracts/mocks/TestCAPE.sol/TestCAPE"),
+            Path::new("../abi/contracts/mocks/TestCAPE.sol/TestCAPE"),
             CAPEConstructorArgs::new(
                 MERKLE_HEIGHT,
                 CapeContractState::RECORD_ROOT_HISTORY_SIZE as u64,

@@ -47,6 +47,3 @@ default-features = false
 
 [dev-dependencies]
 proptest = "1.0.0"
-
-[build-dependencies]
-ethers-contract-abigen = { git = "https://github.com/gakonst/ethers-rs" }

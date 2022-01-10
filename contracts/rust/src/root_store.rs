@@ -11,7 +11,7 @@ async fn test_root_store() -> Result<()> {
     let client = get_funded_deployer().await?;
     let contract = deploy(
         client.clone(),
-        Path::new("../artifacts/contracts/mocks/TestRootStore.sol/TestRootStore"),
+        Path::new("../abi/contracts/mocks/TestRootStore.sol/TestRootStore"),
         (3u64,), /* num_roots */
     )
     .await?;

@@ -26,3 +26,6 @@ __pycache__/
 typechain-types/
 
 deployments/localhost/
+
+# TODO: remove this when build-abi script is removed
+/abi/

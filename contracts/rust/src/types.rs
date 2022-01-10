@@ -22,43 +22,43 @@ const GATE_WIDTH: usize = 4;
 
 abigen!(
     TestBN254,
-    "../artifacts/contracts/mocks/TestBN254.sol/TestBN254/abi.json",
+    "../abi/contracts/mocks/TestBN254.sol/TestBN254/abi.json",
     event_derives(serde::Deserialize, serde::Serialize);
 
     TestRecordsMerkleTree,
-    "../artifacts/contracts/mocks/TestRecordsMerkleTree.sol/TestRecordsMerkleTree/abi.json",
+    "../abi/contracts/mocks/TestRecordsMerkleTree.sol/TestRecordsMerkleTree/abi.json",
     event_derives(serde::Deserialize, serde::Serialize);
 
     TestRescue,
-    "../artifacts/contracts/mocks/TestRescue.sol/TestRescue/abi.json",
+    "../abi/contracts/mocks/TestRescue.sol/TestRescue/abi.json",
     event_derives(serde::Deserialize, serde::Serialize);
 
     TestRootStore,
-    "../artifacts/contracts/mocks/TestRootStore.sol/TestRootStore/abi.json",
+    "../abi/contracts/mocks/TestRootStore.sol/TestRootStore/abi.json",
     event_derives(serde::Deserialize, serde::Serialize);
 
     TestTranscript,
-    "../artifacts/contracts/mocks/TestTranscript.sol/TestTranscript/abi.json",
+    "../abi/contracts/mocks/TestTranscript.sol/TestTranscript/abi.json",
     event_derives(serde::Deserialize, serde::Serialize);
 
     CAPE,
-    "../artifacts/contracts/CAPE.sol/CAPE/abi.json",
+    "../abi/contracts/CAPE.sol/CAPE/abi.json",
     event_derives(serde::Deserialize, serde::Serialize);
 
     PlonkVerifier,
-    "../artifacts/contracts/verifier/PlonkVerifier.sol/PlonkVerifier/abi.json",
+    "../abi/contracts/verifier/PlonkVerifier.sol/PlonkVerifier/abi.json",
     event_derives(serde::Deserialize, serde::Serialize);
 
     TestCapeTypes,
-    "../artifacts/contracts/mocks/TestCapeTypes.sol/TestCapeTypes/abi.json",
+    "../abi/contracts/mocks/TestCapeTypes.sol/TestCapeTypes/abi.json",
     event_derives(serde::Deserialize, serde::Serialize);
 
     TestCAPE,
-    "../artifacts/contracts/mocks/TestCAPE.sol/TestCAPE/abi.json",
+    "../abi/contracts/mocks/TestCAPE.sol/TestCAPE/abi.json",
     event_derives(serde::Deserialize, serde::Serialize);
 
     Greeter,
-    "../artifacts/contracts/Greeter.sol/Greeter/abi.json",
+    "../abi/contracts/Greeter.sol/Greeter/abi.json",
     event_derives(serde::Deserialize, serde::Serialize);
 );
 

@@ -51,7 +51,7 @@ pub(crate) async fn get_contract_records_merkle_tree(
     let client = ethereum::get_funded_deployer().await.unwrap();
     let contract = ethereum::deploy(
         client.clone(),
-        Path::new("../artifacts/contracts/mocks/TestRecordsMerkleTree.sol/TestRecordsMerkleTree"),
+        Path::new("../abi/contracts/mocks/TestRecordsMerkleTree.sol/TestRecordsMerkleTree"),
         height,
     )
     .await

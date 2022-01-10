@@ -298,7 +298,7 @@ for that purpose.
 
 To connect to various chains use `RPC_URL` and `MNEMONIC` env vars. For example
 
-    env MNEMONIC=$RINKEBY_MNEMONIC RPC_URL=$RINKEBY_URL cargo test
+    env MNEMONIC="$RINKEBY_MNEMONIC" RPC_URL=$RINKEBY_URL cargo test
 
 To watch the rust files and compile on changes
 
@@ -457,6 +457,14 @@ batch_verify:  2759316.285714286 gas  ------ 2084.7296774480005 USD
 ```
 > hardhat --network rinkeby run contracts/scripts/benchmarks.js
 ```
+
+To run the hardhat tests against rinkeby
+
+    hardhat test --network rinkeby
+
+To run an end-to-end test against rinkeby
+
+    cape-test-rinkeby
 
 # Goerli
 

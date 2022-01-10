@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 import "hardhat/console.sol";
 import {BN254} from "../libraries/BN254.sol";
+import {IPlonkVerifier} from "../interfaces/IPlonkVerifier.sol";
 
 library Transcript {
     struct TranscriptData {
@@ -11,10 +12,9 @@ library Transcript {
         bytes32[2] state;
     }
 
-    function appendMessage(TranscriptData memory self, bytes memory message) internal pure {
-        self.transcript = abi.encodePacked(self.transcript, message);
-    }
-
+    // ================================
+    // Helper functions
+    // ================================
     function reverseEndianness(uint256 input) internal pure returns (uint256 v) {
         v = input;
 
@@ -42,27 +42,6 @@ library Transcript {
         v = (v >> 128) | (v << 128);
     }
 
-    function appendChallenge(TranscriptData memory self, uint256 challenge) internal pure {
-        appendMessage(self, abi.encodePacked(reverseEndianness(challenge)));
-    }
-
-    function appendCommitments(TranscriptData memory self, BN254.G1Point[] memory comms)
-        internal
-        pure
-    {
-        for (uint256 i = 0; i < comms.length; i++) {
-            appendCommitment(self, comms[i]);
-        }
-    }
-
-    function appendCommitment(TranscriptData memory self, BN254.G1Point memory comm)
-        internal
-        pure
-    {
-        bytes memory commBytes = g1Serialize(comm);
-        appendMessage(self, commBytes);
-    }
-
     function g1Serialize(BN254.G1Point memory point) internal pure returns (bytes memory) {
         uint256 mask;
 
@@ -81,6 +60,48 @@ library Transcript {
         return abi.encodePacked(reverseEndianness(point.x | mask));
     }
 
+    // ================================
+    // Primitive functions
+    // ================================
+    function appendMessage(TranscriptData memory self, bytes memory message) internal pure {
+        self.transcript = abi.encodePacked(self.transcript, message);
+    }
+
+    function appendFieldElement(TranscriptData memory self, uint256 fieldElement) internal pure {
+        appendMessage(self, abi.encodePacked(reverseEndianness(fieldElement)));
+    }
+
+    function appendGroupElement(TranscriptData memory self, BN254.G1Point memory comm)
+        internal
+        pure
+    {
+        bytes memory commBytes = g1Serialize(comm);
+        appendMessage(self, commBytes);
+    }
+
+    // ================================
+    // Transcript APIs
+    // ================================
+    function appendChallenge(TranscriptData memory self, uint256 challenge) internal pure {
+        appendFieldElement(self, challenge);
+    }
+
+    function appendCommitments(TranscriptData memory self, BN254.G1Point[] memory comms)
+        internal
+        pure
+    {
+        for (uint256 i = 0; i < comms.length; i++) {
+            appendCommitment(self, comms[i]);
+        }
+    }
+
+    function appendCommitment(TranscriptData memory self, BN254.G1Point memory comm)
+        internal
+        pure
+    {
+        appendGroupElement(self, comm);
+    }
+
     function getAndAppendChallenge(TranscriptData memory self) internal pure returns (uint256) {
         bytes32 h1 = keccak256(
             abi.encodePacked(self.state[0], self.state[1], self.transcript, uint8(0))
@@ -94,5 +115,69 @@ library Transcript {
 
         bytes memory randomBytes = BytesLib.slice(abi.encodePacked(h1, h2), 0, 48);
         return BN254.fromLeBytesModOrder(randomBytes);
+    }
+
+    /// @param verifyingKey verifiying key
+    function appendVkAndPubInput(
+        TranscriptData memory self,
+        IPlonkVerifier.VerifyingKey memory verifyingKey,
+        uint256[] memory publicInput
+    ) internal pure {
+        // TODO: improve this code and avoid reverseEndianness
+        uint256 sizeInBits = 254;
+
+        // Fr field size in bits
+        appendMessage(self, BytesLib.slice(abi.encodePacked(reverseEndianness(sizeInBits)), 0, 8));
+
+        // domain size
+        appendMessage(
+            self,
+            BytesLib.slice(abi.encodePacked(reverseEndianness(verifyingKey.domainSize)), 0, 8)
+        );
+
+        // number of inputs
+        appendMessage(
+            self,
+            BytesLib.slice(abi.encodePacked(reverseEndianness(verifyingKey.numInputs)), 0, 8)
+        );
+
+        // =====================
+        // k: domain separators
+        // =====================
+        // Currently, K is hardcoded, and there are 5 of them since
+        // # wire types == 5
+
+        appendFieldElement(self, verifyingKey.k0);
+        appendFieldElement(self, verifyingKey.k1);
+        appendFieldElement(self, verifyingKey.k2);
+        appendFieldElement(self, verifyingKey.k3);
+        appendFieldElement(self, verifyingKey.k4);
+
+        // selectors
+        appendGroupElement(self, verifyingKey.q1);
+        appendGroupElement(self, verifyingKey.q2);
+        appendGroupElement(self, verifyingKey.q3);
+        appendGroupElement(self, verifyingKey.q4);
+        appendGroupElement(self, verifyingKey.qM12);
+        appendGroupElement(self, verifyingKey.qM34);
+        appendGroupElement(self, verifyingKey.qO);
+        appendGroupElement(self, verifyingKey.qC);
+        appendGroupElement(self, verifyingKey.qH1);
+        appendGroupElement(self, verifyingKey.qH2);
+        appendGroupElement(self, verifyingKey.qH3);
+        appendGroupElement(self, verifyingKey.qH4);
+        appendGroupElement(self, verifyingKey.qEcc);
+
+        // sigmas
+        appendGroupElement(self, verifyingKey.sigma0);
+        appendGroupElement(self, verifyingKey.sigma1);
+        appendGroupElement(self, verifyingKey.sigma2);
+        appendGroupElement(self, verifyingKey.sigma3);
+        appendGroupElement(self, verifyingKey.sigma4);
+
+        // public inputs
+        for (uint256 i = 0; i < publicInput.length; i++) {
+            appendFieldElement(self, publicInput[i]);
+        }
     }
 }

@@ -1,6 +1,7 @@
 #![cfg(test)]
 use std::path::Path;
 
+use crate::types::VerifyingKey as SolVerifyingKey;
 use crate::{
     ethereum,
     types::{field_to_u256, G1Point, TestTranscript, TranscriptData},
@@ -10,6 +11,7 @@ use ark_poly_commit::kzg10::Commitment;
 use ark_std::UniformRand;
 use ethers::core::k256::ecdsa::SigningKey;
 use ethers::prelude::{Http, Provider, SignerMiddleware, Wallet};
+use jf_plonk::proof_system::structs::VerifyingKey as RustVerifyingKey;
 use jf_plonk::transcript::PlonkTranscript;
 use jf_plonk::transcript::SolidityTranscript;
 
@@ -203,4 +205,49 @@ async fn test_infinity_commitment() {
         .unwrap();
 
     assert_eq!(ret, field_to_u256(challenge));
+}
+
+#[tokio::test]
+async fn test_append_vk_and_public_inputs() {
+    let contract = deploy().await;
+    let mut rng = ark_std::test_rng();
+    for _test in 0..10 {
+        let rust_verifying_key = RustVerifyingKey::<E>::dummy(10, 1024);
+        let num_comm = rng.gen_range(0..10);
+        let rust_public_inputs: Vec<Fr> = (0..num_comm).map(|_| Fr::rand(&mut rng)).collect();
+
+        // rust side
+        let mut rust_transcript = mk_empty_transcript();
+        rust_transcript
+            .append_vk_and_pub_input(&rust_verifying_key, &rust_public_inputs)
+            .unwrap();
+
+        let challenge = rust_transcript
+            .get_and_append_challenge::<E>(b"ignored")
+            .unwrap();
+
+        // solidity side
+        let ethers_transcript = TranscriptData::default();
+        let ether_verifying_key: SolVerifyingKey = rust_verifying_key.into();
+        let ether_public_inputs = rust_public_inputs
+            .iter()
+            .map(|&x| field_to_u256(x))
+            .collect();
+        let ethers_transcript = contract
+            .test_append_vk_and_pub_input(
+                ethers_transcript,
+                ether_verifying_key,
+                ether_public_inputs,
+            )
+            .call()
+            .await
+            .unwrap();
+        let ret = contract
+            .get_and_append_challenge(ethers_transcript)
+            .call()
+            .await
+            .unwrap();
+
+        assert_eq!(ret, field_to_u256(challenge));
+    }
 }

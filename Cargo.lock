@@ -1800,6 +1800,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "dirs"
+version = "4.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ca3aa72a6f96ea37bbc5aa912f6788242832f75369bdfdadcb0e38423f100059"
+dependencies = [
+ "dirs-sys",
+]
+
+[[package]]
 name = "dirs-next"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1807,6 +1816,17 @@ checksum = "b98cf8ebf19c3d1b223e151f99a4f9f0690dca41414773390fc824184ac833e1"
 dependencies = [
  "cfg-if 1.0.0",
  "dirs-sys-next",
+]
+
+[[package]]
+name = "dirs-sys"
+version = "0.3.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "03d86534ed367a67548dc68113a0f5db55432fdfbb6e6f9d77704397d95d5780"
+dependencies = [
+ "libc",
+ "redox_users",
+ "winapi",
 ]
 
 [[package]]
@@ -4608,6 +4628,28 @@ checksum = "f497285884f3fcff424ffc933e56d7cbca511def0c9831a7f9b5f6153e3cc89b"
 [[package]]
 name = "relayer"
 version = "0.1.0"
+dependencies = [
+ "async-std",
+ "atomic_store",
+ "bincode",
+ "cap-rust-sandbox",
+ "dirs",
+ "ethers 0.6.0 (git+https://github.com/gakonst/ethers-rs?branch=master)",
+ "jf-aap",
+ "jf-primitives 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?rev=2a40d01c938cdcc716071af5a0dc9b3242181c2c)",
+ "lazy_static",
+ "rand_chacha 0.3.1",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "structopt",
+ "tide",
+ "tide-websockets",
+ "toml",
+ "tracing",
+ "tracing-subscriber 0.3.3",
+ "zerok_lib",
+]
 
 [[package]]
 name = "remove_dir_all"
@@ -5875,9 +5917,12 @@ version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "245da694cc7fc4729f3f418b304cb57789f1bed2a78c575407ab8a23f53cb4d3"
 dependencies = [
+ "ansi_term",
  "sharded-slab",
+ "smallvec",
  "thread_local",
  "tracing-core",
+ "tracing-log",
 ]
 
 [[package]]

@@ -266,7 +266,7 @@ impl From<CAPEConstructorArgs> for (u8, u64) {
 mod tests {
     use super::*;
     use ethers::prelude::{
-        k256::ecdsa::SigningKey, Address, Http, Provider, SignerMiddleware, Wallet, U256,
+        k256::ecdsa::SigningKey, Http, Provider, SignerMiddleware, Wallet, U256,
     };
     use jf_aap::structs::RecordOpening;
     use rand::Rng;
@@ -279,7 +279,6 @@ mod tests {
     use anyhow::Result;
     use jf_aap::keys::UserPubKey;
     use jf_aap::utils::TxnsParams;
-    use std::env;
     use std::path::Path;
 
     async fn deploy_cape_test() -> TestCAPE<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>> {
@@ -295,25 +294,34 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_submit_empty_block_to_cape_contract() -> Result<()> {
+        let contract = deploy_cape_test().await;
+
+        // Create an empty block transactions
+        let rng = &mut ark_std::test_rng();
+        let params = TxnsParams::generate_txns(rng, 0, 0, 0);
+        let miner = UserPubKey::default();
+
+        let cape_block = CapeBlock::generate(params.txns, vec![], miner.address())?;
+
+        // Submitting an empty block does not yield a reject from the contract
+        contract
+            .submit_cape_block(cape_block.into(), vec![])
+            .send()
+            .await?
+            .await?;
+
+        // The height is incremented anyways.
+        assert_eq!(contract.height().call().await?, 1u64);
+
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_submit_block_to_cape_contract() -> Result<()> {
-        let client = get_funded_deployer().await.unwrap();
+        let contract = deploy_cape_test().await;
 
-        let contract_address: Address = match env::var("CAPE_ADDRESS") {
-            Ok(val) => val.parse::<Address>().unwrap(),
-            Err(_) => deploy(
-                client.clone(),
-                // TODO using mock contract to be able to manually add root
-                Path::new("../artifacts/contracts/mocks/TestCAPE.sol/TestCAPE"),
-                CAPEConstructorArgs::new(5, 2).generic_into::<(u8, u64)>(),
-            )
-            .await
-            .unwrap()
-            .address(),
-        };
-
-        let contract = TestCAPE::new(contract_address, client);
-
-        // Create two transactions
+        // Create three transactions
         let rng = &mut ark_std::test_rng();
         let num_transfer_txn = 1;
         let num_mint_txn = 1;

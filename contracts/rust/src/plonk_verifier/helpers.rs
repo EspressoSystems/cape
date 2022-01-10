@@ -91,6 +91,8 @@ pub(crate) fn gen_plonk_proof_for_test(
 // Different `m`s lead to different circuits.
 // Different `a0`s lead to different witness values.
 // For UltraPlonk circuits, `a0` should be less than or equal to `m+1`
+// TODO: there are a couple of selectors that are not used with this example
+// For example, the q_H selectors and q_Ecc selectors.
 #[allow(dead_code)]
 fn gen_circuit_for_test<F: PrimeField>(m: usize, a0: usize) -> Result<PlonkCircuit<F>> {
     let mut cs: PlonkCircuit<F> = PlonkCircuit::new_turbo_plonk();

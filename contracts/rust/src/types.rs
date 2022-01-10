@@ -192,8 +192,13 @@ impl From<Challenges> for jf_plonk::proof_system::structs::Challenges<Fr> {
 
 impl From<jf_plonk::proof_system::structs::Challenges<Fr>> for Challenges {
     fn from(chal: jf_plonk::proof_system::structs::Challenges<Fr>) -> Self {
+        let alpha2 = chal.alpha * chal.alpha;
+        let alpha3 = chal.alpha * alpha2;
+
         Self {
             alpha: field_to_u256(chal.alpha),
+            alpha_2: field_to_u256(alpha2),
+            alpha_3: field_to_u256(alpha3),
             beta: field_to_u256(chal.beta),
             gamma: field_to_u256(chal.gamma),
             zeta: field_to_u256(chal.zeta),
@@ -772,18 +777,19 @@ impl From<jf_aap::VerifyingKey> for VerifyingKey {
             sigma_2: sigmas[2].clone(),
             sigma_3: sigmas[3].clone(),
             sigma_4: sigmas[4].clone(),
+            // The order of selectors: q_lc, q_mul, q_hash, q_o, q_c, q_ecc
             q_1: selectors[0].clone(),
             q_2: selectors[1].clone(),
             q_3: selectors[2].clone(),
             q_4: selectors[3].clone(),
             q_m12: selectors[4].clone(),
             q_m34: selectors[5].clone(),
-            q_o: selectors[6].clone(),
-            q_c: selectors[7].clone(),
-            q_h1: selectors[8].clone(),
-            q_h2: selectors[9].clone(),
-            q_h3: selectors[10].clone(),
-            q_h4: selectors[11].clone(),
+            q_h1: selectors[6].clone(),
+            q_h2: selectors[7].clone(),
+            q_h3: selectors[8].clone(),
+            q_h4: selectors[9].clone(),
+            q_o: selectors[10].clone(),
+            q_c: selectors[11].clone(),
             q_ecc: selectors[12].clone(),
             k_0: field_to_u256(*scalars.next().unwrap()),
             k_1: field_to_u256(*scalars.next().unwrap()),

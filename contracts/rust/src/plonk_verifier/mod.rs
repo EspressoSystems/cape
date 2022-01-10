@@ -1,26 +1,34 @@
 #![cfg(test)]
 mod helpers;
+mod poly_eval;
 
+use self::helpers::gen_plonk_proof_for_test;
+use crate::types::GenericInto;
 use crate::{
     ethereum::{deploy, get_funded_deployer},
     plonk_verifier::helpers::get_poly_evals,
-    types::{self as sol, GenericInto},
-    types::{field_to_u256, u256_to_field, TestPlonkVerifier},
+    types as sol,
+    types::{field_to_u256, TestPlonkVerifier},
 };
 use anyhow::Result;
-use ark_bn254::{Bn254, Fr};
+use ark_bn254::{Bn254, Fq, Fr};
+use ark_ec::ProjectiveCurve;
 use ark_ff::Field;
 use ark_poly::{EvaluationDomain, Radix2EvaluationDomain};
 use ark_std::{test_rng, One, UniformRand};
 use ethers::core::k256::ecdsa::SigningKey;
 use ethers::prelude::*;
+use jf_plonk::proof_system::verifier::PcsInfo;
 use jf_plonk::{
-    proof_system::verifier::{PcsInfo, Verifier},
+    proof_system::{
+        structs::{Proof, VerifyingKey},
+        verifier::Verifier,
+    },
     transcript::SolidityTranscript,
 };
-use std::path::Path;
-
-use self::helpers::gen_plonk_proof_for_test;
+use jf_utils::field_switching;
+use rand::Rng;
+use std::{convert::TryInto, path::Path};
 
 async fn deploy_contract(
 ) -> Result<TestPlonkVerifier<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>> {
@@ -32,30 +40,6 @@ async fn deploy_contract(
     )
     .await?;
     Ok(TestPlonkVerifier::new(contract.address(), client))
-}
-
-#[tokio::test]
-async fn test_compute_alpha_powers() -> Result<()> {
-    let rng = &mut test_rng();
-    let contract = deploy_contract().await?;
-
-    for _ in 0..5 {
-        let alpha = Fr::rand(rng);
-        let alpha2 = alpha.square();
-        let expected = vec![alpha2, alpha2 * alpha];
-
-        assert_eq!(
-            contract
-                .compute_alpha_powers(field_to_u256(alpha))
-                .call()
-                .await?
-                .iter()
-                .map(|&u| u256_to_field(u))
-                .collect::<Vec<Fr>>(),
-            expected
-        );
-    }
-    Ok(())
 }
 
 // contains tests for interim functions
@@ -104,22 +88,19 @@ async fn test_prepare_pcs_info() -> Result<()> {
             &alpha_bases,
         )?;
 
-        // !! testing for `compute_lin_poly_constant_term()` !!
-        let alpha_powers_sol: [U256; 2] = [
-            field_to_u256(alpha_powers[0]),
-            field_to_u256(alpha_powers[1]),
-        ];
+        let eval_data = sol::EvalData {
+            vanish_eval: field_to_u256(vanish_eval),
+            lagrange_one: field_to_u256(lagrange_1_eval),
+        };
+
         assert_eq!(
             contract
                 .compute_lin_poly_constant_term(
                     domain.into(),
                     challenges.into(),
-                    vk.clone().into(),
                     public_inputs.iter().map(|f| field_to_u256(*f)).collect(),
                     proof.clone().into(),
-                    field_to_u256(vanish_eval),
-                    field_to_u256(lagrange_1_eval),
-                    alpha_powers_sol,
+                    eval_data
                 )
                 .call()
                 .await?,
@@ -198,5 +179,179 @@ async fn test_batch_verify_opening_proofs() -> Result<()> {
                 .await?
         );
     }
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_challenge_gen() -> Result<()> {
+    // =================
+    // null challenge
+    // =================
+    let mut rng = test_rng();
+    let contract: TestPlonkVerifier<_> = deploy_contract().await?;
+    let extra_message = b"extra message";
+
+    let proof_fr_elements: Vec<Fr> = (0..36).map(|_| Fr::rand(&mut rng)).collect();
+    let proof_fq_elements: Vec<Fq> = proof_fr_elements
+        .iter()
+        .map(|x| field_switching(x))
+        .collect();
+
+    // rust side
+    let rust_verifying_key = VerifyingKey::<Bn254>::dummy(10, 1024);
+    let num_comm = rng.gen_range(0..10);
+    let rust_public_inputs: Vec<Fr> = (0..num_comm).map(|_| Fr::rand(&mut rng)).collect();
+    let rust_proof: Proof<Bn254> = proof_fq_elements.try_into().unwrap();
+    let rust_challenge = Verifier::<Bn254>::compute_challenges::<SolidityTranscript>(
+        &[&rust_verifying_key],
+        &[&rust_public_inputs],
+        &(rust_proof.clone().into()),
+        &Some(extra_message.to_vec()),
+    )?;
+
+    // solidity side
+    let ether_verifying_key: sol::VerifyingKey = rust_verifying_key.into();
+    let ether_public_inputs = rust_public_inputs
+        .iter()
+        .map(|&x| field_to_u256(x))
+        .collect();
+    let ether_proof: sol::PlonkProof = rust_proof.into();
+
+    let ether_challenge: sol::Challenges = contract
+        .test_compute_challenges(
+            ether_verifying_key,
+            ether_public_inputs,
+            ether_proof,
+            extra_message.into(),
+        )
+        .call()
+        .await?;
+
+    let ether_challenge_converted: sol::Challenges = rust_challenge.into();
+    assert_eq!(ether_challenge_converted, ether_challenge);
+
+    // =================
+    // real data
+    // =================
+
+    // rust side
+    let (rust_proof, rust_verifying_key, rust_public_inputs, extra_message, _domain_size) =
+        gen_plonk_proof_for_test(1)?[0].clone();
+
+    let rust_challenge = Verifier::<Bn254>::compute_challenges::<SolidityTranscript>(
+        &[&rust_verifying_key],
+        &[&rust_public_inputs],
+        &(rust_proof.clone().into()),
+        &extra_message,
+    )?;
+
+    // solidity side
+    let ether_verifying_key: sol::VerifyingKey = rust_verifying_key.into();
+    let ether_public_inputs = rust_public_inputs
+        .iter()
+        .map(|&x| field_to_u256(x))
+        .collect();
+    let ether_proof: sol::PlonkProof = rust_proof.into();
+
+    let ether_challenge: sol::Challenges = contract
+        .test_compute_challenges(
+            ether_verifying_key.clone(),
+            ether_public_inputs,
+            ether_proof.clone(),
+            Bytes::default(),
+        )
+        .call()
+        .await?;
+
+    let ether_challenge_converted: sol::Challenges = rust_challenge.into();
+    assert_eq!(ether_challenge_converted, ether_challenge);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_linearization_scalars_and_bases() -> Result<()> {
+    let contract: TestPlonkVerifier<_> = deploy_contract().await?;
+
+    // rust side
+    let (rust_proof, rust_verifying_key, rust_public_inputs, extra_message, domain_size) =
+        gen_plonk_proof_for_test(1)?[0].clone();
+
+    let verifier = Verifier::new(domain_size)?;
+    let rust_challenge = Verifier::<Bn254>::compute_challenges::<SolidityTranscript>(
+        &[&rust_verifying_key],
+        &[&rust_public_inputs],
+        &(rust_proof.clone().into()),
+        &extra_message,
+    )?;
+
+    let rust_domain = Radix2EvaluationDomain::<Fr>::new(domain_size).unwrap();
+    let rust_zeta_n_minus_one = rust_domain.evaluate_vanishing_polynomial(rust_challenge.zeta);
+    let divisor = Fr::from(rust_domain.size() as u32) * (rust_challenge.zeta - Fr::one());
+    let lagrange_1_eval = rust_zeta_n_minus_one / divisor;
+    let divisor =
+        Fr::from(rust_domain.size() as u32) * (rust_challenge.zeta - rust_domain.group_gen_inv);
+    let lagrange_n_eval = rust_zeta_n_minus_one * rust_domain.group_gen_inv / divisor;
+
+    let alpha_2 = rust_challenge.alpha.square();
+    let alpha_3 = alpha_2 * rust_challenge.alpha;
+    let alpha_powers = vec![alpha_2, alpha_3];
+    let alpha_bases = vec![Fr::one()];
+
+    let rust_scalar_and_bases = verifier.linearization_scalars_and_bases(
+        &[&rust_verifying_key],
+        &rust_challenge,
+        &rust_zeta_n_minus_one,
+        &lagrange_1_eval,
+        &lagrange_n_eval,
+        &(rust_proof.clone().into()),
+        &alpha_powers,
+        &alpha_bases,
+    )?;
+
+    let res = rust_scalar_and_bases.multi_scalar_mul().into_affine();
+
+    // solidity side
+    // let ether_domain: sol::EvalDomain = rust_domain.into();
+    let ether_verifying_key: sol::VerifyingKey = rust_verifying_key.into();
+    // println!("k {}", u256_to_field::<Fr>(ether_verifying_key.k_1));
+    let ether_public_inputs = rust_public_inputs
+        .iter()
+        .map(|&x| field_to_u256(x))
+        .collect();
+    let ether_proof: sol::PlonkProof = rust_proof.into();
+
+    let ether_challenge: sol::Challenges = contract
+        .test_compute_challenges(
+            ether_verifying_key.clone(),
+            ether_public_inputs,
+            ether_proof.clone(),
+            Bytes::default(),
+        )
+        .call()
+        .await?;
+
+    let ether_challenge_converted: sol::Challenges = rust_challenge.into();
+    assert_eq!(ether_challenge_converted, ether_challenge);
+
+    let eval_data = sol::EvalData {
+        vanish_eval: field_to_u256(rust_zeta_n_minus_one),
+        lagrange_one: field_to_u256(lagrange_1_eval),
+    };
+
+    let (bases, scalars) = contract
+        .test_linearization_scalars_and_bases(
+            ether_verifying_key,
+            ether_challenge,
+            eval_data,
+            ether_proof,
+        )
+        .call()
+        .await?;
+
+    let ether_res = contract.multi_scalar_mul(bases, scalars).call().await?;
+
+    assert_eq!(ether_res.x, field_to_u256(res.x));
+    assert_eq!(ether_res.y, field_to_u256(res.y));
     Ok(())
 }

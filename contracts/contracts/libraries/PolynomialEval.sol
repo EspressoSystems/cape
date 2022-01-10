@@ -13,6 +13,23 @@ library PolynomialEval {
         uint256 groupGenInv; // Inverse of the generator of the subgroup
     }
 
+    /// @dev stores vanishing poly, lagrange at 1 and n
+    struct EvalData {
+        uint256 vanishEval;
+        uint256 lagrangeOne;
+    }
+
+    /// @dev compute the EvalData for a given domain and a challenge zeta
+    function evalDataGen(uint256 domainSize, uint256 zeta)
+        internal
+        view
+        returns (EvalData memory evalData)
+    {
+        EvalDomain memory domain = newEvalDomain(domainSize);
+        evalData.vanishEval = evaluateVanishingPoly(domain, zeta);
+        evalData.lagrangeOne = evaluateLagrangeOne(domain, zeta, evalData.vanishEval);
+    }
+
     /// @dev Create a new Radix2EvalDomain with `domainSize` which should be power of 2.
     /// @dev Will revert if domainSize is not among {2^15, 2^16, 2^17}
     function newEvalDomain(uint256 domainSize) internal pure returns (EvalDomain memory) {
@@ -86,19 +103,18 @@ library PolynomialEval {
         }
     }
 
-    /// @dev Evaluate the first and the last lagrange polynomial at point `zeta` given the vanishing polynomial evaluation `vanish_eval`.
-    function evaluateLagrangeOneAndN(
+    /// @dev Evaluate the lagrange polynomial at point `zeta` given the vanishing polynomial evaluation `vanish_eval`.
+    function evaluateLagrangeOne(
         EvalDomain memory self,
         uint256 zeta,
         uint256 vanishEval
-    ) internal view returns (uint256 res1, uint256 res2) {
+    ) internal view returns (uint256 res) {
         if (vanishEval == 0) {
-            return (0, 0);
+            return 0;
         }
 
         uint256 p = BN254.R_MOD;
         uint256 divisor;
-        uint256 groupGenInv = self.groupGenInv;
         uint256 vanishEvalMulSizeInv = self.sizeInv;
 
         // =========================
@@ -117,20 +133,7 @@ library PolynomialEval {
         }
         divisor = BN254.invert(divisor);
         assembly {
-            res1 := mulmod(vanishEvalMulSizeInv, divisor, p)
-        }
-
-        // =========================
-        // lagrange_n_eval = vanish_eval * self.group_gen_inv / self.size / (zeta - self.group_gen_inv)
-        // =========================
-        assembly {
-            // submod(zeta, groupGenInv, p)
-            divisor := addmod(sub(p, groupGenInv), zeta, p)
-        }
-        divisor = BN254.invert(divisor);
-        assembly {
-            res2 := mulmod(vanishEvalMulSizeInv, groupGenInv, p)
-            res2 := mulmod(res2, divisor, p)
+            res := mulmod(vanishEvalMulSizeInv, divisor, p)
         }
     }
 

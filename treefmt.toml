@@ -12,6 +12,7 @@ includes = [
   "**/*.py",
   "bin/hdwallet-derive",
   "bin/make-genesis-block",
+  "bin/build-abi",
 ]
 
 [formatter.prettier]

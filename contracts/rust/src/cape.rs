@@ -285,7 +285,7 @@ mod tests {
         let client = get_funded_deployer().await.unwrap();
         let call = deploy(
             client.clone(),
-            Path::new("../artifacts/contracts/mocks/TestCAPE.sol/TestCAPE"),
+            Path::new("../abi/contracts/mocks/TestCAPE.sol/TestCAPE"),
             CAPEConstructorArgs::new(5, 2).generic_into::<(u8, u64)>(),
         )
         .await;
@@ -768,7 +768,7 @@ mod tests {
             let client = get_funded_deployer().await.unwrap();
             let contract = deploy(
                 client.clone(),
-                Path::new("../artifacts/contracts/mocks/TestCapeTypes.sol/TestCapeTypes"),
+                Path::new("../abi/contracts/mocks/TestCapeTypes.sol/TestCapeTypes"),
                 (),
             )
             .await

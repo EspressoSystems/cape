@@ -1104,7 +1104,6 @@ dependencies = [
  "async-trait",
  "bincode",
  "ethers 0.6.0 (git+https://github.com/gakonst/ethers-rs?branch=master)",
- "ethers-contract-abigen 0.6.0 (git+https://github.com/gakonst/ethers-rs)",
  "futures",
  "generic-array 0.14.4",
  "hex",

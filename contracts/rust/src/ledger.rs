@@ -148,6 +148,11 @@ impl Block for CAPEBlock {
     fn txns(&self) -> Vec<CAPETransaction> {
         self.0.clone()
     }
+
+    fn add_transaction(&mut self, txn: Self::Transaction) -> Result<(), ValidationError> {
+        self.0.push(txn);
+        Ok(())
+    }
 }
 
 // In CAPE, we don't do local lightweight validation to check the results of queries. We trust the

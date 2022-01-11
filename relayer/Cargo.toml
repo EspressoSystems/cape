@@ -13,8 +13,8 @@ cap-rust-sandbox = { path = "../contracts/rust" }
 dirs = "4.0"
 # may switch to `ethers = "0.6.2"` in the future; keeping this for compatibility for now
 ethers = { git = "https://github.com/gakonst/ethers-rs", branch = "master" }
-jf-aap = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git", rev = "2a40d01c938cdcc716071af5a0dc9b3242181c2c"}
-jf-primitives = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git", rev = "2a40d01c938cdcc716071af5a0dc9b3242181c2c"}
+jf-aap = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git", branch = "plonk-verifier"}
+jf-primitives = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git", branch = "plonk-verifier"}
 lazy_static = "1.4.0"
 rand_chacha = { version = "0.3.1", features = ["serde1"] }
 serde = { version = "1.0.123", features = ["derive", "rc"] }
@@ -26,4 +26,4 @@ tide-websockets = "0.4.0"
 toml = "0.5"
 tracing = "0.1.26"
 tracing-subscriber = "0.3"
-zerok_lib = { git = "ssh://git@github.com/SpectrumXYZ/spectrum.git", rev="4fec6c5ba8d15df94955195796cd016afc6cb232" }
+zerok_lib = { git = "ssh://git@github.com/SpectrumXYZ/spectrum.git", branch = "plonk-verifier" }

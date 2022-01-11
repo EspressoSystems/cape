@@ -185,8 +185,11 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
         _checkAssetCode(ro, erc20Address);
     }
 
-    function _checkAssetCode(RecordOpening memory ro, address erc20Address) internal pure {
-        uint256 code = uint256(keccak256(abi.encodePacked(DOM_SEP_FOREIGN_ASSET, erc20Address)));
+    function _checkAssetCode(RecordOpening memory ro, address erc20Address) internal view {
+        // TODO currently does not match jf
+        uint256 code = BN254.fromLeBytesModOrder(
+            keccak256(abi.encodePacked(DOM_SEP_FOREIGN_ASSET, erc20Address))
+        );
         require(code == ro.assetDef.code, "Wrong asset code");
     }
 

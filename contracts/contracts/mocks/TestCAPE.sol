@@ -62,7 +62,7 @@ contract TestCAPE is CAPE {
         return _computeMaxCommitments(newBlock);
     }
 
-    function checkAssetCode(RecordOpening memory ro, address erc20Address) public pure {
+    function checkAssetCode(RecordOpening memory ro, address erc20Address) public view {
         _checkAssetCode(ro, erc20Address);
     }
 }

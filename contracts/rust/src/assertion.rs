@@ -3,6 +3,7 @@ use ethers::{abi::Detokenize, prelude::*};
 use std::fmt::Debug;
 
 pub(crate) trait Matcher {
+    fn should_not_revert(self);
     fn should_revert(self);
     fn should_revert_with_message(self, message: &str);
 }
@@ -18,6 +19,12 @@ where
     D: Detokenize + Debug,
     M: Middleware,
 {
+    fn should_not_revert(self) {
+        if self.is_err() {
+            panic!("Reverted");
+        }
+    }
+
     fn should_revert(self) {
         if self.is_ok() {
             panic!("Not reverted");

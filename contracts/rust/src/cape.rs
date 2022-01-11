@@ -268,7 +268,9 @@ mod tests {
     use ethers::prelude::{
         k256::ecdsa::SigningKey, Http, Provider, SignerMiddleware, Wallet, U256,
     };
-    use jf_aap::structs::RecordOpening;
+    use jf_aap::structs::{
+        AssetCode, AssetCodeSeed, AssetDefinition, AssetPolicy, FreezeFlag, RecordOpening,
+    };
     use rand::Rng;
 
     use crate::assertion::Matcher;
@@ -749,7 +751,7 @@ mod tests {
     async fn test_check_asset_code() -> Result<()> {
         let contract = deploy_cape_test().await;
 
-        // random ro and address mismatch
+        // random ro and address fails
         let rng = &mut ark_std::test_rng();
         let ro = RecordOpening::rand_for_test(rng);
         contract
@@ -758,9 +760,53 @@ mod tests {
             .await
             .should_revert_with_message("Wrong asset code");
 
-        // TODO bad domain separator mismatch
+        // domestic ro (with correct address) fails
+        let address = Address::random();
+        let bad_asset_def = AssetDefinition::new(
+            AssetCode::new_domestic(AssetCodeSeed::generate(rng), address.as_bytes()),
+            AssetPolicy::rand_for_test(rng),
+        )
+        .unwrap();
+        let bad_ro = RecordOpening::new(
+            rng,
+            1u64,
+            bad_asset_def,
+            UserPubKey::default(),
+            FreezeFlag::Unfrozen,
+        );
+        contract
+            .check_asset_code(bad_ro.generic_into::<sol::RecordOpening>(), address)
+            .call()
+            .await
+            .should_revert_with_message("Wrong asset code");
 
-        // TODO correct matches
+        // good ro
+        let asset_code = AssetCode::new_foreign(address.as_bytes());
+        let asset_def = AssetDefinition::new(asset_code, AssetPolicy::rand_for_test(rng)).unwrap();
+        let ro = RecordOpening::new(
+            rng,
+            1u64,
+            asset_def,
+            UserPubKey::default(),
+            FreezeFlag::Unfrozen,
+        );
+
+        // good ro with random address fails
+        contract
+            .check_asset_code(
+                ro.clone().generic_into::<sol::RecordOpening>(),
+                Address::random(),
+            )
+            .call()
+            .await
+            .should_revert_with_message("Wrong asset code");
+
+        // good ro with correct address passes
+        contract
+            .check_asset_code(ro.generic_into::<sol::RecordOpening>(), address)
+            .call()
+            .await
+            .should_not_revert();
 
         Ok(())
     }

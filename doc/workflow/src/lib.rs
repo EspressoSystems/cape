@@ -120,7 +120,7 @@ impl CapeBlock {
 
     fn check_valid_until(txn: &TransactionNote, height: u64) -> bool {
         match txn {
-            Transfer(tx) => height <= tx.aux_info.valid_until,
+            Transfer(tx) => height < tx.aux_info.valid_until,
             _ => true,
         }
     }

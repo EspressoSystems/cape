@@ -210,7 +210,11 @@ impl Block for CapeBlock {
         self.0.clone()
     }
 
+<<<<<<< HEAD
     fn add_transaction(&mut self, txn: CapeTransition) -> Result<(), CapeValidationError> {
+=======
+    fn add_transaction(&mut self, txn: Self::Transaction) -> Result<(), ValidationError> {
+>>>>>>> bf2d89c... pin plonk-verifier dev branch for upstreams
         self.0.push(txn);
         Ok(())
     }

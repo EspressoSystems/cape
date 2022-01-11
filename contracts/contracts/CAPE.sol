@@ -27,6 +27,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
     using AccumulatingArray for AccumulatingArray.Data;
 
     bytes public constant CAPE_BURN_MAGIC_BYTES = "TRICAPE burn";
+    bytes public constant DOM_SEP_FOREIGN_ASSET = "FOREIGN_ASSET";
 
     event BlockCommitted(uint64 indexed height, bool[] includedNotes);
 
@@ -66,7 +67,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
         uint64 mintAmount;
         /// the asset definition of the asset
         AssetDefinition mintAssetDef;
-        /// Intenral asset code
+        /// Internal asset code
         uint256 mintInternalAssetCode;
         /// the validity proof of this note
         IPlonkVerifier.PlonkProof proof;
@@ -181,6 +182,12 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
     /// @param erc20Address address of the ERC20 token corresponding to the deposit.
     function depositErc20(RecordOpening memory ro, address erc20Address) public {
         address depositorAddress = msg.sender;
+        _checkAssetCode(ro, erc20Address);
+    }
+
+    function _checkAssetCode(RecordOpening memory ro, address erc20Address) internal pure {
+        uint256 code = uint256(keccak256(abi.encodePacked(DOM_SEP_FOREIGN_ASSET, erc20Address)));
+        require(code == ro.assetDef.code, "Wrong asset code");
     }
 
     /// @notice submit a new block to the CAPE contract. Transactions are validated and the blockchain state is updated. Moreover burn transactions trigger the unwrapping of cape asset records into erc20 tokens.

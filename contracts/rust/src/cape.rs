@@ -745,6 +745,26 @@ mod tests {
         }
     }
 
+    #[tokio::test]
+    async fn test_check_asset_code() -> Result<()> {
+        let contract = deploy_cape_test().await;
+
+        // random ro and address mismatch
+        let rng = &mut ark_std::test_rng();
+        let ro = RecordOpening::rand_for_test(rng);
+        contract
+            .check_asset_code(ro.generic_into::<sol::RecordOpening>(), Address::random())
+            .call()
+            .await
+            .should_revert_with_message("Wrong asset code");
+
+        // TODO bad domain separator mismatch
+
+        // TODO correct matches
+
+        Ok(())
+    }
+
     mod type_conversion {
         use super::*;
         use crate::types::GenericInto;

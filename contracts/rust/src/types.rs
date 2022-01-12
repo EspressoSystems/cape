@@ -21,6 +21,10 @@ use std::convert::TryInto;
 const GATE_WIDTH: usize = 4;
 
 abigen!(
+    AssetRegistry,
+    "../abi/contracts/AssetRegistry.sol/AssetRegistry/abi.json",
+    event_derives(serde::Deserialize, serde::Serialize);
+
     TestBN254,
     "../abi/contracts/mocks/TestBN254.sol/TestBN254/abi.json",
     event_derives(serde::Deserialize, serde::Serialize);

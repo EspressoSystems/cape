@@ -13,13 +13,14 @@ import "./libraries/AccumulatingArray.sol";
 import "./libraries/BN254.sol";
 import "./libraries/RescueLib.sol";
 import "./interfaces/IPlonkVerifier.sol";
+import "./AssetRegistry.sol";
 import "./RecordsMerkleTree.sol";
 import "./RootStore.sol";
 
 // TODO Remove once functions are implemented
 /* solhint-disable no-unused-vars */
 
-contract CAPE is RecordsMerkleTree, RootStore {
+contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
     mapping(uint256 => bool) public nullifiers;
     uint64 public height;
 
@@ -28,11 +29,6 @@ contract CAPE is RecordsMerkleTree, RootStore {
     bytes public constant CAPE_BURN_MAGIC_BYTES = "TRICAPE burn";
 
     event BlockCommitted(uint64 indexed height, bool[] includedNotes);
-
-    struct EdOnBn254Point {
-        uint256 x;
-        uint256 y;
-    }
 
     struct AuditMemo {
         EdOnBn254Point ephemeralKey;
@@ -107,19 +103,6 @@ contract CAPE is RecordsMerkleTree, RootStore {
         EdOnBn254Point txnMemoVerKey;
     }
 
-    struct AssetDefinition {
-        uint256 code;
-        AssetPolicy policy;
-    }
-
-    struct AssetPolicy {
-        EdOnBn254Point auditorPk;
-        EdOnBn254Point credPk;
-        EdOnBn254Point freezerPk;
-        uint256 revealMap;
-        uint64 revealThreshold;
-    }
-
     struct RecordOpening {
         uint64 amount;
         AssetDefinition assetDef;
@@ -192,22 +175,6 @@ contract CAPE is RecordsMerkleTree, RootStore {
         _insertNullifier(nullifier);
         return true;
     }
-
-    /// @notice Check if an asset is already registered
-    /// @param erc20Address erc20 token address corresponding to the asset type.
-    /// @param newAsset asset type.
-    /// @return true if the asset type is registered, false otherwise
-    function isCapeAssetRegistered(address erc20Address, AssetDefinition memory newAsset)
-        public
-        returns (bool)
-    {
-        return true;
-    }
-
-    /// @notice create a new asset type associated to some erc20 token and register it in the contract so that it can be used later for wrapping.
-    /// @param erc20Address erc20 token address of corresponding to the asset type.
-    /// @param newAsset asset type to be registered in the contract.
-    function sponsorCapeAsset(address erc20Address, AssetDefinition memory newAsset) public {}
 
     /// @notice allows to wrap some erc20 tokens into some CAPE asset defined in the record opening
     /// @param ro record opening that will be inserted in the records merkle tree once the deposit is validated.

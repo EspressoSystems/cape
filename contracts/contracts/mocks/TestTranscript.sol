@@ -87,4 +87,12 @@ contract TestTranscript {
         transcript.appendVkAndPubInput(verifyingKey, pubInputs);
         return transcript;
     }
+
+    function testAppendProofEvaluations(
+        Transcript.TranscriptData memory transcript,
+        IPlonkVerifier.PlonkProof memory proof
+    ) public pure returns (Transcript.TranscriptData memory) {
+        transcript.appendProofEvaluations(proof);
+        return transcript;
+    }
 }

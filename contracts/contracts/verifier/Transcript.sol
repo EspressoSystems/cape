@@ -117,7 +117,9 @@ library Transcript {
         return BN254.fromLeBytesModOrder(randomBytes);
     }
 
+    /// @dev Append the verifying key and the public inputs to the transcript.
     /// @param verifyingKey verifiying key
+    /// @param publicInput a list of field elements
     function appendVkAndPubInput(
         TranscriptData memory self,
         IPlonkVerifier.VerifyingKey memory verifyingKey,
@@ -178,5 +180,24 @@ library Transcript {
         for (uint256 i = 0; i < publicInput.length; i++) {
             appendFieldElement(self, publicInput[i]);
         }
+    }
+
+    /// @dev Append the proof to the transcript.
+    function appendProofEvaluations(
+        TranscriptData memory self,
+        IPlonkVerifier.PlonkProof memory proof
+    ) internal pure {
+        appendFieldElement(self, proof.wireEval0);
+        appendFieldElement(self, proof.wireEval1);
+        appendFieldElement(self, proof.wireEval2);
+        appendFieldElement(self, proof.wireEval3);
+        appendFieldElement(self, proof.wireEval4);
+
+        appendFieldElement(self, proof.sigmaEval0);
+        appendFieldElement(self, proof.sigmaEval1);
+        appendFieldElement(self, proof.sigmaEval2);
+        appendFieldElement(self, proof.sigmaEval3);
+
+        appendFieldElement(self, proof.prodPermZetaOmegaEval);
     }
 }

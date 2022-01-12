@@ -21,4 +21,13 @@ contract TestPlonkVerifier {
     ) public view returns (uint256, uint256) {
         return PolynomialEval.evaluateLagrangeOneAndN(self, zeta, vanishEval);
     }
+
+    function testEvaluatePiPoly(
+        PolynomialEval.EvalDomain memory self,
+        uint256[] memory pi,
+        uint256 zeta,
+        uint256 vanishEval
+    ) public view returns (uint256) {
+        return PolynomialEval.evaluatePiPoly(self, pi, zeta, vanishEval);
+    }
 }

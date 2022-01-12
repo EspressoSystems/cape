@@ -171,11 +171,10 @@ library PolynomialEval {
         uint256 ithLagrange;
         uint256 divisor;
         uint256 tmp;
-        uint256 vanishEvalDivN = self.size;
+        uint256 vanishEvalDivN = self.sizeInv;
         uint256[] memory localDomainElements = domainElements(self, length);
 
         // vanish_eval_div_n = (zeta^n-1)/n
-        vanishEvalDivN = BN254.invert(vanishEvalDivN);
         assembly {
             vanishEvalDivN := mulmod(vanishEvalDivN, vanishEval, p)
         }

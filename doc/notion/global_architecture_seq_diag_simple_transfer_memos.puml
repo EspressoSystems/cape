@@ -1,0 +1,28 @@
+@startuml
+autonumber
+participant "CapeContract" as C
+participant "Ethereum Query Service" as EQS
+participant "Owner's Memos Store" as OMS
+participant "Wallet A" as W_A
+participant "Wallet B" as W_B
+participant "Relayer" as R
+
+W_A -> R: transaction <i>tx</i>
+R -> R: assemble block <i>b</i> containing tx
+R -> C: block <i>b</i>
+C -> EQS: "new block <i>b</i> produced"
+' Different notation for subscription service
+EQS -> W_A: block content <i>b:=(b_id,[tx_1,tx_2,...],...)</i> and uid_offset
+EQS -> W_B: block content <i>b:=(b_id,[tx_1,tx_2,...],...)</i> and uid_offset
+EQS -> OMS: block content <i>b:=(b_id,[tx_1,tx_2,...],...)</i> and uid_offset
+
+note left:
+W_A -> OMS: <i>[memo1,memo2,memo3,...],b_id,tx_id,signature</i>
+OMS -> OMS: Check the memos (signature) where the public key is in the transaction
+OMS -> EQS: Query(<i>get commitments and merkle paths for each memo using uid</i>)
+EQS -> OMS: <i>commitments and merkle paths</i>
+OMS -> OMS: Store locally the memos and their correspond merkle paths
+OMS -> W_A: <i>memos, merkle paths</i>
+OMS -> W_B: <i>memos, merkle paths</i>
+W_B -> W_B: <b>for</b> each memo in memos: \n \t try to decrypt \n  \t\t <b>on success</b>: \n \t\t\t <i>Store(merkle path, record opening)</i>
+@enduml

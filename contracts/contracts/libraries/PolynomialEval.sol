@@ -106,8 +106,44 @@ library PolynomialEval {
         EvalDomain memory self,
         uint256 zeta,
         uint256 vanishEval
-    ) internal pure returns (uint256, uint256) {
-        // TODO: https://github.com/SpectrumXYZ/cape/issues/173
+    ) internal view returns (uint256, uint256) {
+        uint256 p = BN254.R_MOD;
+        uint256 divisor;
+        uint256 res1;
+        uint256 res2;
+        uint256 groupGenInv = self.groupGenInv;
+        uint256 vanishEvalMulSizeInv = self.sizeInv;
+
+        assembly {
+            vanishEvalMulSizeInv := mulmod(vanishEval, vanishEvalMulSizeInv, p)
+        }
+
+        // =========================
+        // lagrange_1_eval = vanish_eval / self.size / (zeta - 1)
+        // =========================
+        if (zeta == 0) {
+            divisor = p - 1;
+        } else {
+            divisor = zeta - 1;
+        }
+        // QUESTION: is there an assembly instruction for this?
+        divisor = BN254.invert(divisor);
+        assembly {
+            res1 := mulmod(vanishEvalMulSizeInv, divisor, p)
+        }
+
+        // =========================
+        // lagrange_n_eval = vanish_eval * self.group_gen_inv / self.size / (zeta - self.group_gen_inv)
+        // =========================
+        divisor = (zeta + p - groupGenInv) % p;
+        // QUESTION: is there an assembly instruction for this?
+        divisor = BN254.invert(divisor);
+        assembly {
+            res2 := mulmod(vanishEvalMulSizeInv, groupGenInv, p)
+            res2 := mulmod(res2, divisor, p)
+        }
+
+        return (res1, res2);
     }
 
     /// @dev Evaluate public input polynomial at point `zeta`.

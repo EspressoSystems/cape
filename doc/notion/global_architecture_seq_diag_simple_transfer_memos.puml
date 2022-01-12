@@ -7,18 +7,16 @@ participant "Wallet A" as W_A
 participant "Wallet B" as W_B
 participant "Relayer" as R
 
-W_A -> R: transaction <i>tx</i>
+W_A -> W_A: build transaction <i>tx</i>
+W_A -> R: <i>tx</i>
 R -> R: assemble block <i>b</i> containing tx
 R -> C: block <i>b</i>
 C -> EQS: "new block <i>b</i> produced"
 ' Different notation for subscription service
 EQS -> W_A: block content <i>b:=(b_id,[tx_1,tx_2,...],...)</i> and uid_offset
 EQS -> W_B: block content <i>b:=(b_id,[tx_1,tx_2,...],...)</i> and uid_offset
-EQS -> OMS: block content <i>b:=(b_id,[tx_1,tx_2,...],...)</i> and uid_offset
-
-note left:
 W_A -> OMS: <i>[memo1,memo2,memo3,...],b_id,tx_id,signature</i>
-OMS -> OMS: Check the memos (signature) where the public key is in the transaction
+OMS -> OMS: Check: \n * the signature where the public key is in the transaction \n * that the memos have not already been posted \n * that the right number of memos are provided
 OMS -> EQS: Query(<i>get commitments and merkle paths for each memo using uid</i>)
 EQS -> OMS: <i>commitments and merkle paths</i>
 OMS -> OMS: Store locally the memos and their correspond merkle paths

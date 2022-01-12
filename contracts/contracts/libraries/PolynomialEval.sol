@@ -107,6 +107,10 @@ library PolynomialEval {
         uint256 zeta,
         uint256 vanishEval
     ) internal view returns (uint256, uint256) {
+        if (vanishEval == 0) {
+            return (0, 0);
+        }
+
         uint256 p = BN254.R_MOD;
         uint256 divisor;
         uint256 res1;
@@ -135,7 +139,11 @@ library PolynomialEval {
         // =========================
         // lagrange_n_eval = vanish_eval * self.group_gen_inv / self.size / (zeta - self.group_gen_inv)
         // =========================
-        divisor = (zeta + p - groupGenInv) % p;
+        if (zeta < groupGenInv) {
+            divisor = zeta + p - groupGenInv;
+        } else {
+            divisor = zeta - groupGenInv;
+        }
         // QUESTION: is there an assembly instruction for this?
         divisor = BN254.invert(divisor);
         assembly {
@@ -152,7 +160,5 @@ library PolynomialEval {
         uint256[] memory pi,
         uint256 zeta,
         uint256 vanishEval
-    ) internal pure returns (uint256) {
-        // TODO: https://github.com/SpectrumXYZ/cape/issues/173
-    }
+    ) internal pure returns (uint256) {}
 }

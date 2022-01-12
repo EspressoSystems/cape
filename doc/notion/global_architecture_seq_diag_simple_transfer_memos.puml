@@ -13,12 +13,12 @@ R -> R: assemble block <i>b</i> containing tx
 R -> C: block <i>b</i>
 C -> EQS: "new block <i>b</i> produced"
 ' Different notation for subscription service
-EQS -> W_A: block content <i>b:=(b_id,[tx_1,tx_2,...],...)</i> and uid_offset
-EQS -> W_B: block content <i>b:=(b_id,[tx_1,tx_2,...],...)</i> and uid_offset
+EQS -> W_A: block content <i>b:=(b_id,[tx_1,tx_2,...],...)</i>
+EQS -> W_B: block content <i>b:=(b_id,[tx_1,tx_2,...],...)</i>
 W_A -> OMS: <i>[memo1,memo2,memo3,...],b_id,tx_id,signature</i>
-OMS -> OMS: Check: \n * the signature where the public key is in the transaction \n * that the memos have not already been posted \n * that the right number of memos are provided
-OMS -> EQS: Query(<i>get commitments and merkle paths for each memo using uid</i>)
-EQS -> OMS: <i>commitments and merkle paths</i>
+OMS -> EQS: Query("get transaction <i>tx</i> and merkle paths for each memo using <i>tx_id</i>")
+EQS -> OMS: <i>tx,merkle paths</i>
+OMS -> OMS: Check: \n * the signature where the public key is in the transaction <i>tx</i> \n * that the memos have not already been posted \n * that the right number of memos are provided
 OMS -> OMS: Store locally the memos and their correspond merkle paths
 OMS -> W_A: <i>memos, merkle paths</i>
 OMS -> W_B: <i>memos, merkle paths</i>

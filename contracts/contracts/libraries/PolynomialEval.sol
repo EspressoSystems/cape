@@ -1,9 +1,12 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import {BN254} from "../libraries/BN254.sol";
+
 library PolynomialEval {
     /// @dev a Radix 2 Evaluation Domain
     struct EvalDomain {
+        uint256 logSize;
         uint256 size; // Size of the domain as a field element
         uint256 sizeInv; // Inverse of the size in the field
         uint256 groupGen; // A generator of the subgroup
@@ -16,6 +19,7 @@ library PolynomialEval {
         if (domainSize == 32768) {
             return
                 EvalDomain(
+                    15,
                     domainSize,
                     0x3063edaa444bddc677fcd515f614555a777997e0a9287d1e62bf6dd004d82001,
                     0x2d1ba66f5941dc91017171fa69ec2bd0022a2a2d4115a009a93458fd4e26ecfb,
@@ -24,6 +28,7 @@ library PolynomialEval {
         } else if (domainSize == 65536) {
             return
                 EvalDomain(
+                    16,
                     domainSize,
                     0x30641e0e92bebef818268d663bcad6dbcfd6c0149170f6d7d350b1b1fa6c1001,
                     0x00eeb2cb5981ed45649abebde081dcff16c8601de4347e7dd1628ba2daac43b7,
@@ -32,6 +37,7 @@ library PolynomialEval {
         } else if (domainSize == 131072) {
             return
                 EvalDomain(
+                    17,
                     domainSize,
                     0x30643640b9f82f90e83b698e5ea6179c7c05542e859533b48b9953a2f5360801,
                     0x1bf82deba7d74902c3708cc6e70e61f30512eca95655210e276e5858ce8f58e5,
@@ -42,12 +48,57 @@ library PolynomialEval {
         }
     }
 
+    // This evaluates the vanishing polynomial for this domain at zeta.
+    // For multiplicative subgroups, this polynomial is
+    // `z(X) = X^self.size - 1`.
     function evaluateVanishingPoly(EvalDomain memory self, uint256 zeta)
         internal
         pure
         returns (uint256)
     {
-        // TODO: https://github.com/SpectrumXYZ/cape/issues/173
+        uint256 p = BN254.R_MOD;
+        if (zeta == 0) {
+            return (p - 1);
+        }
+
+        uint256 res;
+        res = zeta;
+        assembly {
+            // repreating 15 times
+            res := mulmod(res, res, p)
+            res := mulmod(res, res, p)
+            res := mulmod(res, res, p)
+            res := mulmod(res, res, p)
+            res := mulmod(res, res, p)
+            res := mulmod(res, res, p)
+            res := mulmod(res, res, p)
+            res := mulmod(res, res, p)
+            res := mulmod(res, res, p)
+            res := mulmod(res, res, p)
+            res := mulmod(res, res, p)
+            res := mulmod(res, res, p)
+            res := mulmod(res, res, p)
+            res := mulmod(res, res, p)
+            res := mulmod(res, res, p)
+        }
+        if (self.logSize == 15) {} else if (self.logSize == 16) {
+            assembly {
+                res := mulmod(res, res, p)
+            }
+        } else if (self.logSize == 17) {
+            assembly {
+                res := mulmod(res, res, p)
+                res := mulmod(res, res, p)
+            }
+        } else {
+            revert("Poly: size not in 2^{15, 16, 17}");
+        }
+
+        // since zeta != 0 we know that res is not 0
+        // so we can safely do a subtraction
+        res--;
+
+        return (res);
     }
 
     /// @dev Evaluate the first and the last lagrange polynomial at point `zeta` given the vanishing polynomial evaluation `vanish_eval`.

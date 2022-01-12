@@ -80,7 +80,7 @@ impl CapeBlock {
             let merkle_root = txn.merkle_root();
             if recent_merkle_roots.contains(&merkle_root)
                 && CapeBlock::check_nullifiers_are_fresh(txn, contract_nullifiers)
-                && CapeBlock::check_valid_until(txn, height)
+                && !CapeBlock::is_expired(txn, height)
                 && !is_burn_txn(txn)
             {
                 filtered_block.txns.push(txn.clone());
@@ -118,9 +118,9 @@ impl CapeBlock {
         }
     }
 
-    fn check_valid_until(txn: &TransactionNote, height: u64) -> bool {
+    fn is_expired(txn: &TransactionNote, height: u64) -> bool {
         match txn {
-            Transfer(tx) => height < tx.aux_info.valid_until,
+            Transfer(tx) => tx.aux_info.valid_until < height,
             _ => true,
         }
     }

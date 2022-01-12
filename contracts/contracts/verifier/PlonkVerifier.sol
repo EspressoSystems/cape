@@ -93,7 +93,7 @@ contract PlonkVerifier is IPlonkVerifier {
         uint256[] memory publicInput,
         PlonkProof memory proof,
         bytes memory extraTranscriptInitMsg
-    ) internal pure returns (PcsInfo memory res) {
+    ) internal view returns (PcsInfo memory res) {
         require(publicInput.length == verifyingKey.numInputs, "Plonk: wrong verifying key");
 
         Challenges memory chal = _computeChallenges(
@@ -208,7 +208,7 @@ contract PlonkVerifier is IPlonkVerifier {
         Challenges memory chal
     )
         internal
-        pure
+        view
         returns (
             uint256[] memory commScalars,
             BN254.G1Point[] memory commBases,

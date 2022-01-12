@@ -53,7 +53,7 @@ interface IPlonkVerifier {
         BN254.G1Point qH3; // rescue selector qH3 * w_ci^5
         BN254.G1Point qH4; // rescue selector qH4 * w_di^5
         BN254.G1Point qEcc; // elliptic curve selector
-        uint256 k0; // separators
+        uint256 k0; // coset representative
         uint256 k1;
         uint256 k2;
         uint256 k3;

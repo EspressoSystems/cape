@@ -1,7 +1,7 @@
 #![cfg(test)]
 use std::path::Path;
 
-use crate::types::VerifyingKey as SolVerifyingKey;
+use crate::types as sol;
 use crate::{
     ethereum,
     types::{field_to_u256, G1Point, TestTranscript, TranscriptData},
@@ -11,7 +11,7 @@ use ark_poly_commit::kzg10::Commitment;
 use ark_std::UniformRand;
 use ethers::core::k256::ecdsa::SigningKey;
 use ethers::prelude::{Http, Provider, SignerMiddleware, Wallet};
-use jf_plonk::proof_system::structs::VerifyingKey as RustVerifyingKey;
+use jf_plonk::proof_system::structs::VerifyingKey;
 use jf_plonk::transcript::PlonkTranscript;
 use jf_plonk::transcript::SolidityTranscript;
 
@@ -212,7 +212,7 @@ async fn test_append_vk_and_public_inputs() {
     let contract = deploy().await;
     let mut rng = ark_std::test_rng();
     for _test in 0..10 {
-        let rust_verifying_key = RustVerifyingKey::<E>::dummy(10, 1024);
+        let rust_verifying_key = VerifyingKey::<E>::dummy(10, 1024);
         let num_comm = rng.gen_range(0..10);
         let rust_public_inputs: Vec<Fr> = (0..num_comm).map(|_| Fr::rand(&mut rng)).collect();
 
@@ -228,7 +228,7 @@ async fn test_append_vk_and_public_inputs() {
 
         // solidity side
         let ethers_transcript = TranscriptData::default();
-        let ether_verifying_key: SolVerifyingKey = rust_verifying_key.into();
+        let ether_verifying_key: sol::VerifyingKey = rust_verifying_key.into();
         let ether_public_inputs = rust_public_inputs
             .iter()
             .map(|&x| field_to_u256(x))

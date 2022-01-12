@@ -124,7 +124,7 @@ library Transcript {
         uint256[] memory publicInput
     ) internal pure {
         // TODO: improve this code and avoid reverseEndianness
-        uint256 sizeInBits = 254;
+        uint64 sizeInBits = 254;
 
         // Fr field size in bits
         appendMessage(self, BytesLib.slice(abi.encodePacked(reverseEndianness(sizeInBits)), 0, 8));
@@ -142,11 +142,10 @@ library Transcript {
         );
 
         // =====================
-        // k: domain separators
+        // k: coset representatives
         // =====================
         // Currently, K is hardcoded, and there are 5 of them since
         // # wire types == 5
-
         appendFieldElement(self, verifyingKey.k0);
         appendFieldElement(self, verifyingKey.k1);
         appendFieldElement(self, verifyingKey.k2);

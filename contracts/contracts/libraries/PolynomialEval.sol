@@ -160,5 +160,81 @@ library PolynomialEval {
         uint256[] memory pi,
         uint256 zeta,
         uint256 vanishEval
-    ) internal pure returns (uint256) {}
+    ) internal view returns (uint256) {
+        if (vanishEval == 0) {
+            return (0);
+        }
+
+        uint256 p = BN254.R_MOD;
+        uint256 length = pi.length;
+        uint256 res = 0;
+        uint256 ithLagrange;
+        uint256 divisor;
+        uint256 tmp;
+        uint256 vanishEvalDivN = self.size;
+        uint256[] memory localDomainElements = domainElements(self, length);
+
+        // vanish_eval_div_n = (zeta^n-1)/n
+        vanishEvalDivN = BN254.invert(vanishEvalDivN);
+        assembly {
+            vanishEvalDivN := mulmod(vanishEvalDivN, vanishEval, p)
+        }
+
+        // Now we need to compute
+        //  \sum_{i=0..l} L_{i,H}(zeta) * pub_input[i]
+        // where
+        // - L_{i,H}(zeta)
+        //      = Z_H(zeta) * v_i / (zeta - g^i)
+        //      = vanish_eval_div_n * g^i / (zeta - g^i)
+        // - v_i = g^i / n
+        for (uint256 i = 0; i < length; i++) {
+            // tmp points to g^i
+            tmp = localDomainElements[i];
+            assembly {
+                // vanish_eval_div_n * g^i
+                ithLagrange := mulmod(vanishEvalDivN, tmp, p)
+            }
+
+            // compute 1/(zeta - g^i)
+            if (zeta >= tmp) {
+                divisor = zeta - tmp;
+            } else {
+                divisor = zeta + p - tmp;
+            }
+            divisor = BN254.invert(divisor);
+
+            // tmp points to public input
+            tmp = pi[i];
+            assembly {
+                ithLagrange := mulmod(ithLagrange, tmp, p)
+                ithLagrange := mulmod(ithLagrange, divisor, p)
+            }
+            res += ithLagrange;
+        }
+        return (res);
+    }
+
+    /// @dev Generate the domain elements for indexes 0..length
+    /// which are essentially g^0, g^1, ..., g^{length-1}
+    function domainElements(EvalDomain memory self, uint256 length)
+        internal
+        pure
+        returns (uint256[] memory)
+    {
+        uint256 groupGen = self.groupGen;
+        uint256 tmp = 1;
+        uint256 p = BN254.R_MOD;
+        uint256[] memory elements = new uint256[](length);
+
+        if (length != 0) {
+            elements[0] = 1;
+            for (uint256 i = 1; i < length; i++) {
+                assembly {
+                    tmp := mulmod(tmp, groupGen, p)
+                }
+                elements[i] = tmp;
+            }
+        }
+        return (elements);
+    }
 }

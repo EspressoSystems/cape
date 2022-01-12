@@ -2,6 +2,7 @@
 extern crate num_derive;
 
 mod assertion;
+mod asset_registry;
 mod bn254;
 pub mod cape;
 #[cfg(test)]

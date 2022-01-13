@@ -79,6 +79,24 @@ impl From<ark_bn254::G1Affine> for G1Point {
     }
 }
 
+impl From<(ark_bn254::Fq, ark_bn254::Fq)> for G1Point {
+    fn from(p: (ark_bn254::Fq, ark_bn254::Fq)) -> Self {
+        let zero = ark_bn254::G1Affine::zero();
+        if p.0 == zero.x && p.1 == zero.y {
+            // Solidity repr of infinity/zero
+            Self {
+                x: U256::from(0),
+                y: U256::from(0),
+            }
+        } else {
+            Self {
+                x: U256::from_little_endian(&to_bytes!(p.0).unwrap()[..]),
+                y: U256::from_little_endian(&to_bytes!(p.1).unwrap()[..]),
+            }
+        }
+    }
+}
+
 impl From<G1Point> for ark_bn254::G1Affine {
     fn from(p_sol: G1Point) -> Self {
         if p_sol.x.is_zero() && p_sol.y.is_zero() {
@@ -674,37 +692,16 @@ impl From<jf_aap::VerifyingKey> for VerifyingKey {
         let domain_size = *scalars.next().unwrap();
         let num_inputs = *scalars.next().unwrap();
 
-        let mut sigmas = Vec::new();
+        let mut sigmas: Vec<G1Point> = vec![];
         for _ in 0..5 {
-            let x = field_to_u256(*scalars.next().unwrap());
-            let y = field_to_u256(*scalars.next().unwrap());
-
-            let sigma = if x == U256::from(0) && y == U256::from(1) {
-                G1Point {
-                    x: U256::from(0),
-                    y: U256::from(0),
-                }
-            } else {
-                G1Point { x, y }
-            };
-            sigmas.push(sigma)
+            let p = (*scalars.next().unwrap(), *scalars.next().unwrap());
+            sigmas.push(p.into());
         }
 
-        let mut selectors = Vec::new();
+        let mut selectors: Vec<G1Point> = vec![];
         for _ in 0..13 {
-            let x = field_to_u256(*scalars.next().unwrap());
-            let y = field_to_u256(*scalars.next().unwrap());
-
-            let selector = if x == U256::from(0) && y == U256::from(1) {
-                G1Point {
-                    x: U256::from(0),
-                    y: U256::from(0),
-                }
-            } else {
-                G1Point { x, y }
-            };
-
-            selectors.push(selector)
+            let p = (*scalars.next().unwrap(), *scalars.next().unwrap());
+            selectors.push(p.into());
         }
 
         Self {

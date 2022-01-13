@@ -140,11 +140,14 @@ contract PlonkVerifier is IPlonkVerifier {
         returns (uint256[2] memory alphaPowers)
     {
         // `alpha_bases` is unnecessary since it's just `vec![E::Fr::one()]` here
-        // TODO: https://github.com/SpectrumXYZ/cape/issues/9
-        uint256 alpha2;
-        uint256 alpha3;
+        uint256 p = BN254.R_MOD;
+        assembly {
+            let alpha2 := mulmod(alpha, alpha, p)
+            mstore(alphaPowers, alpha2)
 
-        alphaPowers = [alpha2, alpha3];
+            let alpha3 := mulmod(alpha, alpha2, p)
+            mstore(add(alphaPowers, 0x20), alpha3)
+        }
     }
 
     function _computeChallenges(

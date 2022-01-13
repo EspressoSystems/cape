@@ -68,4 +68,12 @@ contract TestBN254 {
     ) public pure returns (uint256) {
         return C.powSmall(base, exponent, modulus);
     }
+
+    function testMultiScalarMul(C.G1Point[] memory bases, uint256[] memory scalars)
+        public
+        view
+        returns (C.G1Point memory)
+    {
+        return C.multiScalarMul(bases, scalars);
+    }
 }

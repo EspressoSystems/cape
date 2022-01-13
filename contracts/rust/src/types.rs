@@ -1,5 +1,8 @@
+use ark_bn254::Fr;
 use ark_bn254::{Bn254, Fq};
 use ark_ff::{to_bytes, PrimeField, Zero};
+use ark_poly::EvaluationDomain;
+use ark_poly::Radix2EvaluationDomain;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ethers::prelude::*;
 use jf_aap::{
@@ -43,6 +46,14 @@ abigen!(
 
     TestTranscript,
     "../abi/contracts/mocks/TestTranscript.sol/TestTranscript/abi.json",
+    event_derives(serde::Deserialize, serde::Serialize);
+
+    TestPlonkVerifier,
+    "../abi/contracts/mocks/TestPlonkVerifier.sol/TestPlonkVerifier/abi.json",
+    event_derives(serde::Deserialize, serde::Serialize);
+
+    TestPolynomialEval,
+    "../abi/contracts/mocks/TestPolynomialEval.sol/TestPolynomialEval/abi.json",
     event_derives(serde::Deserialize, serde::Serialize);
 
     CAPE,
@@ -144,6 +155,28 @@ impl From<ark_ed_on_bn254::EdwardsAffine> for EdOnBn254Point {
             x: U256::from_little_endian(&to_bytes!(p.x).unwrap()[..]),
             y: U256::from_little_endian(&to_bytes!(p.y).unwrap()[..]),
         }
+    }
+}
+
+impl From<Radix2EvaluationDomain<Fr>> for EvalDomain {
+    fn from(domain: Radix2EvaluationDomain<Fr>) -> Self {
+        Self {
+            log_size: domain.log_size_of_group.into(),
+            size: domain.size.into(),
+            size_inv: field_to_u256(domain.size_inv),
+            group_gen: field_to_u256(domain.group_gen),
+            group_gen_inv: field_to_u256(domain.group_gen_inv),
+        }
+    }
+}
+
+impl From<EvalDomain> for Radix2EvaluationDomain<Fr> {
+    fn from(domain: EvalDomain) -> Self {
+        let res = Radix2EvaluationDomain::<Fr>::new(domain.size.try_into().unwrap()).unwrap();
+        assert!(res.group_gen == u256_to_field::<Fr>(domain.group_gen));
+        assert!(res.group_gen_inv == u256_to_field::<Fr>(domain.group_gen_inv));
+        assert!(res.size_inv == u256_to_field::<Fr>(domain.size_inv));
+        res
     }
 }
 

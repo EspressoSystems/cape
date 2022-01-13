@@ -1,9 +1,12 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import {BN254} from "../libraries/BN254.sol";
+
 library PolynomialEval {
     /// @dev a Radix 2 Evaluation Domain
     struct EvalDomain {
+        uint256 logSize; // log_2(self.size)
         uint256 size; // Size of the domain as a field element
         uint256 sizeInv; // Inverse of the size in the field
         uint256 groupGen; // A generator of the subgroup
@@ -16,6 +19,7 @@ library PolynomialEval {
         if (domainSize == 32768) {
             return
                 EvalDomain(
+                    15,
                     domainSize,
                     0x3063edaa444bddc677fcd515f614555a777997e0a9287d1e62bf6dd004d82001,
                     0x2d1ba66f5941dc91017171fa69ec2bd0022a2a2d4115a009a93458fd4e26ecfb,
@@ -24,6 +28,7 @@ library PolynomialEval {
         } else if (domainSize == 65536) {
             return
                 EvalDomain(
+                    16,
                     domainSize,
                     0x30641e0e92bebef818268d663bcad6dbcfd6c0149170f6d7d350b1b1fa6c1001,
                     0x00eeb2cb5981ed45649abebde081dcff16c8601de4347e7dd1628ba2daac43b7,
@@ -32,6 +37,7 @@ library PolynomialEval {
         } else if (domainSize == 131072) {
             return
                 EvalDomain(
+                    17,
                     domainSize,
                     0x30643640b9f82f90e83b698e5ea6179c7c05542e859533b48b9953a2f5360801,
                     0x1bf82deba7d74902c3708cc6e70e61f30512eca95655210e276e5858ce8f58e5,
@@ -42,12 +48,42 @@ library PolynomialEval {
         }
     }
 
+    // This evaluates the vanishing polynomial for this domain at zeta.
+    // For multiplicative subgroups, this polynomial is
+    // `z(X) = X^self.size - 1`.
     function evaluateVanishingPoly(EvalDomain memory self, uint256 zeta)
         internal
         pure
-        returns (uint256)
+        returns (uint256 res)
     {
-        // TODO: https://github.com/SpectrumXYZ/cape/issues/173
+        uint256 p = BN254.R_MOD;
+        uint256 logSize;
+
+        if (self.logSize == 15 || self.logSize == 16 || self.logSize == 17) {
+            logSize = self.logSize;
+        } else {
+            revert("Poly: size not in 2^{15, 16, 17}");
+        }
+
+        assembly {
+            switch zeta
+            case 0 {
+                res := sub(p, 1)
+            }
+            default {
+                res := zeta
+                for {
+                    let i := 0
+                } lt(i, logSize) {
+                    i := add(i, 1)
+                } {
+                    res := mulmod(res, res, p)
+                }
+                // since zeta != 0 we know that res is not 0
+                // so we can safely do a subtraction
+                res := sub(res, 1)
+            }
+        }
     }
 
     /// @dev Evaluate the first and the last lagrange polynomial at point `zeta` given the vanishing polynomial evaluation `vanish_eval`.
@@ -55,8 +91,47 @@ library PolynomialEval {
         EvalDomain memory self,
         uint256 zeta,
         uint256 vanishEval
-    ) internal pure returns (uint256, uint256) {
-        // TODO: https://github.com/SpectrumXYZ/cape/issues/173
+    ) internal view returns (uint256 res1, uint256 res2) {
+        if (vanishEval == 0) {
+            return (0, 0);
+        }
+
+        uint256 p = BN254.R_MOD;
+        uint256 divisor;
+        uint256 groupGenInv = self.groupGenInv;
+        uint256 vanishEvalMulSizeInv = self.sizeInv;
+
+        // =========================
+        // lagrange_1_eval = vanish_eval / self.size / (zeta - 1)
+        // =========================
+        assembly {
+            vanishEvalMulSizeInv := mulmod(vanishEval, vanishEvalMulSizeInv, p)
+
+            switch zeta
+            case 0 {
+                divisor := sub(p, 1)
+            }
+            default {
+                divisor := sub(zeta, 1)
+            }
+        }
+        divisor = BN254.invert(divisor);
+        assembly {
+            res1 := mulmod(vanishEvalMulSizeInv, divisor, p)
+        }
+
+        // =========================
+        // lagrange_n_eval = vanish_eval * self.group_gen_inv / self.size / (zeta - self.group_gen_inv)
+        // =========================
+        assembly {
+            // submod(zeta, groupGenInv, p)
+            divisor := addmod(sub(p, groupGenInv), zeta, p)
+        }
+        divisor = BN254.invert(divisor);
+        assembly {
+            res2 := mulmod(vanishEvalMulSizeInv, groupGenInv, p)
+            res2 := mulmod(res2, divisor, p)
+        }
     }
 
     /// @dev Evaluate public input polynomial at point `zeta`.
@@ -65,7 +140,81 @@ library PolynomialEval {
         uint256[] memory pi,
         uint256 zeta,
         uint256 vanishEval
-    ) internal pure returns (uint256) {
-        // TODO: https://github.com/SpectrumXYZ/cape/issues/173
+    ) internal view returns (uint256 res) {
+        if (vanishEval == 0) {
+            return 0;
+        }
+
+        uint256 p = BN254.R_MOD;
+        uint256 length = pi.length;
+        uint256 ithLagrange;
+        uint256 divisor;
+        uint256 tmp;
+        uint256 vanishEvalDivN = self.sizeInv;
+        uint256[] memory localDomainElements = domainElements(self, length);
+
+        // vanish_eval_div_n = (zeta^n-1)/n
+        assembly {
+            vanishEvalDivN := mulmod(vanishEvalDivN, vanishEval, p)
+        }
+
+        // Now we need to compute
+        //  \sum_{i=0..l} L_{i,H}(zeta) * pub_input[i]
+        // where
+        // - L_{i,H}(zeta)
+        //      = Z_H(zeta) * v_i / (zeta - g^i)
+        //      = vanish_eval_div_n * g^i / (zeta - g^i)
+        // - v_i = g^i / n
+        for (uint256 i = 0; i < length; i++) {
+            assembly {
+                // tmp points to g^i
+                // first 32 bytes of reference is the length of an array
+                tmp := mload(add(add(localDomainElements, 0x20), mul(i, 0x20)))
+                // vanish_eval_div_n * g^i
+                ithLagrange := mulmod(vanishEvalDivN, tmp, p)
+                // compute (zeta - g^i)
+                divisor := addmod(sub(p, tmp), zeta, p)
+            }
+            // compute 1/(zeta - g^i)
+            divisor = BN254.invert(divisor);
+            assembly {
+                // tmp points to public input
+                tmp := mload(add(add(pi, 0x20), mul(i, 0x20)))
+                ithLagrange := mulmod(ithLagrange, tmp, p)
+                ithLagrange := mulmod(ithLagrange, divisor, p)
+
+                res := addmod(res, ithLagrange, p)
+            }
+        }
+    }
+
+    /// @dev Generate the domain elements for indexes 0..length
+    /// which are essentially g^0, g^1, ..., g^{length-1}
+    function domainElements(EvalDomain memory self, uint256 length)
+        internal
+        pure
+        returns (uint256[] memory elements)
+    {
+        uint256 groupGen = self.groupGen;
+        uint256 tmp = 1;
+        uint256 p = BN254.R_MOD;
+
+        assembly {
+            if not(iszero(length)) {
+                let ptr := add(elements, 0x20)
+                let end := add(ptr, mul(0x20, length))
+                mstore(ptr, 1)
+                ptr := add(ptr, 0x20)
+                // for (; ptr < end; ptr += 32) loop through the memory of `elements`
+                for {
+
+                } lt(ptr, end) {
+                    ptr := add(ptr, 0x20)
+                } {
+                    tmp := mulmod(tmp, groupGen, p)
+                    mstore(ptr, tmp)
+                }
+            }
+        }
     }
 }

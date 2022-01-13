@@ -7,6 +7,7 @@ use crate::{
 };
 use anyhow::Result;
 use ark_bn254::{Fq, Fr, G1Affine, G1Projective, G2Affine, G2Projective};
+use ark_ec::msm::VariableBaseMSM;
 use ark_ec::AffineCurve;
 use ark_ec::{group::Group, ProjectiveCurve};
 use ark_ff::{field_new, to_bytes, Field};
@@ -112,6 +113,38 @@ async fn test_scalar_mul() -> Result<()> {
             .await?
             .into();
         assert_eq!(res, Group::mul(&p, &s).into_affine().into());
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_multi_scalar_mul() -> Result<()> {
+    let rng = &mut ark_std::test_rng();
+    let contract = deploy_contract().await?;
+
+    for length in 1..10 {
+        let p_rust: Vec<G1Affine> = (0..length)
+            .map(|_| G1Projective::rand(rng).into_affine())
+            .collect();
+        let p_solidity: Vec<G1Point> = p_rust.iter().map(|&x| x.into()).collect();
+
+        let s_rust: Vec<Fr> = (0..length).map(|_| Fr::rand(rng)).collect();
+        let s_solidity: Vec<U256> = s_rust.iter().map(|&x| field_to_u256(x)).collect();
+        let s_rust: Vec<_> = s_rust.iter().map(|&x| x.into_repr()).collect();
+
+        let res: G1Point = contract
+            .test_multi_scalar_mul(p_solidity, s_solidity)
+            .call()
+            .await?
+            .into();
+
+        assert_eq!(
+            res,
+            VariableBaseMSM::multi_scalar_mul(&p_rust, &s_rust)
+                .into_affine()
+                .into()
+        );
     }
 
     Ok(())

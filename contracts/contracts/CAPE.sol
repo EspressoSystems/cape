@@ -185,9 +185,21 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
         _checkAssetCode(ro, erc20Address);
     }
 
+    function computeAssetDescription(address erc20Address, address sponsor)
+        public
+        view
+        returns (bytes memory)
+    {
+        // "TRICAPE ERC20 {} sponsored by {}",
+        // hex::encode(&(erc20_code.0).0),
+        // hex::encode(&sponsor.0)
+        return abi.encodePacked("TRICAPE ERC20 ", erc20Address, " sponsored by ", sponsor);
+    }
+
     function _checkAssetCode(RecordOpening memory ro, address erc20Address) internal view {
+        bytes description = computeAssetDescription(erc20address, msg.sender);
         uint256 code = BN254.fromLeBytesModOrder(
-            abi.encodePacked(keccak256(abi.encodePacked(DOM_SEP_FOREIGN_ASSET, erc20Address)))
+            abi.encodePacked(keccak256(abi.encodePacked(DOM_SEP_FOREIGN_ASSET, description)))
         );
         require(code == ro.assetDef.code, "Wrong asset code");
     }

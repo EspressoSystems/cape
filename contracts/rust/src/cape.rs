@@ -272,6 +272,7 @@ mod tests {
         AssetCode, AssetCodeSeed, AssetDefinition, AssetPolicy, FreezeFlag, RecordOpening,
     };
     use rand::Rng;
+    use zerok_lib::cape_state::{erc20_asset_description, Erc20Code, EthereumAddr};
 
     use crate::assertion::Matcher;
     use crate::ethereum::{deploy, get_funded_deployer};
@@ -745,6 +746,21 @@ mod tests {
 
             assert_eq!(max_comms_sol, U256::from(num_comms));
         }
+    }
+
+    async fn test_erc20_description() -> Result<()> {
+        let contract = deploy_cape_test().await;
+        let sponsor = Address::random();
+        let asset_address = Address::random();
+        let asset_code = Erc20Code(EthereumAddr(asset_address.to_fixed_bytes()));
+        let description =
+            erc20_asset_description(&asset_code, &EthereumAddr(sponsor.to_fixed_bytes()));
+        let ret = contract
+            .compute_asset_description(asset_address, sponsor)
+            .call()
+            .await?;
+        assert_eq!(ret.to_vec(), description.into_bytes());
+        Ok(())
     }
 
     #[tokio::test]

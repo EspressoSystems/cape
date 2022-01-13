@@ -11,6 +11,9 @@ jf-rescue = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfis
 jf-aap = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git", branch = "plonk-verifier" }
 jf-utils = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git", branch = "plonk-verifier" }
 jf-rescue = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git", branch = "plonk-verifier" }
+jf-aap = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", branch = "plonk-verifier" }
+jf-utils = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", branch = "plonk-verifier" }
+jf-rescue = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", branch = "plonk-verifier" }
 ethers = { git = "https://github.com/gakonst/ethers-rs", features = ["abigen"] }
 
 serde_json = "1.0.67"

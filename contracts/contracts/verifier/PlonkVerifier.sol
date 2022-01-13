@@ -140,11 +140,14 @@ contract PlonkVerifier is IPlonkVerifier {
         returns (uint256[2] memory alphaPowers)
     {
         // `alpha_bases` is unnecessary since it's just `vec![E::Fr::one()]` here
-        // TODO: https://github.com/SpectrumXYZ/cape/issues/9
-        uint256 alpha2;
-        uint256 alpha3;
+        uint256 p = BN254.R_MOD;
+        assembly {
+            let alpha2 := mulmod(alpha, alpha, p)
+            mstore(alphaPowers, alpha2)
 
-        alphaPowers = [alpha2, alpha3];
+            let alpha3 := mulmod(alpha, alpha2, p)
+            mstore(add(alphaPowers, 0x20), alpha3)
+        }
     }
 
     function _computeChallenges(
@@ -157,6 +160,9 @@ contract PlonkVerifier is IPlonkVerifier {
     }
 
     /// @dev Compute the constant term of the linearization polynomial
+    ///
+    /// r_plonk = PI - L1(x) * alpha^2 - alpha * \prod_i=1..m-1 (w_i + beta * sigma_i + gamma) * (w_m + gamma) * z(xw)
+    /// where m is the number of wire types.
     function _computeLinPolyConstantTerm(
         Poly.EvalDomain memory domain,
         Challenges memory chal,
@@ -165,34 +171,52 @@ contract PlonkVerifier is IPlonkVerifier {
         PlonkProof memory proof,
         uint256 vanishEval,
         uint256 lagrangeOneEval,
-        uint256 lagrangeNEval,
         uint256[2] memory alphaPowers
     ) internal view returns (uint256 res) {
         uint256 piEval = Poly.evaluatePiPoly(domain, publicInput, chal.zeta, vanishEval);
-        // TODO: https://github.com/SpectrumXYZ/cape/issues/9
+        uint256 perm = _computeLinPolyConstantTermPartialPermEval(chal, proof);
+        uint256 p = BN254.R_MOD;
+
+        assembly {
+            let alpha := mload(chal)
+            let gamma := mload(add(chal, 0x40))
+            let alpha2 := mload(alphaPowers)
+            let w4 := mload(add(proof, 0x220))
+            let permNextEval := mload(add(proof, 0x2c0))
+
+            // \prod_i=1..m-1 (w_i + beta * sigma_i + gamma) * (w_m + gamma) * z(xw)
+            perm := mulmod(perm, mulmod(addmod(w4, gamma, p), permNextEval, p), p)
+            // PI - L1(x) * alpha^2 - alpha * \prod_i=1..m-1 (w_i + beta * sigma_i + gamma) * (w_m + gamma) * z(xw)
+            res := addmod(piEval, sub(p, mulmod(alpha2, lagrangeOneEval, p)), p)
+            res := addmod(res, sub(p, mulmod(alpha, perm, p)), p)
+        }
     }
 
-    // `aggregate_poly_commitments` in Jellyfish, but since we are not aggregating multiple,
-    // but rather preparing for `[F]1` from a single proof.
-    function _preparePolyCommitments(
-        Poly.EvalDomain memory domain,
-        VerifyingKey memory verifyingKey,
+    // partial permutation term evaluation, (break out as a function to avoid "Stack too deep" error).
+    function _computeLinPolyConstantTermPartialPermEval(
         Challenges memory chal,
-        uint256 vanishEval,
-        uint256 lagrangeOneEval,
-        uint256 lagrangeNEval,
-        PlonkProof memory proof,
-        uint256[2] memory alphaPowers
-    )
-        internal
-        pure
-        returns (
-            uint256[] memory commScalars,
-            BN254.G1Point[] memory commBases,
-            uint256[] memory bufferVAndUvBasis
-        )
-    {
-        // TODO: https://github.com/SpectrumXYZ/cape/issues/9
+        PlonkProof memory proof
+    ) internal view returns (uint256 perm) {
+        uint256 p = BN254.R_MOD;
+        assembly {
+            let w0 := mload(add(proof, 0x1a0))
+            let w1 := mload(add(proof, 0x1c0))
+            let w2 := mload(add(proof, 0x1e0))
+            let w3 := mload(add(proof, 0x200))
+            let sigma0 := mload(add(proof, 0x240))
+            let sigma1 := mload(add(proof, 0x260))
+            let sigma2 := mload(add(proof, 0x280))
+            let sigma3 := mload(add(proof, 0x2a0))
+            let beta := mload(add(chal, 0x20))
+            let gamma := mload(add(chal, 0x40))
+
+            // \prod_i=1..m-1 (w_i + beta * sigma_i + gamma)
+            perm := 1
+            perm := mulmod(perm, addmod(add(w0, gamma), mulmod(beta, sigma0, p), p), p)
+            perm := mulmod(perm, addmod(add(w1, gamma), mulmod(beta, sigma1, p), p), p)
+            perm := mulmod(perm, addmod(add(w2, gamma), mulmod(beta, sigma2, p), p), p)
+            perm := mulmod(perm, addmod(add(w3, gamma), mulmod(beta, sigma3, p), p), p)
+        }
     }
 
     // Compute components in [E]1 and [F]1 used for PolyComm opening verification
@@ -234,12 +258,25 @@ contract PlonkVerifier is IPlonkVerifier {
             proof,
             vanishEval,
             lagrangeOneEval,
-            lagrangeNEval,
             alphaPowers
         );
 
-        uint256[] memory bufferVAndUvBasis;
         // TODO: implement `aggregate_poly_commitments` inline (otherwise would encounter "Stack Too Deep")
+        // `aggregate_poly_commitments()` in Jellyfish, but since we are not aggregating multiple,
+        // but rather preparing for `[F]1` from a single proof.
+        uint256[] memory bufferVAndUvBasis;
+
+        eval = _prepareEvaluations(linPolyConstant, proof, bufferVAndUvBasis);
+    }
+
+    // `aggregate_evaluations()` in Jellyfish, but since we are not aggregating multiple, but rather preparing `[E]1` from a single proof.
+    // The returned value is the scalar in `[E]1` described in Sec 8.4, step 11 of https://eprint.iacr.org/2019/953.pdf
+    function _prepareEvaluations(
+        uint256 linPolyConstant,
+        PlonkProof memory proof,
+        uint256[] memory bufferVAndUvBasis
+    ) internal pure returns (uint256 eval) {
+        // TODO: https://github.com/SpectrumXYZ/cape/issues/9
     }
 
     // Batchly verify multiple PCS opening proofs.

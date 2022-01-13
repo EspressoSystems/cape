@@ -10,6 +10,7 @@ mod cape_e2e_tests;
 pub mod ethereum;
 pub mod helpers;
 mod ledger;
+mod plonk_verifier;
 mod poly_eval;
 mod records_merkle_tree;
 mod root_store;

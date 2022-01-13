@@ -60,20 +60,11 @@ interface IPlonkVerifier {
         uint256 k4;
     }
 
-    /// @dev Verify a single TurboPlonk proof.
-    function verify(
-        VerifyingKey memory verifyingKey,
-        uint256[] memory publicInput,
-        PlonkProof memory proof,
-        bytes memory extraTranscriptInitMsg
-    ) external returns (bool);
-
-    // TODO: To be refined, we might be able to merge some part of verifying keys.
-    // /// @dev Batch verify multiple TurboPlonk proofs.
-    // function batchVerify(
-    //     bytes[] memory verifyingKey,
-    //     uint256[][] memory publicInputs,
-    //     PlonkProof[] memory proofs,
-    //     bytes[] memory extraTranscriptInitMsgs
-    // ) external returns (bool);
+    /// @dev Batch verify multiple TurboPlonk proofs.
+    function batchVerify(
+        VerifyingKey[] memory verifyingKeys,
+        uint256[][] memory publicInputs,
+        PlonkProof[] memory proofs,
+        bytes[] memory extraTranscriptInitMsgs
+    ) external view returns (bool);
 }

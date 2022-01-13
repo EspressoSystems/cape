@@ -7,6 +7,7 @@ import "hardhat/console.sol";
 // Consider not pulling everything to top-level
 import {BN254} from "../libraries/BN254.sol";
 import {Transcript} from "../verifier/Transcript.sol";
+import {IPlonkVerifier} from "../interfaces/IPlonkVerifier.sol";
 
 contract TestTranscript {
     using Transcript for Transcript.TranscriptData;
@@ -76,5 +77,22 @@ contract TestTranscript {
         for (uint256 i = 0; i < times; i++) {
             challenge = transcript.getAndAppendChallenge();
         }
+    }
+
+    function testAppendVkAndPubInput(
+        Transcript.TranscriptData memory transcript,
+        IPlonkVerifier.VerifyingKey memory verifyingKey,
+        uint256[] memory pubInputs
+    ) public pure returns (Transcript.TranscriptData memory) {
+        transcript.appendVkAndPubInput(verifyingKey, pubInputs);
+        return transcript;
+    }
+
+    function testAppendProofEvaluations(
+        Transcript.TranscriptData memory transcript,
+        IPlonkVerifier.PlonkProof memory proof
+    ) public pure returns (Transcript.TranscriptData memory) {
+        transcript.appendProofEvaluations(proof);
+        return transcript;
     }
 }

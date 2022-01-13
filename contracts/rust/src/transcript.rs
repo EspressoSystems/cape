@@ -1,6 +1,7 @@
 #![cfg(test)]
 use std::path::Path;
 
+use crate::types as sol;
 use crate::{
     ethereum,
     types::{field_to_u256, G1Point, TestTranscript, TranscriptData},
@@ -10,8 +11,12 @@ use ark_poly_commit::kzg10::Commitment;
 use ark_std::UniformRand;
 use ethers::core::k256::ecdsa::SigningKey;
 use ethers::prelude::{Http, Provider, SignerMiddleware, Wallet};
+use jf_plonk::proof_system::structs::VerifyingKey;
+use jf_plonk::proof_system::structs::{Proof, ProofEvaluations};
 use jf_plonk::transcript::PlonkTranscript;
 use jf_plonk::transcript::SolidityTranscript;
+use jf_utils::field_switching;
+use std::convert::TryInto;
 
 use ark_bn254::{g1::Parameters as G1, Bn254 as E, Fq, Fr, G1Affine, G1Projective};
 use rand::Rng;
@@ -203,4 +208,91 @@ async fn test_infinity_commitment() {
         .unwrap();
 
     assert_eq!(ret, field_to_u256(challenge));
+}
+
+#[tokio::test]
+async fn test_append_vk_and_public_inputs() {
+    let contract = deploy().await;
+    let mut rng = ark_std::test_rng();
+    for _test in 0..10 {
+        let rust_verifying_key = VerifyingKey::<E>::dummy(10, 1024);
+        let num_comm = rng.gen_range(0..10);
+        let rust_public_inputs: Vec<Fr> = (0..num_comm).map(|_| Fr::rand(&mut rng)).collect();
+
+        // rust side
+        let mut rust_transcript = mk_empty_transcript();
+        rust_transcript
+            .append_vk_and_pub_input(&rust_verifying_key, &rust_public_inputs)
+            .unwrap();
+
+        let challenge = rust_transcript
+            .get_and_append_challenge::<E>(b"ignored")
+            .unwrap();
+
+        // solidity side
+        let ethers_transcript = TranscriptData::default();
+        let ether_verifying_key: sol::VerifyingKey = rust_verifying_key.into();
+        let ether_public_inputs = rust_public_inputs
+            .iter()
+            .map(|&x| field_to_u256(x))
+            .collect();
+        let ethers_transcript = contract
+            .test_append_vk_and_pub_input(
+                ethers_transcript,
+                ether_verifying_key,
+                ether_public_inputs,
+            )
+            .call()
+            .await
+            .unwrap();
+        let ret = contract
+            .get_and_append_challenge(ethers_transcript)
+            .call()
+            .await
+            .unwrap();
+
+        assert_eq!(ret, field_to_u256(challenge));
+    }
+}
+
+#[tokio::test]
+async fn test_append_proof_evaluation() {
+    let contract = deploy().await;
+    let mut rng = ark_std::test_rng();
+    for _test in 0..10 {
+        let proof_fr_elements: Vec<Fr> = (0..36).map(|_| Fr::rand(&mut rng)).collect();
+        let proof_fq_elements: Vec<Fq> = proof_fr_elements
+            .iter()
+            .map(|x| field_switching(x))
+            .collect();
+        let rust_proof: Proof<E> = proof_fq_elements.try_into().unwrap();
+        let rust_proof_eval: ProofEvaluations<Fr> =
+            proof_fr_elements[26..36].to_vec().try_into().unwrap();
+
+        // rust side
+        let mut rust_transcript = mk_empty_transcript();
+        rust_transcript
+            .append_proof_evaluations::<E>(&rust_proof_eval)
+            .unwrap();
+
+        let challenge = rust_transcript
+            .get_and_append_challenge::<E>(b"ignored")
+            .unwrap();
+
+        // solidity side
+        let ethers_transcript = TranscriptData::default();
+        let sol_proof: sol::PlonkProof = rust_proof.into();
+        let ethers_transcript = contract
+            .test_append_proof_evaluations(ethers_transcript, sol_proof)
+            .call()
+            .await
+            .unwrap();
+        let ret = contract
+            .get_and_append_challenge(ethers_transcript)
+            .call()
+            .await
+            .unwrap();
+
+        assert_eq!(ret, field_to_u256(challenge));
+    }
 }

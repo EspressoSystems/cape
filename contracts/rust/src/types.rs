@@ -1,4 +1,4 @@
-use ark_bn254::Bn254;
+use ark_bn254::{Bn254, Fq};
 use ark_ff::{to_bytes, PrimeField, Zero};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ethers::prelude::*;
@@ -74,6 +74,24 @@ impl From<ark_bn254::G1Affine> for G1Point {
             Self {
                 x: U256::from_little_endian(&to_bytes!(p.x).unwrap()[..]),
                 y: U256::from_little_endian(&to_bytes!(p.y).unwrap()[..]),
+            }
+        }
+    }
+}
+
+impl From<(ark_bn254::Fq, ark_bn254::Fq)> for G1Point {
+    fn from(p: (ark_bn254::Fq, ark_bn254::Fq)) -> Self {
+        let zero = ark_bn254::G1Affine::zero();
+        if p.0 == zero.x && p.1 == zero.y {
+            // Solidity repr of infinity/zero
+            Self {
+                x: U256::from(0),
+                y: U256::from(0),
+            }
+        } else {
+            Self {
+                x: U256::from_little_endian(&to_bytes!(p.0).unwrap()[..]),
+                y: U256::from_little_endian(&to_bytes!(p.1).unwrap()[..]),
             }
         }
     }
@@ -658,12 +676,63 @@ impl From<FreezeNote> for jf_aap::freeze::FreezeNote {
     }
 }
 
-// TODO: add conversion when https://github.com/SpectrumXYZ/jellyfish/issues/54 is resolved
-// impl From<jf_aap::VerifyingKey> for VerifyingKey {
-//     fn from(vk: jf_aap::VerifyingKey) -> Self {
+impl From<jf_aap::VerifyingKey> for VerifyingKey {
+    fn from(vk: jf_aap::VerifyingKey) -> Self {
+        // scalars are organized as
+        // - domain size, 1 element
+        // - number of inputs, 1 element
+        // - sigmas, 10 elements
+        // - selectors, 26 elements
+        // - k, 5 elements
+        // - g, h, bete_h, 10 elements
+        let scalars: Vec<Fq> = vk.into();
+        assert_eq!(scalars.len(), 53, "cannot parse vk from rust to solidity");
 
-//     }
-// }
+        let mut scalars = scalars.iter();
+        let domain_size = *scalars.next().unwrap();
+        let num_inputs = *scalars.next().unwrap();
+
+        let mut sigmas: Vec<G1Point> = vec![];
+        for _ in 0..5 {
+            let p = (*scalars.next().unwrap(), *scalars.next().unwrap());
+            sigmas.push(p.into());
+        }
+
+        let mut selectors: Vec<G1Point> = vec![];
+        for _ in 0..13 {
+            let p = (*scalars.next().unwrap(), *scalars.next().unwrap());
+            selectors.push(p.into());
+        }
+
+        Self {
+            domain_size: field_to_u256(domain_size),
+            num_inputs: field_to_u256(num_inputs),
+            sigma_0: sigmas[0].clone(),
+            sigma_1: sigmas[1].clone(),
+            sigma_2: sigmas[2].clone(),
+            sigma_3: sigmas[3].clone(),
+            sigma_4: sigmas[4].clone(),
+            q_1: selectors[0].clone(),
+            q_2: selectors[1].clone(),
+            q_3: selectors[2].clone(),
+            q_4: selectors[3].clone(),
+            q_m12: selectors[4].clone(),
+            q_m34: selectors[5].clone(),
+            q_o: selectors[6].clone(),
+            q_c: selectors[7].clone(),
+            q_h1: selectors[8].clone(),
+            q_h2: selectors[9].clone(),
+            q_h3: selectors[10].clone(),
+            q_h4: selectors[11].clone(),
+            q_ecc: selectors[12].clone(),
+            k_0: field_to_u256(*scalars.next().unwrap()),
+            k_1: field_to_u256(*scalars.next().unwrap()),
+            k_2: field_to_u256(*scalars.next().unwrap()),
+            k_3: field_to_u256(*scalars.next().unwrap()),
+            k_4: field_to_u256(*scalars.next().unwrap()),
+        }
+    }
+}
 
 #[cfg(test)]
 mod test {

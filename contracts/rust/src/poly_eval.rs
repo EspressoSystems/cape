@@ -105,7 +105,7 @@ async fn test_evaluate_lagrange_one_and_n() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_evaluate_pi() -> Result<()> {
+async fn test_evaluate_pi_poly() -> Result<()> {
     let mut rng = test_rng();
     let contract: TestPlonkVerifier<_> = deploy_contract().await?;
 

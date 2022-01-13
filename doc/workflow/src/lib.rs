@@ -3,6 +3,7 @@
 use ethers::prelude::*;
 use jf_aap::keys::UserPubKey;
 use jf_aap::structs::{AssetDefinition, FreezeFlag, Nullifier, RecordCommitment, RecordOpening};
+use jf_aap::TransactionNote::Transfer;
 use jf_aap::{MerkleCommitment, MerkleFrontier, NodeValue, TransactionNote};
 use std::collections::{HashMap, HashSet, LinkedList};
 
@@ -60,6 +61,7 @@ impl CapeBlock {
         recent_merkle_roots: &LinkedList<NodeValue>,
         burned_ros: Vec<RecordOpening>,
         contract_nullifiers: &mut HashSet<Nullifier>,
+        height: u64,
     ) -> (CapeBlock, Vec<RecordOpening>) {
         // In order to avoid race conditions between block submitters (relayers or wallets), the CAPE contract
         // discards invalid transactions but keeps the valid ones (instead of rejecting the full block).
@@ -78,6 +80,7 @@ impl CapeBlock {
             let merkle_root = txn.merkle_root();
             if recent_merkle_roots.contains(&merkle_root)
                 && CapeBlock::check_nullifiers_are_fresh(txn, contract_nullifiers)
+                && !CapeBlock::is_expired(txn, height)
                 && !is_burn_txn(txn)
             {
                 filtered_block.txns.push(txn.clone());
@@ -112,6 +115,13 @@ impl CapeBlock {
             )
         } else {
             (filtered_block, filtered_burn_ros)
+        }
+    }
+
+    fn is_expired(txn: &TransactionNote, height: u64) -> bool {
+        match txn {
+            Transfer(tx) => tx.aux_info.valid_until < height,
+            _ => true,
         }
     }
 
@@ -229,8 +239,12 @@ impl CapeContract {
         burned_ros: Vec<RecordOpening>,
     ) -> Result<(), NullifierRepeatedError> {
         // 1. verify the block, and insert its input nullifiers and output record commitments
-        let (new_block, new_burned_ros) =
-            new_block.validate(&self.recent_merkle_roots, burned_ros, &mut self.nullifiers);
+        let (new_block, new_burned_ros) = new_block.validate(
+            &self.recent_merkle_roots,
+            burned_ros,
+            &mut self.nullifiers,
+            self.height,
+        );
 
         // We allow empty blocks. See discussion https://github.com/SpectrumXYZ/cape/issues/156
         // Summary:

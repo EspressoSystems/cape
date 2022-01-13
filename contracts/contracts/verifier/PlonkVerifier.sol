@@ -271,7 +271,7 @@ contract PlonkVerifier is IPlonkVerifier {
             bases[2 * i + 1] = pcsInfos[i].openingProof;
             rBase = (rBase * r) % BN254.R_MOD;
         }
-        a1 = BN254.multiScalarMul(scalars, bases);
+        a1 = BN254.multiScalarMul(bases, scalars);
 
         // Compute B := B0 + r * B1 + ... + r^{m-1} * Bm
         rBase = 1;
@@ -302,7 +302,7 @@ contract PlonkVerifier is IPlonkVerifier {
         }
         scalars[idx] = BN254.negate(sumEvals);
         bases[idx] = BN254.P1();
-        b1 = BN254.negate(BN254.multiScalarMul(scalars, bases));
+        b1 = BN254.negate(BN254.multiScalarMul(bases, scalars));
 
         // Check e(A, [x]2) ?= e(B, [1]2)
         return BN254.pairingProd2(a1, _betaH, b1, BN254.P2());

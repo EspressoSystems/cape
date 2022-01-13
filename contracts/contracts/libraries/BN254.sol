@@ -136,12 +136,17 @@ library BN254 {
 
     /// @dev Multi-scalar Mulitiplication (MSM)
     /// @return r = \Prod{B_i^s_i} where {s_i} are `scalars` and {B_i} are `bases`
-    function multiScalarMul(uint256[] memory scalars, G1Point[] memory bases)
+    function multiScalarMul(G1Point[] memory bases, uint256[] memory scalars)
         internal
-        pure
+        view
         returns (G1Point memory r)
     {
-        // TODO: https://github.com/SpectrumXYZ/cape/issues/174
+        require(scalars.length == bases.length, "MSM error: length does not match");
+
+        r = scalarMul(bases[0], scalars[0]);
+        for (uint256 i = 1; i < scalars.length; i++) {
+            r = add(r, scalarMul(bases[i], scalars[i]));
+        }
     }
 
     /// @dev Compute f^-1 for f \in Fr scalar field

@@ -1,0 +1,60 @@
+name: Testnet Build
+
+on:
+  schedule:
+    - cron: '45 17 * * *' # run at 17:45 UTC
+
+jobs:
+  nightly:
+    name: Skeleton build for running tests against Rinkeby and Goerli testnets
+    strategy:
+      fail-fast: true
+    runs-on: self-hosted
+    container:
+      image: ghcr.io/spectrumxyz/nix:main
+      credentials:
+         username: ancient123
+         password: ${{ secrets.ORG_GITHUB_PAT }}
+      volumes:
+        - github_nix_251:/nix
+    steps:
+      - uses: styfle/cancel-workflow-action@0.9.1
+        name: Cancel Outdated Builds
+        with:
+          all_but_latest: true
+          access_token: ${{ github.token }}
+
+      - name: Install Tools
+        # git not installed by default
+        # alpine default tar is not compatible: https://stackoverflow.com/a/64187955
+        run: |
+          apk add --no-cache tar git
+
+      - uses: actions/checkout@v2
+        name: Checkout Repository
+
+      - name: Initialize Nix Shell
+        run: nix-shell --run "echo Init"
+
+      - name: Configure Git
+        run: |
+          git config --global url."https://ancient123:${{ secrets.ORG_GITHUB_PAT }}@github.com".insteadOf git://github.com
+          git config --global url."https://ancient123:${{ secrets.ORG_GITHUB_PAT }}@github.com".insteadOf ssh://git@github.com
+          git config --global url."https://dl.cloudsmith.io/${{ secrets.CLOUDSMITH_ENTITLEMENT }}/".insteadOf https://dl.cloudsmith.io/basic/
+
+      - name: Cache cargo
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git
+            target
+          # todo: add nix key, for example:  nix-instantiate shell.nix | sha256sum  | head -c 10
+          key: cape-v3-${{ hashFiles('Cargo.lock') }}
+
+      - name: Linting
+        run: nix-shell --run "prepend-timestamps lint-ci"
+
+      - name: Run Tests
+        run: nix-shell --run "prepend-timestamps cape-test-geth"

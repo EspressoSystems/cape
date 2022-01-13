@@ -167,7 +167,7 @@ contract PlonkVerifier is IPlonkVerifier {
         uint256 lagrangeOneEval,
         uint256 lagrangeNEval,
         uint256[2] memory alphaPowers
-    ) internal pure returns (uint256 res) {
+    ) internal view returns (uint256 res) {
         uint256 piEval = Poly.evaluatePiPoly(domain, publicInput, chal.zeta, vanishEval);
         // TODO: https://github.com/SpectrumXYZ/cape/issues/9
     }

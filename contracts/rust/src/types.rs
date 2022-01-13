@@ -48,6 +48,10 @@ abigen!(
     "../abi/contracts/mocks/TestPlonkVerifier.sol/TestPlonkVerifier/abi.json",
     event_derives(serde::Deserialize, serde::Serialize);
 
+    TestPolynomialEval,
+    "../abi/contracts/mocks/TestPolynomialEval.sol/TestPolynomialEval/abi.json",
+    event_derives(serde::Deserialize, serde::Serialize);
+
     CAPE,
     "../abi/contracts/CAPE.sol/CAPE/abi.json",
     event_derives(serde::Deserialize, serde::Serialize);

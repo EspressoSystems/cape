@@ -90,6 +90,12 @@ library BN254 {
         return G1Point(p.x, P_MOD - (p.y % P_MOD));
     }
 
+    // TODO: (alex) add test
+    /// @return res = -fr the negation of scalar field element.
+    function negate(uint256 fr) internal pure returns (uint256 res) {
+        return R_MOD - (fr % R_MOD);
+    }
+
     /// @return r the sum of two points of G1
     function add(G1Point memory p1, G1Point memory p2) internal view returns (G1Point memory r) {
         uint256[4] memory input;
@@ -126,6 +132,16 @@ library BN254 {
             }
         }
         require(success, "Bn254: scalar mul failed!");
+    }
+
+    /// @dev Multi-scalar Mulitiplication (MSM)
+    /// @return r = \Prod{B_i^s_i} where {s_i} are `scalars` and {B_i} are `bases`
+    function multiScalarMul(uint256[] memory scalars, G1Point[] memory bases)
+        internal
+        pure
+        returns (G1Point memory r)
+    {
+        // TODO: https://github.com/SpectrumXYZ/cape/issues/174
     }
 
     /// @dev Compute f^-1 for f \in Fr scalar field

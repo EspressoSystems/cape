@@ -180,6 +180,33 @@ impl From<EvalDomain> for Radix2EvaluationDomain<Fr> {
     }
 }
 
+impl From<Challenges> for jf_plonk::proof_system::structs::Challenges<Fr> {
+    fn from(chal_sol: Challenges) -> Self {
+        Self {
+            tau: Fr::zero(), // not used
+            alpha: u256_to_field(chal_sol.alpha),
+            beta: u256_to_field(chal_sol.beta),
+            gamma: u256_to_field(chal_sol.gamma),
+            zeta: u256_to_field(chal_sol.zeta),
+            v: u256_to_field(chal_sol.v),
+            u: u256_to_field(chal_sol.u),
+        }
+    }
+}
+
+impl From<jf_plonk::proof_system::structs::Challenges<Fr>> for Challenges {
+    fn from(chal: jf_plonk::proof_system::structs::Challenges<Fr>) -> Self {
+        Self {
+            alpha: field_to_u256(chal.alpha),
+            beta: field_to_u256(chal.beta),
+            gamma: field_to_u256(chal.gamma),
+            zeta: field_to_u256(chal.zeta),
+            v: field_to_u256(chal.v),
+            u: field_to_u256(chal.u),
+        }
+    }
+}
+
 /// a helper trait to help with fully-qualified generic into synatx:
 /// `x.generic_into::<DestType>();`
 /// This is particularly helpful in a chained `generic_into()` statements.

@@ -14,6 +14,7 @@ dirs = "4.0"
 # may switch to `ethers = "0.6.2"` in the future; keeping this for compatibility for now
 ethers = { git = "https://github.com/gakonst/ethers-rs", branch = "master" }
 <<<<<<< HEAD
+<<<<<<< HEAD
 jf-aap = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", rev = "eca7b7e85718c7770c24ad90dd34b8a07209a01b" }
 jf-primitives = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git" }
 key-set = { git = "ssh://git@github.com/SpectrumXYZ/key-set.git" }
@@ -21,6 +22,10 @@ key-set = { git = "ssh://git@github.com/SpectrumXYZ/key-set.git" }
 jf-aap = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git", branch = "plonk-verifier"}
 jf-primitives = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git", branch = "plonk-verifier"}
 >>>>>>> bf2d89c... pin plonk-verifier dev branch for upstreams
+=======
+jf-aap = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", branch = "plonk-verifier"}
+jf-primitives = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", branch = "plonk-verifier"}
+>>>>>>> 49e30ca... compute alpha powers
 lazy_static = "1.4.0"
 rand_chacha = { version = "0.3.1", features = ["serde1"] }
 serde = { version = "1.0.123", features = ["derive", "rc"] }

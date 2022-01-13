@@ -3134,6 +3134,7 @@ name = "jf-aap"
 version = "0.0.1"
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=eca7b7e85718c7770c24ad90dd34b8a07209a01b#eca7b7e85718c7770c24ad90dd34b8a07209a01b"
 =======
 source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier#40ad4f2dc376fd7f65e0bf611aaa8b63f9e93529"
@@ -3182,6 +3183,9 @@ name = "jf-aap"
 version = "0.0.1"
 source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?rev=2a40d01c938cdcc716071af5a0dc9b3242181c2c#2a40d01c938cdcc716071af5a0dc9b3242181c2c"
 >>>>>>> bf2d89c... pin plonk-verifier dev branch for upstreams
+=======
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#ae0d524067bb2cc4b361a17a0820d4ea20b5335b"
+>>>>>>> 49e30ca... compute alpha powers
 dependencies = [
  "anyhow",
  "ark-bls12-377",
@@ -3226,6 +3230,7 @@ name = "jf-plonk"
 version = "0.0.1"
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#9b678f5156ad48e0cad318056b3fd73a5188e02d"
 =======
 source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier#40ad4f2dc376fd7f65e0bf611aaa8b63f9e93529"
@@ -3233,6 +3238,9 @@ source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifi
 =======
 source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier#8ec5e6d3bb5dd81b745cc1de7042a4fa3467f2d3"
 >>>>>>> a25a242... Feat/impl additional transcript apis (#277)
+=======
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#ae0d524067bb2cc4b361a17a0820d4ea20b5335b"
+>>>>>>> 49e30ca... compute alpha powers
 dependencies = [
  "ark-bls12-377",
  "ark-bls12-381",
@@ -3306,6 +3314,7 @@ name = "jf-primitives"
 version = "0.0.1"
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#9b678f5156ad48e0cad318056b3fd73a5188e02d"
 =======
 source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier#40ad4f2dc376fd7f65e0bf611aaa8b63f9e93529"
@@ -3374,6 +3383,9 @@ source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifi
 =======
 source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier#8ec5e6d3bb5dd81b745cc1de7042a4fa3467f2d3"
 >>>>>>> a25a242... Feat/impl additional transcript apis (#277)
+=======
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#ae0d524067bb2cc4b361a17a0820d4ea20b5335b"
+>>>>>>> 49e30ca... compute alpha powers
 dependencies = [
  "ark-ec",
  "ark-ff",
@@ -3402,10 +3414,14 @@ dependencies = [
 name = "jf-rescue"
 version = "0.0.1"
 <<<<<<< HEAD
+<<<<<<< HEAD
 source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#9b678f5156ad48e0cad318056b3fd73a5188e02d"
 =======
 source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier#8ec5e6d3bb5dd81b745cc1de7042a4fa3467f2d3"
 >>>>>>> a25a242... Feat/impl additional transcript apis (#277)
+=======
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#ae0d524067bb2cc4b361a17a0820d4ea20b5335b"
+>>>>>>> 49e30ca... compute alpha powers
 dependencies = [
  "ark-bls12-377",
  "ark-bls12-381",
@@ -3435,6 +3451,7 @@ name = "jf-utils"
 version = "0.0.1"
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#9b678f5156ad48e0cad318056b3fd73a5188e02d"
 =======
 source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier#40ad4f2dc376fd7f65e0bf611aaa8b63f9e93529"
@@ -3442,6 +3459,9 @@ source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifi
 =======
 source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier#8ec5e6d3bb5dd81b745cc1de7042a4fa3467f2d3"
 >>>>>>> a25a242... Feat/impl additional transcript apis (#277)
+=======
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#ae0d524067bb2cc4b361a17a0820d4ea20b5335b"
+>>>>>>> 49e30ca... compute alpha powers
 dependencies = [
  "anyhow",
  "ark-ec",
@@ -3488,8 +3508,12 @@ source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?rev=2a40d01c938cdcc
 =======
 name = "jf-utils-derive"
 version = "0.1.0"
+<<<<<<< HEAD
 source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier#8ec5e6d3bb5dd81b745cc1de7042a4fa3467f2d3"
 >>>>>>> a25a242... Feat/impl additional transcript apis (#277)
+=======
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#ae0d524067bb2cc4b361a17a0820d4ea20b5335b"
+>>>>>>> 49e30ca... compute alpha powers
 dependencies = [
  "ark-serialize",
  "ark-std",
@@ -6622,10 +6646,14 @@ dependencies = [
 name = "zerok-macros"
 version = "0.1.0"
 <<<<<<< HEAD
+<<<<<<< HEAD
 source = "git+ssh://git@github.com/SpectrumXYZ/zerok-macros.git#0a9e9ca4ef8870bcd9a2373c00c4a697f704453a"
 =======
 source = "git+ssh://git@github.com/SpectrumXYZ/spectrum.git?branch=plonk-verifier#f66838b2a399d05586bfc12bbe9f96e89ff6a8fa"
 >>>>>>> bf2d89c... pin plonk-verifier dev branch for upstreams
+=======
+source = "git+ssh://git@github.com/SpectrumXYZ/spectrum.git?branch=plonk-verifier#0ae7d2bb3c5d41203cb2417fe42e306cbf523703"
+>>>>>>> 49e30ca... compute alpha powers
 dependencies = [
  "proc-macro2",
  "quote",
@@ -6637,7 +6665,7 @@ dependencies = [
 [[package]]
 name = "zerok_lib"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/spectrum.git?branch=plonk-verifier#f66838b2a399d05586bfc12bbe9f96e89ff6a8fa"
+source = "git+ssh://git@github.com/SpectrumXYZ/spectrum.git?branch=plonk-verifier#0ae7d2bb3c5d41203cb2417fe42e306cbf523703"
 dependencies = [
  "arbitrary",
  "ark-ff",

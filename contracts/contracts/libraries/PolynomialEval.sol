@@ -11,7 +11,7 @@ library PolynomialEval {
     }
 
     /// @dev Create a new Radix2EvalDomain with `domainSize` which should be power of 2.
-    /// @dev Will revert if domainSize is not among [2^15, 2^17]
+    /// @dev Will revert if domainSize is not among {2^15, 2^16, 2^17}
     function newEvalDomain(uint256 domainSize) internal pure returns (EvalDomain memory) {
         if (domainSize == 32768) {
             return
@@ -38,7 +38,7 @@ library PolynomialEval {
                     0x244cf010c43ca87237d8b00bf9dd50c4c01c7f086bd4e8c920e75251d96f0d22
                 );
         } else {
-            revert("Poly: size must in [2^15, 2^17]");
+            revert("Poly: size must in 2^{15,16,17}");
         }
     }
 

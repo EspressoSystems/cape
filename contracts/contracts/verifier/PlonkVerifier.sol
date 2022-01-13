@@ -52,7 +52,6 @@ contract PlonkVerifier is IPlonkVerifier {
 
     /// @dev Plonk IOP verifier challenges.
     struct Challenges {
-        uint256 tau;
         uint256 alpha;
         uint256 beta;
         uint256 gamma;
@@ -134,21 +133,18 @@ contract PlonkVerifier is IPlonkVerifier {
 
     // TODO: remove solhint disable
     /* solhint-disable */
-    // Compute alpha^2, alpha^3, ..., alpha^6
+    // Compute alpha^2, alpha^3,
     function _computeAlphaPowers(uint256 alpha)
         internal
         pure
-        returns (uint256[5] memory alphaPowers)
+        returns (uint256[2] memory alphaPowers)
     {
         // `alpha_bases` is unnecessary since it's just `vec![E::Fr::one()]` here
         // TODO: https://github.com/SpectrumXYZ/cape/issues/9
         uint256 alpha2;
         uint256 alpha3;
-        uint256 alpha4;
-        uint256 alpha5;
-        uint256 alpha6;
 
-        alphaPowers = [alpha2, alpha3, alpha4, alpha5, alpha6];
+        alphaPowers = [alpha2, alpha3];
     }
 
     function _computeChallenges(
@@ -170,7 +166,7 @@ contract PlonkVerifier is IPlonkVerifier {
         uint256 vanishEval,
         uint256 lagrangeOneEval,
         uint256 lagrangeNEval,
-        uint256[5] memory alphaPowers
+        uint256[2] memory alphaPowers
     ) internal pure returns (uint256 res) {
         uint256 piEval = Poly.evaluatePiPoly(domain, publicInput, chal.zeta, vanishEval);
         // TODO: https://github.com/SpectrumXYZ/cape/issues/9
@@ -186,7 +182,7 @@ contract PlonkVerifier is IPlonkVerifier {
         uint256 lagrangeOneEval,
         uint256 lagrangeNEval,
         PlonkProof memory proof,
-        uint256[5] memory alphaPowers
+        uint256[2] memory alphaPowers
     )
         internal
         pure
@@ -220,7 +216,7 @@ contract PlonkVerifier is IPlonkVerifier {
         )
     {
         // pre-compute alpha related values
-        uint256[5] memory alphaPowers = _computeAlphaPowers(chal.alpha);
+        uint256[2] memory alphaPowers = _computeAlphaPowers(chal.alpha);
 
         uint256 vanishEval = Poly.evaluateVanishingPoly(domain, chal.zeta);
         (uint256 lagrangeOneEval, uint256 lagrangeNEval) = Poly.evaluateLagrangeOneAndN(

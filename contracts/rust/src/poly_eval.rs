@@ -17,14 +17,13 @@ use ethers::{core::k256::ecdsa::SigningKey, prelude::U256};
 
 async fn deploy_contract(
 ) -> Result<TestPlonkVerifier<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>> {
-    let client = get_funded_deployer().await.unwrap();
+    let client = get_funded_deployer().await?;
     let contract = deploy(
         client.clone(),
         Path::new("../abi/contracts/mocks/TestPlonkVerifier.sol/TestPlonkVerifier"),
         (),
     )
-    .await
-    .unwrap();
+    .await?;
     Ok(TestPlonkVerifier::new(contract.address(), client))
 }
 
@@ -35,7 +34,7 @@ async fn test_vanishing_poly() -> Result<()> {
 
     for log_domain_size in 15..=17 {
         // rust side
-        let rust_domain = Radix2EvaluationDomain::<Fr>::new(1 << log_domain_size).unwrap();
+        let rust_domain = Radix2EvaluationDomain::<Fr>::new(2usize.pow(log_domain_size)).unwrap();
         let zeta = Fr::rand(&mut rng);
         let eval = rust_domain.evaluate_vanishing_polynomial(zeta);
 
@@ -45,8 +44,7 @@ async fn test_vanishing_poly() -> Result<()> {
         let ret = contract
             .test_evaluate_vanishing_poly(sol_domain, zeta_256)
             .call()
-            .await
-            .unwrap();
+            .await?;
 
         assert_eq!(eval, u256_to_field(ret));
     }
@@ -61,7 +59,7 @@ async fn test_evaluate_lagrange_one_and_n() -> Result<()> {
 
     for log_domain_size in 15..=17 {
         // rust side
-        let rust_domain = Radix2EvaluationDomain::<Fr>::new(1 << log_domain_size).unwrap();
+        let rust_domain = Radix2EvaluationDomain::<Fr>::new(2usize.pow(log_domain_size)).unwrap();
         let zeta = Fr::rand(&mut rng);
         let rust_zeta_n_minus_one = rust_domain.evaluate_vanishing_polynomial(zeta);
         let divisor = Fr::from(rust_domain.size() as u32) * (zeta - Fr::one());
@@ -75,16 +73,14 @@ async fn test_evaluate_lagrange_one_and_n() -> Result<()> {
         let sol_zeta_n_minus_one = contract
             .test_evaluate_vanishing_poly(sol_domain.clone(), zeta_256)
             .call()
-            .await
-            .unwrap();
+            .await?;
 
         assert_eq!(rust_zeta_n_minus_one, u256_to_field(sol_zeta_n_minus_one));
 
         let (sol_eval_1, sol_eval_n) = contract
             .test_evaluate_lagrange_one_and_n(sol_domain, zeta_256, sol_zeta_n_minus_one)
             .call()
-            .await
-            .unwrap();
+            .await?;
 
         assert_eq!(lagrange_1_eval, u256_to_field(sol_eval_1));
         assert_eq!(lagrange_n_eval, u256_to_field(sol_eval_n));
@@ -103,7 +99,8 @@ async fn test_evaluate_pi() -> Result<()> {
         let sol_pub_input: Vec<U256> = rust_pub_input.iter().map(|&x| field_to_u256(x)).collect();
 
         for log_domain_size in 15..=17 {
-            let rust_domain = Radix2EvaluationDomain::<Fr>::new(1 << log_domain_size).unwrap();
+            let rust_domain =
+                Radix2EvaluationDomain::<Fr>::new(2usize.pow(log_domain_size)).unwrap();
 
             // rust side
 
@@ -130,8 +127,7 @@ async fn test_evaluate_pi() -> Result<()> {
             let sol_zeta_n_minus_one = contract
                 .test_evaluate_vanishing_poly(sol_domain.clone(), zeta_256)
                 .call()
-                .await
-                .unwrap();
+                .await?;
 
             assert_eq!(rust_zeta_n_minus_one, u256_to_field(sol_zeta_n_minus_one));
 
@@ -142,8 +138,7 @@ async fn test_evaluate_pi() -> Result<()> {
                     sol_zeta_n_minus_one,
                 )
                 .call()
-                .await
-                .unwrap();
+                .await?;
 
             assert_eq!(lagrange_1_eval, u256_to_field(sol_eval_1));
             assert_eq!(lagrange_n_eval, u256_to_field(sol_eval_n));
@@ -156,8 +151,7 @@ async fn test_evaluate_pi() -> Result<()> {
                     sol_zeta_n_minus_one,
                 )
                 .call()
-                .await
-                .unwrap();
+                .await?;
 
             assert_eq!(rust_eval_pi, u256_to_field(sol_eval_pi));
         }

@@ -6,7 +6,7 @@ import {BN254} from "../libraries/BN254.sol";
 library PolynomialEval {
     /// @dev a Radix 2 Evaluation Domain
     struct EvalDomain {
-        uint256 logSize;
+        uint256 logSize; // log_2(self.size)
         uint256 size; // Size of the domain as a field element
         uint256 sizeInv; // Inverse of the size in the field
         uint256 groupGen; // A generator of the subgroup
@@ -54,51 +54,36 @@ library PolynomialEval {
     function evaluateVanishingPoly(EvalDomain memory self, uint256 zeta)
         internal
         pure
-        returns (uint256)
+        returns (uint256 res)
     {
         uint256 p = BN254.R_MOD;
-        if (zeta == 0) {
-            return (p - 1);
-        }
+        uint256 logSize;
 
-        uint256 res;
-        res = zeta;
-        assembly {
-            // repreating 15 times
-            res := mulmod(res, res, p)
-            res := mulmod(res, res, p)
-            res := mulmod(res, res, p)
-            res := mulmod(res, res, p)
-            res := mulmod(res, res, p)
-            res := mulmod(res, res, p)
-            res := mulmod(res, res, p)
-            res := mulmod(res, res, p)
-            res := mulmod(res, res, p)
-            res := mulmod(res, res, p)
-            res := mulmod(res, res, p)
-            res := mulmod(res, res, p)
-            res := mulmod(res, res, p)
-            res := mulmod(res, res, p)
-            res := mulmod(res, res, p)
-        }
-        if (self.logSize == 15) {} else if (self.logSize == 16) {
-            assembly {
-                res := mulmod(res, res, p)
-            }
-        } else if (self.logSize == 17) {
-            assembly {
-                res := mulmod(res, res, p)
-                res := mulmod(res, res, p)
-            }
+        if (self.logSize == 15 || self.logSize == 16 || self.logSize == 17) {
+            logSize = self.logSize;
         } else {
             revert("Poly: size not in 2^{15, 16, 17}");
         }
 
-        // since zeta != 0 we know that res is not 0
-        // so we can safely do a subtraction
-        res--;
-
-        return (res);
+        assembly {
+            switch zeta
+            case 0 {
+                res := sub(p, 1)
+            }
+            default {
+                res := zeta
+                for {
+                    let i := 0
+                } lt(i, logSize) {
+                    i := add(i, 1)
+                } {
+                    res := mulmod(res, res, p)
+                }
+                // since zeta != 0 we know that res is not 0
+                // so we can safely do a subtraction
+                res := sub(res, 1)
+            }
+        }
     }
 
     /// @dev Evaluate the first and the last lagrange polynomial at point `zeta` given the vanishing polynomial evaluation `vanish_eval`.

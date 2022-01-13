@@ -160,6 +160,9 @@ contract PlonkVerifier is IPlonkVerifier {
     }
 
     /// @dev Compute the constant term of the linearization polynomial
+    ///
+    /// r_plonk = PI - L1(x) * alpha^2 - alpha * \prod_i=1..m-1 (w_i + beta * sigma_i + gamma) * (w_m + gamma) * z(xw)
+    /// where m is the number of wire types.
     function _computeLinPolyConstantTerm(
         Poly.EvalDomain memory domain,
         Challenges memory chal,
@@ -172,7 +175,48 @@ contract PlonkVerifier is IPlonkVerifier {
         uint256[2] memory alphaPowers
     ) internal view returns (uint256 res) {
         uint256 piEval = Poly.evaluatePiPoly(domain, publicInput, chal.zeta, vanishEval);
-        // TODO: https://github.com/SpectrumXYZ/cape/issues/9
+        uint256 perm = _computeLinPolyConstantTermPermEval(chal, proof);
+        uint256 p = BN254.R_MOD;
+        uint256 alpha = chal.alpha;
+        uint256 alpha2 = alphaPowers[0];
+        uint256 alpha3 = alphaPowers[1];
+
+        assembly {
+            // PI - L1(x) * alpha^2
+            res := addmod(piEval, sub(p, mulmod(alpha2, lagrangeOneEval, p)), p)
+            // - alpha * \prod_i=1..m-1 (w_i + beta * sigma_i + gamma) * (w_m + gamma) * z(xw)
+            res := addmod(res, sub(p, mulmod(alpha, perm, p)), p)
+        }
+    }
+
+    // permutation term evaluation, (break out as a function to avoid "Stack too deep" error).
+    function _computeLinPolyConstantTermPermEval(Challenges memory chal, PlonkProof memory proof)
+        internal
+        view
+        returns (uint256 perm)
+    {
+        uint256 p = BN254.R_MOD;
+        uint256 w0 = proof.wireEval0;
+        uint256 w1 = proof.wireEval1;
+        uint256 w2 = proof.wireEval2;
+        uint256 w3 = proof.wireEval3;
+        uint256 w4 = proof.wireEval4;
+        uint256 sigma0 = proof.sigmaEval0;
+        uint256 sigma1 = proof.sigmaEval1;
+        uint256 sigma2 = proof.sigmaEval2;
+        uint256 sigma3 = proof.sigmaEval3;
+        uint256 permNextEval = proof.prodPermZetaOmegaEval;
+        uint256 beta = chal.beta;
+        uint256 gamma = chal.gamma;
+
+        assembly {
+            // (w_m + gamma) * z(xw) * \prod_i=1..m-1 (w_i + beta * sigma_i + gamma)
+            perm := mulmod(addmod(w4, gamma, p), permNextEval, p)
+            perm := mulmod(perm, addmod(addmod(w0, gamma, p), mulmod(beta, sigma0, p), p), p)
+            perm := mulmod(perm, addmod(addmod(w1, gamma, p), mulmod(beta, sigma1, p), p), p)
+            perm := mulmod(perm, addmod(addmod(w2, gamma, p), mulmod(beta, sigma2, p), p), p)
+            perm := mulmod(perm, addmod(addmod(w3, gamma, p), mulmod(beta, sigma3, p), p), p)
+        }
     }
 
     // Compute components in [E]1 and [F]1 used for PolyComm opening verification

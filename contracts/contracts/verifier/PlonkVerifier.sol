@@ -175,29 +175,6 @@ contract PlonkVerifier is IPlonkVerifier {
         // TODO: https://github.com/SpectrumXYZ/cape/issues/9
     }
 
-    // `aggregate_poly_commitments` in Jellyfish, but since we are not aggregating multiple,
-    // but rather preparing for `[F]1` from a single proof.
-    function _preparePolyCommitments(
-        Poly.EvalDomain memory domain,
-        VerifyingKey memory verifyingKey,
-        Challenges memory chal,
-        uint256 vanishEval,
-        uint256 lagrangeOneEval,
-        uint256 lagrangeNEval,
-        PlonkProof memory proof,
-        uint256[2] memory alphaPowers
-    )
-        internal
-        pure
-        returns (
-            uint256[] memory commScalars,
-            BN254.G1Point[] memory commBases,
-            uint256[] memory bufferVAndUvBasis
-        )
-    {
-        // TODO: https://github.com/SpectrumXYZ/cape/issues/9
-    }
-
     // Compute components in [E]1 and [F]1 used for PolyComm opening verification
     // Returned commitment is a generalization of `[F]1` described in Sec 8.4, step 10 of https://eprint.iacr.org/2019/953.pdf
     // Returned evaluation is the scalar in `[E]1` described in Sec 8.4, step 11 of https://eprint.iacr.org/2019/953.pdf
@@ -241,8 +218,24 @@ contract PlonkVerifier is IPlonkVerifier {
             alphaPowers
         );
 
-        uint256[] memory bufferVAndUvBasis;
         // TODO: implement `aggregate_poly_commitments` inline (otherwise would encounter "Stack Too Deep")
+        // `aggregate_poly_commitments()` in Jellyfish, but since we are not aggregating multiple,
+        // but rather preparing for `[F]1` from a single proof.
+        uint256[] memory commScalars;
+        BN254.G1Point[] memory commBases;
+        uint256[] memory bufferVAndUvBasis;
+
+        eval = _prepareEvaluations(linPolyConstant, proof, bufferVAndUvBasis);
+    }
+
+    // `aggregate_evaluations()` in Jellyfish, but since we are not aggregating multiple, but rather preparing `[E]1` from a single proof.
+    // The returned value is the scalar in `[E]1` described in Sec 8.4, step 11 of https://eprint.iacr.org/2019/953.pdf
+    function _prepareEvaluations(
+        uint256 linPolyConstant,
+        PlonkProof memory proof,
+        uint256[] memory bufferVAndUvBasis
+    ) internal pure returns (uint256 eval) {
+        // TODO: https://github.com/SpectrumXYZ/cape/issues/9
     }
 
     // Batchly verify multiple PCS opening proofs.

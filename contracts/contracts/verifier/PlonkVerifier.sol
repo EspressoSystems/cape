@@ -93,7 +93,7 @@ contract PlonkVerifier is IPlonkVerifier {
         uint256[] memory publicInput,
         PlonkProof memory proof,
         bytes memory extraTranscriptInitMsg
-    ) internal pure returns (PcsInfo memory res) {
+    ) internal view returns (PcsInfo memory res) {
         require(publicInput.length == verifyingKey.numInputs, "Plonk: wrong verifying key");
 
         Challenges memory chal = _computeChallenges(
@@ -167,7 +167,7 @@ contract PlonkVerifier is IPlonkVerifier {
         uint256 lagrangeOneEval,
         uint256 lagrangeNEval,
         uint256[2] memory alphaPowers
-    ) internal pure returns (uint256 res) {
+    ) internal view returns (uint256 res) {
         uint256 piEval = Poly.evaluatePiPoly(domain, publicInput, chal.zeta, vanishEval);
         // TODO: https://github.com/SpectrumXYZ/cape/issues/9
     }
@@ -208,7 +208,7 @@ contract PlonkVerifier is IPlonkVerifier {
         Challenges memory chal
     )
         internal
-        pure
+        view
         returns (
             uint256[] memory commScalars,
             BN254.G1Point[] memory commBases,
@@ -271,7 +271,7 @@ contract PlonkVerifier is IPlonkVerifier {
             bases[2 * i + 1] = pcsInfos[i].openingProof;
             rBase = (rBase * r) % BN254.R_MOD;
         }
-        a1 = BN254.multiScalarMul(scalars, bases);
+        a1 = BN254.multiScalarMul(bases, scalars);
 
         // Compute B := B0 + r * B1 + ... + r^{m-1} * Bm
         rBase = 1;
@@ -302,7 +302,7 @@ contract PlonkVerifier is IPlonkVerifier {
         }
         scalars[idx] = BN254.negate(sumEvals);
         bases[idx] = BN254.P1();
-        b1 = BN254.negate(BN254.multiScalarMul(scalars, bases));
+        b1 = BN254.negate(BN254.multiScalarMul(bases, scalars));
 
         // Check e(A, [x]2) ?= e(B, [1]2)
         return BN254.pairingProd2(a1, _betaH, b1, BN254.P2());

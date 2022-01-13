@@ -37,6 +37,7 @@ ark-serialize = "0.3.0"
 ark-ff = "0.3.0"
 ark-ec = "0.3.0"
 ark-ed-on-bn254 = { version = "0.3.0", default-features = false }
+ark-poly = "0.3.0"
 hex = "0.4.3"
 lazy_static = "1.4.0"
 tokio = { version = "1.5", features = ["macros", "rt-multi-thread"] }

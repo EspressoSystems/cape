@@ -4,7 +4,7 @@ use std::path::Path;
 use crate::{
     assertion::Matcher,
     ethereum::{deploy, get_funded_deployer},
-    types::{field_to_u256, u256_to_field, EvalDomain, TestPlonkVerifier},
+    types::{field_to_u256, u256_to_field, EvalDomain, TestPolynomialEval},
 };
 use anyhow::Result;
 use ark_bn254::Fr;
@@ -17,21 +17,21 @@ use ethers::prelude::{Http, Provider, SignerMiddleware, Wallet};
 use ethers::{core::k256::ecdsa::SigningKey, prelude::U256};
 
 async fn deploy_contract(
-) -> Result<TestPlonkVerifier<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>> {
+) -> Result<TestPolynomialEval<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>> {
     let client = get_funded_deployer().await?;
     let contract = deploy(
         client.clone(),
-        Path::new("../abi/contracts/mocks/TestPlonkVerifier.sol/TestPlonkVerifier"),
+        Path::new("../abi/contracts/mocks/TestPolynomialEval.sol/TestPolynomialEval"),
         (),
     )
     .await?;
-    Ok(TestPlonkVerifier::new(contract.address(), client))
+    Ok(TestPolynomialEval::new(contract.address(), client))
 }
 
 #[tokio::test]
 async fn test_vanishing_poly() -> Result<()> {
     let mut rng = test_rng();
-    let contract: TestPlonkVerifier<_> = deploy_contract().await?;
+    let contract = deploy_contract().await?;
 
     for log_domain_size in 15..=17 {
         // test case: 1 edge case of evaluate at zero, and 1 random case
@@ -46,7 +46,7 @@ async fn test_vanishing_poly() -> Result<()> {
             let sol_domain: EvalDomain = rust_domain.into();
             let zeta_256 = field_to_u256(zeta);
             let ret = contract
-                .test_evaluate_vanishing_poly(sol_domain, zeta_256)
+                .evaluate_vanishing_poly(sol_domain, zeta_256)
                 .call()
                 .await?;
 
@@ -56,7 +56,7 @@ async fn test_vanishing_poly() -> Result<()> {
 
     let wrong_domain = Radix2EvaluationDomain::<Fr>::new(2usize.pow(18)).unwrap();
     contract
-        .test_evaluate_vanishing_poly(wrong_domain.into(), field_to_u256(Fr::rand(&mut rng)))
+        .evaluate_vanishing_poly(wrong_domain.into(), field_to_u256(Fr::rand(&mut rng)))
         .call()
         .await
         .should_revert_with_message("Poly: size not in 2^{15, 16, 17}");
@@ -67,7 +67,7 @@ async fn test_vanishing_poly() -> Result<()> {
 #[tokio::test]
 async fn test_evaluate_lagrange_one_and_n() -> Result<()> {
     let mut rng = test_rng();
-    let contract: TestPlonkVerifier<_> = deploy_contract().await?;
+    let contract = deploy_contract().await?;
 
     for log_domain_size in 15..=17 {
         let test_zeta = vec![Fr::zero(), Fr::rand(&mut rng)];
@@ -85,14 +85,14 @@ async fn test_evaluate_lagrange_one_and_n() -> Result<()> {
             let sol_domain: EvalDomain = rust_domain.into();
             let zeta_256 = field_to_u256(zeta);
             let sol_zeta_n_minus_one = contract
-                .test_evaluate_vanishing_poly(sol_domain.clone(), zeta_256)
+                .evaluate_vanishing_poly(sol_domain.clone(), zeta_256)
                 .call()
                 .await?;
 
             assert_eq!(rust_zeta_n_minus_one, u256_to_field(sol_zeta_n_minus_one));
 
             let (sol_eval_1, sol_eval_n) = contract
-                .test_evaluate_lagrange_one_and_n(sol_domain, zeta_256, sol_zeta_n_minus_one)
+                .evaluate_lagrange_one_and_n(sol_domain, zeta_256, sol_zeta_n_minus_one)
                 .call()
                 .await?;
 
@@ -107,7 +107,7 @@ async fn test_evaluate_lagrange_one_and_n() -> Result<()> {
 #[tokio::test]
 async fn test_evaluate_pi_poly() -> Result<()> {
     let mut rng = test_rng();
-    let contract: TestPlonkVerifier<_> = deploy_contract().await?;
+    let contract = deploy_contract().await?;
 
     for pi_length in 0..5 {
         let rust_pub_input: Vec<Fr> = (0..pi_length).map(|_| Fr::rand(&mut rng)).collect();
@@ -140,18 +140,14 @@ async fn test_evaluate_pi_poly() -> Result<()> {
             let sol_domain: EvalDomain = rust_domain.into();
             let zeta_256 = field_to_u256(zeta);
             let sol_zeta_n_minus_one = contract
-                .test_evaluate_vanishing_poly(sol_domain.clone(), zeta_256)
+                .evaluate_vanishing_poly(sol_domain.clone(), zeta_256)
                 .call()
                 .await?;
 
             assert_eq!(rust_zeta_n_minus_one, u256_to_field(sol_zeta_n_minus_one));
 
             let (sol_eval_1, sol_eval_n) = contract
-                .test_evaluate_lagrange_one_and_n(
-                    sol_domain.clone(),
-                    zeta_256,
-                    sol_zeta_n_minus_one,
-                )
+                .evaluate_lagrange_one_and_n(sol_domain.clone(), zeta_256, sol_zeta_n_minus_one)
                 .call()
                 .await?;
 
@@ -159,7 +155,7 @@ async fn test_evaluate_pi_poly() -> Result<()> {
             assert_eq!(lagrange_n_eval, u256_to_field(sol_eval_n));
 
             let sol_eval_pi = contract
-                .test_evaluate_pi_poly(
+                .evaluate_pi_poly(
                     sol_domain,
                     sol_pub_input.clone(),
                     zeta_256,

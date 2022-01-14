@@ -1,8 +1,10 @@
 name: Testnet Build
 
 on:
-  schedule:
-    - cron: '45 17 * * *' # run at 17:45 UTC
+  # schedule:
+    # - cron: '45 17 * * *' # run at 17:45 UTC
+  push:
+    
 
 jobs:
   nightly:
@@ -53,8 +55,6 @@ jobs:
           # todo: add nix key, for example:  nix-instantiate shell.nix | sha256sum  | head -c 10
           key: cape-v3-${{ hashFiles('Cargo.lock') }}
 
-      - name: Linting
-        run: nix-shell --run "prepend-timestamps lint-ci"
-
-      - name: Run Tests
-        run: nix-shell --run "prepend-timestamps cape-test-geth"
+      # temp placeholder env vars
+      - name: Run Tests Against Goerli Testnet
+        run: GOERLI_MNEMONIC="midnight excess rocket horror isolate expand orchard gallery upset picnic hungry accuse" GOERLI_URL="https://goerli.infura.io/v3/b1c297e315394878bc159b5d10b202e1" nix-shell --run "hardhat test --network goerli"

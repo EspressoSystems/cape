@@ -171,51 +171,51 @@ contract PlonkVerifier is IPlonkVerifier {
         PlonkProof memory proof,
         uint256 vanishEval,
         uint256 lagrangeOneEval,
-        uint256 lagrangeNEval,
         uint256[2] memory alphaPowers
     ) internal view returns (uint256 res) {
         uint256 piEval = Poly.evaluatePiPoly(domain, publicInput, chal.zeta, vanishEval);
-        uint256 perm = _computeLinPolyConstantTermPermEval(chal, proof);
+        uint256 perm = _computeLinPolyConstantTermPartialPermEval(chal, proof);
         uint256 p = BN254.R_MOD;
-        uint256 alpha = chal.alpha;
-        uint256 alpha2 = alphaPowers[0];
-        uint256 alpha3 = alphaPowers[1];
 
         assembly {
-            // PI - L1(x) * alpha^2
+            let alpha := mload(chal)
+            let gamma := mload(add(chal, 0x40))
+            let alpha2 := mload(alphaPowers)
+            let w4 := mload(add(proof, 0x220))
+            let permNextEval := mload(add(proof, 0x2c0))
+
+            // \prod_i=1..m-1 (w_i + beta * sigma_i + gamma) * (w_m + gamma) * z(xw)
+            perm := mulmod(perm, mulmod(addmod(w4, gamma, p), permNextEval, p), p)
+            // PI - L1(x) * alpha^2 - alpha * \prod_i=1..m-1 (w_i + beta * sigma_i + gamma) * (w_m + gamma) * z(xw)
             res := addmod(piEval, sub(p, mulmod(alpha2, lagrangeOneEval, p)), p)
-            // - alpha * \prod_i=1..m-1 (w_i + beta * sigma_i + gamma) * (w_m + gamma) * z(xw)
             res := addmod(res, sub(p, mulmod(alpha, perm, p)), p)
         }
     }
 
-    // permutation term evaluation, (break out as a function to avoid "Stack too deep" error).
-    function _computeLinPolyConstantTermPermEval(Challenges memory chal, PlonkProof memory proof)
-        internal
-        view
-        returns (uint256 perm)
-    {
+    // partial permutation term evaluation, (break out as a function to avoid "Stack too deep" error).
+    function _computeLinPolyConstantTermPartialPermEval(
+        Challenges memory chal,
+        PlonkProof memory proof
+    ) internal view returns (uint256 perm) {
         uint256 p = BN254.R_MOD;
-        uint256 w0 = proof.wireEval0;
-        uint256 w1 = proof.wireEval1;
-        uint256 w2 = proof.wireEval2;
-        uint256 w3 = proof.wireEval3;
-        uint256 w4 = proof.wireEval4;
-        uint256 sigma0 = proof.sigmaEval0;
-        uint256 sigma1 = proof.sigmaEval1;
-        uint256 sigma2 = proof.sigmaEval2;
-        uint256 sigma3 = proof.sigmaEval3;
-        uint256 permNextEval = proof.prodPermZetaOmegaEval;
-        uint256 beta = chal.beta;
-        uint256 gamma = chal.gamma;
-
         assembly {
-            // (w_m + gamma) * z(xw) * \prod_i=1..m-1 (w_i + beta * sigma_i + gamma)
-            perm := mulmod(addmod(w4, gamma, p), permNextEval, p)
-            perm := mulmod(perm, addmod(addmod(w0, gamma, p), mulmod(beta, sigma0, p), p), p)
-            perm := mulmod(perm, addmod(addmod(w1, gamma, p), mulmod(beta, sigma1, p), p), p)
-            perm := mulmod(perm, addmod(addmod(w2, gamma, p), mulmod(beta, sigma2, p), p), p)
-            perm := mulmod(perm, addmod(addmod(w3, gamma, p), mulmod(beta, sigma3, p), p), p)
+            let w0 := mload(add(proof, 0x1a0))
+            let w1 := mload(add(proof, 0x1c0))
+            let w2 := mload(add(proof, 0x1e0))
+            let w3 := mload(add(proof, 0x200))
+            let sigma0 := mload(add(proof, 0x240))
+            let sigma1 := mload(add(proof, 0x260))
+            let sigma2 := mload(add(proof, 0x280))
+            let sigma3 := mload(add(proof, 0x2a0))
+            let beta := mload(add(chal, 0x20))
+            let gamma := mload(add(chal, 0x40))
+
+            // \prod_i=1..m-1 (w_i + beta * sigma_i + gamma)
+            perm := 1
+            perm := mulmod(perm, addmod(add(w0, gamma), mulmod(beta, sigma0, p), p), p)
+            perm := mulmod(perm, addmod(add(w1, gamma), mulmod(beta, sigma1, p), p), p)
+            perm := mulmod(perm, addmod(add(w2, gamma), mulmod(beta, sigma2, p), p), p)
+            perm := mulmod(perm, addmod(add(w3, gamma), mulmod(beta, sigma3, p), p), p)
         }
     }
 
@@ -258,15 +258,12 @@ contract PlonkVerifier is IPlonkVerifier {
             proof,
             vanishEval,
             lagrangeOneEval,
-            lagrangeNEval,
             alphaPowers
         );
 
         // TODO: implement `aggregate_poly_commitments` inline (otherwise would encounter "Stack Too Deep")
         // `aggregate_poly_commitments()` in Jellyfish, but since we are not aggregating multiple,
         // but rather preparing for `[F]1` from a single proof.
-        uint256[] memory commScalars;
-        BN254.G1Point[] memory commBases;
         uint256[] memory bufferVAndUvBasis;
 
         eval = _prepareEvaluations(linPolyConstant, proof, bufferVAndUvBasis);

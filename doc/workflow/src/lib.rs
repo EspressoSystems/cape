@@ -309,6 +309,9 @@ impl CapeContract {
         let (updated_mt_comm, updated_mt_frontier) =
             self.batch_insert_with_frontier(self.mt_frontier.clone(), &rc_to_be_inserted);
 
+        // Empty the list record commitments corresponding to pending deposits
+        self.pending_deposit_queue = vec![];
+
         // 4. update the blockchain state digest
         self.height += 1;
         self.merkle_commitment = updated_mt_comm;

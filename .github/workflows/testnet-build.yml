@@ -57,4 +57,6 @@ jobs:
 
       # temp placeholder env vars
       - name: Run Tests Against Goerli Testnet
-        run: GOERLI_MNEMONIC="midnight excess rocket horror isolate expand orchard gallery upset picnic hungry accuse" GOERLI_URL="https://goerli.infura.io/v3/b1c297e315394878bc159b5d10b202e1" nix-shell --run "hardhat test --network goerli"
+        run: | 
+          nix-shell --run "hardhat clean"
+          GOERLI_MNEMONIC="midnight excess rocket horror isolate expand orchard gallery upset picnic hungry accuse" GOERLI_URL="https://goerli.infura.io/v3/b1c297e315394878bc159b5d10b202e1" nix-shell --run "hardhat test --network goerli"

@@ -1,22 +1,23 @@
 // Copyright © 2021 Translucence Research, Inc. All rights reserved.
 
 use crate::routes::{
-    dispatch_url, dispatch_web_socket, RouteBinding, UrlSegmentType, UrlSegmentValue,
+    dispatch_url, dispatch_web_socket, RouteBinding, UrlSegmentType, UrlSegmentValue, Wallet,
 };
-use async_std::sync::{Arc, RwLock};
+use async_std::{
+    sync::{Arc, Mutex},
+    task::{spawn, JoinHandle},
+};
 use std::collections::hash_map::HashMap;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use structopt::StructOpt;
 use tide::StatusCode;
 use tide_websockets::{WebSocket, WebSocketConnection};
-//use zerok_lib::api::server;
+use zerok_lib::api::server;
 
 mod disco;
 mod ip;
 mod routes;
-
-//const STATE_SEED: [u8; 32] = [0x7au8; 32];
 
 #[derive(Debug, StructOpt)]
 #[structopt(
@@ -41,9 +42,7 @@ struct NodeOpt {
 
 /// Returns the project directory.
 fn project_path() -> PathBuf {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    println!("path {}", path.display());
-    path
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
 }
 
 /// Returns "<repo>/public/" where <repo> is
@@ -73,22 +72,10 @@ fn default_api_path() -> PathBuf {
 }
 
 #[derive(Clone)]
-struct Connection {
-    _id: String,
-    _wsc: WebSocketConnection,
-}
-
-#[derive(Clone)]
-struct DummyNode {
-    _node_state: u8,
-}
-
-#[derive(Clone)]
 pub struct WebState {
-    _connections: Arc<RwLock<HashMap<String, Connection>>>,
     web_path: PathBuf,
     api: toml::Value,
-    node: Arc<RwLock<DummyNode>>,
+    wallet: Arc<Mutex<Option<Wallet>>>,
 }
 
 async fn form_demonstration(req: tide::Request<WebState>) -> Result<tide::Body, tide::Error> {
@@ -143,10 +130,12 @@ fn parse_route(
                     "  Argument: {} as type {} and value: {} ",
                     pat_segment, segment_type, req_segment
                 ));
-                if let Some(value) = UrlSegmentValue::parse(req_segment, segment_type) {
+                let ptype =
+                    UrlSegmentType::from_str(segment_type).map_err(|err| err.to_string())?;
+                if let Some(value) = UrlSegmentValue::parse(ptype, req_segment) {
                     let rb = RouteBinding {
                         parameter: pat_segment.to_string(),
-                        ptype: UrlSegmentType::from_str(segment_type).unwrap(),
+                        ptype,
                         value,
                     };
                     bindings
@@ -249,45 +238,18 @@ fn add_form_demonstration(web_server: &mut tide::Server<WebState>) {
         .get(form_demonstration);
 }
 
-#[async_std::main]
-async fn main() -> Result<(), std::io::Error> {
-    tracing_subscriber::fmt().pretty().init();
-
-    // Initialize the web server.
-    //
-    // opt_web_path is the path to the web assets directory. If the path
-    // is empty, the default is constructed assuming Cargo is used to
-    // build the executable in the customary location.
-    //
-    // own_id is the identifier of this instance of the executable. The
-    // port the web server listens on is 50000, unless the
-    // PORT environment variable is set.
-
-    // Take the command line option for the web asset directory path
-    // provided it is not empty. Otherwise, construct the default from
-    // the executable path.
-    let opt_api_path = NodeOpt::from_args().api_path;
-    let opt_web_path = NodeOpt::from_args().web_path;
-    let web_path = if opt_web_path.is_empty() {
-        default_web_path()
-    } else {
-        PathBuf::from(opt_web_path)
-    };
-    let api_path = if opt_api_path.is_empty() {
-        default_api_path()
-    } else {
-        PathBuf::from(opt_api_path)
-    };
-    println!("Web path: {:?}", web_path);
+fn init_server(
+    api_path: PathBuf,
+    web_path: PathBuf,
+    port: u64,
+) -> std::io::Result<JoinHandle<std::io::Result<()>>> {
     let api = disco::load_messages(&api_path);
-    let dummy_node = Arc::new(RwLock::new(DummyNode { _node_state: 0 }));
     let mut web_server = tide::with_state(WebState {
-        _connections: Default::default(),
         web_path: web_path.clone(),
         api: api.clone(),
-        node: dummy_node.clone(),
+        wallet: Arc::new(Mutex::new(None)),
     });
-    //web_server.with(server::trace).with(server::add_error_body);
+    web_server.with(server::trace).with(server::add_error_body);
 
     // Define the routes handled by the web server.
     web_server.at("/public").serve_dir(web_path)?;
@@ -329,10 +291,228 @@ async fn main() -> Result<(), std::io::Error> {
             }
         });
     }
-    println!("6");
 
-    let port = std::env::var("PORT").unwrap_or_else(|_| (50000).to_string());
     let addr = format!("0.0.0.0:{}", port);
-    web_server.listen(addr).await?;
+    Ok(spawn(web_server.listen(addr)))
+}
+
+#[async_std::main]
+async fn main() -> Result<(), std::io::Error> {
+    tracing_subscriber::fmt().pretty().init();
+
+    // Initialize the web server.
+    //
+    // opt_web_path is the path to the web assets directory. If the path
+    // is empty, the default is constructed assuming Cargo is used to
+    // build the executable in the customary location.
+    //
+    // own_id is the identifier of this instance of the executable. The
+    // port the web server listens on is 60000, unless the
+    // PORT environment variable is set.
+
+    // Take the command line option for the web asset directory path
+    // provided it is not empty. Otherwise, construct the default from
+    // the executable path.
+    let opt_api_path = NodeOpt::from_args().api_path;
+    let opt_web_path = NodeOpt::from_args().web_path;
+    let web_path = if opt_web_path.is_empty() {
+        default_web_path()
+    } else {
+        PathBuf::from(opt_web_path)
+    };
+    let api_path = if opt_api_path.is_empty() {
+        default_api_path()
+    } else {
+        PathBuf::from(opt_api_path)
+    };
+    println!("Web path: {:?}", web_path);
+
+    // Use something different than the default Spectrum port (60000 vs 50000).
+    let port = std::env::var("PORT").unwrap_or_else(|_| String::from("60000"));
+    init_server(api_path, web_path, port.parse().unwrap())?.await?;
+
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use lazy_static::lazy_static;
+    use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
+    use serde::de::DeserializeOwned;
+    use std::convert::TryInto;
+    use surf::Url;
+    use tagged_base64::TaggedBase64;
+    use tempdir::TempDir;
+    use tracing_test::traced_test;
+    use zerok_lib::{api::client, wallet::hd::KeyTree};
+
+    lazy_static! {
+        static ref PORT: Arc<Mutex<u64>> = {
+            let port_offset = std::env::var("PORT").unwrap_or_else(|_| String::from("60000"));
+            Arc::new(Mutex::new(port_offset.parse().unwrap()))
+        };
+    }
+
+    async fn port() -> u64 {
+        let mut counter = PORT.lock().await;
+        let port = *counter;
+        *counter += 1;
+        port
+    }
+
+    fn random_mnemonic(rng: &mut ChaChaRng) -> String {
+        // TODO add an endpoint for generating random mnemonics
+        KeyTree::random(rng).unwrap().1
+    }
+
+    struct TestServer {
+        client: surf::Client,
+        temp_dir: TempDir,
+    }
+
+    impl TestServer {
+        async fn new() -> Self {
+            let port = port().await;
+
+            // Run a server in the background that is unique to this test. Note that the server task
+            // is leaked: tide does not provide any mechanism for graceful programmatic shutdown, so
+            // the server will continue running until the process is killed, even after the test
+            // ends. This is probably not so bad, since each test's server task should be idle once
+            // the test is over, and anyways I don't see a good way around it.
+            init_server(default_api_path(), default_web_path(), port).unwrap();
+
+            let client: surf::Client = surf::Config::new()
+                .set_base_url(Url::parse(&format!("http://localhost:{}", port)).unwrap())
+                .try_into()
+                .unwrap();
+            Self {
+                client: client.with(client::parse_error_body),
+                temp_dir: TempDir::new("test_cape_wallet").unwrap(),
+            }
+        }
+
+        async fn get<T: DeserializeOwned>(&self, path: &str) -> Result<T, surf::Error> {
+            let mut res = self.client.get(path).send().await?;
+            client::response_body(&mut res).await
+        }
+
+        fn path(&self) -> TaggedBase64 {
+            TaggedBase64::new(
+                "PATH",
+                self.temp_dir
+                    .path()
+                    .as_os_str()
+                    .to_str()
+                    .unwrap()
+                    .as_bytes(),
+            )
+            .unwrap()
+        }
+    }
+
+    #[async_std::test]
+    #[traced_test]
+    async fn test_newwallet() {
+        let server = TestServer::new().await;
+        let mut rng = ChaChaRng::from_seed([42u8; 32]);
+        let mnemonic = random_mnemonic(&mut rng);
+
+        // Should fail if the mnemonic is invalid.
+        server
+            .get::<()>(&format!(
+                "newwallet/invalid-mnemonic/path/{}",
+                server.path()
+            ))
+            .await
+            .expect_err("newwallet succeeded with an invalid mnemonic");
+        // Should fail if the path is invalid.
+        server
+            .get::<()>(&format!("newwallet/{}/path/invalid-path", mnemonic))
+            .await
+            .expect_err("newwallet succeeded with an invalid path");
+
+        server
+            .get::<()>(&format!("newwallet/{}/path/{}", mnemonic, server.path()))
+            .await
+            .unwrap();
+
+        // Should fail if the wallet already exists.
+        server
+            .get::<()>(&format!("newwallet/{}/path/{}", mnemonic, server.path()))
+            .await
+            .expect_err("newwallet succeeded when a wallet already existed");
+    }
+
+    #[async_std::test]
+    #[traced_test]
+    async fn test_openwallet() {
+        let server = TestServer::new().await;
+        let mut rng = ChaChaRng::from_seed([42u8; 32]);
+        let mnemonic = random_mnemonic(&mut rng);
+        println!("mnemonic: {}", mnemonic);
+
+        // Should fail if no wallet exists.
+        server
+            .get::<()>(&format!("openwallet/{}/path/{}", mnemonic, server.path()))
+            .await
+            .expect_err("openwallet succeeded when no wallet exists");
+
+        // Now create a wallet so we can open it.
+        server
+            .get::<()>(&format!("newwallet/{}/path/{}", mnemonic, server.path()))
+            .await
+            .unwrap();
+        server
+            .get::<()>(&format!("openwallet/{}/path/{}", mnemonic, server.path()))
+            .await
+            .unwrap();
+
+        // Should fail if the mnemonic is invalid.
+        server
+            .get::<()>(&format!(
+                "openwallet/invalid-mnemonic/path/{}",
+                server.path()
+            ))
+            .await
+            .expect_err("openwallet succeeded with an invalid mnemonic");
+        // Should fail if the mnemonic is incorrect.
+        server
+            .get::<()>(&format!(
+                "openwallet/{}/path/{}",
+                random_mnemonic(&mut rng),
+                server.path()
+            ))
+            .await
+            .expect_err("openwallet succeeded with the wrong mnemonic");
+        // Should fail if the path is invalid.
+        server
+            .get::<()>(&format!("openwallet/{}/path/invalid-path", mnemonic))
+            .await
+            .expect_err("openwallet succeeded with an invalid path");
+    }
+
+    #[async_std::test]
+    #[traced_test]
+    async fn test_closewallet() {
+        let server = TestServer::new().await;
+        let mut rng = ChaChaRng::from_seed([42u8; 32]);
+
+        // Should fail if a wallet is not already open.
+        server
+            .get::<()>("closewallet")
+            .await
+            .expect_err("closewallet succeeded without an open wallet");
+
+        // Now open a wallet and close it.
+        server
+            .get::<()>(&format!(
+                "newwallet/{}/path/{}",
+                random_mnemonic(&mut rng),
+                server.path()
+            ))
+            .await
+            .unwrap();
+        server.get::<()>("closewallet").await.unwrap();
+    }
 }

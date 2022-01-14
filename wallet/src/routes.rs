@@ -1,20 +1,33 @@
 // Copyright © 2021 Translucence Research, Inc. All rights reserved.
 
-use crate::routes::mime::Mime;
 use crate::WebState;
-use serde::Serialize;
+use async_std::sync::{Arc, Mutex};
+use jf_aap::{MerkleTree, TransactionVerifyingKey};
 use std::collections::HashMap;
 use std::fmt::Debug;
+use std::path::PathBuf;
 use std::str::FromStr;
 use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, EnumIter, EnumString};
 use tagged_base64::TaggedBase64;
-use tide::http::{content::Accept, mime};
 use tide::StatusCode;
-use tide::{Body, Request, Response};
 use tide_websockets::WebSocketConnection;
+use zerok_lib::{
+    api::server::response,
+    cape_ledger::CapeLedger,
+    state::{key_set::KeySet, VerifierKeySet, MERKLE_HEIGHT},
+    universal_params::UNIVERSAL_PARAM,
+    wallet,
+    wallet::{
+        loader::{Loader, LoaderMetadata},
+        testing::mocks::{MockCapeBackend, MockCapeNetwork, MockLedger},
+        WalletBackend, WalletError, WalletStorage,
+    },
+};
 
-#[derive(Debug, EnumString)]
+pub type Wallet = wallet::Wallet<'static, MockCapeBackend<'static, LoaderMetadata>, CapeLedger>;
+
+#[derive(Clone, Copy, Debug, EnumString)]
 pub enum UrlSegmentType {
     Boolean,
     Hexadecimal,
@@ -39,13 +52,13 @@ use UrlSegmentValue::*;
 
 #[allow(dead_code)]
 impl UrlSegmentValue {
-    pub fn parse(value: &str, ptype: &str) -> Option<Self> {
+    pub fn parse(ptype: UrlSegmentType, value: &str) -> Option<Self> {
         Some(match ptype {
-            "Boolean" => Boolean(value.parse::<bool>().ok()?),
-            "Hexadecimal" => Hexadecimal(u128::from_str_radix(value, 16).ok()?),
-            "Integer" => Integer(value.parse::<u128>().ok()?),
-            "TaggedBase64" => Identifier(TaggedBase64::parse(value).ok()?),
-            _ => panic!("Type specified in api.toml isn't supported: {}", ptype),
+            UrlSegmentType::Boolean => Boolean(value.parse::<bool>().ok()?),
+            UrlSegmentType::Hexadecimal => Hexadecimal(u128::from_str_radix(value, 16).ok()?),
+            UrlSegmentType::Integer => Integer(value.parse::<u128>().ok()?),
+            UrlSegmentType::TaggedBase64 => Identifier(TaggedBase64::parse(value).ok()?),
+            UrlSegmentType::Literal => Literal(String::from(value)),
         })
     }
 
@@ -79,6 +92,29 @@ impl UrlSegmentValue {
                 StatusCode::BadRequest,
                 format!("expected tagged base 64, got {:?}", self),
             ))
+        }
+    }
+
+    pub fn as_path(&self) -> Result<PathBuf, tide::Error> {
+        let tb64 = self.as_identifier()?;
+        if tb64.tag() == "PATH" {
+            Ok(PathBuf::from(std::str::from_utf8(&tb64.value())?))
+        } else {
+            Err(tide::Error::from_str(
+                StatusCode::BadRequest,
+                format!("expected tag PATH, got {}", tb64.tag()),
+            ))
+        }
+    }
+
+    pub fn as_string(&self) -> Result<String, tide::Error> {
+        match self {
+            Self::Literal(s) => Ok(String::from(s)),
+            Self::Identifier(tb64) => Ok(String::from(std::str::from_utf8(&tb64.value())?)),
+            _ => Err(tide::Error::from_str(
+                StatusCode::BadRequest,
+                format!("expected string, got {:?}", self),
+            )),
         }
     }
 }
@@ -136,93 +172,6 @@ pub fn check_api(api: toml::Value) -> bool {
     !missing_definition
 }
 
-// TODO !corbett Copied from zerok/zerok_lib/src/api.rs. Factor out a crate.
-
-pub fn best_response_type(
-    accept: &mut Option<Accept>,
-    available: &[Mime],
-) -> Result<Mime, tide::Error> {
-    match accept {
-        Some(accept) => {
-            // The Accept type has a `negotiate` method, but it doesn't properly handle
-            // wildcards. It handles * but not */* and basetype/*, because for content type
-            // proposals like */* and basetype/*, it looks for a literal match in `available`,
-            // it does not perform pattern matching. So, we implement negotiation ourselves.
-            //
-            // First sort by the weight parameter, which the Accept type does do correctly.
-            accept.sort();
-            // Go through each proposed content type, in the order specified by the client, and
-            // match them against our available types, respecting wildcards.
-            for proposed in accept.iter() {
-                if proposed.basetype() == "*" {
-                    // The only acceptable Accept value with a basetype of * is */*, therefore
-                    // this will match any available type.
-                    return Ok(available[0].clone());
-                } else if proposed.subtype() == "*" {
-                    // If the subtype is * but the basetype is not, look for a proposed type
-                    // with a matching basetype and any subtype.
-                    for mime in available {
-                        if mime.basetype() == proposed.basetype() {
-                            return Ok(mime.clone());
-                        }
-                    }
-                } else if available.contains(proposed) {
-                    // If neither part of the proposal is a wildcard, look for a literal match.
-                    return Ok((**proposed).clone());
-                }
-            }
-
-            if accept.wildcard() {
-                // If no proposals are available but a wildcard flag * was given, return any
-                // available content type.
-                Ok(available[0].clone())
-            } else {
-                Err(tide::Error::from_str(
-                    StatusCode::NotAcceptable,
-                    "No suitable Content-Type found",
-                ))
-            }
-        }
-        None => {
-            // If no content type is explicitly requested, default to the first available type.
-            Ok(available[0].clone())
-        }
-    }
-}
-
-fn respond_with<T: Serialize>(
-    accept: &mut Option<Accept>,
-    body: T,
-) -> Result<Response, tide::Error> {
-    let ty = best_response_type(accept, &[mime::JSON, mime::BYTE_STREAM])?;
-    if ty == mime::BYTE_STREAM {
-        let bytes = bincode::serialize(&body)?;
-        Ok(Response::builder(tide::StatusCode::Ok)
-            .body(bytes)
-            .content_type(mime::BYTE_STREAM)
-            .build())
-    } else if ty == mime::JSON {
-        Ok(Response::builder(tide::StatusCode::Ok)
-            .body(Body::from_json(&body)?)
-            .content_type(mime::JSON)
-            .build())
-    } else {
-        unreachable!()
-    }
-}
-
-/// Serialize the body of a response.
-///
-/// The Accept header of the request is used to determine the serialization format.
-///
-/// This function combined with the [add_error_body] middleware defines the server-side protocol
-/// for encoding zerok types in HTTP responses.
-pub fn response<T: Serialize, S>(req: &Request<S>, body: T) -> Result<Response, tide::Error> {
-    respond_with(&mut Accept::from_headers(req)?, body)
-}
-
-// End of functions copied from api.rs
-
 pub fn dummy_url_eval(
     route_pattern: &str,
     bindings: &HashMap<String, RouteBinding>,
@@ -250,6 +199,83 @@ pub fn dummy_url_eval(
         .build())
 }
 
+fn wallet_error(source: WalletError) -> tide::Error {
+    tide::Error::from_str(StatusCode::InternalServerError, source.to_string())
+}
+
+// Create a wallet (if !existing) or open an existing one.
+pub async fn init_wallet(
+    mnemonic: String,
+    path: Option<PathBuf>,
+    existing: bool,
+) -> Result<Wallet, tide::Error> {
+    let path = match path {
+        Some(path) => path,
+        None => {
+            let home = std::env::var("HOME").map_err(|_| {
+                tide::Error::from_str(
+                    StatusCode::InternalServerError,
+                    "HOME directory is not set. Please set the server's HOME directory, or specify \
+                    a different storage location using :path.",
+                )
+            })?;
+            let mut path = PathBuf::from(home);
+            path.push(".translucence/wallet");
+            path
+        }
+    };
+
+    let verif_crs = VerifierKeySet {
+        mint: TransactionVerifyingKey::Mint(
+            jf_aap::proof::mint::preprocess(&*UNIVERSAL_PARAM, MERKLE_HEIGHT)?.1,
+        ),
+        xfr: KeySet::new(
+            vec![TransactionVerifyingKey::Transfer(
+                jf_aap::proof::transfer::preprocess(&*UNIVERSAL_PARAM, 3, 3, MERKLE_HEIGHT)?.1,
+            )]
+            .into_iter(),
+        )
+        .unwrap(),
+        freeze: KeySet::new(
+            vec![TransactionVerifyingKey::Freeze(
+                jf_aap::proof::freeze::preprocess(&*UNIVERSAL_PARAM, 2, MERKLE_HEIGHT)?.1,
+            )]
+            .into_iter(),
+        )
+        .unwrap(),
+    };
+    //TODO replace this mock backend with a connection to a real backend when available.
+    let ledger = Arc::new(Mutex::new(MockLedger::new(MockCapeNetwork::new(
+        verif_crs,
+        MerkleTree::new(MERKLE_HEIGHT).unwrap(),
+        vec![],
+    ))));
+    let mut loader = Loader::from_mnemonic(mnemonic, true, path);
+    let mut backend = MockCapeBackend::new(ledger.clone(), &mut loader)?;
+
+    if backend.storage().await.exists() != existing {
+        return Err(tide::Error::from_str(
+            StatusCode::BadRequest,
+            if existing {
+                "cannot open wallet that does not exist"
+            } else {
+                "cannot create wallet that already exists"
+            },
+        ));
+    }
+
+    Wallet::new(backend).await.map_err(wallet_error)
+}
+
+fn require_wallet(wallet: &mut Option<Wallet>) -> Result<&mut Wallet, tide::Error> {
+    wallet.as_mut().ok_or_else(|| {
+        tide::Error::from_str(
+            StatusCode::BadRequest,
+            "you most open a wallet to use this endpoint",
+        )
+    })
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // Endpoints
 //
@@ -259,7 +285,45 @@ pub fn dummy_url_eval(
 // and building a Response object.
 //
 
-async fn closewallet(_bindings: &HashMap<String, RouteBinding>) -> Result<(), tide::Error> {
+pub async fn newwallet(
+    bindings: &HashMap<String, RouteBinding>,
+    wallet: &mut Option<Wallet>,
+) -> Result<(), tide::Error> {
+    let path = match bindings.get(":path") {
+        Some(binding) => Some(binding.value.as_path()?),
+        None => None,
+    };
+    let mnemonic = bindings[":mnemonic"].value.as_string()?;
+
+    // If we already have a wallet open, close it before opening a new one, otherwise we can end up
+    // with two wallets using the same file at the same time.
+    *wallet = None;
+
+    *wallet = Some(init_wallet(mnemonic, path, false).await?);
+    Ok(())
+}
+
+pub async fn openwallet(
+    bindings: &HashMap<String, RouteBinding>,
+    wallet: &mut Option<Wallet>,
+) -> Result<(), tide::Error> {
+    let path = match bindings.get(":path") {
+        Some(binding) => Some(binding.value.as_path()?),
+        None => None,
+    };
+    let mnemonic = bindings[":mnemonic"].value.as_string()?;
+
+    // If we already have a wallet open, close it before opening a new one, otherwise we can end up
+    // with two wallets using the same file at the same time.
+    *wallet = None;
+
+    *wallet = Some(init_wallet(mnemonic, path, true).await?);
+    Ok(())
+}
+
+async fn closewallet(wallet: &mut Option<Wallet>) -> Result<(), tide::Error> {
+    require_wallet(wallet)?;
+    *wallet = None;
     Ok(())
 }
 
@@ -272,11 +336,10 @@ pub async fn dispatch_url(
         .split_once('/')
         .unwrap_or((route_pattern, ""))
         .0;
+    let wallet = &mut *req.state().wallet.lock().await;
     let key = ApiRouteKey::from_str(first_segment).expect("Unknown route");
-    let query_service_guard = req.state().node.read().await;
-    let _query_service = &*query_service_guard;
     match key {
-        ApiRouteKey::closewallet => response(&req, closewallet(bindings).await?),
+        ApiRouteKey::closewallet => response(&req, closewallet(wallet).await?),
         ApiRouteKey::deposit => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::freeze => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::getaddress => dummy_url_eval(route_pattern, bindings),
@@ -286,8 +349,8 @@ pub async fn dispatch_url(
         ApiRouteKey::mint => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::newasset => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::newkey => dummy_url_eval(route_pattern, bindings),
-        ApiRouteKey::newwallet => dummy_url_eval(route_pattern, bindings),
-        ApiRouteKey::openwallet => dummy_url_eval(route_pattern, bindings),
+        ApiRouteKey::newwallet => response(&req, newwallet(bindings, wallet).await?),
+        ApiRouteKey::openwallet => response(&req, openwallet(bindings, wallet).await?),
         ApiRouteKey::send => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::trace => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::transaction => dummy_url_eval(route_pattern, bindings),

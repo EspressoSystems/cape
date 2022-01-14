@@ -28,7 +28,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
     using AccumulatingArray for AccumulatingArray.Data;
 
     bytes public constant CAPE_BURN_MAGIC_BYTES = "TRICAPE burn";
-    bytes public constant DOM_SEP_FOREIGN_ASSET = "FOREIGN_ASSET";
+    bytes13 public constant DOM_SEP_FOREIGN_ASSET = "FOREIGN_ASSET";
 
     event BlockCommitted(uint64 indexed height, bool[] includedNotes);
 
@@ -194,7 +194,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
     function _checkAssetCode(RecordOpening memory ro, address erc20Address) internal view {
         bytes memory description = _computeAssetDescription(erc20Address, msg.sender);
         bytes memory randomBytes = abi.encodePacked(
-            keccak256(abi.encodePacked(DOM_SEP_FOREIGN_ASSET, description))
+            keccak256(bytes.concat(DOM_SEP_FOREIGN_ASSET, description))
         );
         uint256 code = BN254.fromLeBytesModOrder(randomBytes);
         require(code == ro.assetDef.code, "Wrong asset code");
@@ -207,7 +207,8 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
         pure
         returns (bytes memory)
     {
-        return abi.encodePacked("TRICAPE ERC20", erc20Address, "sponsored by", sponsor);
+        return
+            bytes.concat("TRICAPE ERC20", bytes20(erc20Address), "sponsored by", bytes20(sponsor));
     }
 
     /// @notice submit a new block to the CAPE contract. Transactions are validated and the blockchain state is updated. Moreover burn transactions trigger the unwrapping of cape asset records into erc20 tokens.

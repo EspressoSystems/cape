@@ -186,10 +186,6 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
         _checkAssetCode(ro, erc20Address);
     }
 
-    function getSender() public view returns (address) {
-        return msg.sender;
-    }
-
     /// @dev requires "view" to access msg.sender
     function _checkAssetCode(RecordOpening memory ro, address erc20Address) internal view {
         bytes memory description = _computeAssetDescription(erc20Address, msg.sender);

@@ -856,8 +856,6 @@ mod tests {
             .await
             .should_revert_with_message("Wrong asset code");
 
-        let addr = contract.get_sender().call().await?;
-        println!("addr {}", addr);
         // Passes for correct record opening and erc20 address.
         contract
             .check_asset_code(ro.generic_into::<sol::RecordOpening>(), erc20_address)

@@ -141,6 +141,10 @@ impl Committable for CAPEBlock {
 impl Block for CAPEBlock {
     type Transaction = CAPETransaction;
 
+    fn add_transaction(&mut self, _txn: Self::Transaction) -> Result<(), ValidationError> {
+        unimplemented!()
+    }
+
     fn new(txns: Vec<CAPETransaction>) -> Self {
         Self(txns)
     }

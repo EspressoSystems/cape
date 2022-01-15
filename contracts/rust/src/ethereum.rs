@@ -3,9 +3,10 @@ use anyhow::Result;
 use async_recursion::async_recursion;
 use ethers::{
     abi::{Abi, Tokenize},
+    contract::Contract,
     core::k256::ecdsa::SigningKey,
     prelude::{
-        artifacts::BytecodeObject, coins_bip39::English, Address, Contract, ContractFactory, Http,
+        artifacts::BytecodeObject, coins_bip39::English, Address, ContractFactory, Http,
         LocalWallet, Middleware, MnemonicBuilder, Provider, Signer, SignerMiddleware,
         TransactionRequest, Wallet, U256,
     },

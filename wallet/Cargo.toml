@@ -40,7 +40,7 @@ tracing = "0.1.26"
 tracing-distributed = "0.3.1"
 tracing-futures = "0.2"
 tracing-subscriber = "0.2.19"
-zerok_lib = { git = "ssh://git@github.com/SpectrumXYZ/spectrum.git", rev = "b7a7565c2d26f09b6f563b580d92c2279dd7ec83", features = ["mocks"]}
+zerok_lib = { git = "ssh://git@github.com/SpectrumXYZ/spectrum.git", rev = "1a8ff9adc778a573859b78762369723f082c5666", features = ["mocks"]}
 
 [dev-dependencies]
 surf = "2.3.2"

@@ -337,15 +337,17 @@ async fn main() -> Result<(), std::io::Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use jf_aap::structs::AssetDefinition;
     use lazy_static::lazy_static;
     use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
+    use routes::WalletSummary;
     use serde::de::DeserializeOwned;
     use std::convert::TryInto;
     use surf::Url;
     use tagged_base64::TaggedBase64;
     use tempdir::TempDir;
     use tracing_test::traced_test;
-    use zerok_lib::{api::client, wallet::hd::KeyTree};
+    use zerok_lib::{api::client, txn_builder::AssetInfo, wallet::hd::KeyTree};
 
     lazy_static! {
         static ref PORT: Arc<Mutex<u64>> = {
@@ -514,5 +516,42 @@ mod tests {
             .await
             .unwrap();
         server.get::<()>("closewallet").await.unwrap();
+    }
+
+    #[async_std::test]
+    #[traced_test]
+    async fn test_getinfo() {
+        let server = TestServer::new().await;
+        let mut rng = ChaChaRng::from_seed([42u8; 32]);
+
+        // Should fail if a wallet is not already open.
+        server
+            .get::<WalletSummary>("getinfo")
+            .await
+            .expect_err("getinfo succeeded without an open wallet");
+
+        // Now open a wallet and call getinfo.
+        server
+            .get::<()>(&format!(
+                "newwallet/{}/path/{}",
+                random_mnemonic(&mut rng),
+                server.path()
+            ))
+            .await
+            .unwrap();
+        let info = server.get::<WalletSummary>("getinfo").await.unwrap();
+
+        // The info is not very interesting before we add any keys or assets, but that's for another
+        // endpoint.
+        assert_eq!(
+            info,
+            WalletSummary {
+                addresses: vec![],
+                spend_keys: vec![],
+                audit_keys: vec![],
+                freeze_keys: vec![],
+                assets: vec![AssetInfo::from(AssetDefinition::native())]
+            }
+        )
     }
 }

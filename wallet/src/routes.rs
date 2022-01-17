@@ -2,7 +2,12 @@
 
 use crate::WebState;
 use async_std::sync::{Arc, Mutex};
-use jf_aap::{MerkleTree, TransactionVerifyingKey};
+use jf_aap::{
+    keys::{AuditorPubKey, FreezerPubKey, UserPubKey},
+    structs::{AssetCode, AssetDefinition},
+    MerkleTree, TransactionVerifyingKey,
+};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::path::PathBuf;
@@ -13,9 +18,11 @@ use tagged_base64::TaggedBase64;
 use tide::StatusCode;
 use tide_websockets::WebSocketConnection;
 use zerok_lib::{
+    api,
     api::server::response,
     cape_ledger::CapeLedger,
     state::{key_set::KeySet, VerifierKeySet, MERKLE_HEIGHT},
+    txn_builder::AssetInfo,
     universal_params::UNIVERSAL_PARAM,
     wallet,
     wallet::{
@@ -327,6 +334,40 @@ async fn closewallet(wallet: &mut Option<Wallet>) -> Result<(), tide::Error> {
     Ok(())
 }
 
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct WalletSummary {
+    pub addresses: Vec<api::UserAddress>,
+    pub spend_keys: Vec<UserPubKey>,
+    pub audit_keys: Vec<AuditorPubKey>,
+    pub freeze_keys: Vec<FreezerPubKey>,
+    pub assets: Vec<AssetInfo>,
+}
+
+async fn getinfo(wallet: &mut Option<Wallet>) -> Result<WalletSummary, tide::Error> {
+    let wallet = require_wallet(wallet)?;
+
+    // There is always one asset we know about, even if we don't have any in our wallet: the native
+    // asset. Make sure this gets added to the list of known assets.
+    let mut assets = wallet.assets().await;
+    assets.insert(
+        AssetCode::native(),
+        AssetInfo::from(AssetDefinition::native()),
+    );
+
+    Ok(WalletSummary {
+        addresses: wallet
+            .pub_keys()
+            .await
+            .into_iter()
+            .map(|pub_key| api::UserAddress(pub_key.address()))
+            .collect(),
+        spend_keys: wallet.pub_keys().await,
+        audit_keys: wallet.auditor_pub_keys().await,
+        freeze_keys: wallet.freezer_pub_keys().await,
+        assets: assets.into_values().collect(),
+    })
+}
+
 pub async fn dispatch_url(
     req: tide::Request<WebState>,
     route_pattern: &str,
@@ -344,7 +385,7 @@ pub async fn dispatch_url(
         ApiRouteKey::freeze => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::getaddress => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::getbalance => dummy_url_eval(route_pattern, bindings),
-        ApiRouteKey::getinfo => dummy_url_eval(route_pattern, bindings),
+        ApiRouteKey::getinfo => response(&req, getinfo(wallet).await?),
         ApiRouteKey::importkey => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::mint => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::newasset => dummy_url_eval(route_pattern, bindings),

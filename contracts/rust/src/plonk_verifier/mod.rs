@@ -3,10 +3,11 @@ mod helpers;
 
 use crate::{
     ethereum::{deploy, get_funded_deployer},
+    plonk_verifier::helpers::get_poly_evals,
     types::{field_to_u256, u256_to_field, TestPlonkVerifier},
 };
 use anyhow::Result;
-use ark_bn254::Fr;
+use ark_bn254::{Bn254, Fr};
 use ark_ff::Field;
 use ark_poly::{EvaluationDomain, Radix2EvaluationDomain};
 use ark_std::{test_rng, One, UniformRand};
@@ -53,8 +54,9 @@ async fn test_compute_alpha_powers() -> Result<()> {
     Ok(())
 }
 
+// contains tests for interim functions
 #[tokio::test]
-async fn test_compute_lin_poly_constant_term() -> Result<()> {
+async fn test_prepare_pcs_info() -> Result<()> {
     let contract = deploy_contract().await?;
 
     for _ in 0..5 {
@@ -98,6 +100,7 @@ async fn test_compute_lin_poly_constant_term() -> Result<()> {
             &alpha_bases,
         )?;
 
+        // !! testing for `compute_lin_poly_constant_term()` !!
         let alpha_powers_sol: [U256; 2] = [
             field_to_u256(alpha_powers[0]),
             field_to_u256(alpha_powers[1]),
@@ -107,9 +110,9 @@ async fn test_compute_lin_poly_constant_term() -> Result<()> {
                 .compute_lin_poly_constant_term(
                     domain.into(),
                     challenges.into(),
-                    vk.into(),
+                    vk.clone().into(),
                     public_inputs.iter().map(|f| field_to_u256(*f)).collect(),
-                    proof.into(),
+                    proof.clone().into(),
                     field_to_u256(vanish_eval),
                     field_to_u256(lagrange_1_eval),
                     alpha_powers_sol,
@@ -117,6 +120,44 @@ async fn test_compute_lin_poly_constant_term() -> Result<()> {
                 .call()
                 .await?,
             field_to_u256(lin_poly_constant),
+        );
+
+        // build the (aggregated) polynomial commitment instance
+        let (_comm_scalars_and_bases, buffer_v_and_uv_basis) = verifier
+            .aggregate_poly_commitments(
+                &[&vk],
+                &challenges,
+                &vanish_eval,
+                &lagrange_1_eval,
+                &lagrange_n_eval,
+                &proof.clone().into(),
+                &alpha_powers,
+                &alpha_bases,
+            )?;
+        // TODO: @zhenfei should add tests against contract output here.
+
+        // build the (aggregated) polynomial evaluation instance
+        let mut buffer_v_and_uv_basis_sol: [U256; 10] = [U256::zero(); 10];
+        assert_eq!(buffer_v_and_uv_basis.len(), 10);
+        for i in 0..buffer_v_and_uv_basis.len() {
+            buffer_v_and_uv_basis_sol[i] = field_to_u256(buffer_v_and_uv_basis[i]);
+        }
+        let eval = Verifier::<Bn254>::aggregate_evaluations(
+            &lin_poly_constant,
+            &[get_poly_evals(proof.clone())],
+            &[None],
+            &buffer_v_and_uv_basis,
+        )?;
+        assert_eq!(
+            contract
+                .prepare_evaluations(
+                    field_to_u256(lin_poly_constant),
+                    proof.into(),
+                    buffer_v_and_uv_basis_sol,
+                )
+                .call()
+                .await?,
+            field_to_u256(eval)
         );
     }
     Ok(())

@@ -264,7 +264,7 @@ contract PlonkVerifier is IPlonkVerifier {
         // TODO: implement `aggregate_poly_commitments` inline (otherwise would encounter "Stack Too Deep")
         // `aggregate_poly_commitments()` in Jellyfish, but since we are not aggregating multiple,
         // but rather preparing for `[F]1` from a single proof.
-        uint256[] memory bufferVAndUvBasis;
+        uint256[10] memory bufferVAndUvBasis;
 
         eval = _prepareEvaluations(linPolyConstant, proof, bufferVAndUvBasis);
     }
@@ -274,9 +274,21 @@ contract PlonkVerifier is IPlonkVerifier {
     function _prepareEvaluations(
         uint256 linPolyConstant,
         PlonkProof memory proof,
-        uint256[] memory bufferVAndUvBasis
+        uint256[10] memory bufferVAndUvBasis
     ) internal pure returns (uint256 eval) {
-        // TODO: https://github.com/SpectrumXYZ/cape/issues/9
+        uint256 p = BN254.R_MOD;
+        assembly {
+            eval := sub(p, linPolyConstant)
+            for {
+                let i := 0
+            } lt(i, 10) {
+                i := add(i, 1)
+            } {
+                let combiner := mload(add(bufferVAndUvBasis, mul(i, 0x20)))
+                let termEval := mload(add(proof, add(0x1a0, mul(i, 0x20))))
+                eval := addmod(eval, mulmod(combiner, termEval, p), p)
+            }
+        }
     }
 
     // Batchly verify multiple PCS opening proofs.

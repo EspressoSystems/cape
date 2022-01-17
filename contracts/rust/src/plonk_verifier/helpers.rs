@@ -1,16 +1,17 @@
 use anyhow::Result;
-use ark_bn254::{Bn254, Fr};
+use ark_bn254::{Bn254, Fq, Fr};
 use ark_ff::PrimeField;
-use ark_std::test_rng;
+use ark_std::{convert::TryInto, test_rng};
 use itertools::izip;
 use jf_plonk::{
     circuit::{Arithmetization, Circuit, PlonkCircuit},
     proof_system::{
-        structs::{Proof, VerifyingKey},
+        structs::{Proof, ProofEvaluations, VerifyingKey},
         PlonkKzgSnark, Snark,
     },
     transcript::SolidityTranscript,
 };
+use jf_utils::fq_to_fr;
 
 /// return list of (proof, ver_key, public_input, extra_msg, domain_size)
 pub(crate) fn gen_plonk_proof_for_test(
@@ -122,4 +123,15 @@ fn gen_circuit_for_test<F: PrimeField>(m: usize, a0: usize) -> Result<PlonkCircu
     cs.finalize_for_arithmetization()?;
 
     Ok(cs)
+}
+
+// getter of polynomial evaluations of `proof`, since the fields visibility is not public
+pub(crate) fn get_poly_evals(proof: Proof<Bn254>) -> ProofEvaluations<Fr> {
+    const NUM_G1_POINT: usize = 13;
+    let mut scalars: Vec<Fq> = proof.into();
+    let poly_evals_scalars: Vec<Fr> = scalars
+        .drain((2 * NUM_G1_POINT)..)
+        .map(|fq| fq_to_fr::<Fq, ark_bn254::g1::Parameters>(&fq))
+        .collect();
+    poly_evals_scalars.try_into().unwrap()
 }

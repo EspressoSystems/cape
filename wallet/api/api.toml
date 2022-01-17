@@ -55,8 +55,9 @@ HEADING_DESCRIPTION = "Description"
 # TODO !corbett Better way to specify optional elements to avoid combinatorial explosion. See newasset for an example.
 
 [route.newwallet]
-PATH = ["newwallet/:mnemonic"]
-":mnemonic" = "TaggedBase64"
+PATH = ["newwallet/:mnemonic", "newwallet/:mnemonic/path/:path"]
+":path" = "TaggedBase64"
+":mnemonic" = "Literal"
 DOC = """
 Creates and opens a new the wallet with the given mnemonic.
 """
@@ -64,7 +65,7 @@ Creates and opens a new the wallet with the given mnemonic.
 [route.openwallet]
 PATH = ["openwallet/:mnemonic", "openwallet/:mnemonic/path/:path"]
 ":path" = "TaggedBase64"
-":mnemonic" = "String"
+":mnemonic" = "Literal"
 DOC = """
 Open the wallet from local storage with the given mnemonic and path.
 """

@@ -31,7 +31,7 @@ Block <i>b</i> is a list of transactions that contains <i>tx</i>.
 end note
 
 
-R -> CapeContract: submit_cape_block(b)
+R -> CapeContract: submit_cape_block(b,[])
 end group
 
 group Unwrapping: AAP record -> USDC token

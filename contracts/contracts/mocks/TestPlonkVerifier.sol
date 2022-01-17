@@ -36,4 +36,12 @@ contract TestPlonkVerifier is V {
                 alphaPowers
             );
     }
+
+    function prepareEvaluations(
+        uint256 linPolyConstant,
+        PlonkProof memory proof,
+        uint256[10] memory bufferVAndUvBasis
+    ) public pure returns (uint256 eval) {
+        return V._prepareEvaluations(linPolyConstant, proof, bufferVAndUvBasis);
+    }
 }

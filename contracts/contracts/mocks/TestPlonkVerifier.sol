@@ -44,4 +44,8 @@ contract TestPlonkVerifier is V {
     ) public pure returns (uint256 eval) {
         return V._prepareEvaluations(linPolyConstant, proof, bufferVAndUvBasis);
     }
+
+    function batchVerifyOpeningProofs(PcsInfo[] memory pcsInfos) public view returns (bool) {
+        return V._batchVerifyOpeningProofs(pcsInfos);
+    }
 }

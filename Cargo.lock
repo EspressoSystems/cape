@@ -3136,6 +3136,7 @@ version = "0.0.1"
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=eca7b7e85718c7770c24ad90dd34b8a07209a01b#eca7b7e85718c7770c24ad90dd34b8a07209a01b"
 =======
 source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier#40ad4f2dc376fd7f65e0bf611aaa8b63f9e93529"
@@ -3190,6 +3191,9 @@ source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-v
 =======
 source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#fee8dda6062c358c616521c2805c32847bcfd20f"
 >>>>>>> 30e1dc5... feat: add prepare_evaluations
+=======
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#6d98265d749adae416de62d86b13276869143e8d"
+>>>>>>> bd5a4f4... add batch opening proof verification
 dependencies = [
  "anyhow",
  "ark-bls12-377",
@@ -3236,6 +3240,7 @@ version = "0.0.1"
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#9b678f5156ad48e0cad318056b3fd73a5188e02d"
 =======
 source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier#40ad4f2dc376fd7f65e0bf611aaa8b63f9e93529"
@@ -3249,6 +3254,9 @@ source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-v
 =======
 source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#fee8dda6062c358c616521c2805c32847bcfd20f"
 >>>>>>> 30e1dc5... feat: add prepare_evaluations
+=======
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#6d98265d749adae416de62d86b13276869143e8d"
+>>>>>>> bd5a4f4... add batch opening proof verification
 dependencies = [
  "ark-bls12-377",
  "ark-bls12-381",
@@ -3320,6 +3328,7 @@ dependencies = [
 [[package]]
 name = "jf-primitives"
 version = "0.0.1"
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -3398,6 +3407,9 @@ source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-v
 =======
 source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#fee8dda6062c358c616521c2805c32847bcfd20f"
 >>>>>>> 30e1dc5... feat: add prepare_evaluations
+=======
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#6d98265d749adae416de62d86b13276869143e8d"
+>>>>>>> bd5a4f4... add batch opening proof verification
 dependencies = [
  "ark-ec",
  "ark-ff",
@@ -3428,6 +3440,7 @@ version = "0.0.1"
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#9b678f5156ad48e0cad318056b3fd73a5188e02d"
 =======
 source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier#8ec5e6d3bb5dd81b745cc1de7042a4fa3467f2d3"
@@ -3438,6 +3451,9 @@ source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-v
 =======
 source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#fee8dda6062c358c616521c2805c32847bcfd20f"
 >>>>>>> 30e1dc5... feat: add prepare_evaluations
+=======
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#6d98265d749adae416de62d86b13276869143e8d"
+>>>>>>> bd5a4f4... add batch opening proof verification
 dependencies = [
  "ark-bls12-377",
  "ark-bls12-381",
@@ -3469,6 +3485,7 @@ version = "0.0.1"
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#9b678f5156ad48e0cad318056b3fd73a5188e02d"
 =======
 source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier#40ad4f2dc376fd7f65e0bf611aaa8b63f9e93529"
@@ -3482,6 +3499,9 @@ source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-v
 =======
 source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#fee8dda6062c358c616521c2805c32847bcfd20f"
 >>>>>>> 30e1dc5... feat: add prepare_evaluations
+=======
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#6d98265d749adae416de62d86b13276869143e8d"
+>>>>>>> bd5a4f4... add batch opening proof verification
 dependencies = [
  "anyhow",
  "ark-ec",
@@ -3530,6 +3550,7 @@ name = "jf-utils-derive"
 version = "0.1.0"
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier#8ec5e6d3bb5dd81b745cc1de7042a4fa3467f2d3"
 >>>>>>> a25a242... Feat/impl additional transcript apis (#277)
 =======
@@ -3538,6 +3559,9 @@ source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-v
 =======
 source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#fee8dda6062c358c616521c2805c32847bcfd20f"
 >>>>>>> 30e1dc5... feat: add prepare_evaluations
+=======
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#6d98265d749adae416de62d86b13276869143e8d"
+>>>>>>> bd5a4f4... add batch opening proof verification
 dependencies = [
  "ark-serialize",
  "ark-std",

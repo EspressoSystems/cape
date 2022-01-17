@@ -13,8 +13,8 @@ cap-rust-sandbox = { path = "../contracts/rust" }
 dirs = "4.0"
 # may switch to `ethers = "0.6.2"` in the future; keeping this for compatibility for now
 ethers = { git = "https://github.com/gakonst/ethers-rs", branch = "master" }
-jf-aap = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git", branch = "plonk-verifier"}
-jf-primitives = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git", branch = "plonk-verifier"}
+jf-aap = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", branch = "plonk-verifier"}
+jf-primitives = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", branch = "plonk-verifier"}
 lazy_static = "1.4.0"
 rand_chacha = { version = "0.3.1", features = ["serde1"] }
 serde = { version = "1.0.123", features = ["derive", "rc"] }

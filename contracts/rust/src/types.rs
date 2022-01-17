@@ -798,6 +798,28 @@ impl From<jf_aap::VerifyingKey> for VerifyingKey {
     }
 }
 
+// TODO: remove this when PcsInfo visibility was changed back to private
+impl From<jf_plonk::proof_system::verifier::PcsInfo<Bn254>> for PcsInfo {
+    fn from(info: jf_plonk::proof_system::verifier::PcsInfo<Bn254>) -> Self {
+        let mut comm_scalars = vec![];
+        let mut comm_bases = vec![];
+        for (&base, &scalar) in info.comm_scalars_and_bases.base_scalar_map.iter() {
+            comm_scalars.push(field_to_u256(scalar));
+            comm_bases.push(base.into());
+        }
+        Self {
+            u: field_to_u256(info.u),
+            eval_point: field_to_u256(info.eval_point),
+            next_eval_point: field_to_u256(info.next_eval_point),
+            eval: field_to_u256(info.eval),
+            comm_scalars,
+            comm_bases,
+            opening_proof: info.opening_proof.0.into(),
+            shifted_opening_proof: info.shifted_opening_proof.0.into(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

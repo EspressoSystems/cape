@@ -4,6 +4,7 @@ mod helpers;
 use crate::{
     ethereum::{deploy, get_funded_deployer},
     plonk_verifier::helpers::get_poly_evals,
+    types::{self as sol, GenericInto},
     types::{field_to_u256, u256_to_field, TestPlonkVerifier},
 };
 use anyhow::Result;
@@ -13,7 +14,10 @@ use ark_poly::{EvaluationDomain, Radix2EvaluationDomain};
 use ark_std::{test_rng, One, UniformRand};
 use ethers::core::k256::ecdsa::SigningKey;
 use ethers::prelude::*;
-use jf_plonk::{proof_system::verifier::Verifier, transcript::SolidityTranscript};
+use jf_plonk::{
+    proof_system::verifier::{PcsInfo, Verifier},
+    transcript::SolidityTranscript,
+};
 use std::path::Path;
 
 use self::helpers::gen_plonk_proof_for_test;
@@ -158,6 +162,40 @@ async fn test_prepare_pcs_info() -> Result<()> {
                 .call()
                 .await?,
             field_to_u256(eval)
+        );
+    }
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_batch_verify_opening_proofs() -> Result<()> {
+    let contract = deploy_contract().await?;
+
+    for i in 1..4 {
+        let pcs_infos: Vec<PcsInfo<Bn254>> = gen_plonk_proof_for_test(i)?
+            .iter()
+            .map(|(proof, vk, pub_input, extra_msg, domain_size)| {
+                let verifier = Verifier::new(*domain_size).unwrap();
+                verifier
+                    .prepare_pcs_info::<SolidityTranscript>(
+                        &[vk],
+                        &[pub_input],
+                        &(*proof).clone().into(),
+                        extra_msg,
+                    )
+                    .unwrap()
+            })
+            .collect();
+        let pcs_infos_sol = pcs_infos
+            .iter()
+            .map(|info| info.clone().generic_into::<sol::PcsInfo>())
+            .collect();
+
+        assert!(
+            contract
+                .batch_verify_opening_proofs(pcs_infos_sol)
+                .call()
+                .await?
         );
     }
     Ok(())

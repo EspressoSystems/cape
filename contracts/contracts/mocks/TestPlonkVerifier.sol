@@ -36,4 +36,8 @@ contract TestPlonkVerifier is V {
                 alphaPowers
             );
     }
+
+    function batchVerifyOpeningProofs(PcsInfo[] memory pcsInfos) public view returns (bool) {
+        return V._batchVerifyOpeningProofs(pcsInfos);
+    }
 }

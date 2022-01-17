@@ -39,25 +39,33 @@ contract PlonkVerifier is IPlonkVerifier {
 
     /// @dev polynomial commitment evaluation info.
     struct PcsInfo {
-        uint256 u; // a random combiner that was used to combine evaluations at point
-        uint256 evalPoint; // the point to be evaluated at
-        uint256 nextEvalPoint; // the shifted point to be evaluated at
-        uint256 eval; // the polynomial evaluation value
+        // a random combiner that was used to combine evaluations at point
+        uint256 u; // 0x00
+        // the point to be evaluated at
+        uint256 evalPoint; // 0x20
+        // the shifted point to be evaluated at
+        uint256 nextEvalPoint; // 0x40
+        // the polynomial evaluation value
+        uint256 eval; // 0x60
         // TODO: deliberate on if two arrays is the best choice for `struct ScalarsAndBases` in JF.
-        uint256[] commScalars; // scalars of poly comm for MSM
-        BN254.G1Point[] commBases; // bases of poly comm for MSM
-        BN254.G1Point openingProof; // proof of evaluations at point `eval_point`
-        BN254.G1Point shiftedOpeningProof; // proof of evaluations at point `next_eval_point`
+        // scalars of poly comm for MSM
+        uint256[] commScalars; // 0x80
+        // bases of poly comm for MSM
+        BN254.G1Point[] commBases; // 0xa0
+        // proof of evaluations at point `eval_point`
+        BN254.G1Point openingProof; // 0xc0
+        // proof of evaluations at point `next_eval_point`
+        BN254.G1Point shiftedOpeningProof; // 0xe0
     }
 
     /// @dev Plonk IOP verifier challenges.
     struct Challenges {
-        uint256 alpha;
-        uint256 beta;
-        uint256 gamma;
-        uint256 zeta;
-        uint256 v;
-        uint256 u;
+        uint256 alpha; // 0x00
+        uint256 beta; // 0x20
+        uint256 gamma; // 0x40
+        uint256 zeta; // 0x60
+        uint256 v; // 0x80
+        uint256 u; // 0xa0
     }
 
     /// @dev Batch verify multiple TurboPlonk proofs.
@@ -75,9 +83,9 @@ contract PlonkVerifier is IPlonkVerifier {
         );
         require(proofs.length > 0, "Plonk: need at least 1 proof");
 
-        PcsInfo[] memory pcsInfo = new PcsInfo[](proofs.length);
+        PcsInfo[] memory pcsInfos = new PcsInfo[](proofs.length);
         for (uint256 i = 0; i < proofs.length; i++) {
-            pcsInfo[i] = _preparePcsInfo(
+            pcsInfos[i] = _preparePcsInfo(
                 verifyingKeys[i],
                 publicInputs[i],
                 proofs[i],
@@ -85,7 +93,7 @@ contract PlonkVerifier is IPlonkVerifier {
             );
         }
 
-        return false;
+        return _batchVerifyOpeningProofs(pcsInfos);
     }
 
     function _preparePcsInfo(
@@ -282,68 +290,194 @@ contract PlonkVerifier is IPlonkVerifier {
     // Batchly verify multiple PCS opening proofs.
     // `open_key` has been assembled from BN254.P1(), BN254.P2() and contract variable _betaH
     function _batchVerifyOpeningProofs(PcsInfo[] memory pcsInfos) internal view returns (bool) {
+        uint256 pcsLen = pcsInfos.length;
+        uint256 p = BN254.R_MOD;
         // Compute a pseudorandom challenge from the instances
-        uint256 r = 1;
-        if (pcsInfos.length > 1) {
+        uint256 r = 1; // for a single proof, no need to use `r` (`r=1` has no effect)
+        if (pcsLen > 1) {
             Transcript.TranscriptData memory transcript;
-            for (uint256 i = 0; i < pcsInfos.length; i++) {
+            for (uint256 i = 0; i < pcsLen; i++) {
                 transcript.appendChallenge(pcsInfos[i].u);
             }
             r = transcript.getAndAppendChallenge();
         }
 
-        uint256 rBase = 1;
-        BN254.G1Point[] memory g1Elems;
-        BN254.G2Point[] memory g2Elems;
         BN254.G1Point memory a1;
         BN254.G1Point memory b1;
 
         // Compute A := A0 + r * A1 + ... + r^{m-1} * Am
-        uint256 scalarsBasesLenA = 2 * pcsInfos.length;
-        uint256[] memory scalars = new uint256[](scalarsBasesLenA);
-        BN254.G1Point[] memory bases = new BN254.G1Point[](scalarsBasesLenA);
+        {
+            uint256[] memory scalars = new uint256[](2 * pcsLen);
+            BN254.G1Point[] memory bases = new BN254.G1Point[](2 * pcsLen);
+            uint256 rBase = 1;
+            for (uint256 i = 0; i < pcsLen; i++) {
+                scalars[2 * i] = rBase;
+                bases[2 * i] = pcsInfos[i].openingProof;
 
-        for (uint256 i = 0; i < pcsInfos.length; i++) {
-            scalars[2 * i] = rBase;
-            bases[2 * i + 1] = pcsInfos[i].openingProof;
-            rBase = (rBase * r) % BN254.R_MOD;
+                {
+                    uint256 tmp;
+                    uint256 u = pcsInfos[i].u;
+                    assembly {
+                        tmp := mulmod(rBase, u, p)
+                    }
+                    scalars[2 * i + 1] = tmp;
+                }
+                bases[2 * i + 1] = pcsInfos[i].shiftedOpeningProof;
+
+                assembly {
+                    rBase := mulmod(rBase, r, p)
+                }
+            }
+            a1 = BN254.multiScalarMul(bases, scalars);
         }
-        a1 = BN254.multiScalarMul(bases, scalars);
 
         // Compute B := B0 + r * B1 + ... + r^{m-1} * Bm
-        rBase = 1;
-        uint256 pcsInfoScalarsBasesLen = pcsInfos[0].commScalars.length;
-        uint256 scalarsBasesLenB = (2 + pcsInfoScalarsBasesLen) * pcsInfos.length + 1;
-        scalars = new uint256[](scalarsBasesLenB);
-        bases = new BN254.G1Point[](scalarsBasesLenB);
-        uint256 sumEvals = 0;
-        uint256 idx = 0;
+        {
 
-        for (uint256 i = 0; i < pcsInfos.length; i++) {
-            for (uint256 j = 0; j < pcsInfoScalarsBasesLen; j++) {
-                scalars[idx] = (rBase * pcsInfos[i].commScalars[j]) % BN254.R_MOD;
-                bases[idx] = pcsInfos[i].commBases[j];
-                idx += 1;
-            }
-
-            scalars[idx] = (rBase * pcsInfos[i].evalPoint) % BN254.R_MOD;
-            bases[idx] = pcsInfos[i].openingProof;
-            idx += 1;
-
-            scalars[idx] = (rBase * pcsInfos[i].u * pcsInfos[i].nextEvalPoint) % BN254.R_MOD;
-            bases[idx] = pcsInfos[i].shiftedOpeningProof;
-            idx += 1;
-
-            sumEvals = (sumEvals + rBase * pcsInfos[i].eval) % BN254.R_MOD;
-            rBase = (rBase * r) % BN254.R_MOD;
         }
-        scalars[idx] = BN254.negate(sumEvals);
-        bases[idx] = BN254.P1();
-        b1 = BN254.negate(BN254.multiScalarMul(bases, scalars));
+
+        b1 = _computePairingB1Term(pcsInfos, r);
 
         // Check e(A, [x]2) ?= e(B, [1]2)
         return BN254.pairingProd2(a1, _betaH, b1, BN254.P2());
     }
+
     // TODO: remove the next line
     /* solhint-disable */
+
+    function _computePairingB1Term(PcsInfo[] memory pcsInfos, uint256 combiner)
+        internal
+        view
+        returns (BN254.G1Point memory b1)
+    {
+        // uint256 pcsLen = pcsInfos.length;
+        uint256 p = BN254.R_MOD;
+
+        // Compute B := B0 + r * B1 + ... + r^{m-1} * Bm
+        uint256 pcsInfoScalarsBasesLen = pcsInfos[0].commScalars.length;
+        uint256 scalarsBasesLenB = (2 + pcsInfoScalarsBasesLen) * pcsInfos.length + 1;
+        uint256[] memory scalars = new uint256[](scalarsBasesLenB);
+        BN254.G1Point[] memory bases = new BN254.G1Point[](scalarsBasesLenB);
+        uint256 sumEvals = 0;
+        uint256 idx = 0;
+
+        // assembly {
+        //     // return memory position of `ith` slots in a dynamic array
+        //     function posInDynamicArray(pointer, ith) -> result {
+        //         result := add(pointer, add(0x20, mul(ith, 0x20)))
+        //     }
+
+        //     let rBase := 1
+
+        //     for {
+        //         let i := 0
+        //     } lt(i, pcsLen) {
+        //         i := add(i, 1)
+        //     } {
+        //         for {
+        //             let j := 0
+        //         } lt(j, pcsInfoScalarsBasesLen) {
+        //             j := add(j, 1)
+        //         } {
+        //             // scalars[idx] = (rBase * pcsInfos[i].commScalars[j]) % BN254.R_MOD;
+        //             let s := mload(posInDynamicArray(mload(posInDynamicArray(pcsInfos, i)), j))
+        //             mstore(posInDynamicArray(scalars, idx), mulmod(rBase, s, p))
+        //             // bases[idx] = pcsInfos[i].commBases[j];
+        //             mstore(
+        //                 posInDynamicArray(bases, idx),
+        //                 mload(posInDynamicArray(mload(posInDynamicArray(pcsInfos, i)), j))
+        //             )
+        //             // idx += 1;
+        //             idx := add(idx, 1)
+        //         }
+
+        //         // scalars[idx] = (rBase * pcsInfos[i].evalPoint) % BN254.R_MOD;
+        //         let evalPoint := mload(add(posInDynamicArray(pcsInfos, i), 0x20))
+        //         mstore(posInDynamicArray(scalars, idx), mulmod(rBase, evalPoint, p))
+        //         // bases[idx] = pcsInfos[i].openingProof;
+        //         mstore(
+        //             posInDynamicArray(bases, idx),
+        //             mload(add(posInDynamicArray(pcsInfos, i), 0xc0))
+        //         )
+        //         // idx += 1;
+        //         idx := add(idx, 1)
+
+        //         // scalars[idx] = (rBase * pcsInfos[i].u * pcsInfos[i].nextEvalPoint) % BN254.R_MOD;
+        //         let u := mload(posInDynamicArray(pcsInfos, i))
+        //         let nextEvalPoint := mload(add(posInDynamicArray(pcsInfos, i), 0x40))
+        //         mstore(
+        //             posInDynamicArray(scalars, idx),
+        //             mulmod(rBase, mulmod(u, nextEvalPoint, p), p)
+        //         )
+        //         // bases[idx] = pcsInfos[i].shiftedOpeningProof;
+        //         mstore(
+        //             posInDynamicArray(bases, idx),
+        //             mload(add(posInDynamicArray(pcsInfos, i), 0xe0))
+        //         )
+        //         // idx += 1;
+        //         idx := add(idx, 1)
+
+        //         // sumEvals = (sumEvals + rBase * pcsInfos[i].eval) % BN254.R_MOD;
+        //         let eval := mload(add(posInDynamicArray(pcsInfos, i), 0x60))
+        //         sumEvals := addmod(sumEvals, mulmod(rBase, eval, p), p)
+        //         // rBase = (rBase * r) % BN254.R_MOD;
+        //         rBase := mulmod(rBase, combiner, p)
+        //     }
+        // }
+
+        uint256 rBase = 1;
+        for (uint256 i = 0; i < pcsInfos.length; i++) {
+            for (uint256 j = 0; j < pcsInfoScalarsBasesLen; j++) {
+                {
+                    // scalars[idx] = (rBase * pcsInfos[i].commScalars[j]) % BN254.R_MOD;
+                    uint256 s = pcsInfos[i].commScalars[j];
+                    uint256 tmp;
+                    assembly {
+                        tmp := mulmod(rBase, s, p)
+                    }
+                    scalars[idx] = tmp;
+                }
+                bases[idx] = pcsInfos[i].commBases[j];
+                idx += 1;
+            }
+
+            {
+                // scalars[idx] = (rBase * pcsInfos[i].evalPoint) % BN254.R_MOD;
+                uint256 evalPoint = pcsInfos[i].evalPoint;
+                uint256 tmp;
+                assembly {
+                    tmp := mulmod(rBase, evalPoint, p)
+                }
+                scalars[idx] = tmp;
+            }
+            bases[idx] = pcsInfos[i].openingProof;
+            idx += 1;
+
+            {
+                // scalars[idx] = (rBase * pcsInfos[i].u * pcsInfos[i].nextEvalPoint) % BN254.R_MOD;
+                uint256 u = pcsInfos[i].u;
+                uint256 nextEvalPoint = pcsInfos[i].nextEvalPoint;
+                uint256 tmp;
+                assembly {
+                    tmp := mulmod(rBase, mulmod(u, nextEvalPoint, p), p)
+                }
+                scalars[idx] = tmp;
+            }
+            bases[idx] = pcsInfos[i].shiftedOpeningProof;
+            idx += 1;
+
+            {
+                // sumEvals = (sumEvals + rBase * pcsInfos[i].eval) % BN254.R_MOD;
+                // rBase = (rBase * combiner) % BN254.R_MOD;
+                uint256 eval = pcsInfos[i].eval;
+                assembly {
+                    sumEvals := addmod(sumEvals, mulmod(rBase, eval, p), p)
+                    rBase := mulmod(rBase, combiner, p)
+                }
+            }
+        }
+        scalars[idx] = BN254.negate(sumEvals);
+        bases[idx] = BN254.P1();
+        b1 = BN254.negate(BN254.multiScalarMul(bases, scalars));
+    }
 }

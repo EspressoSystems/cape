@@ -3180,7 +3180,7 @@ checksum = "1aab8fc367588b89dcee83ab0fd66b72b50b72fa1904d7095045ace2b0c81c35"
 [[package]]
 name = "jf-aap"
 version = "0.0.1"
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#ae0d524067bb2cc4b361a17a0820d4ea20b5335b"
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#d50566cdbec8f376721b02a8220f55d8b7387224"
 dependencies = [
  "anyhow",
  "ark-bls12-377",
@@ -3220,7 +3220,7 @@ dependencies = [
 [[package]]
 name = "jf-plonk"
 version = "0.0.1"
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#ae0d524067bb2cc4b361a17a0820d4ea20b5335b"
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#d50566cdbec8f376721b02a8220f55d8b7387224"
 dependencies = [
  "ark-bls12-377",
  "ark-bls12-381",
@@ -3251,7 +3251,7 @@ dependencies = [
 [[package]]
 name = "jf-primitives"
 version = "0.0.1"
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#ae0d524067bb2cc4b361a17a0820d4ea20b5335b"
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#d50566cdbec8f376721b02a8220f55d8b7387224"
 dependencies = [
  "ark-ec",
  "ark-ff",
@@ -3274,7 +3274,7 @@ dependencies = [
 [[package]]
 name = "jf-rescue"
 version = "0.0.1"
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#ae0d524067bb2cc4b361a17a0820d4ea20b5335b"
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#d50566cdbec8f376721b02a8220f55d8b7387224"
 dependencies = [
  "ark-bls12-377",
  "ark-bls12-381",
@@ -3302,7 +3302,7 @@ dependencies = [
 [[package]]
 name = "jf-utils"
 version = "0.0.1"
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#ae0d524067bb2cc4b361a17a0820d4ea20b5335b"
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#d50566cdbec8f376721b02a8220f55d8b7387224"
 dependencies = [
  "anyhow",
  "ark-ec",
@@ -3319,7 +3319,7 @@ dependencies = [
 [[package]]
 name = "jf-utils-derive"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#ae0d524067bb2cc4b361a17a0820d4ea20b5335b"
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#d50566cdbec8f376721b02a8220f55d8b7387224"
 dependencies = [
  "ark-serialize",
  "ark-std",

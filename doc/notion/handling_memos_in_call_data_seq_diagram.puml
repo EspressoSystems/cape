@@ -1,0 +1,16 @@
+@startuml
+autonumber
+participant "CapeContract" as C
+participant "Ethereum Query Service" as EQS
+participant "Wallet A" as W_A
+participant "All wallets" as W_B
+
+W_B -> EQS: subscribe
+W_A -> W_A: build transaction <i>tx<i> and assemble block <i>b</i>
+W_A -> C: <i>b</i>
+C -> EQS: "new block <i>b</i> produced"
+EQS ->EQS: check signature sig_i for each (tx_i,memos_i)_i
+EQS -> W_B: block content <i>b:=(b_id,[(tx_i,sig_i,memos_i,is_memos_validation_successful_i)]_i,,...)</i>
+W_B -> W_B: <b>for</b> each memo in memos: \n \t try to decrypt \n  \t\t <b>on success</b>: \n \t\t\t Build <i>merkle path</i> \n \t\t\t Store <i>(merkle_path, record opening)</i>
+W_B -> W_B: update all merkle paths with new record commitments the block
+@enduml

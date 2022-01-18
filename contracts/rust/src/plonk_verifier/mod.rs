@@ -3,7 +3,7 @@ mod helpers;
 mod poly_eval;
 
 use self::helpers::gen_plonk_proof_for_test;
-use crate::types::GenericInto;
+use crate::types::{u256_to_field, GenericInto};
 use crate::{
     ethereum::{deploy, get_funded_deployer},
     plonk_verifier::helpers::get_poly_evals,
@@ -11,10 +11,11 @@ use crate::{
     types::{field_to_u256, TestPlonkVerifier},
 };
 use anyhow::Result;
-use ark_bn254::{Bn254, Fq, Fr};
+use ark_bn254::{Bn254, Fq, Fr, G1Affine};
 use ark_ec::ProjectiveCurve;
 use ark_ff::Field;
 use ark_poly::{EvaluationDomain, Radix2EvaluationDomain};
+use ark_std::Zero;
 use ark_std::{test_rng, One, UniformRand};
 use ethers::core::k256::ecdsa::SigningKey;
 use ethers::prelude::*;
@@ -100,7 +101,7 @@ async fn test_prepare_pcs_info() -> Result<()> {
                     challenges.into(),
                     public_inputs.iter().map(|f| field_to_u256(*f)).collect(),
                     proof.clone().into(),
-                    eval_data
+                    eval_data.clone()
                 )
                 .call()
                 .await?,
@@ -108,18 +109,55 @@ async fn test_prepare_pcs_info() -> Result<()> {
         );
 
         // build the (aggregated) polynomial commitment instance
-        let (_comm_scalars_and_bases, buffer_v_and_uv_basis) = verifier
-            .aggregate_poly_commitments(
-                &[&vk],
-                &challenges,
-                &vanish_eval,
-                &lagrange_1_eval,
-                &lagrange_n_eval,
-                &proof.clone().into(),
-                &alpha_powers,
-                &alpha_bases,
-            )?;
-        // TODO: @zhenfei should add tests against contract output here.
+        let (comm_scalars_and_bases, buffer_v_and_uv_basis) = verifier.aggregate_poly_commitments(
+            &[&vk],
+            &challenges,
+            &vanish_eval,
+            &lagrange_1_eval,
+            &lagrange_n_eval,
+            &proof.clone().into(),
+            &alpha_powers,
+            &alpha_bases,
+        )?;
+        let _rust_msm_result = comm_scalars_and_bases.multi_scalar_mul().into_affine();
+        // TODO: remove
+        // for (i, (b, s)) in comm_scalars_and_bases.base_scalar_map.iter().enumerate() {
+        //     println!("{} {} {}", i, b.x, s);
+        // }
+        // println!();
+
+        let (bases, scalars) = contract
+            .linearization_scalars_and_bases(
+                vk.into(),
+                challenges.into(),
+                eval_data,
+                proof.clone().into(),
+            )
+            .call()
+            .await?;
+
+        // TODO: remove
+        // for (i, (b, s)) in bases.iter().zip(scalars.iter()).enumerate() {
+        //     println!("{} {:x} {:x}", i, b.x, s);
+        // }
+        let hash_map = comm_scalars_and_bases.base_scalar_map;
+        for (b, s) in bases.iter().zip(scalars.iter()).skip(1) {
+            // FIXME: the first base-scalar pair is incorrect
+            // since we have not yet implemented the function to
+            // include u and uv bases
+            let base = G1Affine::from(b.clone());
+            if !base.is_zero() {
+                assert!(hash_map.get(&base).is_some());
+                assert_eq!(*hash_map.get(&base).unwrap(), u256_to_field::<Fr>(*s));
+            }
+        }
+
+        let _ether_msm_res = contract.multi_scalar_mul(bases, scalars).call().await?;
+
+        // FIXME: currently bases and scalars do not have the u and uv info
+        // this following tests will not pass, will be fixed in a separate MR
+        // assert_eq!(ether_msm_res.x, field_to_u256(rust_msm_result.x));
+        // assert_eq!(ether_msm_res.y, field_to_u256(rust_msm_result.y));
 
         // build the (aggregated) polynomial evaluation instance
         let mut buffer_v_and_uv_basis_sol: [U256; 10] = [U256::zero(); 10];

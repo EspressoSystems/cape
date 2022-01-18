@@ -203,49 +203,48 @@ contract PlonkVerifier is IPlonkVerifier {
         Poly.EvalData memory evalData
     ) internal view returns (uint256 res) {
         uint256 piEval = Poly.evaluatePiPoly(domain, publicInput, chal.zeta, evalData.vanishEval);
-        uint256 perm = _computeLinPolyConstantTermPartialPermEval(chal, proof);
         uint256 p = BN254.R_MOD;
         uint256 lagrangeOneEval = evalData.lagrangeOne;
+        uint256 perm = 1;
 
         assembly {
-            let alpha := mload(chal)
-            let gamma := mload(add(chal, 0x80))
-            let alpha2 := mload(add(chal, 0x20))
-            let w4 := mload(add(proof, 0x220))
-            let permNextEval := mload(add(proof, 0x2c0))
-
-            // \prod_i=1..m-1 (w_i + beta * sigma_i + gamma) * (w_m + gamma) * z(xw)
-            perm := mulmod(perm, mulmod(addmod(w4, gamma, p), permNextEval, p), p)
-            // PI - L1(x) * alpha^2 - alpha * \prod_i=1..m-1 (w_i + beta * sigma_i + gamma) * (w_m + gamma) * z(xw)
-            res := addmod(piEval, sub(p, mulmod(alpha2, lagrangeOneEval, p)), p)
-            res := addmod(res, sub(p, mulmod(alpha, perm, p)), p)
-        }
-    }
-
-    // partial permutation term evaluation, (break out as a function to avoid "Stack too deep" error).
-    function _computeLinPolyConstantTermPartialPermEval(
-        Challenges memory chal,
-        PlonkProof memory proof
-    ) internal pure returns (uint256 perm) {
-        uint256 p = BN254.R_MOD;
-        assembly {
-            let w0 := mload(add(proof, 0x1a0))
-            let w1 := mload(add(proof, 0x1c0))
-            let w2 := mload(add(proof, 0x1e0))
-            let w3 := mload(add(proof, 0x200))
-            let sigma0 := mload(add(proof, 0x240))
-            let sigma1 := mload(add(proof, 0x260))
-            let sigma2 := mload(add(proof, 0x280))
-            let sigma3 := mload(add(proof, 0x2a0))
             let beta := mload(add(chal, 0x60))
             let gamma := mload(add(chal, 0x80))
 
             // \prod_i=1..m-1 (w_i + beta * sigma_i + gamma)
-            perm := 1
-            perm := mulmod(perm, addmod(add(w0, gamma), mulmod(beta, sigma0, p), p), p)
-            perm := mulmod(perm, addmod(add(w1, gamma), mulmod(beta, sigma1, p), p), p)
-            perm := mulmod(perm, addmod(add(w2, gamma), mulmod(beta, sigma2, p), p), p)
-            perm := mulmod(perm, addmod(add(w3, gamma), mulmod(beta, sigma3, p), p), p)
+            {
+                let w0 := mload(add(proof, 0x1a0))
+                let sigma0 := mload(add(proof, 0x240))
+                perm := mulmod(perm, addmod(add(w0, gamma), mulmod(beta, sigma0, p), p), p)
+            }
+            {
+                let w1 := mload(add(proof, 0x1c0))
+                let sigma1 := mload(add(proof, 0x260))
+                perm := mulmod(perm, addmod(add(w1, gamma), mulmod(beta, sigma1, p), p), p)
+            }
+            {
+                let w2 := mload(add(proof, 0x1e0))
+                let sigma2 := mload(add(proof, 0x280))
+                perm := mulmod(perm, addmod(add(w2, gamma), mulmod(beta, sigma2, p), p), p)
+            }
+            {
+                let w3 := mload(add(proof, 0x200))
+                let sigma3 := mload(add(proof, 0x2a0))
+                perm := mulmod(perm, addmod(add(w3, gamma), mulmod(beta, sigma3, p), p), p)
+            }
+
+            // \prod_i=1..m-1 (w_i + beta * sigma_i + gamma) * (w_m + gamma) * z(xw)
+            {
+                let w4 := mload(add(proof, 0x220))
+                let permNextEval := mload(add(proof, 0x2c0))
+                perm := mulmod(perm, mulmod(addmod(w4, gamma, p), permNextEval, p), p)
+            }
+
+            let alpha := mload(chal)
+            let alpha2 := mload(add(chal, 0x20))
+            // PI - L1(x) * alpha^2 - alpha * \prod_i=1..m-1 (w_i + beta * sigma_i + gamma) * (w_m + gamma) * z(xw)
+            res := addmod(piEval, sub(p, mulmod(alpha2, lagrangeOneEval, p)), p)
+            res := addmod(res, sub(p, mulmod(alpha, perm, p)), p)
         }
     }
 

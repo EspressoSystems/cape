@@ -748,6 +748,7 @@ mod tests {
         }
     }
 
+    #[tokio::test]
     async fn test_erc20_description() -> Result<()> {
         let contract = deploy_cape_test().await;
         let sponsor = Address::random();
@@ -759,7 +760,7 @@ mod tests {
             .compute_asset_description(asset_address, sponsor)
             .call()
             .await?;
-        assert_eq!(ret.to_vec(), description.into_bytes());
+        assert_eq!(ret.to_vec(), description);
         Ok(())
     }
 
@@ -767,7 +768,7 @@ mod tests {
     async fn test_check_asset_code() -> Result<()> {
         let contract = deploy_cape_test().await;
 
-        // random ro and address fails
+        // Fails for random record opening with random asset code.
         let rng = &mut ark_std::test_rng();
         let ro = RecordOpening::rand_for_test(rng);
         contract
@@ -776,28 +777,66 @@ mod tests {
             .await
             .should_revert_with_message("Wrong asset code");
 
-        // domestic ro (with correct address) fails
-        let address = Address::random();
-        let bad_asset_def = AssetDefinition::new(
-            AssetCode::new_domestic(AssetCodeSeed::generate(rng), address.as_bytes()),
+        // Fails for record opening with domestic asset code.
+        let erc20_address = Address::random();
+        let domestic_asset_def = AssetDefinition::new(
+            AssetCode::new_domestic(AssetCodeSeed::generate(rng), erc20_address.as_bytes()),
             AssetPolicy::rand_for_test(rng),
         )
         .unwrap();
-        let bad_ro = RecordOpening::new(
-            rng,
-            1u64,
-            bad_asset_def,
-            UserPubKey::default(),
-            FreezeFlag::Unfrozen,
-        );
         contract
-            .check_asset_code(bad_ro.generic_into::<sol::RecordOpening>(), address)
+            .check_asset_code(
+                RecordOpening::new(
+                    rng,
+                    1u64,
+                    domestic_asset_def,
+                    UserPubKey::default(),
+                    FreezeFlag::Unfrozen,
+                )
+                .generic_into::<sol::RecordOpening>(),
+                erc20_address,
+            )
             .call()
             .await
             .should_revert_with_message("Wrong asset code");
 
-        // good ro
-        let asset_code = AssetCode::new_foreign(address.as_bytes());
+        // TODO This is the first address, we should derive it from TEST_MNEMONIC
+        // msg.sender is the first address derived from TEST_MNEMONIC in hardhat
+        // let sponsor = "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266".parse::<Address>()?;
+        // but Address(0) in geth! why?
+        let sponsor = Address::zero();
+        let erc20_code = Erc20Code(EthereumAddr(erc20_address.to_fixed_bytes()));
+
+        // Fails if txn sender address does not match sponsor in asset code.
+        let description_wrong_sponsor = erc20_asset_description(
+            &erc20_code,
+            &EthereumAddr(Address::random().to_fixed_bytes()),
+        );
+        let asset_def_wrong_sponsor = AssetDefinition::new(
+            AssetCode::new_foreign(&description_wrong_sponsor),
+            AssetPolicy::rand_for_test(rng),
+        )
+        .unwrap();
+        let ro_wrong_sponsor = RecordOpening::new(
+            rng,
+            1u64,
+            asset_def_wrong_sponsor,
+            UserPubKey::default(),
+            FreezeFlag::Unfrozen,
+        );
+        contract
+            .check_asset_code(
+                ro_wrong_sponsor.generic_into::<sol::RecordOpening>(),
+                sponsor,
+            )
+            .call()
+            .await
+            .should_revert_with_message("Wrong asset code");
+
+        // Create a correct record opening with foreign asset code.
+        let description =
+            erc20_asset_description(&erc20_code, &EthereumAddr(sponsor.to_fixed_bytes()));
+        let asset_code = AssetCode::new_foreign(&description);
         let asset_def = AssetDefinition::new(asset_code, AssetPolicy::rand_for_test(rng)).unwrap();
         let ro = RecordOpening::new(
             rng,
@@ -807,7 +846,7 @@ mod tests {
             FreezeFlag::Unfrozen,
         );
 
-        // good ro with random address fails
+        // Fails for record opening with random erc20 address.
         contract
             .check_asset_code(
                 ro.clone().generic_into::<sol::RecordOpening>(),
@@ -817,9 +856,11 @@ mod tests {
             .await
             .should_revert_with_message("Wrong asset code");
 
-        // good ro with correct address passes
+        let addr = contract.get_sender().call().await?;
+        println!("addr {}", addr);
+        // Passes for correct record opening and erc20 address.
         contract
-            .check_asset_code(ro.generic_into::<sol::RecordOpening>(), address)
+            .check_asset_code(ro.generic_into::<sol::RecordOpening>(), erc20_address)
             .call()
             .await
             .should_not_revert();

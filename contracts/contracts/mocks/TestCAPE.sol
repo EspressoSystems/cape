@@ -65,4 +65,12 @@ contract TestCAPE is CAPE {
     function checkAssetCode(RecordOpening memory ro, address erc20Address) public view {
         _checkAssetCode(ro, erc20Address);
     }
+
+    function computeAssetDescription(address erc20Address, address sponsor)
+        public
+        pure
+        returns (bytes memory)
+    {
+        return _computeAssetDescription(erc20Address, sponsor);
+    }
 }

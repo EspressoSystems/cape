@@ -12,6 +12,7 @@ import "solidity-bytes-utils/contracts/BytesLib.sol";
 import "./libraries/AccumulatingArray.sol";
 import "./libraries/BN254.sol";
 import "./libraries/RescueLib.sol";
+import "./verifier/Transcript.sol";
 import "./interfaces/IPlonkVerifier.sol";
 import "./AssetRegistry.sol";
 import "./RecordsMerkleTree.sol";
@@ -185,23 +186,28 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
         _checkAssetCode(ro, erc20Address);
     }
 
-    function computeAssetDescription(address erc20Address, address sponsor)
-        public
-        view
-        returns (bytes memory)
-    {
-        // "TRICAPE ERC20 {} sponsored by {}",
-        // hex::encode(&(erc20_code.0).0),
-        // hex::encode(&sponsor.0)
-        return abi.encodePacked("TRICAPE ERC20 ", erc20Address, " sponsored by ", sponsor);
+    function getSender() public view returns (address) {
+        return msg.sender;
     }
 
+    /// @dev requires "view" to access msg.sender
     function _checkAssetCode(RecordOpening memory ro, address erc20Address) internal view {
-        bytes description = computeAssetDescription(erc20address, msg.sender);
-        uint256 code = BN254.fromLeBytesModOrder(
-            abi.encodePacked(keccak256(abi.encodePacked(DOM_SEP_FOREIGN_ASSET, description)))
+        bytes memory description = _computeAssetDescription(erc20Address, msg.sender);
+        bytes memory randomBytes = abi.encodePacked(
+            keccak256(abi.encodePacked(DOM_SEP_FOREIGN_ASSET, description))
         );
+        uint256 code = BN254.fromLeBytesModOrder(randomBytes);
         require(code == ro.assetDef.code, "Wrong asset code");
+    }
+
+    // TODO consider inlining once asset description is finalized. Until then it's useful
+    // for testing if this computation matches the rust code.
+    function _computeAssetDescription(address erc20Address, address sponsor)
+        internal
+        pure
+        returns (bytes memory)
+    {
+        return abi.encodePacked("TRICAPE ERC20", erc20Address, "sponsored by", sponsor);
     }
 
     /// @notice submit a new block to the CAPE contract. Transactions are validated and the blockchain state is updated. Moreover burn transactions trigger the unwrapping of cape asset records into erc20 tokens.

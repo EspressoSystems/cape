@@ -50,11 +50,11 @@
 
 ## Obtaining the source code
 
-    git clone git@gitlab.com:translucence/cap-on-ethereum/cape
+    git clone git@github.com:SpectrumXYZ/cape.git
 
 ## Dependencies
 
-This project has a lot of dependencies the only tested installation method is
+This project has a lot of dependencies. The only tested installation method is
 via the [nix](https://nixos.org) package manager.
 
 You also need access to the following git repos
@@ -99,7 +99,7 @@ Try running some tests to verify the installation
     cape-test-geth
 
 If this fails with errors that don't point to obvious problems please open an
-issue on gitlab.
+issue on gitlab. M1 Macs need to have node@16 installed to avoid memory allocation errors.
 
 Note that these tests use `cargo test --release` which is slower for compiling but then faster for executing.
 

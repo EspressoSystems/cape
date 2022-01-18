@@ -218,7 +218,7 @@ async fn test_challenge_gen() -> Result<()> {
     let ether_proof: sol::PlonkProof = rust_proof.into();
 
     let ether_challenge: sol::Challenges = contract
-        .test_compute_challenges(
+        .compute_challenges(
             ether_verifying_key,
             ether_public_inputs,
             ether_proof,
@@ -254,7 +254,7 @@ async fn test_challenge_gen() -> Result<()> {
     let ether_proof: sol::PlonkProof = rust_proof.into();
 
     let ether_challenge: sol::Challenges = contract
-        .test_compute_challenges(
+        .compute_challenges(
             ether_verifying_key.clone(),
             ether_public_inputs,
             ether_proof.clone(),
@@ -322,7 +322,7 @@ async fn test_linearization_scalars_and_bases() -> Result<()> {
     let ether_proof: sol::PlonkProof = rust_proof.into();
 
     let ether_challenge: sol::Challenges = contract
-        .test_compute_challenges(
+        .compute_challenges(
             ether_verifying_key.clone(),
             ether_public_inputs,
             ether_proof.clone(),
@@ -340,7 +340,7 @@ async fn test_linearization_scalars_and_bases() -> Result<()> {
     };
 
     let (bases, scalars) = contract
-        .test_linearization_scalars_and_bases(
+        .linearization_scalars_and_bases(
             ether_verifying_key,
             ether_challenge,
             eval_data,

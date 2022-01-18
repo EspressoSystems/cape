@@ -28,7 +28,7 @@ contract TestPlonkVerifier is V {
         return V._batchVerifyOpeningProofs(pcsInfos);
     }
 
-    function testComputeChallenges(
+    function computeChallenges(
         V.VerifyingKey memory verifyingKey,
         uint256[] memory publicInput,
         V.PlonkProof memory proof,
@@ -37,14 +37,14 @@ contract TestPlonkVerifier is V {
         return V._computeChallenges(verifyingKey, publicInput, proof, extraTranscriptInitMsg);
     }
 
-    function testLinearizationScalarsAndBases(
+    function linearizationScalarsAndBases(
         V.VerifyingKey memory verifyingKey,
         V.Challenges memory challenge,
         Poly.EvalData memory evalData,
         V.PlonkProof memory proof
     ) public pure returns (BN254.G1Point[] memory bases, uint256[] memory scalars) {
         //returns (BN254.G1Point[15] memory bases, uint256[15] memory scalars) {
-        return V.linearizationScalarsAndBases(verifyingKey, challenge, evalData, proof);
+        return V._linearizationScalarsAndBases(verifyingKey, challenge, evalData, proof);
     }
 
     function multiScalarMul(BN254.G1Point[] memory bases, uint256[] memory scalars)

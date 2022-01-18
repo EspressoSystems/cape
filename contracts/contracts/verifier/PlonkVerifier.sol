@@ -435,12 +435,12 @@ contract PlonkVerifier is IPlonkVerifier {
         return BN254.pairingProd2(a1, _betaH, b1, BN254.P2());
     }
 
-    function linearizationScalarsAndBases(
+    function _linearizationScalarsAndBases(
         PlonkVerifier.VerifyingKey memory verifyingKey,
         PlonkVerifier.Challenges memory challenge,
         Poly.EvalData memory evalData,
         PlonkVerifier.PlonkProof memory proof
-    ) public pure returns (BN254.G1Point[] memory bases, uint256[] memory scalars) {
+    ) internal pure returns (BN254.G1Point[] memory bases, uint256[] memory scalars) {
         // todo: optimize this code
 
         uint256 firstScalar;

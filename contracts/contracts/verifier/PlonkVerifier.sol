@@ -148,9 +148,8 @@ contract PlonkVerifier is IPlonkVerifier {
         uint256[] memory publicInput,
         PlonkProof memory proof,
         bytes memory extraTranscriptInitMsg
-    ) internal pure returns (Challenges memory) {
+    ) internal pure returns (Challenges memory res) {
         Transcript.TranscriptData memory transcript;
-        Challenges memory res;
         uint256 p = BN254.R_MOD;
 
         transcript.appendMessage(extraTranscriptInitMsg);
@@ -722,7 +721,6 @@ contract PlonkVerifier is IPlonkVerifier {
         scalars[19] = tmp2;
 
         bases[19] = proof.split4;
-
     }
 
     // TODO: remove the next line

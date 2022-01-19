@@ -15,6 +15,7 @@ use ark_bn254::{Bn254, Fq, Fr, G1Affine};
 use ark_ec::ProjectiveCurve;
 use ark_ff::Field;
 use ark_poly::{EvaluationDomain, Radix2EvaluationDomain};
+use ark_std::rand::Rng;
 use ark_std::Zero;
 use ark_std::{test_rng, One, UniformRand};
 use ethers::core::k256::ecdsa::SigningKey;
@@ -28,7 +29,6 @@ use jf_plonk::{
     transcript::SolidityTranscript,
 };
 use jf_utils::field_switching;
-use ark_std::rand::Rng;
 use std::{convert::TryInto, path::Path};
 
 async fn deploy_contract(
@@ -120,11 +120,6 @@ async fn test_prepare_pcs_info() -> Result<()> {
             &alpha_bases,
         )?;
         let _rust_msm_result = comm_scalars_and_bases.multi_scalar_mul().into_affine();
-        // TODO: remove
-        // for (i, (b, s)) in comm_scalars_and_bases.base_scalar_map.iter().enumerate() {
-        //     println!("{} {} {}", i, b.x, s);
-        // }
-        // println!();
 
         let (bases, scalars) = contract
             .linearization_scalars_and_bases(
@@ -136,10 +131,6 @@ async fn test_prepare_pcs_info() -> Result<()> {
             .call()
             .await?;
 
-        // TODO: remove
-        // for (i, (b, s)) in bases.iter().zip(scalars.iter()).enumerate() {
-        //     println!("{} {:x} {:x}", i, b.x, s);
-        // }
         let hash_map = comm_scalars_and_bases.base_scalar_map;
         for (b, s) in bases.iter().zip(scalars.iter()).skip(1) {
             // FIXME: the first base-scalar pair is incorrect

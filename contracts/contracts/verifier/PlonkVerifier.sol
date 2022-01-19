@@ -270,7 +270,7 @@ contract PlonkVerifier is IPlonkVerifier {
         )
     {
         // pre-compute evaluation data
-        Poly.EvalData memory evalData = Poly.evalDataGen(domain.size, chal.zeta);
+        Poly.EvalData memory evalData = Poly.evalDataGen(domain, chal.zeta);
 
         // compute the constant term of the linearization polynomial
         uint256 linPolyConstant = _computeLinPolyConstantTerm(

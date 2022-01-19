@@ -53,14 +53,6 @@ async fn test_vanishing_poly() -> Result<()> {
             assert_eq!(eval, u256_to_field(ret));
         }
     }
-
-    let wrong_domain = Radix2EvaluationDomain::<Fr>::new(2usize.pow(18)).unwrap();
-    contract
-        .evaluate_vanishing_poly(wrong_domain.into(), field_to_u256(Fr::rand(&mut rng)))
-        .call()
-        .await
-        .should_revert_with_message("Poly: size not in 2^{15, 16, 17}");
-
     Ok(())
 }
 

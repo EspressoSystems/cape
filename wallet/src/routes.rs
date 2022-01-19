@@ -411,6 +411,13 @@ async fn getbalance(
 ) -> Result<BalanceInfo, tide::Error> {
     let wallet = &require_wallet(wallet)?;
 
+    // The request dispatcher should fail if the URL pattern does not match one of the patterns
+    // defined for this route in api.toml, so the only routes we have to handle are:
+    //  * getbalance/all
+    //  * getbalance/address/:address
+    //  * getbalance/address/:address/asset/:asset
+    // Therefore, we can determine which form we are handling just by checking for the presence of
+    // :address and :asset.
     let address = match bindings.get(":address") {
         Some(address) => Some(address.value.to::<api::UserAddress>()?),
         None => None,

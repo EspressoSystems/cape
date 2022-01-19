@@ -671,8 +671,22 @@ mod tests {
             .expect_err("getbalance succeeded with an invalid address");
         // Should fail with an invalid asset code (we'll use an address where the asset should go).
         server
-            .get::<Vec<api::UserAddress>>(&format!("getaddress/address/{}/asset/{}", addr, addr))
+            .get::<BalanceInfo>(&format!("getbalance/address/{}/asset/{}", addr, addr))
             .await
             .expect_err("getbalance succeeded with an invalid asset code");
+        // Should fail with route pattern misuse (e.g. specifying `address` route component without
+        // an accompanying `:address` parameter).
+        server
+            .get::<BalanceInfo>("getbalance/address")
+            .await
+            .expect_err("getbalance/address succeeded with invalid route pattern");
+        server
+            .get::<BalanceInfo>("getbalance/asset")
+            .await
+            .expect_err("getbalance/asset succeeded with invalid route pattern");
+        server
+            .get::<BalanceInfo>("getbalance")
+            .await
+            .expect_err("getbalance succeeded with invalid route pattern");
     }
 }

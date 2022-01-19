@@ -28,7 +28,7 @@ use jf_plonk::{
     transcript::SolidityTranscript,
 };
 use jf_utils::field_switching;
-use rand::Rng;
+use ark_std::rand::Rng;
 use std::{convert::TryInto, path::Path};
 
 async fn deploy_contract(

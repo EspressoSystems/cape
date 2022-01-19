@@ -47,120 +47,146 @@ async fn deploy_contract(
 async fn test_prepare_pcs_info() -> Result<()> {
     let contract = deploy_contract().await?;
 
-    for _ in 0..5 {
-        let (proof, vk, public_inputs, extra_msg, domain_size) =
-            gen_plonk_proof_for_test(1)?[0].clone();
+    let (proof, vk, public_inputs, extra_msg, domain_size) =
+        gen_plonk_proof_for_test(1)?[0].clone();
 
-        // simulate the verifier logic to drive to state for calling the tested fn.
-        let domain = Radix2EvaluationDomain::new(domain_size).unwrap();
-        let verifier = Verifier::new(domain_size)?;
-        // compute challenges and evaluations
-        let challenges = Verifier::compute_challenges::<SolidityTranscript>(
-            &[&vk],
-            &[&public_inputs],
-            &proof.clone().into(),
-            &extra_msg,
-        )?;
-        // pre-compute alpha related values
-        let alpha_2 = challenges.alpha.square();
-        let alpha_3 = alpha_2 * challenges.alpha;
-        let alpha_powers = vec![alpha_2, alpha_3];
-        let alpha_bases = vec![Fr::one()];
+    // simulate the verifier logic to drive to state for calling the tested fn.
+    let domain = Radix2EvaluationDomain::new(domain_size).unwrap();
+    let verifier = Verifier::new(domain_size)?;
+    // compute challenges and evaluations
+    let challenges = Verifier::compute_challenges::<SolidityTranscript>(
+        &[&vk],
+        &[&public_inputs],
+        &proof.clone().into(),
+        &extra_msg,
+    )?;
+    // pre-compute alpha related values
+    let alpha_2 = challenges.alpha.square();
+    let alpha_3 = alpha_2 * challenges.alpha;
+    let alpha_powers = vec![alpha_2, alpha_3];
+    let alpha_bases = vec![Fr::one()];
 
-        // evaluate_vanishing_poly()
-        let vanish_eval = domain.evaluate_vanishing_polynomial(challenges.zeta);
-        // evaluate_lagrange_1_and_n()
-        let divisor = Fr::from(domain.size() as u32) * (challenges.zeta - Fr::one());
-        let lagrange_1_eval = vanish_eval / divisor;
-        let divisor = Fr::from(domain.size() as u32) * (challenges.zeta - domain.group_gen_inv);
-        let lagrange_n_eval = vanish_eval * domain.group_gen_inv / divisor;
+    // evaluate_vanishing_poly()
+    let vanish_eval = domain.evaluate_vanishing_polynomial(challenges.zeta);
+    // evaluate_lagrange_1_and_n()
+    let divisor = Fr::from(domain.size() as u32) * (challenges.zeta - Fr::one());
+    let lagrange_1_eval = vanish_eval / divisor;
+    let divisor = Fr::from(domain.size() as u32) * (challenges.zeta - domain.group_gen_inv);
+    let lagrange_n_eval = vanish_eval * domain.group_gen_inv / divisor;
 
-        // compute the constant term of the linearization polynomial
-        let lin_poly_constant = verifier.compute_lin_poly_constant_term(
-            &challenges,
-            &[&vk],
-            &[&public_inputs],
-            &proof.clone().into(),
-            &vanish_eval,
-            &lagrange_1_eval,
-            &lagrange_n_eval,
-            &alpha_powers,
-            &alpha_bases,
-        )?;
-        let eval_data = sol::EvalData {
-            vanish_eval: field_to_u256(vanish_eval),
-            lagrange_one: field_to_u256(lagrange_1_eval),
-        };
-        assert_eq!(
-            contract
-                .compute_lin_poly_constant_term(
-                    domain.into(),
-                    challenges.into(),
-                    public_inputs.iter().map(|f| field_to_u256(*f)).collect(),
-                    proof.clone().into(),
-                    eval_data.clone()
-                )
-                .call()
-                .await?,
-            field_to_u256(lin_poly_constant),
-        );
-
-        // build the (aggregated) polynomial commitment instance
-        let (comm_scalars_and_bases, buffer_v_and_uv_basis) = verifier.aggregate_poly_commitments(
-            &[&vk],
-            &challenges,
-            &vanish_eval,
-            &lagrange_1_eval,
-            &lagrange_n_eval,
-            &proof.clone().into(),
-            &alpha_powers,
-            &alpha_bases,
-        )?;
-        let (comm_scalars_sol, comm_bases_sol, buffer_v_and_uv_basis_sol) = contract
-            .prepare_poly_commitments(
-                vk.into(),
+    // compute the constant term of the linearization polynomial
+    let lin_poly_constant = verifier.compute_lin_poly_constant_term(
+        &challenges,
+        &[&vk],
+        &[&public_inputs],
+        &proof.clone().into(),
+        &vanish_eval,
+        &lagrange_1_eval,
+        &lagrange_n_eval,
+        &alpha_powers,
+        &alpha_bases,
+    )?;
+    let eval_data = sol::EvalData {
+        vanish_eval: field_to_u256(vanish_eval),
+        lagrange_one: field_to_u256(lagrange_1_eval),
+    };
+    assert_eq!(
+        contract
+            .compute_lin_poly_constant_term(
+                domain.into(),
                 challenges.into(),
-                eval_data,
+                public_inputs.iter().map(|f| field_to_u256(*f)).collect(),
                 proof.clone().into(),
+                eval_data.clone()
             )
             .call()
-            .await?;
-        assert_eq!(
-            contract
-                .multi_scalar_mul(comm_bases_sol, comm_scalars_sol)
-                .call()
-                .await?,
-            comm_scalars_and_bases
-                .multi_scalar_mul()
-                .into_affine()
-                .into(),
-        );
-        assert_eq!(
-            buffer_v_and_uv_basis_sol.to_vec(),
-            buffer_v_and_uv_basis
-                .iter()
-                .map(|f| field_to_u256(*f))
-                .collect::<Vec<_>>()
-        );
+            .await?,
+        field_to_u256(lin_poly_constant),
+    );
 
-        let eval = Verifier::<Bn254>::aggregate_evaluations(
-            &lin_poly_constant,
-            &[get_poly_evals(proof.clone())],
-            &[None],
-            &buffer_v_and_uv_basis,
-        )?;
-        assert_eq!(
-            contract
-                .prepare_evaluations(
-                    field_to_u256(lin_poly_constant),
-                    proof.into(),
-                    buffer_v_and_uv_basis_sol,
-                )
-                .call()
-                .await?,
-            field_to_u256(eval)
-        );
-    }
+    // build the (aggregated) polynomial commitment instance
+    let (comm_scalars_and_bases, buffer_v_and_uv_basis) = verifier.aggregate_poly_commitments(
+        &[&vk],
+        &challenges,
+        &vanish_eval,
+        &lagrange_1_eval,
+        &lagrange_n_eval,
+        &proof.clone().into(),
+        &alpha_powers,
+        &alpha_bases,
+    )?;
+    let (comm_scalars_sol, comm_bases_sol, buffer_v_and_uv_basis_sol) = contract
+        .prepare_poly_commitments(
+            vk.clone().into(),
+            challenges.into(),
+            eval_data,
+            proof.clone().into(),
+        )
+        .call()
+        .await?;
+    assert_eq!(
+        contract
+            .multi_scalar_mul(comm_bases_sol, comm_scalars_sol)
+            .call()
+            .await?,
+        comm_scalars_and_bases
+            .multi_scalar_mul()
+            .into_affine()
+            .into(),
+    );
+    assert_eq!(
+        buffer_v_and_uv_basis_sol.to_vec(),
+        buffer_v_and_uv_basis
+            .iter()
+            .map(|f| field_to_u256(*f))
+            .collect::<Vec<_>>()
+    );
+
+    let eval = Verifier::<Bn254>::aggregate_evaluations(
+        &lin_poly_constant,
+        &[get_poly_evals(proof.clone())],
+        &[None],
+        &buffer_v_and_uv_basis,
+    )?;
+    assert_eq!(
+        contract
+            .prepare_evaluations(
+                field_to_u256(lin_poly_constant),
+                proof.clone().into(),
+                buffer_v_and_uv_basis_sol,
+            )
+            .call()
+            .await?,
+        field_to_u256(eval)
+    );
+
+    // TODO: remove all intermediate steps test above?
+    // end-to-end test prepare_pcs_info
+    let extra_msg_sol = if let Some(msg) = extra_msg.clone() {
+        Bytes::from(msg)
+    } else {
+        Bytes::default()
+    };
+    assert_eq!(
+        contract
+            .prepare_pcs_info(
+                vk.clone().into(),
+                public_inputs.iter().map(|f| field_to_u256(*f)).collect(),
+                proof.clone().into(),
+                extra_msg_sol,
+            )
+            .call()
+            .await?,
+        verifier
+            .prepare_pcs_info::<SolidityTranscript>(
+                &[&vk],
+                &[&public_inputs],
+                &proof.into(),
+                &extra_msg
+            )?
+            .into()
+    );
+
     Ok(())
 }
 

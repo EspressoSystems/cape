@@ -723,14 +723,6 @@ contract PlonkVerifier is IPlonkVerifier {
 
         bases[19] = proof.split4;
 
-        // Dump the base-scalar pair for debuging
-        // for (uint256 i=0;i<20; i++) {
-        //     console.logBytes("");
-        //     console.logBytes("");
-        //     console.logBytes(abi.encodePacked(i));
-        //     console.logBytes(abi.encodePacked(scalars[i]));
-        //     console.logBytes(abi.encodePacked(bases[i].x));
-        // }
     }
 
     // TODO: remove the next line

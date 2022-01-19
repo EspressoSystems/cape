@@ -244,6 +244,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
                     comms.add(note.mintComm);
                     comms.add(note.chgComm);
                     includedNotes[i] = true;
+                    // TODO check domestic (aap-native) asset code during verification of a mint note. See https://github.com/SpectrumXYZ/jellyfish-apps/blob/main/aap/src/mint.rs#L157-L159
                     // TODO extract proof for batch verification
                 }
 

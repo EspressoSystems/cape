@@ -60,8 +60,6 @@ contract PlonkVerifier is IPlonkVerifier {
 
     /// @dev Plonk IOP verifier challenges.
     struct Challenges {
-        // tau is not used in basic plonk
-        // uint256 tau;
         uint256 alpha; // 0x00
         uint256 alpha2; // 0x20
         uint256 alpha3; // 0x40

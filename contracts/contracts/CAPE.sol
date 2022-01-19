@@ -12,6 +12,7 @@ import "solidity-bytes-utils/contracts/BytesLib.sol";
 import "./libraries/AccumulatingArray.sol";
 import "./libraries/BN254.sol";
 import "./libraries/RescueLib.sol";
+import "./verifier/Transcript.sol";
 import "./interfaces/IPlonkVerifier.sol";
 import "./AssetRegistry.sol";
 import "./RecordsMerkleTree.sol";
@@ -27,6 +28,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
     using AccumulatingArray for AccumulatingArray.Data;
 
     bytes public constant CAPE_BURN_MAGIC_BYTES = "TRICAPE burn";
+    bytes13 public constant DOM_SEP_FOREIGN_ASSET = "FOREIGN_ASSET";
 
     event BlockCommitted(uint64 indexed height, bool[] includedNotes);
 
@@ -66,7 +68,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
         uint64 mintAmount;
         /// the asset definition of the asset
         AssetDefinition mintAssetDef;
-        /// Intenral asset code
+        /// Internal asset code
         uint256 mintInternalAssetCode;
         /// the validity proof of this note
         IPlonkVerifier.PlonkProof proof;
@@ -181,6 +183,28 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
     /// @param erc20Address address of the ERC20 token corresponding to the deposit.
     function depositErc20(RecordOpening memory ro, address erc20Address) public {
         address depositorAddress = msg.sender;
+        _checkAssetCode(ro, erc20Address);
+    }
+
+    /// @dev requires "view" to access msg.sender
+    function _checkAssetCode(RecordOpening memory ro, address erc20Address) internal view {
+        bytes memory description = _computeAssetDescription(erc20Address, msg.sender);
+        bytes memory randomBytes = abi.encodePacked(
+            keccak256(bytes.concat(DOM_SEP_FOREIGN_ASSET, description))
+        );
+        uint256 code = BN254.fromLeBytesModOrder(randomBytes);
+        require(code == ro.assetDef.code, "Wrong asset code");
+    }
+
+    // TODO consider inlining once asset description is finalized. Until then it's useful
+    // for testing if this computation matches the rust code.
+    function _computeAssetDescription(address erc20Address, address sponsor)
+        internal
+        pure
+        returns (bytes memory)
+    {
+        return
+            bytes.concat("TRICAPE ERC20", bytes20(erc20Address), "sponsored by", bytes20(sponsor));
     }
 
     /// @notice submit a new block to the CAPE contract. Transactions are validated and the blockchain state is updated. Moreover burn transactions trigger the unwrapping of cape asset records into erc20 tokens.
@@ -220,6 +244,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
                     comms.add(note.mintComm);
                     comms.add(note.chgComm);
                     includedNotes[i] = true;
+                    // TODO check domestic (aap-native) asset code during verification of a mint note. See https://github.com/SpectrumXYZ/jellyfish-apps/blob/main/aap/src/mint.rs#L157-L159
                     // TODO extract proof for batch verification
                 }
 

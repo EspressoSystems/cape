@@ -330,9 +330,6 @@ contract PlonkVerifier is IPlonkVerifier {
             r = transcript.getAndAppendChallenge();
         }
 
-        uint256 rBase = 1;
-        // BN254.G1Point[] memory g1Elems;
-        // BN254.G2Point[] memory g2Elems;
         BN254.G1Point memory a1;
         BN254.G1Point memory b1;
 

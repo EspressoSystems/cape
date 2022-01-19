@@ -161,12 +161,12 @@ library Transcript {
         appendGroupElement(self, verifyingKey.q4);
         appendGroupElement(self, verifyingKey.qM12);
         appendGroupElement(self, verifyingKey.qM34);
-        appendGroupElement(self, verifyingKey.qO);
-        appendGroupElement(self, verifyingKey.qC);
         appendGroupElement(self, verifyingKey.qH1);
         appendGroupElement(self, verifyingKey.qH2);
         appendGroupElement(self, verifyingKey.qH3);
         appendGroupElement(self, verifyingKey.qH4);
+        appendGroupElement(self, verifyingKey.qO);
+        appendGroupElement(self, verifyingKey.qC);
         appendGroupElement(self, verifyingKey.qEcc);
 
         // sigmas

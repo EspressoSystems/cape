@@ -12,12 +12,12 @@ contract TestPolynomialEval {
         return PolynomialEval.evaluateVanishingPoly(self, zeta);
     }
 
-    function evaluateLagrangeOneAndN(
+    function evaluateLagrange(
         PolynomialEval.EvalDomain memory self,
         uint256 zeta,
         uint256 vanishEval
-    ) public view returns (uint256, uint256) {
-        return PolynomialEval.evaluateLagrangeOneAndN(self, zeta, vanishEval);
+    ) public view returns (uint256) {
+        return PolynomialEval.evaluateLagrangeOne(self, zeta, vanishEval);
     }
 
     function evaluatePiPoly(

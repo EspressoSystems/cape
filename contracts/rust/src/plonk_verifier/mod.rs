@@ -19,6 +19,7 @@ use ark_std::rand::Rng;
 use ark_std::{test_rng, One, UniformRand};
 use ethers::core::k256::ecdsa::SigningKey;
 use ethers::prelude::*;
+use itertools::multiunzip;
 use jf_plonk::proof_system::verifier::PcsInfo;
 use jf_plonk::{
     proof_system::{
@@ -363,5 +364,49 @@ async fn test_challenge_gen() -> Result<()> {
     let ether_challenge_converted: sol::Challenges = rust_challenge.into();
     assert_eq!(ether_challenge_converted, ether_challenge);
 
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_batch_verify_plonk_proofs() -> Result<()> {
+    let contract = deploy_contract().await?;
+
+    for num_proof in 1..5 {
+        let (proofs, vks, public_inputs, extra_msgs, _): (
+            Vec<Proof<Bn254>>,
+            Vec<VerifyingKey<Bn254>>,
+            Vec<Vec<Fr>>,
+            Vec<Option<Vec<u8>>>,
+            Vec<usize>,
+        ) = multiunzip(gen_plonk_proof_for_test(num_proof)?);
+        let vks_sol = vks
+            .iter()
+            .map(|vk| vk.clone().generic_into::<sol::VerifyingKey>())
+            .collect();
+        let pis_sol = public_inputs
+            .iter()
+            .map(|pi| pi.iter().map(|f| field_to_u256(*f)).collect())
+            .collect();
+        let proofs_sol = proofs
+            .iter()
+            .map(|pf| pf.clone().generic_into::<sol::PlonkProof>())
+            .collect();
+        let extra_msgs_sol = extra_msgs
+            .iter()
+            .map(|msg| {
+                if let Some(msg) = msg {
+                    Bytes::from(msg.clone())
+                } else {
+                    Bytes::default()
+                }
+            })
+            .collect();
+        assert!(
+            contract
+                .batch_verify(vks_sol, pis_sol, proofs_sol, extra_msgs_sol,)
+                .call()
+                .await?
+        );
+    }
     Ok(())
 }

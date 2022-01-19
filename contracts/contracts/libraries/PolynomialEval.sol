@@ -20,14 +20,13 @@ library PolynomialEval {
     }
 
     /// @dev compute the EvalData for a given domain and a challenge zeta
-    function evalDataGen(uint256 domainSize, uint256 zeta)
+    function evalDataGen(EvalDomain memory self, uint256 zeta)
         internal
         view
         returns (EvalData memory evalData)
     {
-        EvalDomain memory domain = newEvalDomain(domainSize);
-        evalData.vanishEval = evaluateVanishingPoly(domain, zeta);
-        evalData.lagrangeOne = evaluateLagrangeOne(domain, zeta, evalData.vanishEval);
+        evalData.vanishEval = evaluateVanishingPoly(self, zeta);
+        evalData.lagrangeOne = evaluateLagrangeOne(self, zeta, evalData.vanishEval);
     }
 
     /// @dev Create a new Radix2EvalDomain with `domainSize` which should be power of 2.
@@ -74,13 +73,7 @@ library PolynomialEval {
         returns (uint256 res)
     {
         uint256 p = BN254.R_MOD;
-        uint256 logSize;
-
-        if (self.logSize == 15 || self.logSize == 16 || self.logSize == 17) {
-            logSize = self.logSize;
-        } else {
-            revert("Poly: size not in 2^{15, 16, 17}");
-        }
+        uint256 logSize = self.logSize;
 
         assembly {
             switch zeta

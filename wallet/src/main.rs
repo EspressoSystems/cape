@@ -689,4 +689,36 @@ mod tests {
             .await
             .expect_err("getbalance succeeded with invalid route pattern");
     }
+
+    #[async_std::test]
+    #[traced_test]
+    async fn test_newkey() {
+        let server = TestServer::new().await;
+        let mut rng = ChaChaRng::from_seed([42u8; 32]);
+
+        // Should fail if a wallet is not already open.
+        server
+            .get::<()>("newkey/send")
+            .await
+            .expect_err("newkey succeeded without an open wallet");
+
+        // Now open a wallet and call newkey.
+        server
+            .get::<()>(&format!(
+                "newwallet/{}/path/{}",
+                random_mnemonic(&mut rng),
+                server.path()
+            ))
+            .await
+            .unwrap();
+        server.get::<()>("newkey/send").await.unwrap();
+        server.get::<()>("newkey/trace").await.unwrap();
+        server.get::<()>("newkey/freeze").await.unwrap();
+
+        // Should fail if the key type is invaild,
+        server
+            .get::<WalletSummary>("newkey/invalid_key_type")
+            .await
+            .expect_err("newkey succeeded with an invaild key type");
+    }
 }

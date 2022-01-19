@@ -65,7 +65,7 @@ async fn test_vanishing_poly() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_evaluate_lagrange_one_and_n() -> Result<()> {
+async fn test_evaluate_lagrange_one() -> Result<()> {
     let mut rng = test_rng();
     let contract = deploy_contract().await?;
 
@@ -78,8 +78,6 @@ async fn test_evaluate_lagrange_one_and_n() -> Result<()> {
             let rust_zeta_n_minus_one = rust_domain.evaluate_vanishing_polynomial(zeta);
             let divisor = Fr::from(rust_domain.size() as u32) * (zeta - Fr::one());
             let lagrange_1_eval = rust_zeta_n_minus_one / divisor;
-            let divisor = Fr::from(rust_domain.size() as u32) * (zeta - rust_domain.group_gen_inv);
-            let lagrange_n_eval = rust_zeta_n_minus_one * rust_domain.group_gen_inv / divisor;
 
             // solidity side
             let sol_domain: EvalDomain = rust_domain.into();
@@ -91,13 +89,12 @@ async fn test_evaluate_lagrange_one_and_n() -> Result<()> {
 
             assert_eq!(rust_zeta_n_minus_one, u256_to_field(sol_zeta_n_minus_one));
 
-            let (sol_eval_1, sol_eval_n) = contract
-                .evaluate_lagrange_one_and_n(sol_domain, zeta_256, sol_zeta_n_minus_one)
+            let sol_eval_1 = contract
+                .evaluate_lagrange(sol_domain, zeta_256, sol_zeta_n_minus_one)
                 .call()
                 .await?;
 
             assert_eq!(lagrange_1_eval, u256_to_field(sol_eval_1));
-            assert_eq!(lagrange_n_eval, u256_to_field(sol_eval_n));
         }
     }
 
@@ -123,8 +120,6 @@ async fn test_evaluate_pi_poly() -> Result<()> {
             let rust_zeta_n_minus_one = rust_domain.evaluate_vanishing_polynomial(zeta);
             let divisor = Fr::from(rust_domain.size() as u32) * (zeta - Fr::one());
             let lagrange_1_eval = rust_zeta_n_minus_one / divisor;
-            let divisor = Fr::from(rust_domain.size() as u32) * (zeta - rust_domain.group_gen_inv);
-            let lagrange_n_eval = rust_zeta_n_minus_one * rust_domain.group_gen_inv / divisor;
 
             let vanish_eval_div_n =
                 Fr::from(rust_domain.size() as u32).inverse().unwrap() * (rust_zeta_n_minus_one);
@@ -146,13 +141,11 @@ async fn test_evaluate_pi_poly() -> Result<()> {
 
             assert_eq!(rust_zeta_n_minus_one, u256_to_field(sol_zeta_n_minus_one));
 
-            let (sol_eval_1, sol_eval_n) = contract
-                .evaluate_lagrange_one_and_n(sol_domain.clone(), zeta_256, sol_zeta_n_minus_one)
+            let sol_eval_1 = contract
+                .evaluate_lagrange(sol_domain.clone(), zeta_256, sol_zeta_n_minus_one)
                 .call()
                 .await?;
-
             assert_eq!(lagrange_1_eval, u256_to_field(sol_eval_1));
-            assert_eq!(lagrange_n_eval, u256_to_field(sol_eval_n));
 
             let sol_eval_pi = contract
                 .evaluate_pi_poly(

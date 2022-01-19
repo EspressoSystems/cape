@@ -61,11 +61,13 @@ contract PlonkVerifier is IPlonkVerifier {
     /// @dev Plonk IOP verifier challenges.
     struct Challenges {
         uint256 alpha; // 0x00
-        uint256 beta; // 0x20
-        uint256 gamma; // 0x40
-        uint256 zeta; // 0x60
-        uint256 v; // 0x80
-        uint256 u; // 0xa0
+        uint256 alpha2; // 0x20
+        uint256 alpha3; // 0x40
+        uint256 beta; // 0x60
+        uint256 gamma; // 0x80
+        uint256 zeta; // 0xA0
+        uint256 v; // 0xC0
+        uint256 u; // 0xE0
     }
 
     /// @dev Batch verify multiple TurboPlonk proofs.
@@ -117,7 +119,7 @@ contract PlonkVerifier is IPlonkVerifier {
             uint256[] memory commScalars,
             BN254.G1Point[] memory commBases,
             uint256 eval
-        ) = _prepareOpeningProof(domain, verifyingKey, publicInput, proof, chal);
+        ) = _prepareOpeningProof(domain, publicInput, proof, chal);
 
         uint256 zeta = chal.zeta;
         uint256 omega = domain.groupGen;
@@ -139,32 +141,54 @@ contract PlonkVerifier is IPlonkVerifier {
         );
     }
 
-    // TODO: remove solhint disable
-    /* solhint-disable */
-    // Compute alpha^2, alpha^3,
-    function _computeAlphaPowers(uint256 alpha)
-        internal
-        pure
-        returns (uint256[2] memory alphaPowers)
-    {
-        // `alpha_bases` is unnecessary since it's just `vec![E::Fr::one()]` here
-        uint256 p = BN254.R_MOD;
-        assembly {
-            let alpha2 := mulmod(alpha, alpha, p)
-            mstore(alphaPowers, alpha2)
-
-            let alpha3 := mulmod(alpha, alpha2, p)
-            mstore(add(alphaPowers, 0x20), alpha3)
-        }
-    }
-
     function _computeChallenges(
         VerifyingKey memory verifyingKey,
         uint256[] memory publicInput,
         PlonkProof memory proof,
         bytes memory extraTranscriptInitMsg
-    ) internal pure returns (Challenges memory) {
-        // TODO: depends on https://github.com/SpectrumXYZ/cape/issues/171
+    ) internal pure returns (Challenges memory res) {
+        Transcript.TranscriptData memory transcript;
+        uint256 p = BN254.R_MOD;
+
+        transcript.appendMessage(extraTranscriptInitMsg);
+        transcript.appendVkAndPubInput(verifyingKey, publicInput);
+        transcript.appendGroupElement(proof.wire0);
+        transcript.appendGroupElement(proof.wire1);
+        transcript.appendGroupElement(proof.wire2);
+        transcript.appendGroupElement(proof.wire3);
+        transcript.appendGroupElement(proof.wire4);
+
+        // have to compute tau, but not really used anywhere
+        transcript.getAndAppendChallenge();
+        res.beta = transcript.getAndAppendChallenge();
+        res.gamma = transcript.getAndAppendChallenge();
+
+        transcript.appendGroupElement(proof.prodPerm);
+
+        res.alpha = transcript.getAndAppendChallenge();
+
+        transcript.appendGroupElement(proof.split0);
+        transcript.appendGroupElement(proof.split1);
+        transcript.appendGroupElement(proof.split2);
+        transcript.appendGroupElement(proof.split3);
+        transcript.appendGroupElement(proof.split4);
+
+        res.zeta = transcript.getAndAppendChallenge();
+
+        transcript.appendProofEvaluations(proof);
+        res.v = transcript.getAndAppendChallenge();
+
+        transcript.appendGroupElement(proof.zeta);
+        transcript.appendGroupElement(proof.zetaOmega);
+        res.u = transcript.getAndAppendChallenge();
+
+        assembly {
+            let alpha := mload(res)
+            let alpha2 := mulmod(alpha, alpha, p)
+            let alpha3 := mulmod(alpha2, alpha, p)
+            mstore(add(res, 0x20), alpha2)
+            mstore(add(res, 0x40), alpha3)
+        }
     }
 
     /// @dev Compute the constant term of the linearization polynomial
@@ -174,56 +198,53 @@ contract PlonkVerifier is IPlonkVerifier {
     function _computeLinPolyConstantTerm(
         Poly.EvalDomain memory domain,
         Challenges memory chal,
-        VerifyingKey memory verifyingKey,
         uint256[] memory publicInput,
         PlonkProof memory proof,
-        uint256 vanishEval,
-        uint256 lagrangeOneEval,
-        uint256[2] memory alphaPowers
+        Poly.EvalData memory evalData
     ) internal view returns (uint256 res) {
-        uint256 piEval = Poly.evaluatePiPoly(domain, publicInput, chal.zeta, vanishEval);
-        uint256 perm = _computeLinPolyConstantTermPartialPermEval(chal, proof);
+        uint256 piEval = Poly.evaluatePiPoly(domain, publicInput, chal.zeta, evalData.vanishEval);
         uint256 p = BN254.R_MOD;
+        uint256 lagrangeOneEval = evalData.lagrangeOne;
+        uint256 perm = 1;
 
         assembly {
-            let alpha := mload(chal)
-            let gamma := mload(add(chal, 0x40))
-            let alpha2 := mload(alphaPowers)
-            let w4 := mload(add(proof, 0x220))
-            let permNextEval := mload(add(proof, 0x2c0))
+            let beta := mload(add(chal, 0x60))
+            let gamma := mload(add(chal, 0x80))
+
+            // \prod_i=1..m-1 (w_i + beta * sigma_i + gamma)
+            {
+                let w0 := mload(add(proof, 0x1a0))
+                let sigma0 := mload(add(proof, 0x240))
+                perm := mulmod(perm, addmod(add(w0, gamma), mulmod(beta, sigma0, p), p), p)
+            }
+            {
+                let w1 := mload(add(proof, 0x1c0))
+                let sigma1 := mload(add(proof, 0x260))
+                perm := mulmod(perm, addmod(add(w1, gamma), mulmod(beta, sigma1, p), p), p)
+            }
+            {
+                let w2 := mload(add(proof, 0x1e0))
+                let sigma2 := mload(add(proof, 0x280))
+                perm := mulmod(perm, addmod(add(w2, gamma), mulmod(beta, sigma2, p), p), p)
+            }
+            {
+                let w3 := mload(add(proof, 0x200))
+                let sigma3 := mload(add(proof, 0x2a0))
+                perm := mulmod(perm, addmod(add(w3, gamma), mulmod(beta, sigma3, p), p), p)
+            }
 
             // \prod_i=1..m-1 (w_i + beta * sigma_i + gamma) * (w_m + gamma) * z(xw)
-            perm := mulmod(perm, mulmod(addmod(w4, gamma, p), permNextEval, p), p)
+            {
+                let w4 := mload(add(proof, 0x220))
+                let permNextEval := mload(add(proof, 0x2c0))
+                perm := mulmod(perm, mulmod(addmod(w4, gamma, p), permNextEval, p), p)
+            }
+
+            let alpha := mload(chal)
+            let alpha2 := mload(add(chal, 0x20))
             // PI - L1(x) * alpha^2 - alpha * \prod_i=1..m-1 (w_i + beta * sigma_i + gamma) * (w_m + gamma) * z(xw)
             res := addmod(piEval, sub(p, mulmod(alpha2, lagrangeOneEval, p)), p)
             res := addmod(res, sub(p, mulmod(alpha, perm, p)), p)
-        }
-    }
-
-    // partial permutation term evaluation, (break out as a function to avoid "Stack too deep" error).
-    function _computeLinPolyConstantTermPartialPermEval(
-        Challenges memory chal,
-        PlonkProof memory proof
-    ) internal view returns (uint256 perm) {
-        uint256 p = BN254.R_MOD;
-        assembly {
-            let w0 := mload(add(proof, 0x1a0))
-            let w1 := mload(add(proof, 0x1c0))
-            let w2 := mload(add(proof, 0x1e0))
-            let w3 := mload(add(proof, 0x200))
-            let sigma0 := mload(add(proof, 0x240))
-            let sigma1 := mload(add(proof, 0x260))
-            let sigma2 := mload(add(proof, 0x280))
-            let sigma3 := mload(add(proof, 0x2a0))
-            let beta := mload(add(chal, 0x20))
-            let gamma := mload(add(chal, 0x40))
-
-            // \prod_i=1..m-1 (w_i + beta * sigma_i + gamma)
-            perm := 1
-            perm := mulmod(perm, addmod(add(w0, gamma), mulmod(beta, sigma0, p), p), p)
-            perm := mulmod(perm, addmod(add(w1, gamma), mulmod(beta, sigma1, p), p), p)
-            perm := mulmod(perm, addmod(add(w2, gamma), mulmod(beta, sigma2, p), p), p)
-            perm := mulmod(perm, addmod(add(w3, gamma), mulmod(beta, sigma3, p), p), p)
         }
     }
 
@@ -234,7 +255,6 @@ contract PlonkVerifier is IPlonkVerifier {
     // equivalent of JF's https://github.com/SpectrumXYZ/jellyfish/blob/main/plonk/src/proof_system/verifier.rs#L154-L170
     function _prepareOpeningProof(
         Poly.EvalDomain memory domain,
-        VerifyingKey memory verifyingKey,
         uint256[] memory publicInput,
         PlonkProof memory proof,
         Challenges memory chal
@@ -247,26 +267,16 @@ contract PlonkVerifier is IPlonkVerifier {
             uint256 eval
         )
     {
-        // pre-compute alpha related values
-        uint256[2] memory alphaPowers = _computeAlphaPowers(chal.alpha);
-
-        uint256 vanishEval = Poly.evaluateVanishingPoly(domain, chal.zeta);
-        (uint256 lagrangeOneEval, uint256 lagrangeNEval) = Poly.evaluateLagrangeOneAndN(
-            domain,
-            chal.zeta,
-            vanishEval
-        );
+        // pre-compute evaluation data
+        Poly.EvalData memory evalData = Poly.evalDataGen(domain.size, chal.zeta);
 
         // compute the constant term of the linearization polynomial
         uint256 linPolyConstant = _computeLinPolyConstantTerm(
             domain,
             chal,
-            verifyingKey,
             publicInput,
             proof,
-            vanishEval,
-            lagrangeOneEval,
-            alphaPowers
+            evalData
         );
 
         // TODO: implement `aggregate_poly_commitments` inline (otherwise would encounter "Stack Too Deep")
@@ -414,6 +424,298 @@ contract PlonkVerifier is IPlonkVerifier {
 
         // Check e(A, [x]2) ?= e(B, [1]2)
         return BN254.pairingProd2(a1, _betaH, b1, BN254.P2());
+    }
+
+    function _linearizationScalarsAndBases(
+        PlonkVerifier.VerifyingKey memory verifyingKey,
+        PlonkVerifier.Challenges memory challenge,
+        Poly.EvalData memory evalData,
+        PlonkVerifier.PlonkProof memory proof
+    ) internal pure returns (BN254.G1Point[] memory bases, uint256[] memory scalars) {
+        // todo: optimize this code
+
+        uint256 firstScalar;
+        uint256 secondScalar;
+        uint256 rhs;
+        uint256 tmp;
+        uint256 tmp2;
+        uint256 p = BN254.R_MOD;
+
+        bases = new BN254.G1Point[](20);
+        scalars = new uint256[](20);
+
+        // ============================================
+        // Compute coefficient for the permutation product polynomial commitment.
+        // firstScalar =
+        //          L1(zeta) * alpha^2
+        //          + alpha
+        //              * (beta * zeta      + wireEval0 + gamma)
+        //              * (beta * k1 * zeta + wireEval1 + gamma)
+        //              * (beta * k2 * zeta + wireEval2 + gamma)
+        //              * ...
+        // where wireEval0, wireEval1, wireEval2, ... are in w_evals
+        // ============================================
+        // first base and scala:
+        // - proof.prodPerm
+        // - firstScalar
+        assembly {
+            // firstScalar = alpha^2 * L1(zeta)
+            firstScalar := mulmod(mload(add(challenge, 0x20)), mload(add(evalData, 0x20)), p)
+
+            // rhs = alpha
+            rhs := mload(challenge)
+
+            // tmp = beta * zeta
+            tmp := mulmod(mload(add(challenge, 0x60)), mload(add(challenge, 0xA0)), p)
+
+            // =================================
+            // k0 (which is 1) component
+            // (beta * zeta + wireEval0 + gamma)
+            // =================================
+            tmp2 := addmod(tmp, mload(add(proof, 0x1A0)), p)
+            tmp2 := addmod(tmp2, mload(add(challenge, 0x80)), p)
+
+            rhs := mulmod(tmp2, rhs, p)
+
+            // =================================
+            // k1 component
+            // (beta * zeta * k1 + wireEval1 + gamma)
+            // =================================
+            tmp2 := mulmod(tmp, mload(add(verifyingKey, 0x2A0)), p)
+            tmp2 := addmod(tmp2, mload(add(proof, 0x1C0)), p)
+            tmp2 := addmod(tmp2, mload(add(challenge, 0x80)), p)
+
+            rhs := mulmod(tmp2, rhs, p)
+
+            // =================================
+            // k2 component
+            // (beta * zeta * k2 + wireEval2 + gamma)
+            // =================================
+            tmp2 := mulmod(tmp, mload(add(verifyingKey, 0x2C0)), p)
+            tmp2 := addmod(tmp2, mload(add(proof, 0x1E0)), p)
+            tmp2 := addmod(tmp2, mload(add(challenge, 0x80)), p)
+            rhs := mulmod(tmp2, rhs, p)
+
+            // =================================
+            // k3 component
+            // (beta * zeta * k3 + wireEval3 + gamma)
+            // =================================
+            tmp2 := mulmod(tmp, mload(add(verifyingKey, 0x2E0)), p)
+            tmp2 := addmod(tmp2, mload(add(proof, 0x200)), p)
+            tmp2 := addmod(tmp2, mload(add(challenge, 0x80)), p)
+            rhs := mulmod(tmp2, rhs, p)
+
+            // =================================
+            // k4 component
+            // (beta * zeta * k4 + wireEval4 + gamma)
+            // =================================
+            tmp2 := mulmod(tmp, mload(add(verifyingKey, 0x300)), p)
+            tmp2 := addmod(tmp2, mload(add(proof, 0x220)), p)
+            tmp2 := addmod(tmp2, mload(add(challenge, 0x80)), p)
+            rhs := mulmod(tmp2, rhs, p)
+
+            firstScalar := addmod(firstScalar, rhs, p)
+        }
+        bases[0] = proof.prodPerm;
+        scalars[0] = firstScalar;
+
+        // ============================================
+        // Compute coefficient for the last wire sigma polynomial commitment.
+        // secondScalar = alpha * beta * z_w * [s_sigma_3]_1
+        //              * (wireEval0 + gamma + beta * sigmaEval0)
+        //              * (wireEval1 + gamma + beta * sigmaEval1)
+        //              * ...
+        // ============================================
+        // second base and scala:
+        // - verifyingKey.sigma4
+        // - secondScalar
+        assembly {
+            // secondScalar = alpha * beta * z_w
+            secondScalar := mulmod(mload(challenge), mload(add(challenge, 0x60)), p)
+            secondScalar := mulmod(secondScalar, mload(add(proof, 0x2C0)), p)
+
+            // (wireEval0 + gamma + beta * sigmaEval0)
+            tmp := mulmod(mload(add(challenge, 0x60)), mload(add(proof, 0x240)), p)
+            tmp := addmod(tmp, mload(add(proof, 0x1A0)), p)
+            tmp := addmod(tmp, mload(add(challenge, 0x80)), p)
+
+            secondScalar := mulmod(secondScalar, tmp, p)
+
+            // (wireEval1 + gamma + beta * sigmaEval1)
+            tmp := mulmod(mload(add(challenge, 0x60)), mload(add(proof, 0x260)), p)
+            tmp := addmod(tmp, mload(add(proof, 0x1C0)), p)
+            tmp := addmod(tmp, mload(add(challenge, 0x80)), p)
+
+            secondScalar := mulmod(secondScalar, tmp, p)
+
+            // (wireEval2 + gamma + beta * sigmaEval2)
+            tmp := mulmod(mload(add(challenge, 0x60)), mload(add(proof, 0x280)), p)
+            tmp := addmod(tmp, mload(add(proof, 0x1E0)), p)
+            tmp := addmod(tmp, mload(add(challenge, 0x80)), p)
+
+            secondScalar := mulmod(secondScalar, tmp, p)
+
+            // (wireEval3 + gamma + beta * sigmaEval3)
+            tmp := mulmod(mload(add(challenge, 0x60)), mload(add(proof, 0x2A0)), p)
+            tmp := addmod(tmp, mload(add(proof, 0x200)), p)
+            tmp := addmod(tmp, mload(add(challenge, 0x80)), p)
+
+            secondScalar := mulmod(secondScalar, tmp, p)
+        }
+
+        bases[1] = verifyingKey.sigma4;
+        scalars[1] = p - secondScalar;
+
+        // ============================================
+        // next 13 are for selectors:
+        //
+        // the selectors are organized as
+        // - q_lc
+        // - q_mul
+        // - q_hash
+        // - q_o
+        // - q_c
+        // - q_ecc
+        // ============================================
+
+        // ============
+        // q_lc
+        // ============
+        // q_1...q_4
+        scalars[2] = proof.wireEval0;
+        scalars[3] = proof.wireEval1;
+        scalars[4] = proof.wireEval2;
+        scalars[5] = proof.wireEval3;
+        bases[2] = verifyingKey.q1;
+        bases[3] = verifyingKey.q2;
+        bases[4] = verifyingKey.q3;
+        bases[5] = verifyingKey.q4;
+
+        // ============
+        // q_M
+        // ============
+        // q_M12 and q_M34
+        // q_M12 = w_evals[0] * w_evals[1];
+        assembly {
+            tmp := mulmod(mload(add(proof, 0x1A0)), mload(add(proof, 0x1C0)), p)
+        }
+        scalars[6] = tmp;
+        bases[6] = verifyingKey.qM12;
+
+        // q_M34] = w_evals[2] * w_evals[3];
+        assembly {
+            tmp := mulmod(mload(add(proof, 0x1E0)), mload(add(proof, 0x200)), p)
+        }
+        scalars[7] = tmp;
+        bases[7] = verifyingKey.qM34;
+
+        // ============
+        // q_H
+        // ============
+        // w_evals[0].pow([5]);
+        assembly {
+            tmp := mload(add(proof, 0x1A0))
+            tmp2 := mulmod(tmp, tmp, p)
+            tmp2 := mulmod(tmp2, tmp2, p)
+            tmp := mulmod(tmp, tmp2, p)
+        }
+        scalars[8] = tmp;
+        bases[8] = verifyingKey.qH1;
+
+        // w_evals[1].pow([5]);
+        assembly {
+            tmp := mload(add(proof, 0x1C0))
+            tmp2 := mulmod(tmp, tmp, p)
+            tmp2 := mulmod(tmp2, tmp2, p)
+            tmp := mulmod(tmp, tmp2, p)
+        }
+        scalars[9] = tmp;
+        bases[9] = verifyingKey.qH2;
+
+        // w_evals[2].pow([5]);
+        assembly {
+            tmp := mload(add(proof, 0x1E0))
+            tmp2 := mulmod(tmp, tmp, p)
+            tmp2 := mulmod(tmp2, tmp2, p)
+            tmp := mulmod(tmp, tmp2, p)
+        }
+        scalars[10] = tmp;
+        bases[10] = verifyingKey.qH3;
+
+        // w_evals[3].pow([5]);
+        assembly {
+            tmp := mload(add(proof, 0x200))
+            tmp2 := mulmod(tmp, tmp, p)
+            tmp2 := mulmod(tmp2, tmp2, p)
+            tmp := mulmod(tmp, tmp2, p)
+        }
+        scalars[11] = tmp;
+        bases[11] = verifyingKey.qH4;
+
+        // ============
+        // q_o and q_c
+        // ============
+        // q_o
+        scalars[12] = p - proof.wireEval4;
+        bases[12] = verifyingKey.qO;
+        // q_c
+        scalars[13] = 1;
+        bases[13] = verifyingKey.qC;
+
+        // ============
+        // q_Ecc
+        // ============
+        // q_Ecc = w_evals[0] * w_evals[1] * w_evals[2] * w_evals[3] * w_evals[4];
+        assembly {
+            tmp := mulmod(mload(add(scalars, 0xE0)), mload(add(scalars, 0x100)), p)
+            tmp := mulmod(tmp, mload(add(proof, 0x220)), p)
+        }
+        scalars[14] = tmp;
+        bases[14] = verifyingKey.qEcc;
+
+        // ============================================
+        // the last 5 are for splitting quotient commitments
+        // ============================================
+
+        // first one is 1-zeta^n
+        scalars[15] = p - evalData.vanishEval;
+        bases[15] = proof.split0;
+        assembly {
+            // tmp = zeta^{n+2}
+            tmp := addmod(mload(evalData), 1, p)
+            // todo: use pre-computed zeta^2
+            tmp2 := mulmod(mload(add(challenge, 0xA0)), mload(add(challenge, 0xA0)), p)
+            tmp := mulmod(tmp, tmp2, p)
+        }
+
+        // second one is (1-zeta^n) zeta^(n+2)
+        assembly {
+            tmp2 := mulmod(mload(add(scalars, 0x200)), tmp, p)
+        }
+        scalars[16] = tmp2;
+        bases[16] = proof.split1;
+
+        // thrid one is (1-zeta^n) zeta^2(n+2)
+        assembly {
+            tmp2 := mulmod(mload(add(scalars, 0x220)), tmp, p)
+        }
+        scalars[17] = tmp2;
+        bases[17] = proof.split2;
+
+        // forth one is (1-zeta^n) zeta^3(n+2)
+        assembly {
+            tmp2 := mulmod(mload(add(scalars, 0x240)), tmp, p)
+        }
+        scalars[18] = tmp2;
+        bases[18] = proof.split3;
+
+        // fifth one is (1-zeta^n) zeta^4(n+2)
+        assembly {
+            tmp2 := mulmod(mload(add(scalars, 0x260)), tmp, p)
+        }
+        scalars[19] = tmp2;
+
+        bases[19] = proof.split4;
     }
 
     // TODO: remove the next line

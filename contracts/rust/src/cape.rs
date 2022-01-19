@@ -268,15 +268,14 @@ mod tests {
     use ethers::prelude::{
         k256::ecdsa::SigningKey, Http, Provider, SignerMiddleware, Wallet, U256,
     };
-    use jf_aap::structs::{
-        AssetCode, AssetCodeSeed, AssetDefinition, AssetPolicy, FreezeFlag, RecordOpening,
-    };
+    use jf_aap::structs::{AssetCode, AssetCodeSeed, InternalAssetCode, RecordOpening};
     use rand::Rng;
 
     use crate::assertion::Matcher;
     use crate::ethereum::{deploy, get_funded_deployer};
     use crate::types::{
-        GenericInto, MerkleRootSol, NullifierSol, RecordCommitmentSol, TestCAPE, TestCapeTypes,
+        AssetCodeSol, GenericInto, InternalAssetCodeSol, MerkleRootSol, NullifierSol,
+        RecordCommitmentSol, TestCAPE, TestCapeTypes,
     };
     use anyhow::Result;
     use jf_aap::keys::UserPubKey;
@@ -764,103 +763,168 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_check_asset_code() -> Result<()> {
+    async fn test_check_foreign_asset_code() -> Result<()> {
         let contract = deploy_cape_test().await;
 
         // Fails for random record opening with random asset code.
         let rng = &mut ark_std::test_rng();
         let ro = RecordOpening::rand_for_test(rng);
         contract
-            .check_asset_code(ro.generic_into::<sol::RecordOpening>(), Address::random())
-            .call()
-            .await
-            .should_revert_with_message("Wrong asset code");
-
-        // Fails for record opening with domestic asset code.
-        let erc20_address = Address::random();
-        let domestic_asset_def = AssetDefinition::new(
-            AssetCode::new_domestic(AssetCodeSeed::generate(rng), erc20_address.as_bytes()),
-            AssetPolicy::rand_for_test(rng),
-        )
-        .unwrap();
-        contract
-            .check_asset_code(
-                RecordOpening::new(
-                    rng,
-                    1u64,
-                    domestic_asset_def,
-                    UserPubKey::default(),
-                    FreezeFlag::Unfrozen,
-                )
-                .generic_into::<sol::RecordOpening>(),
-                erc20_address,
+            .check_foreign_asset_code(
+                ro.asset_def.code.generic_into::<sol::AssetCodeSol>().0,
+                Address::random(),
             )
             .call()
             .await
-            .should_revert_with_message("Wrong asset code");
+            .should_revert_with_message("Wrong foreign asset code");
 
-        // TODO This is the first address, we should derive it from TEST_MNEMONIC
-        // msg.sender is the first address derived from TEST_MNEMONIC in hardhat
-        // let sponsor = "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266".parse::<Address>()?;
-        // but Address(0) in geth! why?
-        let sponsor = Address::zero();
+        let erc20_address = Address::random();
+        // This is the first account from the test mnemonic
+        // TODO define elsewhere to make it usable from other tests
+        let sponsor = "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266".parse::<Address>()?;
         let erc20_code = Erc20Code(EthereumAddr(erc20_address.to_fixed_bytes()));
+
+        // Fails for domestic asset code.
+        let domestic_asset_code =
+            AssetCode::new_domestic(AssetCodeSeed::generate(rng), erc20_address.as_bytes());
+        contract
+            .check_foreign_asset_code(
+                domestic_asset_code.generic_into::<AssetCodeSol>().0,
+                erc20_address,
+            )
+            .from(sponsor)
+            .call()
+            .await
+            .should_revert_with_message("Wrong foreign asset code");
 
         // Fails if txn sender address does not match sponsor in asset code.
         let description_wrong_sponsor = erc20_asset_description(
             &erc20_code,
             &EthereumAddr(Address::random().to_fixed_bytes()),
         );
-        let asset_def_wrong_sponsor = AssetDefinition::new(
-            AssetCode::new_foreign(&description_wrong_sponsor),
-            AssetPolicy::rand_for_test(rng),
-        )
-        .unwrap();
-        let ro_wrong_sponsor = RecordOpening::new(
-            rng,
-            1u64,
-            asset_def_wrong_sponsor,
-            UserPubKey::default(),
-            FreezeFlag::Unfrozen,
-        );
+        let asset_code_wrong_sponsor = AssetCode::new_foreign(&description_wrong_sponsor);
         contract
-            .check_asset_code(
-                ro_wrong_sponsor.generic_into::<sol::RecordOpening>(),
+            .check_foreign_asset_code(
+                asset_code_wrong_sponsor.generic_into::<AssetCodeSol>().0,
                 sponsor,
             )
+            .from(sponsor)
             .call()
             .await
-            .should_revert_with_message("Wrong asset code");
+            .should_revert_with_message("Wrong foreign asset code");
 
-        // Create a correct record opening with foreign asset code.
         let description =
             erc20_asset_description(&erc20_code, &EthereumAddr(sponsor.to_fixed_bytes()));
         let asset_code = AssetCode::new_foreign(&description);
-        let asset_def = AssetDefinition::new(asset_code, AssetPolicy::rand_for_test(rng)).unwrap();
-        let ro = RecordOpening::new(
-            rng,
-            1u64,
-            asset_def,
-            UserPubKey::default(),
-            FreezeFlag::Unfrozen,
-        );
 
-        // Fails for record opening with random erc20 address.
+        // Fails for random erc20 address.
         contract
-            .check_asset_code(
-                ro.clone().generic_into::<sol::RecordOpening>(),
+            .check_foreign_asset_code(
+                asset_code.generic_into::<sol::AssetCodeSol>().0,
                 Address::random(),
             )
+            .from(sponsor)
             .call()
             .await
-            .should_revert_with_message("Wrong asset code");
+            .should_revert_with_message("Wrong foreign asset code");
 
-        // Passes for correct record opening and erc20 address.
+        // Passes for correctly derived asset code
         contract
-            .check_asset_code(ro.generic_into::<sol::RecordOpening>(), erc20_address)
+            .check_foreign_asset_code(
+                asset_code.generic_into::<sol::AssetCodeSol>().0,
+                erc20_address,
+            )
+            .from(sponsor)
             .call()
             .await
             .should_not_revert();
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_check_domestic_asset_code() -> Result<()> {
+        let contract = deploy_cape_test().await;
+
+        // Create a matching pair of codes
+        let rng = &mut ark_std::test_rng();
+        let description = b"aap_usdx";
+        let seed = AssetCodeSeed::generate(rng);
+        let internal_asset_code = InternalAssetCode::new(seed, description);
+        let asset_code = AssetCode::new_domestic(seed, description);
+
+        // Passes for matching asset codes
+        contract
+            .check_domestic_asset_code(
+                asset_code.generic_into::<AssetCodeSol>().0,
+                internal_asset_code.generic_into::<InternalAssetCodeSol>().0,
+            )
+            .call()
+            .await
+            .should_not_revert();
+
+        // Fails with non-matching description
+        contract
+            .check_domestic_asset_code(
+                AssetCode::new_domestic(seed, b"other description")
+                    .generic_into::<AssetCodeSol>()
+                    .0,
+                internal_asset_code.generic_into::<InternalAssetCodeSol>().0,
+            )
+            .call()
+            .await
+            .should_revert_with_message("Wrong domestic asset code");
+
+        // Fails for foreign asset code
+        contract
+            .check_domestic_asset_code(
+                AssetCode::new_foreign(description)
+                    .generic_into::<AssetCodeSol>()
+                    .0,
+                internal_asset_code.generic_into::<InternalAssetCodeSol>().0,
+            )
+            .call()
+            .await
+            .should_revert_with_message("Wrong domestic asset code");
+
+        // Fails if internal asset code doesn't match (different seed)
+        contract
+            .check_domestic_asset_code(
+                asset_code.generic_into::<AssetCodeSol>().0,
+                InternalAssetCode::new(AssetCodeSeed::generate(rng), description)
+                    .generic_into::<InternalAssetCodeSol>()
+                    .0,
+            )
+            .call()
+            .await
+            .should_revert_with_message("Wrong domestic asset code");
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_check_domestic_asset_code_in_submit_cape_block() -> Result<()> {
+        let contract = deploy_cape_test().await;
+        let rng = &mut ark_std::test_rng();
+        let params = TxnsParams::generate_txns(rng, 0, 1, 0);
+
+        contract
+            .add_root(params.merkle_root.generic_into::<MerkleRootSol>().0)
+            .send()
+            .await?
+            .await?;
+
+        let mut block = CapeBlock::generate(params.txns, vec![], UserPubKey::default().address())?;
+
+        // Set a wrong internal asset code on the mint note
+        block.mint_notes[0].mint_internal_asset_code =
+            InternalAssetCode::new(AssetCodeSeed::generate(rng), b"description");
+
+        contract
+            .submit_cape_block(block.into(), vec![])
+            .call()
+            .await
+            .should_revert_with_message("Wrong domestic asset code");
 
         Ok(())
     }

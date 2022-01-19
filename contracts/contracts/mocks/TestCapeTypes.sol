@@ -17,7 +17,7 @@ contract TestCapeTypes {
         return root;
     }
 
-    function checkAssetCode(uint256 code) public pure returns (uint256) {
+    function checkForeignAssetCode(uint256 code) public pure returns (uint256) {
         return code;
     }
 

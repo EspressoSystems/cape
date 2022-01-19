@@ -29,6 +29,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
 
     bytes public constant CAPE_BURN_MAGIC_BYTES = "TRICAPE burn";
     bytes13 public constant DOM_SEP_FOREIGN_ASSET = "FOREIGN_ASSET";
+    bytes14 public constant DOM_SEP_DOMESTIC_ASSET = "DOMESTIC_ASSET";
 
     event BlockCommitted(uint64 indexed height, bool[] includedNotes);
 
@@ -183,17 +184,39 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
     /// @param erc20Address address of the ERC20 token corresponding to the deposit.
     function depositErc20(RecordOpening memory ro, address erc20Address) public {
         address depositorAddress = msg.sender;
-        _checkAssetCode(ro, erc20Address);
+        _checkForeignAssetCode(ro.assetDef.code, erc20Address);
     }
 
+    /// @notice Checks if the asset definition code is correctly derived from the ERC20 address
+    ///        of the token and the address of the depositor.
     /// @dev requires "view" to access msg.sender
-    function _checkAssetCode(RecordOpening memory ro, address erc20Address) internal view {
+    function _checkForeignAssetCode(uint256 assetDefinitionCode, address erc20Address)
+        internal
+        view
+    {
         bytes memory description = _computeAssetDescription(erc20Address, msg.sender);
-        bytes memory randomBytes = abi.encodePacked(
+        bytes memory randomBytes = bytes.concat(
             keccak256(bytes.concat(DOM_SEP_FOREIGN_ASSET, description))
         );
-        uint256 code = BN254.fromLeBytesModOrder(randomBytes);
-        require(code == ro.assetDef.code, "Wrong asset code");
+        uint256 derivedCode = BN254.fromLeBytesModOrder(randomBytes);
+        require(derivedCode == assetDefinitionCode, "Wrong foreign asset code");
+    }
+
+    /// @notice Checks if the asset definition code is correctly derived from the internal asset code.
+    function _checkDomesticAssetCode(uint256 assetDefinitionCode, uint256 internalAssetCode)
+        internal
+        view
+    {
+        bytes memory randomBytes = bytes.concat(
+            keccak256(
+                bytes.concat(
+                    DOM_SEP_DOMESTIC_ASSET,
+                    bytes32(Transcript.reverseEndianness(internalAssetCode))
+                )
+            )
+        );
+        uint256 derivedCode = BN254.fromLeBytesModOrder(randomBytes);
+        require(derivedCode == assetDefinitionCode, "Wrong domestic asset code");
     }
 
     // TODO consider inlining once asset description is finalized. Until then it's useful
@@ -244,7 +267,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
                     comms.add(note.mintComm);
                     comms.add(note.chgComm);
                     includedNotes[i] = true;
-                    // TODO check domestic (aap-native) asset code during verification of a mint note. See https://github.com/SpectrumXYZ/jellyfish-apps/blob/main/aap/src/mint.rs#L157-L159
+                    _checkDomesticAssetCode(note.mintAssetDef.code, note.mintInternalAssetCode);
                     // TODO extract proof for batch verification
                 }
 

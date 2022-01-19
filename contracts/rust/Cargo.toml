@@ -12,7 +12,7 @@ jf-primitives = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jell
 jf-aap = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", rev = "c9ded9359d82447ec5644c8df2921c16ba26c660"}
 jf-rescue = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", rev = "c9ded9359d82447ec5644c8df2921c16ba26c660"}
 jf-utils = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", rev = "c9ded9359d82447ec5644c8df2921c16ba26c660"}
-zerok_lib = { git = "ssh://git@github.com/SpectrumXYZ/spectrum.git", rev = "b3fbca5802e4ebabd36a59547dc982f88266b8d6" }
+zerok_lib = { git = "ssh://git@github.com/SpectrumXYZ/spectrum.git", rev = "b86e2e0ef24aa313a51a82875309f562fe0184d0" }
 ethers = { git = "https://github.com/gakonst/ethers-rs", branch = "master" }
 itertools = "0.10.1" # needed for jf-aap to compile
 ark-std = "0.3.0"

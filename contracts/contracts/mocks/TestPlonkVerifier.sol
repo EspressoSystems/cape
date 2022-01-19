@@ -47,6 +47,24 @@ contract TestPlonkVerifier is V {
         return V._linearizationScalarsAndBases(verifyingKey, challenge, evalData, proof);
     }
 
+    function preparePolyCommitments(
+        VerifyingKey memory verifyingKey,
+        Challenges memory chal,
+        Poly.EvalData memory evalData,
+        PlonkProof memory proof
+    )
+        public
+        pure
+        returns (
+            uint256[] memory commScalars,
+            BN254.G1Point[] memory commBases,
+            uint256[10] memory bufferVAndUvBasis
+        )
+    {
+        return V._preparePolyCommitments(verifyingKey, chal, evalData, proof);
+    }
+
+    // helper so that test code doesn't have to deploy both PlonkVerifier.sol and BN254.sol
     function multiScalarMul(BN254.G1Point[] memory bases, uint256[] memory scalars)
         public
         view

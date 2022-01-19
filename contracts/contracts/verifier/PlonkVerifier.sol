@@ -189,8 +189,6 @@ contract PlonkVerifier is IPlonkVerifier {
             mstore(add(res, 0x20), alpha2)
             mstore(add(res, 0x40), alpha3)
         }
-
-        return (res);
     }
 
     /// @dev Compute the constant term of the linearization polynomial

@@ -11,6 +11,7 @@ import "hardhat/console.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 import "./libraries/AccumulatingArray.sol";
 import "./libraries/BN254.sol";
+import "./libraries/EdOnBN254.sol";
 import "./libraries/RescueLib.sol";
 import "./interfaces/IPlonkVerifier.sol";
 import "./RecordsMerkleTree.sol";
@@ -30,13 +31,8 @@ contract CAPE is RecordsMerkleTree, RootStore {
 
     event BlockCommitted(uint64 indexed height, bool[] includedNotes);
 
-    struct EdOnBn254Point {
-        uint256 x;
-        uint256 y;
-    }
-
     struct AuditMemo {
-        EdOnBn254Point ephemeralKey;
+        EdOnBN254.EdOnBN254Point ephemeralKey;
         uint256[] data;
     }
 
@@ -92,20 +88,20 @@ contract CAPE is RecordsMerkleTree, RootStore {
         uint256 merkleRoot;
         uint64 fee;
         uint64 validUntil;
-        EdOnBn254Point txnMemoVerKey;
+        EdOnBN254.EdOnBN254Point txnMemoVerKey;
         bytes extraProofBoundData;
     }
 
     struct MintAuxInfo {
         uint256 merkleRoot;
         uint64 fee;
-        EdOnBn254Point txnMemoVerKey;
+        EdOnBN254.EdOnBN254Point txnMemoVerKey;
     }
 
     struct FreezeAuxInfo {
         uint256 merkleRoot;
         uint64 fee;
-        EdOnBn254Point txnMemoVerKey;
+        EdOnBN254.EdOnBN254Point txnMemoVerKey;
     }
 
     struct AssetDefinition {
@@ -114,9 +110,9 @@ contract CAPE is RecordsMerkleTree, RootStore {
     }
 
     struct AssetPolicy {
-        EdOnBn254Point auditorPk;
-        EdOnBn254Point credPk;
-        EdOnBn254Point freezerPk;
+        EdOnBN254.EdOnBN254Point auditorPk;
+        EdOnBN254.EdOnBN254Point credPk;
+        EdOnBN254.EdOnBN254Point freezerPk;
         uint256 revealMap;
         uint64 revealThreshold;
     }
@@ -124,13 +120,13 @@ contract CAPE is RecordsMerkleTree, RootStore {
     struct RecordOpening {
         uint64 amount;
         AssetDefinition assetDef;
-        EdOnBn254Point userAddr;
+        EdOnBN254.EdOnBN254Point userAddr;
         bool freezeFlag;
         uint256 blind;
     }
 
     struct CapeBlock {
-        EdOnBn254Point minerAddr;
+        EdOnBN254.EdOnBN254Point minerAddr;
         NoteType[] noteTypes;
         TransferNote[] transferNotes;
         MintNote[] mintNotes;
@@ -451,6 +447,7 @@ contract CAPE is RecordsMerkleTree, RootStore {
         proof = note.proof;
 
         // prepare transcript init messages
+        transcriptInitMsg = EdOnBN254.edSerialize(note.auxInfo.txnMemoVerKey);
     }
 
     function _prepareForProofVerification(BurnNote memory note)
@@ -514,6 +511,7 @@ contract CAPE is RecordsMerkleTree, RootStore {
         proof = note.proof;
 
         // prepare transcript init messages
+        transcriptInitMsg = EdOnBN254.edSerialize(note.auxInfo.txnMemoVerKey);
     }
 
     function _prepareForProofVerification(FreezeNote memory note)
@@ -551,5 +549,6 @@ contract CAPE is RecordsMerkleTree, RootStore {
         proof = note.proof;
 
         // prepare transcript init messages
+        transcriptInitMsg = EdOnBN254.edSerialize(note.auxInfo.txnMemoVerKey);
     }
 }

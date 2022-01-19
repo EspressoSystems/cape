@@ -337,17 +337,22 @@ async fn main() -> Result<(), std::io::Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use jf_aap::structs::AssetDefinition;
+    use jf_aap::{
+        keys::UserKeyPair,
+        structs::{AssetCode, AssetDefinition},
+    };
     use lazy_static::lazy_static;
     use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
-    use routes::WalletSummary;
+    use routes::{BalanceInfo, WalletSummary};
     use serde::de::DeserializeOwned;
     use std::convert::TryInto;
+    use std::fmt::Debug;
+    use std::iter::once;
     use surf::Url;
     use tagged_base64::TaggedBase64;
     use tempdir::TempDir;
     use tracing_test::traced_test;
-    use zerok_lib::{api::client, txn_builder::AssetInfo, wallet::hd::KeyTree};
+    use zerok_lib::{api, api::client, txn_builder::AssetInfo, wallet::hd::KeyTree};
 
     lazy_static! {
         static ref PORT: Arc<Mutex<u64>> = {
@@ -397,6 +402,12 @@ mod tests {
         async fn get<T: DeserializeOwned>(&self, path: &str) -> Result<T, surf::Error> {
             let mut res = self.client.get(path).send().await?;
             client::response_body(&mut res).await
+        }
+
+        async fn requires_wallet<T: Debug + DeserializeOwned>(&self, path: &str) {
+            self.get::<T>(path)
+                .await
+                .expect_err(&format!("{} succeeded without an open wallet", path));
         }
 
         fn path(&self) -> TaggedBase64 {
@@ -456,9 +467,8 @@ mod tests {
 
         // Should fail if no wallet exists.
         server
-            .get::<()>(&format!("openwallet/{}/path/{}", mnemonic, server.path()))
-            .await
-            .expect_err("openwallet succeeded when no wallet exists");
+            .requires_wallet::<()>(&format!("openwallet/{}/path/{}", mnemonic, server.path()))
+            .await;
 
         // Now create a wallet so we can open it.
         server
@@ -501,10 +511,7 @@ mod tests {
         let mut rng = ChaChaRng::from_seed([42u8; 32]);
 
         // Should fail if a wallet is not already open.
-        server
-            .get::<()>("closewallet")
-            .await
-            .expect_err("closewallet succeeded without an open wallet");
+        server.requires_wallet::<()>("closewallet").await;
 
         // Now open a wallet and close it.
         server
@@ -525,10 +532,7 @@ mod tests {
         let mut rng = ChaChaRng::from_seed([42u8; 32]);
 
         // Should fail if a wallet is not already open.
-        server
-            .get::<WalletSummary>("getinfo")
-            .await
-            .expect_err("getinfo succeeded without an open wallet");
+        server.requires_wallet::<WalletSummary>("getinfo").await;
 
         // Now open a wallet and call getinfo.
         server
@@ -553,5 +557,136 @@ mod tests {
                 assets: vec![AssetInfo::from(AssetDefinition::native())]
             }
         )
+    }
+
+    #[async_std::test]
+    #[traced_test]
+    async fn test_getaddress() {
+        let server = TestServer::new().await;
+        let mut rng = ChaChaRng::from_seed([42u8; 32]);
+
+        // Should fail if a wallet is not already open.
+        server
+            .requires_wallet::<Vec<api::UserAddress>>("getaddress")
+            .await;
+
+        // Now open a wallet and call getaddress.
+        server
+            .get::<()>(&format!(
+                "newwallet/{}/path/{}",
+                random_mnemonic(&mut rng),
+                server.path()
+            ))
+            .await
+            .unwrap();
+        let addresses = server
+            .get::<Vec<api::UserAddress>>("getaddress")
+            .await
+            .unwrap();
+
+        // The result is not very interesting before we add any keys, but that's for another
+        // endpoint.
+        assert_eq!(addresses, vec![]);
+    }
+
+    #[async_std::test]
+    #[traced_test]
+    async fn test_getbalance() {
+        let server = TestServer::new().await;
+        let mut rng = ChaChaRng::from_seed([42u8; 32]);
+
+        let addr = api::UserAddress::from(UserKeyPair::generate(&mut rng).address());
+        let asset = AssetCode::native();
+
+        // Should fail if a wallet is not already open.
+        server
+            .requires_wallet::<BalanceInfo>("getbalance/all")
+            .await;
+        server
+            .requires_wallet::<BalanceInfo>(&format!("getbalance/address/{}", addr))
+            .await;
+        server
+            .requires_wallet::<BalanceInfo>(&format!("getbalance/address/{}/asset/{}", addr, asset))
+            .await;
+
+        // Now open a wallet.
+        server
+            .get::<()>(&format!(
+                "newwallet/{}/path/{}",
+                random_mnemonic(&mut rng),
+                server.path()
+            ))
+            .await
+            .unwrap();
+
+        // We can now hit the endpoints successfully, although there are currently no balances
+        // because we haven't added any keys or received any records.
+        assert_eq!(
+            server.get::<BalanceInfo>("getbalance/all").await.unwrap(),
+            BalanceInfo::AllBalances(HashMap::default())
+        );
+        assert_eq!(
+            server
+                .get::<BalanceInfo>(&format!("getbalance/address/{}", addr))
+                .await
+                .unwrap(),
+            // Even though this address has not been added to the wallet (and thus was not included
+            // in the results of `getbalance/all`), if we specifically request its balance, the
+            // wallet will check for records of each known asset type belonging to this address,
+            // find none, and return a balance of 0 for that asset type. Since the wallet always
+            // knows about the native asset type, this will actually return some data, rather than
+            // an empty map or an error.
+            BalanceInfo::AccountBalances(once((AssetCode::native(), 0)).collect())
+        );
+        assert_eq!(
+            server
+                .get::<BalanceInfo>(&format!("getbalance/address/{}/asset/{}", addr, asset))
+                .await
+                .unwrap(),
+            BalanceInfo::Balance(0),
+        );
+        // If we query for a specific asset code, we should get a balance of 0 even if the wallet
+        // doesn't know about this asset yet.
+        assert_eq!(
+            server
+                .get::<BalanceInfo>(&format!(
+                    "getbalance/address/{}/asset/{}",
+                    addr,
+                    AssetCode::random(&mut rng).0
+                ))
+                .await
+                .unwrap(),
+            BalanceInfo::Balance(0),
+        );
+
+        // Should fail with an invalid address (we'll get an invalid address by serializing an asset
+        // code where the address should go.).
+        server
+            .get::<BalanceInfo>(&format!("getbalance/address/{}", asset))
+            .await
+            .expect_err("getbalance succeeded with an invalid address");
+        server
+            .get::<BalanceInfo>(&format!("getbalance/address/{}/asset/{}", asset, asset))
+            .await
+            .expect_err("getbalance succeeded with an invalid address");
+        // Should fail with an invalid asset code (we'll use an address where the asset should go).
+        server
+            .get::<BalanceInfo>(&format!("getbalance/address/{}/asset/{}", addr, addr))
+            .await
+            .expect_err("getbalance succeeded with an invalid asset code");
+        // Should fail with route pattern misuse (e.g. specifying `address` route component without
+        // an accompanying `:address` parameter).
+        server
+            .get::<BalanceInfo>("getbalance/address")
+            .await
+            .expect_err("getbalance/address succeeded with invalid route pattern");
+        server
+            .get::<BalanceInfo>("getbalance/asset")
+            .await
+            .expect_err("getbalance/asset succeeded with invalid route pattern");
+        server
+            .get::<BalanceInfo>("getbalance")
+            .await
+            .expect_err("getbalance succeeded with invalid route pattern");
     }
 }

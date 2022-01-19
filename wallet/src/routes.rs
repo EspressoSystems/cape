@@ -2,6 +2,7 @@
 
 use crate::WebState;
 use async_std::sync::{Arc, Mutex};
+use futures::{prelude::*, stream::iter};
 use jf_aap::{
     keys::{AuditorPubKey, FreezerPubKey, UserPubKey},
     structs::{AssetCode, AssetDefinition},
@@ -19,7 +20,7 @@ use tide::StatusCode;
 use tide_websockets::WebSocketConnection;
 use zerok_lib::{
     api,
-    api::server::response,
+    api::{server::response, TaggedBlob},
     cape_ledger::CapeLedger,
     state::{key_set::KeySet, VerifierKeySet, MERKLE_HEIGHT},
     txn_builder::AssetInfo,
@@ -123,6 +124,11 @@ impl UrlSegmentValue {
                 format!("expected string, got {:?}", self),
             )),
         }
+    }
+
+    pub fn to<T: TaggedBlob>(&self) -> Result<T, tide::Error> {
+        T::from_tagged_blob(&self.as_identifier()?)
+            .map_err(|err| tide::Error::from_str(StatusCode::BadRequest, format!("{}", err)))
     }
 }
 
@@ -274,6 +280,19 @@ pub async fn init_wallet(
     Wallet::new(backend).await.map_err(wallet_error)
 }
 
+async fn known_assets(wallet: &Wallet) -> HashMap<AssetCode, AssetInfo> {
+    let mut assets = wallet.assets().await;
+
+    // There is always one asset we know about, even if we don't have any in our wallet: the native
+    // asset. Make sure this gets added to the list of known assets.
+    assets.insert(
+        AssetCode::native(),
+        AssetInfo::from(AssetDefinition::native()),
+    );
+
+    assets
+}
+
 fn require_wallet(wallet: &mut Option<Wallet>) -> Result<&mut Wallet, tide::Error> {
     wallet.as_mut().ok_or_else(|| {
         tide::Error::from_str(
@@ -345,27 +364,103 @@ pub struct WalletSummary {
 
 async fn getinfo(wallet: &mut Option<Wallet>) -> Result<WalletSummary, tide::Error> {
     let wallet = require_wallet(wallet)?;
-
-    // There is always one asset we know about, even if we don't have any in our wallet: the native
-    // asset. Make sure this gets added to the list of known assets.
-    let mut assets = wallet.assets().await;
-    assets.insert(
-        AssetCode::native(),
-        AssetInfo::from(AssetDefinition::native()),
-    );
-
     Ok(WalletSummary {
         addresses: wallet
             .pub_keys()
             .await
             .into_iter()
-            .map(|pub_key| api::UserAddress(pub_key.address()))
+            .map(|pub_key| pub_key.address().into())
             .collect(),
         spend_keys: wallet.pub_keys().await,
         audit_keys: wallet.auditor_pub_keys().await,
         freeze_keys: wallet.freezer_pub_keys().await,
-        assets: assets.into_values().collect(),
+        assets: known_assets(wallet).await.into_values().collect(),
     })
+}
+
+async fn getaddress(wallet: &mut Option<Wallet>) -> Result<Vec<api::UserAddress>, tide::Error> {
+    let wallet = require_wallet(wallet)?;
+    Ok(wallet
+        .pub_keys()
+        .await
+        .into_iter()
+        .map(|pub_key| pub_key.address().into())
+        .collect())
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum BalanceInfo {
+    /// The balance of a single asset, in a single account.
+    Balance(u64),
+    /// All the balances of an account, by asset type.
+    AccountBalances(HashMap<AssetCode, u64>),
+    /// All the balances of all accounts owned by the wallet.
+    AllBalances(HashMap<api::UserAddress, HashMap<AssetCode, u64>>),
+}
+
+// Get all balances for the current wallet, all the balances for a given address, or the balance for
+// a given address and asset type.
+//
+// Returns:
+//  * BalanceInfo::Balance, if address and asset code both given
+//  * BalanceInfo::AccountBalances, if address given
+//  * BalanceInfo::AllBalances, if neither given
+async fn getbalance(
+    bindings: &HashMap<String, RouteBinding>,
+    wallet: &mut Option<Wallet>,
+) -> Result<BalanceInfo, tide::Error> {
+    let wallet = &require_wallet(wallet)?;
+
+    // The request dispatcher should fail if the URL pattern does not match one of the patterns
+    // defined for this route in api.toml, so the only routes we have to handle are:
+    //  * getbalance/all
+    //  * getbalance/address/:address
+    //  * getbalance/address/:address/asset/:asset
+    // Therefore, we can determine which form we are handling just by checking for the presence of
+    // :address and :asset.
+    let address = match bindings.get(":address") {
+        Some(address) => Some(address.value.to::<api::UserAddress>()?),
+        None => None,
+    };
+    let asset = match bindings.get(":asset") {
+        Some(asset) => Some(asset.value.to::<AssetCode>()?),
+        None => None,
+    };
+
+    let one_balance = |address: api::UserAddress, asset| async move {
+        wallet.balance(&address.into(), &asset).await
+    };
+    let account_balances = |address: api::UserAddress| async move {
+        iter(known_assets(wallet).await.into_keys())
+            .then(|asset| {
+                let address = address.clone();
+                async move { (asset, one_balance(address, asset).await) }
+            })
+            .collect()
+            .await
+    };
+    let all_balances = || async {
+        iter(wallet.pub_keys().await)
+            .then(|key| async move {
+                let address = api::UserAddress::from(key.address());
+                (address.clone(), account_balances(address).await)
+            })
+            .collect()
+            .await
+    };
+
+    match (address, asset) {
+        (Some(address), Some(asset)) => Ok(BalanceInfo::Balance(one_balance(address, asset).await)),
+        (Some(address), None) => Ok(BalanceInfo::AccountBalances(
+            account_balances(address).await,
+        )),
+        (None, None) => Ok(BalanceInfo::AllBalances(all_balances().await)),
+        (None, Some(_)) => {
+            // There is no endpoint that includes asset but not address, so the request parsing code
+            // should not allow us to reach here.
+            unreachable!()
+        }
+    }
 }
 
 pub async fn dispatch_url(
@@ -383,8 +478,8 @@ pub async fn dispatch_url(
         ApiRouteKey::closewallet => response(&req, closewallet(wallet).await?),
         ApiRouteKey::deposit => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::freeze => dummy_url_eval(route_pattern, bindings),
-        ApiRouteKey::getaddress => dummy_url_eval(route_pattern, bindings),
-        ApiRouteKey::getbalance => dummy_url_eval(route_pattern, bindings),
+        ApiRouteKey::getaddress => response(&req, getaddress(wallet).await?),
+        ApiRouteKey::getbalance => response(&req, getbalance(bindings, wallet).await?),
         ApiRouteKey::getinfo => response(&req, getinfo(wallet).await?),
         ApiRouteKey::importkey => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::mint => dummy_url_eval(route_pattern, bindings),

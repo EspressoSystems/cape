@@ -1141,7 +1141,7 @@ dependencies = [
  "tracing-futures",
  "tracing-subscriber 0.2.25",
  "tracing-test",
- "zerok_lib 0.1.0 (git+ssh://git@github.com/SpectrumXYZ/spectrum.git?branch=main)",
+ "zerok_lib 0.1.0 (git+ssh://git@github.com/SpectrumXYZ/spectrum.git?rev=80d568119b72c7ea33728fa48ad45215869fe345)",
 ]
 
 [[package]]
@@ -6418,7 +6418,7 @@ dependencies = [
 [[package]]
 name = "zerok-macros"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/spectrum.git?branch=main#161a68e6534abe902c43ce52160babf5b76b8650"
+source = "git+ssh://git@github.com/SpectrumXYZ/spectrum.git?rev=80d568119b72c7ea33728fa48ad45215869fe345#80d568119b72c7ea33728fa48ad45215869fe345"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -6438,7 +6438,7 @@ dependencies = [
 [[package]]
 name = "zerok_lib"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/spectrum.git?branch=main#161a68e6534abe902c43ce52160babf5b76b8650"
+source = "git+ssh://git@github.com/SpectrumXYZ/spectrum.git?rev=80d568119b72c7ea33728fa48ad45215869fe345#80d568119b72c7ea33728fa48ad45215869fe345"
 dependencies = [
  "arbitrary",
  "ark-ff",
@@ -6489,7 +6489,7 @@ dependencies = [
  "tide",
  "tracing",
  "zeroize",
- "zerok-macros 0.1.0 (git+ssh://git@github.com/SpectrumXYZ/spectrum.git?branch=main)",
+ "zerok-macros 0.1.0 (git+ssh://git@github.com/SpectrumXYZ/spectrum.git?rev=80d568119b72c7ea33728fa48ad45215869fe345)",
 ]
 
 [[package]]

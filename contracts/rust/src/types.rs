@@ -769,8 +769,6 @@ impl From<jf_aap::VerifyingKey> for VerifyingKey {
             selectors.push(p.into());
         }
 
-        println!("sigma {:x} {:x}", sigmas[0].x, sigmas[0].y);
-
         Self {
             domain_size: field_to_u256(domain_size),
             num_inputs: field_to_u256(num_inputs),

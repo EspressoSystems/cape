@@ -343,7 +343,7 @@ mod tests {
     };
     use lazy_static::lazy_static;
     use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
-    use routes::{BalanceInfo, WalletSummary};
+    use routes::{BalanceInfo, PubKey, WalletSummary};
     use serde::de::DeserializeOwned;
     use std::convert::TryInto;
     use std::fmt::Debug;
@@ -688,5 +688,63 @@ mod tests {
             .get::<BalanceInfo>("getbalance")
             .await
             .expect_err("getbalance succeeded with invalid route pattern");
+    }
+
+    #[async_std::test]
+    #[traced_test]
+    async fn test_newkey() {
+        let server = TestServer::new().await;
+        let mut rng = ChaChaRng::from_seed([42u8; 32]);
+
+        // Should fail if a wallet is not already open.
+        server.requires_wallet::<PubKey>("newkey/send").await;
+        server.requires_wallet::<PubKey>("newkey/trace").await;
+        server.requires_wallet::<PubKey>("newkey/freeze").await;
+
+        // Now open a wallet and call newkey.
+        server
+            .get::<()>(&format!(
+                "newwallet/{}/path/{}",
+                random_mnemonic(&mut rng),
+                server.path()
+            ))
+            .await
+            .unwrap();
+
+        // newkey should return a public key with the correct type and add the key to the wallet.
+        let spend_key = server.get::<PubKey>("newkey/send").await.unwrap();
+        let audit_key = server.get::<PubKey>("newkey/trace").await.unwrap();
+        let freeze_key = server.get::<PubKey>("newkey/freeze").await.unwrap();
+        let info = server.get::<WalletSummary>("getinfo").await.unwrap();
+        match spend_key {
+            PubKey::Spend(key) => {
+                assert_eq!(info.spend_keys, vec![key]);
+            }
+            _ => {
+                panic!("Expected Spend, found {:?}", spend_key);
+            }
+        }
+        match audit_key {
+            PubKey::Audit(key) => {
+                assert_eq!(info.audit_keys, vec![key]);
+            }
+            _ => {
+                panic!("Expected Audit, found {:?}", audit_key);
+            }
+        }
+        match freeze_key {
+            PubKey::Freeze(key) => {
+                assert_eq!(info.freeze_keys, vec![key]);
+            }
+            _ => {
+                panic!("Expected Freeze, found {:?}", freeze_key);
+            }
+        }
+
+        // Should fail if the key type is invaild,
+        server
+            .get::<PubKey>("newkey/invalid_key_type")
+            .await
+            .expect_err("newkey succeeded with an invaild key type");
     }
 }

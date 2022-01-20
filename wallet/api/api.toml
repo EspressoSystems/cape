@@ -99,7 +99,7 @@ Get the addresses, public keys, and asset types for the current wallet.
 [route.newkey]
 PATH = ["newkey/send", "newkey/trace", "newkey/freeze"]
 DOC = """
-Generate a key of the given type to be used to define assets.
+Generate and return a key of the given type to be used to define assets.
 """
 
 [route.importkey]

@@ -168,6 +168,14 @@ pub enum ApiRouteKey {
     wrap,
 }
 
+#[derive(Debug, Deserialize, Serialize)]
+/// Public keys for spending, auditing and freezing assets.
+pub enum PubKey {
+    Spend(UserPubKey),
+    Audit(AuditorPubKey),
+    Freeze(FreezerPubKey),
+}
+
 /// Verifiy that every variant of enum ApiRouteKey is defined in api.toml
 // TODO !corbett Check all the other things that might fail after startup.
 pub fn check_api(api: toml::Value) -> bool {
@@ -463,17 +471,31 @@ async fn getbalance(
     }
 }
 
+async fn newkey(key_type: &str, wallet: &mut Option<Wallet>) -> Result<PubKey, tide::Error> {
+    let wallet = require_wallet(wallet)?;
+
+    match key_type {
+        "send" => Ok(PubKey::Spend(wallet.generate_user_key(None).await?)),
+        "trace" => Ok(PubKey::Audit(wallet.generate_audit_key().await?)),
+        "freeze" => Ok(PubKey::Freeze(wallet.generate_freeze_key().await?)),
+        _ => Err(tide::Error::from_str(
+            StatusCode::BadRequest,
+            format!(
+                "expected key type (send, trace or freeze), got {:?}",
+                key_type
+            ),
+        )),
+    }
+}
+
 pub async fn dispatch_url(
     req: tide::Request<WebState>,
     route_pattern: &str,
     bindings: &HashMap<String, RouteBinding>,
 ) -> Result<tide::Response, tide::Error> {
-    let first_segment = route_pattern
-        .split_once('/')
-        .unwrap_or((route_pattern, ""))
-        .0;
+    let segments = route_pattern.split_once('/').unwrap_or((route_pattern, ""));
     let wallet = &mut *req.state().wallet.lock().await;
-    let key = ApiRouteKey::from_str(first_segment).expect("Unknown route");
+    let key = ApiRouteKey::from_str(segments.0).expect("Unknown route");
     match key {
         ApiRouteKey::closewallet => response(&req, closewallet(wallet).await?),
         ApiRouteKey::deposit => dummy_url_eval(route_pattern, bindings),
@@ -484,7 +506,7 @@ pub async fn dispatch_url(
         ApiRouteKey::importkey => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::mint => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::newasset => dummy_url_eval(route_pattern, bindings),
-        ApiRouteKey::newkey => dummy_url_eval(route_pattern, bindings),
+        ApiRouteKey::newkey => response(&req, newkey(segments.1, wallet).await?),
         ApiRouteKey::newwallet => response(&req, newwallet(bindings, wallet).await?),
         ApiRouteKey::openwallet => response(&req, openwallet(bindings, wallet).await?),
         ApiRouteKey::send => dummy_url_eval(route_pattern, bindings),

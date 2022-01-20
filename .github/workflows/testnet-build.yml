@@ -56,5 +56,5 @@ jobs:
           key: cape-v3-${{ hashFiles('Cargo.lock') }}
 
       # temp placeholder env vars
-      - name: Run Tests Against Goerli Testnet
-        run: nix-shell --run "GOERLI_MNEMONIC='midnight excess rocket horror isolate expand orchard gallery upset picnic hungry accuse' GOERLI_URL='https://goerli.infura.io/v3/b1c297e315394878bc159b5d10b202e1' hardhat test --network goerli"
+      - name: Run Tests Against Rinkeby Testnet
+        run: nix-shell --run "RINKEBY_MNEMONIC='${{ secrets.RINKEBY_MNEMONIC }}' RINKEBY_URL='https://rinkeby.infura.io/v3/b1c297e315394878bc159b5d10b202e1' hardhat test --network rinkeby"

@@ -20,8 +20,7 @@ library RescueLib {
     uint256 private constant _ALPHA_INV =
         17510594297471420177797124596205820070838691520332827474958563349260646796493;
 
-    // _MDS is hardcoded
-    // TODO optimize (see Starkware or hard code matrix operations + assembly)
+    // MDS is hardcoded
     function _linearOp(
         uint256 s0,
         uint256 s1,
@@ -37,7 +36,6 @@ library RescueLib {
             uint256
         )
     {
-        // TODO remove loop to save gas?
         // Matrix multiplication
         unchecked {
             return (
@@ -178,7 +176,6 @@ library RescueLib {
         }
         (s0, s1, s2, s3) = _linearOp(s0, s1, s2, s3);
 
-        // TODO avoid code duplication?
         unchecked {
             uint256 tmp = s0 +
                 18657517374128716281071590782771170166993445602755371021955596036781411817786;
@@ -221,7 +218,6 @@ library RescueLib {
         }
         (s0, s1, s2, s3) = _linearOp(s0, s1, s2, s3);
 
-        // TODO avoid code duplication?
         unchecked {
             uint256 tmp = s0 +
                 307094088106440279963968943984309088038734274328527845883669678290790702381;
@@ -264,7 +260,6 @@ library RescueLib {
         }
         (s0, s1, s2, s3) = _linearOp(s0, s1, s2, s3);
 
-        // TODO avoid code duplication?
         unchecked {
             uint256 tmp = s0 +
                 15608173629791582453867933160400609222904457931922627396107815347244961625587;
@@ -307,7 +302,6 @@ library RescueLib {
         }
         (s0, s1, s2, s3) = _linearOp(s0, s1, s2, s3);
 
-        // TODO avoid code duplication?
         unchecked {
             uint256 tmp = s0 +
                 4585980485870975597083581718044393941512074846925247225127276913719050121968;
@@ -350,7 +344,6 @@ library RescueLib {
         }
         (s0, s1, s2, s3) = _linearOp(s0, s1, s2, s3);
 
-        // TODO avoid code duplication?
         unchecked {
             uint256 tmp = s0 +
                 10226182617544046880850643054874064693998595520540061157646952229134207239372;
@@ -393,7 +386,6 @@ library RescueLib {
         }
         (s0, s1, s2, s3) = _linearOp(s0, s1, s2, s3);
 
-        // TODO avoid code duplication?
         unchecked {
             uint256 tmp = s0 +
                 10351436748086126474964482623536554036637945319698748519226181145454116702488;
@@ -436,7 +428,6 @@ library RescueLib {
         }
         (s0, s1, s2, s3) = _linearOp(s0, s1, s2, s3);
 
-        // TODO avoid code duplication?
         unchecked {
             uint256 tmp = s0 +
                 16224484149774307577146165975762490690838415946665379067259822320752729067513;
@@ -479,7 +470,6 @@ library RescueLib {
         }
         (s0, s1, s2, s3) = _linearOp(s0, s1, s2, s3);
 
-        // TODO avoid code duplication?
         unchecked {
             uint256 tmp = s0 +
                 5526416022516734657935645023952329824887761902324086126076396040056459740202;
@@ -522,7 +512,6 @@ library RescueLib {
         }
         (s0, s1, s2, s3) = _linearOp(s0, s1, s2, s3);
 
-        // TODO avoid code duplication?
         unchecked {
             uint256 tmp = s0 +
                 3523599105403569319090449327691358425990456728660349400211678603795116364226;
@@ -565,7 +554,6 @@ library RescueLib {
         }
         (s0, s1, s2, s3) = _linearOp(s0, s1, s2, s3);
 
-        // TODO avoid code duplication?
         unchecked {
             uint256 tmp = s0 +
                 2552744099402346352193097862110515290335034445517764751557635302899937367219;
@@ -608,7 +596,6 @@ library RescueLib {
         }
         (s0, s1, s2, s3) = _linearOp(s0, s1, s2, s3);
 
-        // TODO avoid code duplication?
         unchecked {
             uint256 tmp = s0 +
                 21386271527766270535632132320974945129946865648321206442664310421414128279311;
@@ -651,7 +638,6 @@ library RescueLib {
         }
         (s0, s1, s2, s3) = _linearOp(s0, s1, s2, s3);
 
-        // TODO avoid code duplication?
         unchecked {
             uint256 tmp = s0 +
                 19076469206110044175016166349949136119962165667268661130584159239385341119621;

@@ -550,6 +550,22 @@ To run the CI locally install [gitlab-runner](https://docs.gitlab.com/runner/ins
 
 Where the last argument is the name of the job to run.
 
+## Nightly CI builds
+
+There's a CI nightly job that runs the test suite via hardhat against the Rinkeby testnet.
+
+2 things to note:
+
+1. Currently the relevant contracts are deployed with each build, meaning we're not optimizing on gas costs per build.
+
+2. The funds in the testnet wallet need to be topped off occassionally as the nightly tests consume gas over some period of time.
+
+Based on a few successful test runs, the entire suite should consume roughly 0.079024934 gas. In case the wallet needs more funds, send more test ETH to:
+
+```
+0x2FB18F4b4519a5fc792cb6508C6505675BA659E9
+```
+
 # Documentation
 
 Extracting documentation from the solidity source is done using a javascript

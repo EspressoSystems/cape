@@ -3,7 +3,7 @@ mod helpers;
 mod poly_eval;
 
 use self::helpers::gen_plonk_proof_for_test;
-use crate::types::GenericInto;
+use crate::types::{u256_to_field, GenericInto};
 use crate::{
     ethereum::{deploy, get_funded_deployer},
     plonk_verifier::helpers::get_poly_evals,
@@ -11,11 +11,13 @@ use crate::{
     types::{field_to_u256, TestPlonkVerifier},
 };
 use anyhow::Result;
-use ark_bn254::{Bn254, Fq, Fr};
+use ark_bn254::{Bn254, Fq, Fr, G1Affine};
+use ark_ec::AffineCurve;
 use ark_ec::ProjectiveCurve;
 use ark_ff::Field;
 use ark_poly::{EvaluationDomain, Radix2EvaluationDomain};
 use ark_std::rand::Rng;
+use ark_std::Zero;
 use ark_std::{test_rng, One, UniformRand};
 use ethers::core::k256::ecdsa::SigningKey;
 use ethers::prelude::*;
@@ -168,25 +170,59 @@ async fn test_prepare_pcs_info() -> Result<()> {
     } else {
         Bytes::default()
     };
+
+    let sol_pcs = contract
+        .prepare_pcs_info(
+            vk.clone().into(),
+            public_inputs.iter().map(|f| field_to_u256(*f)).collect(),
+            proof.clone().into(),
+            extra_msg_sol,
+        )
+        .call()
+        .await?;
+
+    let rust_pcs = verifier.prepare_pcs_info::<SolidityTranscript>(
+        &[&vk],
+        &[&public_inputs],
+        &proof.into(),
+        &extra_msg,
+    )?;
+
+    assert_eq!(sol_pcs.u, field_to_u256(rust_pcs.u));
+    assert_eq!(sol_pcs.eval_point, field_to_u256(rust_pcs.eval_point));
     assert_eq!(
-        contract
-            .prepare_pcs_info(
-                vk.clone().into(),
-                public_inputs.iter().map(|f| field_to_u256(*f)).collect(),
-                proof.clone().into(),
-                extra_msg_sol,
-            )
-            .call()
-            .await?,
-        verifier
-            .prepare_pcs_info::<SolidityTranscript>(
-                &[&vk],
-                &[&public_inputs],
-                &proof.into(),
-                &extra_msg
-            )?
-            .into()
+        sol_pcs.next_eval_point,
+        field_to_u256(rust_pcs.next_eval_point)
     );
+    assert_eq!(sol_pcs.eval, field_to_u256(rust_pcs.eval));
+    assert_eq!(
+        sol_pcs.opening_proof.x,
+        field_to_u256(rust_pcs.opening_proof.0.x)
+    );
+    assert_eq!(
+        sol_pcs.opening_proof.y,
+        field_to_u256(rust_pcs.opening_proof.0.y)
+    );
+    assert_eq!(
+        sol_pcs.shifted_opening_proof.x,
+        field_to_u256(rust_pcs.shifted_opening_proof.0.x)
+    );
+    assert_eq!(
+        sol_pcs.shifted_opening_proof.y,
+        field_to_u256(rust_pcs.shifted_opening_proof.0.y)
+    );
+
+    let rust_msm = rust_pcs
+        .comm_scalars_and_bases
+        .multi_scalar_mul()
+        .into_affine();
+    let mut res = G1Affine::zero();
+    for (b, s) in sol_pcs.comm_bases.iter().zip(sol_pcs.comm_scalars.iter()) {
+        let base: G1Affine = b.clone().into();
+        let scalar: Fr = u256_to_field(s.clone());
+        res += &base.mul(scalar).into_affine();
+    }
+    assert_eq!(res, rust_msm);
 
     Ok(())
 }

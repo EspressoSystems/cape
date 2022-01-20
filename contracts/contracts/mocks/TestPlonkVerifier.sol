@@ -55,7 +55,7 @@ contract TestPlonkVerifier is V, TestPoly {
         PlonkProof memory proof
     )
         public
-        view
+        pure
         returns (
             uint256[] memory commScalars,
             BN254.G1Point[] memory commBases,
@@ -92,17 +92,9 @@ contract TestPlonkVerifier is V, TestPoly {
         // NOTE: the only difference with actual code
         Poly.EvalDomain memory domain = newEvalDomain(verifyingKey.domainSize);
 
-        console.logBytes("fff");
-        console.logBytes(abi.encodePacked(verifyingKey.sigma0.x));
-        console.logBytes(abi.encodePacked(verifyingKey.sigma0.y));
-
         // compute opening proof in poly comm.
         (uint256[] memory commScalars, BN254.G1Point[] memory commBases, uint256 eval) = V
             ._prepareOpeningProof(domain, verifyingKey, publicInput, proof, chal);
-
-        console.logBytes("ggg");
-        console.logBytes(abi.encodePacked(verifyingKey.sigma0.x));
-        console.logBytes(abi.encodePacked(verifyingKey.sigma0.y));
 
         uint256 zeta = chal.zeta;
         uint256 omega = domain.groupGen;

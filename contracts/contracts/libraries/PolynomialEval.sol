@@ -194,7 +194,7 @@ library PolynomialEval {
         uint256 groupGen = self.groupGen;
         uint256 tmp = 1;
         uint256 p = BN254.R_MOD;
-
+        elements = new uint256[](length);
         assembly {
             if not(iszero(length)) {
                 let ptr := add(elements, 0x20)

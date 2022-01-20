@@ -280,6 +280,10 @@ contract PlonkVerifier is IPlonkVerifier {
             evalData
         );
 
+        console.logBytes("abcd");
+        console.logBytes(abi.encodePacked(verifyingKey.sigma0.x));
+        console.logBytes(abi.encodePacked(verifyingKey.sigma0.y));
+
         uint256[10] memory bufferVAndUvBasis;
         (commScalars, commBases, bufferVAndUvBasis) = _preparePolyCommitments(
             verifyingKey,
@@ -287,6 +291,19 @@ contract PlonkVerifier is IPlonkVerifier {
             evalData,
             proof
         );
+        console.logBytes("aaaa");
+        for (uint256 i = 0; i < commScalars.length; i++) {
+            console.logBytes(abi.encodePacked(commScalars[i]));
+        }
+        console.logBytes("a");
+        for (uint256 i = 0; i < commBases.length; i++) {
+            console.logBytes(abi.encodePacked(i));
+            console.logBytes(abi.encodePacked(commBases[i].x));
+            console.logBytes(abi.encodePacked(commBases[i].y));
+        }
+        console.logBytes("a");
+        console.logBytes("a");
+        console.logBytes("a");
 
         eval = _prepareEvaluations(linPolyConstant, proof, bufferVAndUvBasis);
     }

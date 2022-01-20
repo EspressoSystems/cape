@@ -5,6 +5,7 @@ import {BN254} from "../libraries/BN254.sol";
 import {PlonkVerifier as V} from "../verifier/PlonkVerifier.sol";
 import {PolynomialEval as Poly} from "../libraries/PolynomialEval.sol";
 import {TestPolynomialEval as TestPoly} from "../mocks/TestPolynomialEval.sol";
+import "hardhat/console.sol";
 
 contract TestPlonkVerifier is V, TestPoly {
     function computeLinPolyConstantTerm(
@@ -44,7 +45,6 @@ contract TestPlonkVerifier is V, TestPoly {
         Poly.EvalData memory evalData,
         V.PlonkProof memory proof
     ) public pure returns (BN254.G1Point[] memory bases, uint256[] memory scalars) {
-        //returns (BN254.G1Point[15] memory bases, uint256[15] memory scalars) {
         return V._linearizationScalarsAndBases(verifyingKey, challenge, evalData, proof);
     }
 
@@ -55,7 +55,7 @@ contract TestPlonkVerifier is V, TestPoly {
         PlonkProof memory proof
     )
         public
-        pure
+        view
         returns (
             uint256[] memory commScalars,
             BN254.G1Point[] memory commBases,
@@ -92,9 +92,17 @@ contract TestPlonkVerifier is V, TestPoly {
         // NOTE: the only difference with actual code
         Poly.EvalDomain memory domain = newEvalDomain(verifyingKey.domainSize);
 
+        console.logBytes("fff");
+        console.logBytes(abi.encodePacked(verifyingKey.sigma0.x));
+        console.logBytes(abi.encodePacked(verifyingKey.sigma0.y));
+
         // compute opening proof in poly comm.
         (uint256[] memory commScalars, BN254.G1Point[] memory commBases, uint256 eval) = V
             ._prepareOpeningProof(domain, verifyingKey, publicInput, proof, chal);
+
+        console.logBytes("ggg");
+        console.logBytes(abi.encodePacked(verifyingKey.sigma0.x));
+        console.logBytes(abi.encodePacked(verifyingKey.sigma0.y));
 
         uint256 zeta = chal.zeta;
         uint256 omega = domain.groupGen;

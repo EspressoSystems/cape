@@ -45,8 +45,6 @@ async fn deploy_contract(
 // contains tests for interim functions
 #[tokio::test]
 async fn test_prepare_pcs_info() -> Result<()> {
-    let contract = deploy_contract().await?;
-
     let (proof, vk, public_inputs, extra_msg, domain_size) =
         gen_plonk_proof_for_test(1)?[0].clone();
 
@@ -74,6 +72,9 @@ async fn test_prepare_pcs_info() -> Result<()> {
     let divisor = Fr::from(domain.size() as u32) * (challenges.zeta - domain.group_gen_inv);
     let lagrange_n_eval = vanish_eval * domain.group_gen_inv / divisor;
 
+    // delay the contract deployment to avoid connection reset problem caused by
+    // waiting for CRS loading.
+    let contract = deploy_contract().await?;
     // compute the constant term of the linearization polynomial
     let lin_poly_constant = verifier.compute_lin_poly_constant_term(
         &challenges,

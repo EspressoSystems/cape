@@ -1,8 +1,7 @@
 name: Build
 
 on:
-  # temp disable to avoid unneeded runs in CI
-  # push:
+  push:
   workflow_dispatch:
 
 jobs:

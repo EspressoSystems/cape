@@ -7,7 +7,7 @@ on:
 
 jobs:
   nightly:
-    name: Skeleton build for running tests against Rinkeby testnet
+    name: Build for running tests against Rinkeby testnet # TODO: this workflow can probably be deduped as most of it mirrors the build from build.yml
     strategy:
       fail-fast: true
     runs-on: self-hosted

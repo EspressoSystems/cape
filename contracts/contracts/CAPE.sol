@@ -30,6 +30,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
     bytes public constant CAPE_BURN_MAGIC_BYTES = "TRICAPE burn";
     bytes13 public constant DOM_SEP_FOREIGN_ASSET = "FOREIGN_ASSET";
     bytes14 public constant DOM_SEP_DOMESTIC_ASSET = "DOMESTIC_ASSET";
+    uint256 public constant AAP_NATIVE_ASSET_CODE = 1;
 
     event BlockCommitted(uint64 indexed height, bool[] includedNotes);
 
@@ -410,5 +411,160 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
         ];
 
         return RescueLib.commit(inputs);
+    }
+
+    // an overloadded function (one for each note type) to prepare all inputs necessary
+    // for batch verification of the plonk proof
+    function _prepareForProofVerification(TransferNote memory note)
+        internal
+        pure
+        returns (
+            IPlonkVerifier.VerifyingKey memory vk,
+            uint256[] memory publicInput,
+            IPlonkVerifier.PlonkProof memory proof,
+            bytes memory transcriptInitMsg
+        )
+    {
+        // TODO: add code to load the correct (hardcoded) vk
+
+        // prepare public inputs
+        // 4: root, native_asset_code, valid_until, fee
+        // 2: audit_memo.ephemeral_key (x and y)
+        publicInput = new uint256[](
+            4 +
+                note.inputNullifiers.length +
+                note.outputCommitments.length +
+                2 +
+                note.auditMemo.data.length
+        );
+        publicInput[0] = note.auxInfo.merkleRoot;
+        publicInput[1] = AAP_NATIVE_ASSET_CODE;
+        publicInput[2] = note.auxInfo.validUntil;
+        publicInput[3] = note.auxInfo.fee;
+        {
+            uint256 idx = 4;
+            for (uint256 i = 0; i < note.inputNullifiers.length; i++) {
+                publicInput[idx + i] = note.inputNullifiers[i];
+            }
+            idx += note.inputNullifiers.length;
+
+            for (uint256 i = 0; i < note.outputCommitments.length; i++) {
+                publicInput[idx + i] = note.outputCommitments[i];
+            }
+            idx += note.outputCommitments.length;
+
+            publicInput[idx] = note.auditMemo.ephemeralKey.x;
+            publicInput[idx + 1] = note.auditMemo.ephemeralKey.y;
+            idx += 2;
+
+            for (uint256 i = 0; i < note.auditMemo.data.length; i++) {
+                publicInput[idx + i] = note.auditMemo.data[i];
+            }
+        }
+
+        // extract out proof
+        proof = note.proof;
+
+        // prepare transcript init messages
+    }
+
+    function _prepareForProofVerification(BurnNote memory note)
+        internal
+        pure
+        returns (
+            IPlonkVerifier.VerifyingKey memory,
+            uint256[] memory,
+            IPlonkVerifier.PlonkProof memory,
+            bytes memory
+        )
+    {
+        return _prepareForProofVerification(note.transferNote);
+    }
+
+    function _prepareForProofVerification(MintNote memory note)
+        internal
+        pure
+        returns (
+            IPlonkVerifier.VerifyingKey memory vk,
+            uint256[] memory publicInput,
+            IPlonkVerifier.PlonkProof memory proof,
+            bytes memory transcriptInitMsg
+        )
+    {
+        // TODO: add code to load the correct (hardcoded) vk
+
+        // prepare public inputs
+        // 9: see below; 8: asset policy; rest: audit memo
+        publicInput = new uint256[](9 + 8 + 2 + note.auditMemo.data.length);
+        publicInput[0] = note.auxInfo.merkleRoot;
+        publicInput[1] = AAP_NATIVE_ASSET_CODE;
+        publicInput[2] = note.inputNullifier;
+        publicInput[3] = note.auxInfo.fee;
+        publicInput[4] = note.mintComm;
+        publicInput[5] = note.chgComm;
+        publicInput[6] = note.mintAmount;
+        publicInput[7] = note.mintAssetDef.code;
+        publicInput[8] = note.mintInternalAssetCode;
+
+        publicInput[9] = note.mintAssetDef.policy.revealMap;
+        publicInput[10] = note.mintAssetDef.policy.auditorPk.x;
+        publicInput[11] = note.mintAssetDef.policy.auditorPk.y;
+        publicInput[12] = note.mintAssetDef.policy.credPk.x;
+        publicInput[13] = note.mintAssetDef.policy.credPk.y;
+        publicInput[14] = note.mintAssetDef.policy.freezerPk.x;
+        publicInput[15] = note.mintAssetDef.policy.freezerPk.y;
+        publicInput[16] = note.mintAssetDef.policy.revealThreshold;
+
+        {
+            publicInput[17] = note.auditMemo.ephemeralKey.x;
+            publicInput[18] = note.auditMemo.ephemeralKey.y;
+
+            uint256 idx = 19;
+            for (uint256 i = 0; i < note.auditMemo.data.length; i++) {
+                publicInput[idx + i] = note.auditMemo.data[i];
+            }
+        }
+
+        // extract out proof
+        proof = note.proof;
+
+        // prepare transcript init messages
+    }
+
+    function _prepareForProofVerification(FreezeNote memory note)
+        internal
+        pure
+        returns (
+            IPlonkVerifier.VerifyingKey memory vk,
+            uint256[] memory publicInput,
+            IPlonkVerifier.PlonkProof memory proof,
+            bytes memory transcriptInitMsg
+        )
+    {
+        // TODO: add code to load the correct (hardcoded) vk
+
+        // prepare public inputs
+        publicInput = new uint256[](
+            3 + note.inputNullifiers.length + note.outputCommitments.length
+        );
+        publicInput[0] = note.auxInfo.merkleRoot;
+        publicInput[1] = AAP_NATIVE_ASSET_CODE;
+        publicInput[2] = note.auxInfo.fee;
+        {
+            uint256 idx = 3;
+            for (uint256 i = 0; i < note.inputNullifiers.length; i++) {
+                publicInput[idx + i] = note.inputNullifiers[i];
+            }
+            idx += note.inputNullifiers.length;
+
+            for (uint256 i = 0; i < note.outputCommitments.length; i++) {
+                publicInput[idx + i] = note.outputCommitments[i];
+            }
+        }
+
+        // extract out proof
+        proof = note.proof;
+
+        // prepare transcript init messages
     }
 }

@@ -13,20 +13,22 @@ library PolynomialEval {
         uint256 groupGenInv; // Inverse of the generator of the subgroup
     }
 
-    /// @dev stores vanishing poly, lagrange at 1 and n
+    /// @dev stores vanishing poly, lagrange at 1, and Public input poly
     struct EvalData {
         uint256 vanishEval;
         uint256 lagrangeOne;
+        uint256 piEval;
     }
 
     /// @dev compute the EvalData for a given domain and a challenge zeta
-    function evalDataGen(EvalDomain memory self, uint256 zeta)
-        internal
-        view
-        returns (EvalData memory evalData)
-    {
+    function evalDataGen(
+        EvalDomain memory self,
+        uint256 zeta,
+        uint256[] memory publicInput
+    ) internal view returns (EvalData memory evalData) {
         evalData.vanishEval = evaluateVanishingPoly(self, zeta);
         evalData.lagrangeOne = evaluateLagrangeOne(self, zeta, evalData.vanishEval);
+        evalData.piEval = evaluatePiPoly(self, publicInput, zeta, evalData.vanishEval);
     }
 
     /// @dev Create a new Radix2EvalDomain with `domainSize` which should be power of 2.

@@ -9,13 +9,11 @@ import "hardhat/console.sol";
 
 contract TestPlonkVerifier is V, TestPoly {
     function computeLinPolyConstantTerm(
-        Poly.EvalDomain memory domain,
         Challenges memory chal,
-        uint256[] memory publicInput,
         PlonkProof memory proof,
         Poly.EvalData memory evalData
     ) public view returns (uint256 res) {
-        return V._computeLinPolyConstantTerm(domain, chal, publicInput, proof, evalData);
+        return V._computeLinPolyConstantTerm(chal, proof, evalData);
     }
 
     function prepareEvaluations(
@@ -91,10 +89,12 @@ contract TestPlonkVerifier is V, TestPoly {
 
         // NOTE: the only difference with actual code
         Poly.EvalDomain memory domain = newEvalDomain(verifyingKey.domainSize);
+        // pre-compute evaluation data
+        Poly.EvalData memory evalData = Poly.evalDataGen(domain, chal.zeta, publicInput);
 
         // compute opening proof in poly comm.
         (uint256[] memory commScalars, BN254.G1Point[] memory commBases, uint256 eval) = V
-            ._prepareOpeningProof(domain, verifyingKey, publicInput, proof, chal);
+            ._prepareOpeningProof(verifyingKey, evalData, proof, chal);
 
         uint256 zeta = chal.zeta;
         uint256 omega = domain.groupGen;

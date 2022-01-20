@@ -14,7 +14,7 @@ use anyhow::Result;
 use ark_bn254::{Bn254, Fq, Fr, G1Affine};
 use ark_ec::AffineCurve;
 use ark_ec::ProjectiveCurve;
-use ark_ff::Field;
+use ark_ff::{Field, Zero};
 use ark_poly::{EvaluationDomain, Radix2EvaluationDomain};
 use ark_std::rand::Rng;
 use ark_std::Zero;
@@ -52,7 +52,7 @@ async fn test_prepare_pcs_info() -> Result<()> {
 
     // simulate the verifier logic to drive to state for calling the tested fn.
     let domain = Radix2EvaluationDomain::new(domain_size).unwrap();
-    let verifier = Verifier::new(domain_size)?;
+    let verifier = Verifier::<Bn254>::new(domain_size)?;
     // compute challenges and evaluations
     let challenges = Verifier::compute_challenges::<SolidityTranscript>(
         &[&vk],
@@ -73,6 +73,21 @@ async fn test_prepare_pcs_info() -> Result<()> {
     let lagrange_1_eval = vanish_eval / divisor;
     let divisor = Fr::from(domain.size() as u32) * (challenges.zeta - domain.group_gen_inv);
     let lagrange_n_eval = vanish_eval * domain.group_gen_inv / divisor;
+    // evaluate pi_poly
+    let pi_eval = {
+        if vanish_eval.is_zero() {
+            Fr::zero()
+        } else {
+            let vanish_eval_div_n = Fr::from(domain.size() as u32).inverse().unwrap() * vanish_eval;
+            let mut result = Fr::zero();
+            for (i, val) in public_inputs.iter().enumerate() {
+                let lagrange_i =
+                    vanish_eval_div_n * domain.element(i) / (challenges.zeta - domain.element(i));
+                result += lagrange_i * val;
+            }
+            result
+        }
+    };
 
     // delay the contract deployment to avoid connection reset problem caused by
     // waiting for CRS loading.
@@ -92,13 +107,12 @@ async fn test_prepare_pcs_info() -> Result<()> {
     let eval_data = sol::EvalData {
         vanish_eval: field_to_u256(vanish_eval),
         lagrange_one: field_to_u256(lagrange_1_eval),
+        pi_eval: field_to_u256(pi_eval),
     };
     assert_eq!(
         contract
             .compute_lin_poly_constant_term(
-                domain.into(),
                 challenges.into(),
-                public_inputs.iter().map(|f| field_to_u256(*f)).collect(),
                 proof.clone().into(),
                 eval_data.clone()
             )

@@ -115,12 +115,15 @@ contract PlonkVerifier is IPlonkVerifier {
         );
 
         Poly.EvalDomain memory domain = Poly.newEvalDomain(verifyingKey.domainSize);
+        // pre-compute evaluation data
+        Poly.EvalData memory evalData = Poly.evalDataGen(domain, chal.zeta, publicInput);
+
         // compute opening proof in poly comm.
         (
             uint256[] memory commScalars,
             BN254.G1Point[] memory commBases,
             uint256 eval
-        ) = _prepareOpeningProof(domain, verifyingKey, publicInput, proof, chal);
+        ) = _prepareOpeningProof(verifyingKey, evalData, proof, chal);
 
         uint256 zeta = chal.zeta;
         uint256 omega = domain.groupGen;
@@ -197,15 +200,13 @@ contract PlonkVerifier is IPlonkVerifier {
     /// r_plonk = PI - L1(x) * alpha^2 - alpha * \prod_i=1..m-1 (w_i + beta * sigma_i + gamma) * (w_m + gamma) * z(xw)
     /// where m is the number of wire types.
     function _computeLinPolyConstantTerm(
-        Poly.EvalDomain memory domain,
         Challenges memory chal,
-        uint256[] memory publicInput,
         PlonkProof memory proof,
         Poly.EvalData memory evalData
     ) internal view returns (uint256 res) {
-        uint256 piEval = Poly.evaluatePiPoly(domain, publicInput, chal.zeta, evalData.vanishEval);
         uint256 p = BN254.R_MOD;
         uint256 lagrangeOneEval = evalData.lagrangeOne;
+        uint256 piEval = evalData.piEval;
         uint256 perm = 1;
 
         assembly {
@@ -255,9 +256,8 @@ contract PlonkVerifier is IPlonkVerifier {
     //
     // equivalent of JF's https://github.com/SpectrumXYZ/jellyfish/blob/main/plonk/src/proof_system/verifier.rs#L154-L170
     function _prepareOpeningProof(
-        Poly.EvalDomain memory domain,
         VerifyingKey memory verifyingKey,
-        uint256[] memory publicInput,
+        Poly.EvalData memory evalData,
         PlonkProof memory proof,
         Challenges memory chal
     )
@@ -269,17 +269,8 @@ contract PlonkVerifier is IPlonkVerifier {
             uint256 eval
         )
     {
-        // pre-compute evaluation data
-        Poly.EvalData memory evalData = Poly.evalDataGen(domain, chal.zeta);
-
         // compute the constant term of the linearization polynomial
-        uint256 linPolyConstant = _computeLinPolyConstantTerm(
-            domain,
-            chal,
-            publicInput,
-            proof,
-            evalData
-        );
+        uint256 linPolyConstant = _computeLinPolyConstantTerm(chal, proof, evalData);
 
         uint256[10] memory bufferVAndUvBasis;
         (commScalars, commBases, bufferVAndUvBasis) = _preparePolyCommitments(

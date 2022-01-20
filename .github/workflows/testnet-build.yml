@@ -1,14 +1,13 @@
 name: Testnet Build
 
 on:
-  # schedule:
-    # - cron: '45 17 * * *' # run at 17:45 UTC
-  push:
+  schedule:
+  - cron: '0 10 * * *' # run at 10:00 UTC
     
 
 jobs:
   nightly:
-    name: Skeleton build for running tests against Rinkeby and Goerli testnets
+    name: Skeleton build for running tests against Rinkeby testnet
     strategy:
       fail-fast: true
     runs-on: self-hosted
@@ -55,6 +54,5 @@ jobs:
           # todo: add nix key, for example:  nix-instantiate shell.nix | sha256sum  | head -c 10
           key: cape-v3-${{ hashFiles('Cargo.lock') }}
 
-      # temp placeholder env vars
       - name: Run Tests Against Rinkeby Testnet
         run: nix-shell --run "RINKEBY_MNEMONIC='${{ secrets.RINKEBY_MNEMONIC }}' RINKEBY_URL='https://rinkeby.infura.io/v3/b1c297e315394878bc159b5d10b202e1' hardhat test --network rinkeby"

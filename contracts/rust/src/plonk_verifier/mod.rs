@@ -11,7 +11,7 @@ use crate::{
     types::{field_to_u256, TestPlonkVerifier},
 };
 use anyhow::Result;
-use ark_bn254::{Bn254, Fq, Fr};
+use ark_bn254::{Bn254, Fq, Fr, G1Projective};
 use ark_ec::ProjectiveCurve;
 use ark_ff::{Field, Zero};
 use ark_poly::{EvaluationDomain, Radix2EvaluationDomain};
@@ -370,6 +370,7 @@ async fn test_challenge_gen() -> Result<()> {
 #[tokio::test]
 async fn test_batch_verify_plonk_proofs() -> Result<()> {
     let contract = deploy_contract().await?;
+    let rng = &mut test_rng();
 
     for num_proof in 1..5 {
         let (proofs, vks, public_inputs, extra_msgs, _): (
@@ -379,19 +380,43 @@ async fn test_batch_verify_plonk_proofs() -> Result<()> {
             Vec<Option<Vec<u8>>>,
             Vec<usize>,
         ) = multiunzip(gen_plonk_proof_for_test(num_proof)?);
-        let vks_sol = vks
+        let vks_sol: Vec<sol::VerifyingKey> = vks
             .iter()
             .map(|vk| vk.clone().generic_into::<sol::VerifyingKey>())
             .collect();
-        let pis_sol = public_inputs
+        let bad_vks_sol: Vec<sol::VerifyingKey> = vks_sol
+            .iter()
+            .map(|vk| {
+                let mut bad_vk = vk.clone();
+                bad_vk.sigma_2 = G1Projective::rand(rng).into_affine().into();
+                bad_vk.q_4 = G1Projective::rand(rng).into_affine().into();
+                bad_vk.q_m34 = G1Projective::rand(rng).into_affine().into();
+                bad_vk
+            })
+            .collect();
+        let pis_sol: Vec<Vec<U256>> = public_inputs
             .iter()
             .map(|pi| pi.iter().map(|f| field_to_u256(*f)).collect())
             .collect();
-        let proofs_sol = proofs
+        let bad_pis_sol: Vec<Vec<U256>> = pis_sol
+            .iter()
+            .map(|pi| pi.iter().map(|_| field_to_u256(Fr::rand(rng))).collect())
+            .collect();
+        let proofs_sol: Vec<sol::PlonkProof> = proofs
             .iter()
             .map(|pf| pf.clone().generic_into::<sol::PlonkProof>())
             .collect();
-        let extra_msgs_sol = extra_msgs
+        let bad_proofs_sol: Vec<sol::PlonkProof> = proofs_sol
+            .iter()
+            .map(|pf| {
+                let mut bad_pf = pf.clone();
+                bad_pf.wire_4 = G1Projective::rand(rng).into_affine().into();
+                bad_pf.split_0 = G1Projective::rand(rng).into_affine().into();
+                bad_pf.prod_perm_zeta_omega_eval = field_to_u256(Fr::rand(rng));
+                bad_pf
+            })
+            .collect();
+        let extra_msgs_sol: Vec<Bytes> = extra_msgs
             .iter()
             .map(|msg| {
                 if let Some(msg) = msg {
@@ -401,12 +426,72 @@ async fn test_batch_verify_plonk_proofs() -> Result<()> {
                 }
             })
             .collect();
+        let bad_extra_msgs_sol: Vec<Bytes> = extra_msgs_sol
+            .iter()
+            .map(|m| {
+                if m == &Bytes::default() {
+                    Bytes::from(b"random string".to_vec())
+                } else {
+                    Bytes::default()
+                }
+            })
+            .collect();
+
+        // reconnect to contract to avoid connection reset problem
+        let client = get_funded_deployer().await?;
+        let contract = TestPlonkVerifier::new(contract.address(), client);
+
         assert!(
             contract
-                .batch_verify(vks_sol, pis_sol, proofs_sol, extra_msgs_sol,)
+                .test_batch_verify(
+                    vks_sol.clone(),
+                    pis_sol.clone(),
+                    proofs_sol.clone(),
+                    extra_msgs_sol.clone()
+                )
+                .call()
+                .await?
+        );
+        assert!(
+            !contract
+                .test_batch_verify(
+                    bad_vks_sol,
+                    pis_sol.clone(),
+                    proofs_sol.clone(),
+                    extra_msgs_sol.clone(),
+                )
+                .call()
+                .await?
+        );
+        assert!(
+            !contract
+                .test_batch_verify(
+                    vks_sol.clone(),
+                    bad_pis_sol,
+                    proofs_sol.clone(),
+                    extra_msgs_sol.clone(),
+                )
+                .call()
+                .await?
+        );
+        assert!(
+            !contract
+                .test_batch_verify(
+                    vks_sol.clone(),
+                    pis_sol.clone(),
+                    bad_proofs_sol,
+                    extra_msgs_sol.clone(),
+                )
+                .call()
+                .await?
+        );
+        assert!(
+            !contract
+                .test_batch_verify(vks_sol, pis_sol, proofs_sol, bad_extra_msgs_sol,)
                 .call()
                 .await?
         );
     }
+
     Ok(())
 }

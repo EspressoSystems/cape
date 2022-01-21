@@ -4,16 +4,16 @@ pragma solidity ^0.8.0;
 import {BN254} from "../libraries/BN254.sol";
 import {PlonkVerifier as V} from "../verifier/PlonkVerifier.sol";
 import {PolynomialEval as Poly} from "../libraries/PolynomialEval.sol";
+import {TestPolynomialEval as TestPoly} from "../mocks/TestPolynomialEval.sol";
+import "hardhat/console.sol";
 
-contract TestPlonkVerifier is V {
+contract TestPlonkVerifier is V, TestPoly {
     function computeLinPolyConstantTerm(
-        Poly.EvalDomain memory domain,
         Challenges memory chal,
-        uint256[] memory publicInput,
         PlonkProof memory proof,
         Poly.EvalData memory evalData
     ) public view returns (uint256 res) {
-        return V._computeLinPolyConstantTerm(domain, chal, publicInput, proof, evalData);
+        return V._computeLinPolyConstantTerm(chal, proof, evalData);
     }
 
     function prepareEvaluations(
@@ -43,7 +43,6 @@ contract TestPlonkVerifier is V {
         Poly.EvalData memory evalData,
         V.PlonkProof memory proof
     ) public pure returns (BN254.G1Point[] memory bases, uint256[] memory scalars) {
-        //returns (BN254.G1Point[15] memory bases, uint256[15] memory scalars) {
         return V._linearizationScalarsAndBases(verifyingKey, challenge, evalData, proof);
     }
 
@@ -71,5 +70,49 @@ contract TestPlonkVerifier is V {
         returns (BN254.G1Point memory)
     {
         return BN254.multiScalarMul(bases, scalars);
+    }
+
+    function preparePcsInfo(
+        VerifyingKey memory verifyingKey,
+        uint256[] memory publicInput,
+        PlonkProof memory proof,
+        bytes memory extraTranscriptInitMsg
+    ) public view returns (PcsInfo memory res) {
+        require(publicInput.length == verifyingKey.numInputs, "Plonk: wrong verifying key");
+
+        Challenges memory chal = V._computeChallenges(
+            verifyingKey,
+            publicInput,
+            proof,
+            extraTranscriptInitMsg
+        );
+
+        // NOTE: the only difference with actual code
+        Poly.EvalDomain memory domain = newEvalDomain(verifyingKey.domainSize);
+        // pre-compute evaluation data
+        Poly.EvalData memory evalData = Poly.evalDataGen(domain, chal.zeta, publicInput);
+
+        // compute opening proof in poly comm.
+        (uint256[] memory commScalars, BN254.G1Point[] memory commBases, uint256 eval) = V
+            ._prepareOpeningProof(verifyingKey, evalData, proof, chal);
+
+        uint256 zeta = chal.zeta;
+        uint256 omega = domain.groupGen;
+        uint256 p = BN254.R_MOD;
+        uint256 zetaOmega;
+        assembly {
+            zetaOmega := mulmod(zeta, omega, p)
+        }
+
+        res = PcsInfo(
+            chal.u,
+            zeta,
+            zetaOmega,
+            eval,
+            commScalars,
+            commBases,
+            proof.zeta,
+            proof.zetaOmega
+        );
     }
 }

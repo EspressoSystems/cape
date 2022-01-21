@@ -791,11 +791,6 @@ impl From<jf_aap::VerifyingKey> for VerifyingKey {
             q_o: selectors[10].clone(),
             q_c: selectors[11].clone(),
             q_ecc: selectors[12].clone(),
-            k_0: field_to_u256(*scalars.next().unwrap()),
-            k_1: field_to_u256(*scalars.next().unwrap()),
-            k_2: field_to_u256(*scalars.next().unwrap()),
-            k_3: field_to_u256(*scalars.next().unwrap()),
-            k_4: field_to_u256(*scalars.next().unwrap()),
         }
     }
 }

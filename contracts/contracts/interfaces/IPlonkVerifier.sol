@@ -80,12 +80,6 @@ interface IPlonkVerifier {
         BN254.G1Point qH4; // 0x240
         // elliptic curve selector
         BN254.G1Point qEcc; // 0x260
-        // coset representative
-        uint256 k0; // 0x280
-        uint256 k1; // 0x2A0
-        uint256 k2; // 0x2C0
-        uint256 k3; // 0x2E0
-        uint256 k4; // 0x300
     }
 
     /// @dev Batch verify multiple TurboPlonk proofs.

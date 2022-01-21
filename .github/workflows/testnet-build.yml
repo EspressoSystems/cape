@@ -55,4 +55,4 @@ jobs:
           key: cape-v3-${{ hashFiles('Cargo.lock') }}
 
       - name: Run Tests Against Rinkeby Testnet
-        run: nix-shell --run "RINKEBY_MNEMONIC='${{ secrets.RINKEBY_MNEMONIC }}' RINKEBY_URL='https://rinkeby.infura.io/v3/b1c297e315394878bc159b5d10b202e1' hardhat test --network rinkeby"
+        run: nix-shell --run "RINKEBY_MNEMONIC='${{ secrets.RINKEBY_MNEMONIC }}' RINKEBY_URL='${{ secrets.RINKEBY_ENDPOINT }}' hardhat test --network rinkeby"

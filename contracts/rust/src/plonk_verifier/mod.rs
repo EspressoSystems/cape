@@ -3,7 +3,7 @@ mod helpers;
 mod poly_eval;
 
 use self::helpers::gen_plonk_proof_for_test;
-use crate::types::{u256_to_field, GenericInto};
+use crate::types::GenericInto;
 use crate::{
     ethereum::{deploy, get_funded_deployer},
     plonk_verifier::helpers::get_poly_evals,
@@ -11,13 +11,11 @@ use crate::{
     types::{field_to_u256, TestPlonkVerifier},
 };
 use anyhow::Result;
-use ark_bn254::{Bn254, Fq, Fr, G1Affine};
-use ark_ec::AffineCurve;
+use ark_bn254::{Bn254, Fq, Fr};
 use ark_ec::ProjectiveCurve;
 use ark_ff::{Field, Zero};
 use ark_poly::{EvaluationDomain, Radix2EvaluationDomain};
 use ark_std::rand::Rng;
-use ark_std::Zero;
 use ark_std::{test_rng, One, UniformRand};
 use ethers::core::k256::ecdsa::SigningKey;
 use ethers::prelude::*;
@@ -225,18 +223,17 @@ async fn test_prepare_pcs_info() -> Result<()> {
         sol_pcs.shifted_opening_proof.y,
         field_to_u256(rust_pcs.shifted_opening_proof.0.y)
     );
-
-    let rust_msm = rust_pcs
-        .comm_scalars_and_bases
-        .multi_scalar_mul()
-        .into_affine();
-    let mut res = G1Affine::zero();
-    for (b, s) in sol_pcs.comm_bases.iter().zip(sol_pcs.comm_scalars.iter()) {
-        let base: G1Affine = b.clone().into();
-        let scalar: Fr = u256_to_field(s.clone());
-        res += &base.mul(scalar).into_affine();
-    }
-    assert_eq!(res, rust_msm);
+    assert_eq!(
+        contract
+            .multi_scalar_mul(sol_pcs.comm_bases, sol_pcs.comm_scalars)
+            .call()
+            .await?,
+        rust_pcs
+            .comm_scalars_and_bases
+            .multi_scalar_mul()
+            .into_affine()
+            .into(),
+    );
 
     Ok(())
 }
@@ -265,6 +262,9 @@ async fn test_batch_verify_opening_proofs() -> Result<()> {
             .map(|info| info.clone().generic_into::<sol::PcsInfo>())
             .collect();
 
+        // reconnect to contract to avoid connection reset problem
+        let client = get_funded_deployer().await?;
+        let contract = TestPlonkVerifier::new(contract.address(), client);
         assert!(
             contract
                 .batch_verify_opening_proofs(pcs_infos_sol)
@@ -345,6 +345,10 @@ async fn test_challenge_gen() -> Result<()> {
         .map(|&x| field_to_u256(x))
         .collect();
     let ether_proof: sol::PlonkProof = rust_proof.into();
+
+    // reconnect to contract to avoid connection reset problem
+    let client = get_funded_deployer().await?;
+    let contract = TestPlonkVerifier::new(contract.address(), client);
 
     let ether_challenge: sol::Challenges = contract
         .compute_challenges(

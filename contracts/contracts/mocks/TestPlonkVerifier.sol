@@ -12,16 +12,16 @@ contract TestPlonkVerifier is V, TestPoly {
         Challenges memory chal,
         PlonkProof memory proof,
         Poly.EvalData memory evalData
-    ) public view returns (uint256 res) {
+    ) public pure returns (uint256 res) {
         return V._computeLinPolyConstantTerm(chal, proof, evalData);
     }
 
     function prepareEvaluations(
         uint256 linPolyConstant,
         PlonkProof memory proof,
-        uint256[10] memory bufferVAndUvBasis
+        uint256[] memory scalars
     ) public pure returns (uint256 eval) {
-        return V._prepareEvaluations(linPolyConstant, proof, bufferVAndUvBasis);
+        return V._prepareEvaluations(linPolyConstant, proof, scalars);
     }
 
     function batchVerifyOpeningProofs(PcsInfo[] memory pcsInfos) public view returns (bool) {
@@ -43,7 +43,10 @@ contract TestPlonkVerifier is V, TestPoly {
         Poly.EvalData memory evalData,
         V.PlonkProof memory proof
     ) public pure returns (BN254.G1Point[] memory bases, uint256[] memory scalars) {
-        return V._linearizationScalarsAndBases(verifyingKey, challenge, evalData, proof);
+        bases = new BN254.G1Point[](30);
+        scalars = new uint256[](30);
+
+        V._linearizationScalarsAndBases(verifyingKey, challenge, evalData, proof, bases, scalars);
     }
 
     function preparePolyCommitments(
@@ -51,16 +54,10 @@ contract TestPlonkVerifier is V, TestPoly {
         Challenges memory chal,
         Poly.EvalData memory evalData,
         PlonkProof memory proof
-    )
-        public
-        pure
-        returns (
-            uint256[] memory commScalars,
-            BN254.G1Point[] memory commBases,
-            uint256[10] memory bufferVAndUvBasis
-        )
-    {
-        return V._preparePolyCommitments(verifyingKey, chal, evalData, proof);
+    ) public pure returns (uint256[] memory commScalars, BN254.G1Point[] memory commBases) {
+        commBases = new BN254.G1Point[](30);
+        commScalars = new uint256[](30);
+        V._preparePolyCommitments(verifyingKey, chal, evalData, proof, commScalars, commBases);
     }
 
     // helper so that test code doesn't have to deploy both PlonkVerifier.sol and BN254.sol
@@ -93,8 +90,17 @@ contract TestPlonkVerifier is V, TestPoly {
         Poly.EvalData memory evalData = Poly.evalDataGen(domain, chal.zeta, publicInput);
 
         // compute opening proof in poly comm.
-        (uint256[] memory commScalars, BN254.G1Point[] memory commBases, uint256 eval) = V
-            ._prepareOpeningProof(verifyingKey, evalData, proof, chal);
+        uint256[] memory commScalars = new uint256[](30);
+        BN254.G1Point[] memory commBases = new BN254.G1Point[](30);
+
+        uint256 eval = _prepareOpeningProof(
+            verifyingKey,
+            evalData,
+            proof,
+            chal,
+            commScalars,
+            commBases
+        );
 
         uint256 zeta = chal.zeta;
         uint256 omega = domain.groupGen;

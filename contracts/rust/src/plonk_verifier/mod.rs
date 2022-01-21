@@ -118,7 +118,6 @@ async fn test_prepare_pcs_info() -> Result<()> {
             .await?,
         field_to_u256(lin_poly_constant),
     );
-
     // build the (aggregated) polynomial commitment instance
     let (comm_scalars_and_bases, buffer_v_and_uv_basis) = verifier.aggregate_poly_commitments(
         &[&vk],
@@ -130,7 +129,8 @@ async fn test_prepare_pcs_info() -> Result<()> {
         &alpha_powers,
         &alpha_bases,
     )?;
-    let (comm_scalars_sol, comm_bases_sol, buffer_v_and_uv_basis_sol) = contract
+
+    let (comm_scalars_sol, comm_bases_sol) = contract
         .prepare_poly_commitments(
             vk.clone().into(),
             challenges.into(),
@@ -139,22 +139,16 @@ async fn test_prepare_pcs_info() -> Result<()> {
         )
         .call()
         .await?;
+
     assert_eq!(
         contract
-            .multi_scalar_mul(comm_bases_sol, comm_scalars_sol)
+            .multi_scalar_mul(comm_bases_sol, comm_scalars_sol.clone())
             .call()
             .await?,
         comm_scalars_and_bases
             .multi_scalar_mul()
             .into_affine()
             .into(),
-    );
-    assert_eq!(
-        buffer_v_and_uv_basis_sol.to_vec(),
-        buffer_v_and_uv_basis
-            .iter()
-            .map(|f| field_to_u256(*f))
-            .collect::<Vec<_>>()
     );
 
     let eval = Verifier::<Bn254>::aggregate_evaluations(
@@ -168,7 +162,7 @@ async fn test_prepare_pcs_info() -> Result<()> {
             .prepare_evaluations(
                 field_to_u256(lin_poly_constant),
                 proof.clone().into(),
-                buffer_v_and_uv_basis_sol,
+                comm_scalars_sol
             )
             .call()
             .await?,
@@ -188,10 +182,23 @@ async fn test_prepare_pcs_info() -> Result<()> {
             vk.clone().into(),
             public_inputs.iter().map(|f| field_to_u256(*f)).collect(),
             proof.clone().into(),
-            extra_msg_sol,
+            extra_msg_sol.clone(),
         )
         .call()
         .await?;
+
+    println!(
+        "\ngas cost for pcs_info {}",
+        contract
+            .prepare_pcs_info(
+                vk.clone().into(),
+                public_inputs.iter().map(|f| field_to_u256(*f)).collect(),
+                proof.clone().into(),
+                extra_msg_sol,
+            )
+            .estimate_gas()
+            .await?
+    );
 
     let rust_pcs = verifier.prepare_pcs_info::<SolidityTranscript>(
         &[&vk],
@@ -257,7 +264,7 @@ async fn test_batch_verify_opening_proofs() -> Result<()> {
                     .unwrap()
             })
             .collect();
-        let pcs_infos_sol = pcs_infos
+        let pcs_infos_sol: Vec<sol::PcsInfo> = pcs_infos
             .iter()
             .map(|info| info.clone().generic_into::<sol::PcsInfo>())
             .collect();
@@ -267,8 +274,16 @@ async fn test_batch_verify_opening_proofs() -> Result<()> {
         let contract = TestPlonkVerifier::new(contract.address(), client);
         assert!(
             contract
-                .batch_verify_opening_proofs(pcs_infos_sol)
+                .batch_verify_opening_proofs(pcs_infos_sol.clone())
                 .call()
+                .await?
+        );
+        println!(
+            "\ngas cost for {} proofs {}",
+            i,
+            contract
+                .batch_verify_opening_proofs(pcs_infos_sol)
+                .estimate_gas()
                 .await?
         );
     }

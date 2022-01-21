@@ -115,4 +115,32 @@ contract TestPlonkVerifier is V, TestPoly {
             proof.zetaOmega
         );
     }
+
+    function testBatchVerify(
+        VerifyingKey[] memory verifyingKeys,
+        uint256[][] memory publicInputs,
+        PlonkProof[] memory proofs,
+        bytes[] memory extraTranscriptInitMsgs
+    ) public view returns (bool) {
+        require(
+            verifyingKeys.length == proofs.length &&
+                publicInputs.length == proofs.length &&
+                extraTranscriptInitMsgs.length == proofs.length,
+            "Plonk: invalid input param"
+        );
+        require(proofs.length > 0, "Plonk: need at least 1 proof");
+
+        PcsInfo[] memory pcsInfos = new PcsInfo[](proofs.length);
+        for (uint256 i = 0; i < proofs.length; i++) {
+            // NOTE: only difference with actual code
+            pcsInfos[i] = preparePcsInfo(
+                verifyingKeys[i],
+                publicInputs[i],
+                proofs[i],
+                extraTranscriptInitMsgs[i]
+            );
+        }
+
+        return _batchVerifyOpeningProofs(pcsInfos);
+    }
 }

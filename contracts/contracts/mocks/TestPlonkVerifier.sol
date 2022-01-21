@@ -19,9 +19,9 @@ contract TestPlonkVerifier is V, TestPoly {
     function prepareEvaluations(
         uint256 linPolyConstant,
         PlonkProof memory proof,
-        uint256[10] memory bufferVAndUvBasis
+        uint256[] memory scalars
     ) public pure returns (uint256 eval) {
-        return V._prepareEvaluations(linPolyConstant, proof, bufferVAndUvBasis);
+        return V._prepareEvaluations(linPolyConstant, proof, scalars);
     }
 
     function batchVerifyOpeningProofs(PcsInfo[] memory pcsInfos) public view returns (bool) {
@@ -42,7 +42,15 @@ contract TestPlonkVerifier is V, TestPoly {
         V.Challenges memory challenge,
         Poly.EvalData memory evalData,
         V.PlonkProof memory proof
-    ) public pure returns (BN254.G1Point[] memory bases, uint256[] memory scalars) {
+    )
+        public
+        pure
+        returns (
+            BN254.G1Point[] memory bases,
+            uint256[] memory scalars,
+            uint256 length
+        )
+    {
         return V._linearizationScalarsAndBases(verifyingKey, challenge, evalData, proof);
     }
 
@@ -51,15 +59,7 @@ contract TestPlonkVerifier is V, TestPoly {
         Challenges memory chal,
         Poly.EvalData memory evalData,
         PlonkProof memory proof
-    )
-        public
-        pure
-        returns (
-            uint256[] memory commScalars,
-            BN254.G1Point[] memory commBases,
-            uint256[10] memory bufferVAndUvBasis
-        )
-    {
+    ) public pure returns (uint256[] memory commScalars, BN254.G1Point[] memory commBases) {
         return V._preparePolyCommitments(verifyingKey, chal, evalData, proof);
     }
 

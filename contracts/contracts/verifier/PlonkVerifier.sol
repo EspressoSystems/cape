@@ -115,11 +115,17 @@ contract PlonkVerifier is IPlonkVerifier {
         Poly.EvalData memory evalData = Poly.evalDataGen(domain, chal.zeta, publicInput);
 
         // compute opening proof in poly comm.
-        (
-            uint256[] memory commScalars,
-            BN254.G1Point[] memory commBases,
-            uint256 eval
-        ) = _prepareOpeningProof(verifyingKey, evalData, proof, chal);
+        uint256[] memory commScalars = new uint256[](30);
+        BN254.G1Point[] memory commBases = new BN254.G1Point[](30);
+
+        uint256 eval = _prepareOpeningProof(
+            verifyingKey,
+            evalData,
+            proof,
+            chal,
+            commScalars,
+            commBases
+        );
 
         uint256 zeta = chal.zeta;
         uint256 omega = domain.groupGen;
@@ -251,65 +257,37 @@ contract PlonkVerifier is IPlonkVerifier {
     // Returned evaluation is the scalar in `[E]1` described in Sec 8.4, step 11 of https://eprint.iacr.org/2019/953.pdf
     //
     // equivalent of JF's https://github.com/SpectrumXYZ/jellyfish/blob/main/plonk/src/proof_system/verifier.rs#L154-L170
+    /// @dev caller allocates the memory fr commScalars and commBases
+    /// requires Arrays of size 30.
     function _prepareOpeningProof(
         VerifyingKey memory verifyingKey,
         Poly.EvalData memory evalData,
         PlonkProof memory proof,
-        Challenges memory chal
-    )
-        internal
-        pure
-        returns (
-            uint256[] memory commScalars,
-            BN254.G1Point[] memory commBases,
-            uint256 eval
-        )
-    {
+        Challenges memory chal,
+        uint256[] memory commScalars,
+        BN254.G1Point[] memory commBases
+    ) internal pure returns (uint256 eval) {
         // compute the constant term of the linearization polynomial
         uint256 linPolyConstant = _computeLinPolyConstantTerm(chal, proof, evalData);
 
-        uint256[10] memory bufferVAndUvBasis;
-        (commScalars, commBases, bufferVAndUvBasis) = _preparePolyCommitments(
-            verifyingKey,
-            chal,
-            evalData,
-            proof
-        );
+        _preparePolyCommitments(verifyingKey, chal, evalData, proof, commScalars, commBases);
 
-        eval = _prepareEvaluations(linPolyConstant, proof, bufferVAndUvBasis);
+        eval = _prepareEvaluations(linPolyConstant, proof, commScalars);
     }
 
     // `aggregate_poly_commitments()` in Jellyfish, but since we are not aggregating multiple,
     // but rather preparing for `[F]1` from a single proof.
+    /// @dev caller allocates the memory fr commScalars and commBases
+    /// requires Arrays of size 30.
     function _preparePolyCommitments(
         VerifyingKey memory verifyingKey,
         Challenges memory chal,
         Poly.EvalData memory evalData,
-        PlonkProof memory proof
-    )
-        internal
-        pure
-        returns (
-            uint256[] memory commScalars,
-            BN254.G1Point[] memory commBases,
-            uint256[10] memory bufferVAndUvBasis
-        )
-    {
-        commScalars = new uint256[](30);
-        commBases = new BN254.G1Point[](30);
-
-        (
-            BN254.G1Point[] memory linBases,
-            uint256[] memory linScalars
-        ) = _linearizationScalarsAndBases(verifyingKey, chal, evalData, proof);
-        require(
-            linBases.length == linScalars.length && linBases.length == 20,
-            "Plonk: wrong linBases len"
-        );
-        for (uint256 i = 0; i < linBases.length; i++) {
-            commScalars[i] = linScalars[i];
-            commBases[i] = linBases[i];
-        }
+        PlonkProof memory proof,
+        uint256[] memory commScalars,
+        BN254.G1Point[] memory commBases
+    ) internal pure {
+        _linearizationScalarsAndBases(verifyingKey, chal, evalData, proof, commBases, commScalars);
 
         uint256 p = BN254.R_MOD;
         uint256 v = chal.v;
@@ -317,31 +295,30 @@ contract PlonkVerifier is IPlonkVerifier {
 
         // TODO: simplify the code into loops?
         // Add wire witness polynomial commitments.
-        bufferVAndUvBasis[0] = vBase;
         commScalars[20] = vBase;
         commBases[20] = proof.wire0;
         assembly {
             vBase := mulmod(vBase, v, p)
         }
-        bufferVAndUvBasis[1] = vBase;
+
         commScalars[21] = vBase;
         commBases[21] = proof.wire1;
         assembly {
             vBase := mulmod(vBase, v, p)
         }
-        bufferVAndUvBasis[2] = vBase;
+
         commScalars[22] = vBase;
         commBases[22] = proof.wire2;
         assembly {
             vBase := mulmod(vBase, v, p)
         }
-        bufferVAndUvBasis[3] = vBase;
+
         commScalars[23] = vBase;
         commBases[23] = proof.wire3;
         assembly {
             vBase := mulmod(vBase, v, p)
         }
-        bufferVAndUvBasis[4] = vBase;
+
         commScalars[24] = vBase;
         commBases[24] = proof.wire4;
         assembly {
@@ -349,25 +326,24 @@ contract PlonkVerifier is IPlonkVerifier {
         }
 
         // Add wire sigma polynomial commitments. The last sigma commitment is excluded.
-        bufferVAndUvBasis[5] = vBase;
         commScalars[25] = vBase;
         commBases[25] = verifyingKey.sigma0;
         assembly {
             vBase := mulmod(vBase, v, p)
         }
-        bufferVAndUvBasis[6] = vBase;
+
         commScalars[26] = vBase;
         commBases[26] = verifyingKey.sigma1;
         assembly {
             vBase := mulmod(vBase, v, p)
         }
-        bufferVAndUvBasis[7] = vBase;
+
         commScalars[27] = vBase;
         commBases[27] = verifyingKey.sigma2;
         assembly {
             vBase := mulmod(vBase, v, p)
         }
-        bufferVAndUvBasis[8] = vBase;
+
         commScalars[28] = vBase;
         commBases[28] = verifyingKey.sigma3;
         assembly {
@@ -375,17 +351,20 @@ contract PlonkVerifier is IPlonkVerifier {
         }
 
         // Add poly commitments to be evaluated at point `zeta * g`.
-        bufferVAndUvBasis[9] = chal.u;
+        // TODO this bases is the same as commBases[0]
+        // consider merging those
         commScalars[29] = chal.u;
         commBases[29] = proof.prodPerm;
     }
 
     // `aggregate_evaluations()` in Jellyfish, but since we are not aggregating multiple, but rather preparing `[E]1` from a single proof.
     // The returned value is the scalar in `[E]1` described in Sec 8.4, step 11 of https://eprint.iacr.org/2019/953.pdf
+    /// @dev caller allocates the memory fr commScalars
+    /// requires Arrays of size 30.
     function _prepareEvaluations(
         uint256 linPolyConstant,
         PlonkProof memory proof,
-        uint256[10] memory bufferVAndUvBasis
+        uint256[] memory commScalars
     ) internal pure returns (uint256 eval) {
         uint256 p = BN254.R_MOD;
         assembly {
@@ -395,7 +374,10 @@ contract PlonkVerifier is IPlonkVerifier {
             } lt(i, 10) {
                 i := add(i, 1)
             } {
-                let combiner := mload(add(bufferVAndUvBasis, mul(i, 0x20)))
+                // the first u256 stores the length of this array;
+                // the next 20 elements are used to store the linearization of the scalars
+                // the first free space starts from 21
+                let combiner := mload(add(commScalars, mul(add(i, 21), 0x20)))
                 let termEval := mload(add(proof, add(0x1a0, mul(i, 0x20))))
                 eval := addmod(eval, mulmod(combiner, termEval, p), p)
             }
@@ -519,12 +501,17 @@ contract PlonkVerifier is IPlonkVerifier {
         return BN254.pairingProd2(a1, _betaH, b1, BN254.P2());
     }
 
+    // compute the linearization of the scalars and bases.
+    /// @dev caller allocates the memory fr commScalars and commBases
+    /// requires Arrays of size 30.
     function _linearizationScalarsAndBases(
         VerifyingKey memory verifyingKey,
         Challenges memory challenge,
         Poly.EvalData memory evalData,
-        PlonkProof memory proof
-    ) internal pure returns (BN254.G1Point[] memory bases, uint256[] memory scalars) {
+        PlonkProof memory proof,
+        BN254.G1Point[] memory bases,
+        uint256[] memory scalars
+    ) internal pure {
         // TODO: optimize this code
         uint256 firstScalar;
         uint256 secondScalar;
@@ -532,9 +519,6 @@ contract PlonkVerifier is IPlonkVerifier {
         uint256 tmp;
         uint256 tmp2;
         uint256 p = BN254.R_MOD;
-
-        bases = new BN254.G1Point[](20);
-        scalars = new uint256[](20);
 
         // ============================================
         // Compute coefficient for the permutation product polynomial commitment.
@@ -693,7 +677,6 @@ contract PlonkVerifier is IPlonkVerifier {
         scalars[6] = tmp;
         bases[6] = verifyingKey.qM12;
 
-        // q_M34] = w_evals[2] * w_evals[3];
         assembly {
             tmp := mulmod(mload(add(proof, 0x1E0)), mload(add(proof, 0x200)), p)
         }
@@ -758,7 +741,9 @@ contract PlonkVerifier is IPlonkVerifier {
         // ============
         // q_Ecc = w_evals[0] * w_evals[1] * w_evals[2] * w_evals[3] * w_evals[4];
         assembly {
-            tmp := mulmod(mload(add(scalars, 0xE0)), mload(add(scalars, 0x100)), p)
+            tmp := mulmod(mload(add(proof, 0x1A0)), mload(add(proof, 0x1C0)), p)
+            tmp := mulmod(tmp, mload(add(proof, 0x1E0)), p)
+            tmp := mulmod(tmp, mload(add(proof, 0x200)), p)
             tmp := mulmod(tmp, mload(add(proof, 0x220)), p)
         }
         scalars[14] = tmp;
@@ -781,28 +766,28 @@ contract PlonkVerifier is IPlonkVerifier {
 
         // second one is (1-zeta^n) zeta^(n+2)
         assembly {
-            tmp2 := mulmod(mload(add(scalars, 0x200)), tmp, p)
+            tmp2 := mulmod(mload(add(scalars, mul(16, 0x20))), tmp, p)
         }
         scalars[16] = tmp2;
         bases[16] = proof.split1;
 
         // thrid one is (1-zeta^n) zeta^2(n+2)
         assembly {
-            tmp2 := mulmod(mload(add(scalars, 0x220)), tmp, p)
+            tmp2 := mulmod(mload(add(scalars, mul(17, 0x20))), tmp, p)
         }
         scalars[17] = tmp2;
         bases[17] = proof.split2;
 
         // forth one is (1-zeta^n) zeta^3(n+2)
         assembly {
-            tmp2 := mulmod(mload(add(scalars, 0x240)), tmp, p)
+            tmp2 := mulmod(mload(add(scalars, mul(18, 0x20))), tmp, p)
         }
         scalars[18] = tmp2;
         bases[18] = proof.split3;
 
         // fifth one is (1-zeta^n) zeta^4(n+2)
         assembly {
-            tmp2 := mulmod(mload(add(scalars, 0x260)), tmp, p)
+            tmp2 := mulmod(mload(add(scalars, mul(19, 0x20))), tmp, p)
         }
         scalars[19] = tmp2;
         bases[19] = proof.split4;

@@ -115,11 +115,17 @@ contract PlonkVerifier is IPlonkVerifier {
         Poly.EvalData memory evalData = Poly.evalDataGen(domain, chal.zeta, publicInput);
 
         // compute opening proof in poly comm.
-        (
-            uint256[] memory commScalars,
-            BN254.G1Point[] memory commBases,
-            uint256 eval
-        ) = _prepareOpeningProof(verifyingKey, evalData, proof, chal);
+        uint256[] memory commScalars = new uint256[](30);
+        BN254.G1Point[] memory commBases = new BN254.G1Point[](30);
+
+        uint256 eval = _prepareOpeningProof(
+            verifyingKey,
+            evalData,
+            proof,
+            chal,
+            commScalars,
+            commBases
+        );
 
         uint256 zeta = chal.zeta;
         uint256 omega = domain.groupGen;
@@ -251,48 +257,51 @@ contract PlonkVerifier is IPlonkVerifier {
     // Returned evaluation is the scalar in `[E]1` described in Sec 8.4, step 11 of https://eprint.iacr.org/2019/953.pdf
     //
     // equivalent of JF's https://github.com/SpectrumXYZ/jellyfish/blob/main/plonk/src/proof_system/verifier.rs#L154-L170
+    /// @dev caller allocates the memory fr commScalars and commBases
+    /// requires Arrays of size 30.
     function _prepareOpeningProof(
         VerifyingKey memory verifyingKey,
         Poly.EvalData memory evalData,
         PlonkProof memory proof,
-        Challenges memory chal
-    )
-        internal
-        pure
-        returns (
-            uint256[] memory commScalars,
-            BN254.G1Point[] memory commBases,
-            uint256 eval
-        )
-    {
+        Challenges memory chal,
+        uint256[] memory commScalars,
+        BN254.G1Point[] memory commBases
+    ) internal pure returns (uint256 eval) {
         // compute the constant term of the linearization polynomial
         uint256 linPolyConstant = _computeLinPolyConstantTerm(chal, proof, evalData);
 
-        (commScalars, commBases) = _preparePolyCommitments(verifyingKey, chal, evalData, proof);
+        uint256 length = _preparePolyCommitments(
+            verifyingKey,
+            chal,
+            evalData,
+            proof,
+            commScalars,
+            commBases
+        );
 
-        eval = _prepareEvaluations(linPolyConstant, proof, commScalars);
+        eval = _prepareEvaluations(linPolyConstant, proof, commScalars, length);
     }
 
     // `aggregate_poly_commitments()` in Jellyfish, but since we are not aggregating multiple,
     // but rather preparing for `[F]1` from a single proof.
+    /// @dev caller allocates the memory fr commScalars and commBases
+    /// requires Arrays of size 30.
     function _preparePolyCommitments(
         VerifyingKey memory verifyingKey,
         Challenges memory chal,
         Poly.EvalData memory evalData,
-        PlonkProof memory proof
-    ) internal pure returns (uint256[] memory commScalars, BN254.G1Point[] memory commBases) {
-        (
-            BN254.G1Point[] memory linBases,
-            uint256[] memory linScalars,
-            uint256 length
-        ) = _linearizationScalarsAndBases(verifyingKey, chal, evalData, proof);
-
-        commScalars = new uint256[](length + 10);
-        commBases = new BN254.G1Point[](length + 10);
-        for (uint256 i = 0; i < length; i++) {
-            commScalars[i] = linScalars[i];
-            commBases[i] = linBases[i];
-        }
+        PlonkProof memory proof,
+        uint256[] memory commScalars,
+        BN254.G1Point[] memory commBases
+    ) internal pure returns (uint256 length) {
+        length = _linearizationScalarsAndBases(
+            verifyingKey,
+            chal,
+            evalData,
+            proof,
+            commBases,
+            commScalars
+        );
 
         uint256 p = BN254.R_MOD;
         uint256 v = chal.v;
@@ -364,13 +373,16 @@ contract PlonkVerifier is IPlonkVerifier {
 
     // `aggregate_evaluations()` in Jellyfish, but since we are not aggregating multiple, but rather preparing `[E]1` from a single proof.
     // The returned value is the scalar in `[E]1` described in Sec 8.4, step 11 of https://eprint.iacr.org/2019/953.pdf
+    /// @dev caller allocates the memory fr commScalars
+    /// requires Arrays of size 30.
     function _prepareEvaluations(
         uint256 linPolyConstant,
         PlonkProof memory proof,
-        uint256[] memory commScalars
+        uint256[] memory commScalars,
+        uint256 length
     ) internal pure returns (uint256 eval) {
         uint256 p = BN254.R_MOD;
-        uint256 offset = commScalars.length - 9;
+        uint256 offset = length + 1;
         assembly {
             eval := sub(p, linPolyConstant)
             for {
@@ -502,17 +514,22 @@ contract PlonkVerifier is IPlonkVerifier {
         return BN254.pairingProd2(a1, _betaH, b1, BN254.P2());
     }
 
+    // compute the linearization of the scalars and bases.
+    /// @dev caller allocates the memory fr commScalars and commBases
+    /// requires Arrays of size 30.
     function _linearizationScalarsAndBases(
         VerifyingKey memory verifyingKey,
         Challenges memory challenge,
         Poly.EvalData memory evalData,
-        PlonkProof memory proof
+        PlonkProof memory proof,
+        BN254.G1Point[] memory bases,
+        uint256[] memory scalars
     )
         internal
         pure
         returns (
-            BN254.G1Point[] memory bases,
-            uint256[] memory scalars,
+            // BN254.G1Point[] memory bases,
+            // uint256[] memory scalars,
             uint256 counter
         )
     {
@@ -524,8 +541,8 @@ contract PlonkVerifier is IPlonkVerifier {
         uint256 tmp2;
         uint256 p = BN254.R_MOD;
 
-        bases = new BN254.G1Point[](20);
-        scalars = new uint256[](20);
+        // bases = new BN254.G1Point[](20);
+        // scalars = new uint256[](20);
 
         // ============================================
         // Compute coefficient for the permutation product polynomial commitment.

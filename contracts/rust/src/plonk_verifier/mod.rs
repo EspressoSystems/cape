@@ -118,7 +118,6 @@ async fn test_prepare_pcs_info() -> Result<()> {
             .await?,
         field_to_u256(lin_poly_constant),
     );
-
     // build the (aggregated) polynomial commitment instance
     let (comm_scalars_and_bases, buffer_v_and_uv_basis) = verifier.aggregate_poly_commitments(
         &[&vk],
@@ -131,7 +130,7 @@ async fn test_prepare_pcs_info() -> Result<()> {
         &alpha_bases,
     )?;
 
-    let (comm_scalars_sol, comm_bases_sol) = contract
+    let (comm_scalars_sol, comm_bases_sol, len) = contract
         .prepare_poly_commitments(
             vk.clone().into(),
             challenges.into(),
@@ -164,6 +163,7 @@ async fn test_prepare_pcs_info() -> Result<()> {
                 field_to_u256(lin_poly_constant),
                 proof.clone().into(),
                 comm_scalars_sol,
+                len
             )
             .call()
             .await?,

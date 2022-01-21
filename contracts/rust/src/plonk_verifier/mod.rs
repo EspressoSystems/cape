@@ -130,7 +130,8 @@ async fn test_prepare_pcs_info() -> Result<()> {
         &alpha_powers,
         &alpha_bases,
     )?;
-    let (comm_scalars_sol, comm_bases_sol, buffer_v_and_uv_basis_sol) = contract
+
+    let (comm_scalars_sol, comm_bases_sol) = contract
         .prepare_poly_commitments(
             vk.clone().into(),
             challenges.into(),
@@ -139,22 +140,16 @@ async fn test_prepare_pcs_info() -> Result<()> {
         )
         .call()
         .await?;
+
     assert_eq!(
         contract
-            .multi_scalar_mul(comm_bases_sol, comm_scalars_sol)
+            .multi_scalar_mul(comm_bases_sol, comm_scalars_sol.clone())
             .call()
             .await?,
         comm_scalars_and_bases
             .multi_scalar_mul()
             .into_affine()
             .into(),
-    );
-    assert_eq!(
-        buffer_v_and_uv_basis_sol.to_vec(),
-        buffer_v_and_uv_basis
-            .iter()
-            .map(|f| field_to_u256(*f))
-            .collect::<Vec<_>>()
     );
 
     let eval = Verifier::<Bn254>::aggregate_evaluations(
@@ -168,7 +163,7 @@ async fn test_prepare_pcs_info() -> Result<()> {
             .prepare_evaluations(
                 field_to_u256(lin_poly_constant),
                 proof.clone().into(),
-                buffer_v_and_uv_basis_sol,
+                comm_scalars_sol,
             )
             .call()
             .await?,

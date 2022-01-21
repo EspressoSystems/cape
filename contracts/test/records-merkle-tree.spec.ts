@@ -1,12 +1,14 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
+/*
 import { TestRecordsMerkleTree } from "../typechain-types";
+*/
 
 describe("Records Merkle Tree tests", function () {
-  let recordsMerkleTree: TestRecordsMerkleTree;
+  let recordsMerkleTree: any;
   let rmtFactory: {
-    deploy: (arg0: number) => TestRecordsMerkleTree | PromiseLike<TestRecordsMerkleTree>;
+    deploy: (arg0: number) => any | PromiseLike<any>;
   };
 
   beforeEach(async function () {

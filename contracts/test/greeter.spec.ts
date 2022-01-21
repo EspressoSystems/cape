@@ -1,9 +1,12 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
+
+/*
 import { Greeter } from "../typechain-types";
+*/
 
 describe("Greeter (typescript)", function () {
-  let greeter: Greeter;
+  let greeter: any;
 
   beforeEach(async () => {
     const greeterFactory = await ethers.getContractFactory("Greeter");

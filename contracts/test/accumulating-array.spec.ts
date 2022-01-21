@@ -2,10 +2,15 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 import { BigNumber, BigNumberish } from "ethers";
 
+/* TODO: fix import issue
+Error:
+contracts/test/accumulating-array.spec.ts(5,39): error TS2307: Cannot find module '../typechain-types' or its corresponding type declarations.
+
 import { TestAccumulatingArray } from "../typechain-types";
+*/
 
 describe("AccumulatingArray", function () {
-  let contract: TestAccumulatingArray;
+  let contract: any;
 
   beforeEach(async () => {
     const factory = await ethers.getContractFactory("TestAccumulatingArray");

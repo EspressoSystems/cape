@@ -2,7 +2,6 @@
 use std::path::Path;
 
 use crate::{
-    assertion::Matcher,
     ethereum::{deploy, get_funded_deployer},
     types::{field_to_u256, u256_to_field, EvalDomain, TestPolynomialEval},
 };

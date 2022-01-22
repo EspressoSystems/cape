@@ -7,13 +7,13 @@ edition = "2018"
 doctest = false
 
 [dependencies]
-jf-plonk = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", rev = "54f112e41f2264abdfb92c433564fea5cc7cdc97"}
-jf-primitives = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", rev = "54f112e41f2264abdfb92c433564fea5cc7cdc97"}
-jf-aap = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", rev = "54f112e41f2264abdfb92c433564fea5cc7cdc97"}
-jf-rescue = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", rev = "c9ded9359d82447ec5644c8df2921c16ba26c660"}
-jf-utils = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", rev = "54f112e41f2264abdfb92c433564fea5cc7cdc97"}
-reef = { git = "ssh://git@github.com/SpectrumXYZ/reef.git", rev = "a1af004a5722efba2a2ca9ad589a5a0ea46cc320" }
-zerok_lib = { path = "/Users/keyao/Code/system/zerok/zerok_lib", features = ["mocks"] }
+jf-plonk = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", rev = "eb8d3d3b03fec0d88327f4686e8a2787c85274d9"}
+jf-primitives = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", rev = "eb8d3d3b03fec0d88327f4686e8a2787c85274d9"}
+jf-aap = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", rev = "eb8d3d3b03fec0d88327f4686e8a2787c85274d9"}
+jf-rescue = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", rev = "eb8d3d3b03fec0d88327f4686e8a2787c85274d9"}
+jf-utils = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", rev = "eb8d3d3b03fec0d88327f4686e8a2787c85274d9"}
+reef = { git = "ssh://git@github.com/SpectrumXYZ/reef.git", rev = "34725636bbde038176d39dbf6b948ab0a0a0793c" }
+zerok_lib = { git = "ssh://git@github.com/SpectrumXYZ/spectrum.git", branch = "keyao-serialize", features = ["mocks"] }
 ethers = { git = "https://github.com/gakonst/ethers-rs", branch = "master" }
 itertools = "0.10.1" # needed for jf-aap to compile
 ark-std = "0.3.0"

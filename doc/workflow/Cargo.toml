@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-jf-aap = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", rev = "c9ded9359d82447ec5644c8df2921c16ba26c660" }
-jf-utils = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", rev = "c9ded9359d82447ec5644c8df2921c16ba26c660" }
+jf-aap = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", rev = "54f112e41f2264abdfb92c433564fea5cc7cdc97" }
+jf-utils = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", rev = "54f112e41f2264abdfb92c433564fea5cc7cdc97" }
 jf-rescue = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", rev = "c9ded9359d82447ec5644c8df2921c16ba26c660" }
 ethers = { git = "https://github.com/gakonst/ethers-rs", features = ["abigen"] }
 

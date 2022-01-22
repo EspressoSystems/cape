@@ -1077,19 +1077,20 @@ dependencies = [
  "jf-aap",
  "jf-plonk",
  "jf-primitives",
- "jf-rescue",
- "jf-utils",
+ "jf-rescue 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=c9ded9359d82447ec5644c8df2921c16ba26c660)",
+ "jf-utils 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=54f112e41f2264abdfb92c433564fea5cc7cdc97)",
  "num-derive",
  "num-traits",
  "proptest",
  "rand 0.8.4",
  "rand_chacha 0.3.1",
+ "reef",
  "serde",
  "serde_json",
  "sha3",
  "strum_macros",
  "tokio",
- "zerok_lib 0.1.0 (git+ssh://git@github.com/SpectrumXYZ/spectrum.git?rev=b86e2e0ef24aa313a51a82875309f562fe0184d0)",
+ "zerok_lib",
 ]
 
 [[package]]
@@ -1099,8 +1100,8 @@ dependencies = [
  "ethers 0.6.0 (git+https://github.com/gakonst/ethers-rs)",
  "itertools 0.10.3",
  "jf-aap",
- "jf-rescue",
- "jf-utils",
+ "jf-rescue 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=c9ded9359d82447ec5644c8df2921c16ba26c660)",
+ "jf-utils 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=54f112e41f2264abdfb92c433564fea5cc7cdc97)",
  "rand 0.8.4",
  "serde",
  "serde_json",
@@ -1118,7 +1119,7 @@ dependencies = [
  "jf-aap",
  "jf-plonk",
  "jf-primitives",
- "jf-utils",
+ "jf-utils 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=54f112e41f2264abdfb92c433564fea5cc7cdc97)",
  "lazy_static",
  "markdown",
  "rand_chacha 0.3.1",
@@ -1141,7 +1142,7 @@ dependencies = [
  "tracing-futures",
  "tracing-subscriber 0.2.25",
  "tracing-test",
- "zerok_lib 0.1.0 (git+ssh://git@github.com/SpectrumXYZ/spectrum.git?rev=80d568119b72c7ea33728fa48ad45215869fe345)",
+ "zerok_lib",
 ]
 
 [[package]]
@@ -3200,7 +3201,7 @@ checksum = "1aab8fc367588b89dcee83ab0fd66b72b50b72fa1904d7095045ace2b0c81c35"
 [[package]]
 name = "jf-aap"
 version = "0.0.1"
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=c9ded9359d82447ec5644c8df2921c16ba26c660#c9ded9359d82447ec5644c8df2921c16ba26c660"
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=54f112e41f2264abdfb92c433564fea5cc7cdc97#54f112e41f2264abdfb92c433564fea5cc7cdc97"
 dependencies = [
  "anyhow",
  "ark-bls12-377",
@@ -3221,8 +3222,8 @@ dependencies = [
  "itertools 0.10.3",
  "jf-plonk",
  "jf-primitives",
- "jf-rescue",
- "jf-utils",
+ "jf-rescue 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=54f112e41f2264abdfb92c433564fea5cc7cdc97)",
+ "jf-utils 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=54f112e41f2264abdfb92c433564fea5cc7cdc97)",
  "num_cpus",
  "percentage",
  "rand 0.8.4",
@@ -3240,7 +3241,7 @@ dependencies = [
 [[package]]
 name = "jf-plonk"
 version = "0.0.1"
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=c9ded9359d82447ec5644c8df2921c16ba26c660#c9ded9359d82447ec5644c8df2921c16ba26c660"
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=54f112e41f2264abdfb92c433564fea5cc7cdc97#54f112e41f2264abdfb92c433564fea5cc7cdc97"
 dependencies = [
  "ark-bls12-377",
  "ark-bls12-381",
@@ -3257,8 +3258,8 @@ dependencies = [
  "displaydoc",
  "downcast-rs",
  "itertools 0.10.3",
- "jf-rescue",
- "jf-utils",
+ "jf-rescue 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=54f112e41f2264abdfb92c433564fea5cc7cdc97)",
+ "jf-utils 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=54f112e41f2264abdfb92c433564fea5cc7cdc97)",
  "merlin",
  "num-bigint 0.4.3",
  "rand_chacha 0.3.1",
@@ -3271,7 +3272,7 @@ dependencies = [
 [[package]]
 name = "jf-primitives"
 version = "0.0.1"
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=c9ded9359d82447ec5644c8df2921c16ba26c660#c9ded9359d82447ec5644c8df2921c16ba26c660"
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=54f112e41f2264abdfb92c433564fea5cc7cdc97#54f112e41f2264abdfb92c433564fea5cc7cdc97"
 dependencies = [
  "ark-ec",
  "ark-ff",
@@ -3283,8 +3284,36 @@ dependencies = [
  "generic-array 0.14.5",
  "itertools 0.10.3",
  "jf-plonk",
- "jf-rescue",
- "jf-utils",
+ "jf-rescue 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=54f112e41f2264abdfb92c433564fea5cc7cdc97)",
+ "jf-utils 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=54f112e41f2264abdfb92c433564fea5cc7cdc97)",
+ "rayon",
+ "serde",
+ "thiserror",
+ "zeroize",
+]
+
+[[package]]
+name = "jf-rescue"
+version = "0.0.1"
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=54f112e41f2264abdfb92c433564fea5cc7cdc97#54f112e41f2264abdfb92c433564fea5cc7cdc97"
+dependencies = [
+ "ark-bls12-377",
+ "ark-bls12-381",
+ "ark-bn254",
+ "ark-bw6-761",
+ "ark-ec",
+ "ark-ed-on-bls12-377",
+ "ark-ed-on-bls12-381",
+ "ark-ed-on-bn254",
+ "ark-ff",
+ "ark-serialize",
+ "ark-std",
+ "crypto_box",
+ "derivative",
+ "displaydoc",
+ "generic-array 0.14.5",
+ "itertools 0.10.3",
+ "jf-utils 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=54f112e41f2264abdfb92c433564fea5cc7cdc97)",
  "rayon",
  "serde",
  "thiserror",
@@ -3312,11 +3341,28 @@ dependencies = [
  "displaydoc",
  "generic-array 0.14.5",
  "itertools 0.10.3",
- "jf-utils",
+ "jf-utils 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=c9ded9359d82447ec5644c8df2921c16ba26c660)",
  "rayon",
  "serde",
  "thiserror",
  "zeroize",
+]
+
+[[package]]
+name = "jf-utils"
+version = "0.0.1"
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=54f112e41f2264abdfb92c433564fea5cc7cdc97#54f112e41f2264abdfb92c433564fea5cc7cdc97"
+dependencies = [
+ "anyhow",
+ "ark-ec",
+ "ark-ff",
+ "ark-serialize",
+ "ark-std",
+ "digest 0.9.0",
+ "jf-utils-derive 0.1.0 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=54f112e41f2264abdfb92c433564fea5cc7cdc97)",
+ "serde",
+ "sha2 0.9.9",
+ "tagged-base64",
 ]
 
 [[package]]
@@ -3330,10 +3376,21 @@ dependencies = [
  "ark-serialize",
  "ark-std",
  "digest 0.9.0",
- "jf-utils-derive",
+ "jf-utils-derive 0.1.0 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=c9ded9359d82447ec5644c8df2921c16ba26c660)",
  "serde",
  "sha2 0.9.9",
  "tagged-base64",
+]
+
+[[package]]
+name = "jf-utils-derive"
+version = "0.1.0"
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=54f112e41f2264abdfb92c433564fea5cc7cdc97#54f112e41f2264abdfb92c433564fea5cc7cdc97"
+dependencies = [
+ "ark-serialize",
+ "ark-std",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -4498,6 +4555,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "reef"
+version = "0.1.0"
+source = "git+ssh://git@github.com/SpectrumXYZ/reef.git?rev=a1af004a5722efba2a2ca9ad589a5a0ea46cc320#a1af004a5722efba2a2ca9ad589a5a0ea46cc320"
+dependencies = [
+ "ark-serialize",
+ "itertools 0.10.3",
+ "jf-aap",
+ "serde",
+ "snafu",
+ "strum_macros",
+]
+
+[[package]]
 name = "regex"
 version = "1.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4546,7 +4616,7 @@ dependencies = [
  "toml",
  "tracing",
  "tracing-subscriber 0.3.6",
- "zerok_lib 0.1.0 (git+ssh://git@github.com/SpectrumXYZ/spectrum.git?rev=b86e2e0ef24aa313a51a82875309f562fe0184d0)",
+ "zerok_lib",
 ]
 
 [[package]]
@@ -6418,17 +6488,6 @@ dependencies = [
 [[package]]
 name = "zerok-macros"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/spectrum.git?rev=80d568119b72c7ea33728fa48ad45215869fe345#80d568119b72c7ea33728fa48ad45215869fe345"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
-name = "zerok-macros"
-version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/spectrum.git?rev=b86e2e0ef24aa313a51a82875309f562fe0184d0#b86e2e0ef24aa313a51a82875309f562fe0184d0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -6438,7 +6497,6 @@ dependencies = [
 [[package]]
 name = "zerok_lib"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/spectrum.git?rev=80d568119b72c7ea33728fa48ad45215869fe345#80d568119b72c7ea33728fa48ad45215869fe345"
 dependencies = [
  "arbitrary",
  "ark-ff",
@@ -6462,7 +6520,7 @@ dependencies = [
  "jf-aap",
  "jf-plonk",
  "jf-primitives",
- "jf-utils",
+ "jf-utils 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=54f112e41f2264abdfb92c433564fea5cc7cdc97)",
  "lazy_static",
  "mnemonic",
  "phaselock",
@@ -6470,6 +6528,7 @@ dependencies = [
  "rand 0.7.3",
  "rand_chacha 0.3.1",
  "rayon",
+ "reef",
  "rpassword",
  "rust-argon2",
  "rustyline",
@@ -6489,62 +6548,5 @@ dependencies = [
  "tide",
  "tracing",
  "zeroize",
- "zerok-macros 0.1.0 (git+ssh://git@github.com/SpectrumXYZ/spectrum.git?rev=80d568119b72c7ea33728fa48ad45215869fe345)",
-]
-
-[[package]]
-name = "zerok_lib"
-version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/spectrum.git?rev=b86e2e0ef24aa313a51a82875309f562fe0184d0#b86e2e0ef24aa313a51a82875309f562fe0184d0"
-dependencies = [
- "arbitrary",
- "ark-ff",
- "ark-serialize",
- "ark-std",
- "async-scoped",
- "async-std",
- "async-trait",
- "async-tungstenite 0.15.0",
- "async_executors",
- "atomic_store",
- "bincode",
- "bitvec 0.20.4",
- "chacha20 0.8.1",
- "chrono",
- "futures",
- "generic-array 0.14.5",
- "hex",
- "hmac 0.11.0",
- "itertools 0.10.3",
- "jf-aap",
- "jf-plonk",
- "jf-primitives",
- "jf-utils",
- "lazy_static",
- "mnemonic",
- "phaselock",
- "procfs",
- "rand 0.7.3",
- "rand_chacha 0.3.1",
- "rayon",
- "rpassword",
- "rust-argon2",
- "rustyline",
- "serde",
- "serde_cbor",
- "serde_derive",
- "serde_json",
- "serde_with",
- "sha3",
- "snafu",
- "strum",
- "strum_macros",
- "surf",
- "tagged-base64",
- "tempdir",
- "threshold_crypto",
- "tide",
- "tracing",
- "zeroize",
- "zerok-macros 0.1.0 (git+ssh://git@github.com/SpectrumXYZ/spectrum.git?rev=b86e2e0ef24aa313a51a82875309f562fe0184d0)",
+ "zerok-macros",
 ]

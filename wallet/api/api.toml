@@ -142,31 +142,22 @@ Unwrap amount units of the given asset into the given ERC-20 address. Returns a 
 
 [route.newasset]
 PATH = [
-     "newasset/erc20/:erc20/symbol/:symbol/:description/issuer/:issuer/amount/:amount/sendkey/:sendkey/freezekey/:freezekey/tracekey/:tracekey/traceamount/:trace_amount/traceaddress/:trace_address",
-     "newasset/erc20/:erc20/symbol/:symbol/:description/issuer/:issuer/amount/:amount/sendkey/:sendkey/freezekey/:freezekey/tracekey/:tracekey/traceamount/:trace_amount/traceaddress/:trace_address",
-     "newasset/erc20/:erc20/symbol/:symbol/description/:description/issuer/:issuer/amount/:amount/sendkey/:sendkey/freezekey/:freezekey",
-     "newasset/erc20/:erc20/symbol/:symbol/description/:description/issuer/:issuer/amount/:amount/sendkey/:sendkey/freezekey/:freezekey",
-     "newasset/erc20/:erc20/symbol/:symbol/description/:description/issuer/:issuer/amount/:amount/sendkey/:sendkey/tracekey/:tracekey/traceamount/:trace_amount/traceaddress/:trace_address",
-     "newasset/erc20/:erc20/symbol/:symbol/description/:description/issuer/:issuer/amount/:amount/sendkey/:sendkey/tracekey/:tracekey/traceamount/:trace_amount/traceaddress/:trace_address",
-     "newasset/symbol/:symbol/:description/issuer/:issuer/amount/:amount/sendkey/:sendkey/freezekey/:freezekey/tracekey/:tracekey/traceamount/:trace_amount/traceaddress/:trace_address",
-     "newasset/symbol/:symbol/:description/issuer/:issuer/amount/:amount/sendkey/:sendkey/freezekey/:freezekey/tracekey/:tracekey/traceamount/:trace_amount/traceaddress/:trace_address",
-     "newasset/symbol/:symbol/description/:description/issuer/:issuer/amount/:amount/sendkey/:sendkey/freezekey/:freezekey",
-     "newasset/symbol/:symbol/description/:description/issuer/:issuer/amount/:amount/sendkey/:sendkey/freezekey/:freezekey",
-     "newasset/symbol/:symbol/description/:description/issuer/:issuer/amount/:amount/sendkey/:sendkey/tracekey/:tracekey/traceamount/:trace_amount/traceaddress/:trace_address",
-     "newasset/symbol/:symbol/description/:description/issuer/:issuer/amount/:amount/sendkey/:sendkey/tracekey/:tracekey/traceamount/:trace_amount/traceaddress/:trace_address"
+  # `symbol` may be added as a parameter in the future but it's not used for now.
+  # TODO !keyao Make the description and policy parameters optional.
+  # Issue: https://github.com/SpectrumXYZ/cape/issues/345.
+  "newasset/erc20/:erc20/issuer/:issuer/freezekey/:freeze_key/tracekey/:trace_key/traceamount/:trace_amount/traceaddress/:trace_address/revealthreshold/:reveal_threshold",
+  "newasset/description/:description/freezekey/:freeze_key/tracekey/:trace_key/traceamount/:trace_amount/traceaddress/:trace_address/revealthreshold/:reveal_threshold",
 ]
 ":erc20" = "TaggedBase64"
-":symbol" = "String"
 ":description" = "TaggedBase64"
-":issuer" = "String"
-":amount" = "Integer"
-":sendkey" = "TaggedBase64"
-":freezekey" = "TaggedBase64"
-":tracekey" = "TaggedBase64"
+":issuer" = "TaggedBase64"
+":freeze_key" = "TaggedBase64"
+":trace_key" = "TaggedBase64"
 ":trace_amount" = "Boolean"
 ":trace_address" = "Boolean"
+":reveal_threshold" = "Integer"
 DOC = """
-Mint amount units of a given asset code controlled by the current wallet. Reports the asset code associated with the given keys. Keys are generated with *newkey*.
+Sponsor or define an asset, depending on if an ERC20 code is given. Reports the asset definition.
 """
 
 [route.mint]

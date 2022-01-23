@@ -26,4 +26,4 @@ tide-websockets = "0.4.0"
 toml = "0.5"
 tracing = "0.1.26"
 tracing-subscriber = "0.3"
-zerok_lib = { git = "ssh://git@github.com/SpectrumXYZ/spectrum.git", branch = "keyao-serialize", features = ["mocks"] }
+zerok_lib = { git = "ssh://git@github.com/SpectrumXYZ/spectrum.git", branch = "keyao-serialize" }

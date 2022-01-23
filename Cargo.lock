@@ -6462,6 +6462,7 @@ dependencies = [
 [[package]]
 name = "zerok-macros"
 version = "0.1.0"
+source = "git+ssh://git@github.com/SpectrumXYZ/spectrum.git?branch=keyao-serialize#fba213186755cb25ddc95802c8a49c4c915b7394"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -6471,6 +6472,7 @@ dependencies = [
 [[package]]
 name = "zerok_lib"
 version = "0.1.0"
+source = "git+ssh://git@github.com/SpectrumXYZ/spectrum.git?branch=keyao-serialize#fba213186755cb25ddc95802c8a49c4c915b7394"
 dependencies = [
  "arbitrary",
  "ark-ff",

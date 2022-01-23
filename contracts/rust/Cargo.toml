@@ -13,7 +13,7 @@ jf-aap = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-a
 jf-rescue = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", rev = "eb8d3d3b03fec0d88327f4686e8a2787c85274d9"}
 jf-utils = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", rev = "eb8d3d3b03fec0d88327f4686e8a2787c85274d9"}
 reef = { git = "ssh://git@github.com/SpectrumXYZ/reef.git", rev = "34725636bbde038176d39dbf6b948ab0a0a0793c" }
-zerok_lib = { git = "ssh://git@github.com/SpectrumXYZ/spectrum.git", branch = "keyao-serialize", features = ["mocks"] }
+zerok_lib = { git = "ssh://git@github.com/SpectrumXYZ/spectrum.git", branch = "keyao-serialize" }
 ethers = { git = "https://github.com/gakonst/ethers-rs", branch = "master" }
 itertools = "0.10.1" # needed for jf-aap to compile
 ark-std = "0.3.0"

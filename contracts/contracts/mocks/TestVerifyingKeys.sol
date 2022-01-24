@@ -2,8 +2,17 @@
 pragma solidity ^0.8.0;
 
 import {VerifyingKeys as Vk} from "../libraries/VerifyingKeys.sol";
+import "../interfaces/IPlonkVerifier.sol";
 
 contract TestVerifyingKeys {
+    function getVkById(uint256 encodedId)
+        public
+        pure
+        returns (IPlonkVerifier.VerifyingKey memory)
+    {
+        return Vk.getVkById(encodedId);
+    }
+
     function getEncodedId(
         uint8 noteType,
         uint8 numInput,

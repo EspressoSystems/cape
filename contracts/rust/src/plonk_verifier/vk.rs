@@ -1,14 +1,22 @@
 use crate::{
     ethereum::{deploy, get_funded_deployer},
-    plonk_verifier::helpers::get_poly_evals,
     types as sol,
-    types::{field_to_u256, TestVerifyingKeys},
+    types::TestVerifyingKeys,
 };
 use anyhow::Result;
 use ark_std::{rand::Rng, test_rng};
 use ethers::core::k256::ecdsa::SigningKey;
 use ethers::prelude::*;
+use jf_aap::proof::{freeze, mint, transfer, universal_setup_for_test};
+use jf_aap::structs::NoteType;
 use std::path::Path;
+
+const TREE_DEPTH: u8 = 24;
+const SUPPORTED_VKS: [(NoteType, u8, u8, u8); 3] = [
+    (NoteType::Transfer, 2, 2, TREE_DEPTH),
+    (NoteType::Mint, 1, 2, TREE_DEPTH),
+    (NoteType::Freeze, 3, 3, TREE_DEPTH),
+];
 
 async fn deploy_contract(
 ) -> Result<TestVerifyingKeys<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>> {
@@ -43,6 +51,56 @@ async fn test_get_encoded_id() -> Result<()> {
                 + (U256::from(num_output) << 8)
                 + U256::from(tree_depth)
         );
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_get_vk_by_id() -> Result<()> {
+    let contract = deploy_contract().await?;
+    let rng = &mut test_rng();
+
+    let max_degree = 2usize.pow(17);
+    let srs = universal_setup_for_test(max_degree, rng).unwrap();
+
+    for (note_type, num_input, num_output, tree_depth) in SUPPORTED_VKS {
+        // load rust vk
+        let vk = match note_type {
+            NoteType::Transfer => {
+                let (_, vk, _) = transfer::preprocess(
+                    &srs,
+                    num_input as usize,
+                    num_output as usize,
+                    tree_depth,
+                )?;
+                vk.verifying_key
+            }
+            NoteType::Mint => {
+                let (_, vk, _) = mint::preprocess(&srs, tree_depth)?;
+                vk.verifying_key
+            }
+            NoteType::Freeze => {
+                let (_, vk, _) = freeze::preprocess(&srs, num_input as usize, tree_depth)?;
+                vk.verifying_key
+            }
+        };
+        let vk: sol::VerifyingKey = vk.into();
+
+        // reconnect to contract to avoid connection reset problem
+        let client = get_funded_deployer().await?;
+        let contract = TestVerifyingKeys::new(contract.address(), client);
+
+        let note_type_sol = match note_type {
+            NoteType::Transfer => 0u8,
+            NoteType::Mint => 1u8,
+            NoteType::Freeze => 2u8,
+        };
+        let vk_id = contract
+            .get_encoded_id(note_type_sol, num_input, num_output, tree_depth)
+            .call()
+            .await?;
+        assert_eq!(contract.get_vk_by_id(vk_id).call().await?, vk);
     }
 
     Ok(())

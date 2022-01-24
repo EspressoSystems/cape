@@ -33,10 +33,7 @@ async fn test_serialization() -> Result<()> {
     let rng = &mut ark_std::test_rng();
 
     // somehow deploying this contract returns an error
-    let contract = deploy_contract().await;
-
-    let contract = contract?;
-
+    let contract = deploy_contract().await?;
     let mut rust_ser = Vec::new();
 
     // infinity

@@ -8,6 +8,7 @@ use jf_aap::{
     structs::{AssetCode, AssetDefinition},
     MerkleTree, TransactionVerifyingKey,
 };
+use reef::traits::Ledger;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::Debug;
@@ -220,7 +221,7 @@ pub fn dummy_url_eval(
         .build())
 }
 
-fn wallet_error(source: WalletError) -> tide::Error {
+fn wallet_error<L: Ledger>(source: WalletError<L>) -> tide::Error {
     tide::Error::from_str(StatusCode::InternalServerError, source.to_string())
 }
 

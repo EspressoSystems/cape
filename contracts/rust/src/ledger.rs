@@ -2,11 +2,11 @@ use ark_serialize::*;
 use generic_array::GenericArray;
 use jf_aap::{structs::Nullifier, TransactionNote};
 use jf_utils::tagged_blob;
+use reef::traits::{Block, Ledger, NullifierSet, Transaction, Validator};
 use serde::{Deserialize, Serialize};
 use sha3::{Digest, Keccak256};
 use zerok_lib::{
     commit::{Commitment, Committable, RawCommitmentBuilder},
-    ledger::traits::*,
     state::ValidationError,
 };
 
@@ -53,7 +53,7 @@ pub enum CAPETransactionKind {
     Unknown,
 }
 
-impl zerok_lib::ledger::traits::TransactionKind for CAPETransactionKind {
+impl reef::traits::TransactionKind for CAPETransactionKind {
     fn send() -> Self {
         Self::Send
     }
@@ -108,7 +108,7 @@ impl Transaction for CAPETransaction {
             jf_aap::keys::AuditorPubKey,
             jf_aap::keys::AuditorKeyPair,
         >,
-    ) -> Result<zerok_lib::ledger::AuditMemoOpening, zerok_lib::ledger::AuditError> {
+    ) -> Result<reef::types::AuditMemoOpening, reef::types::AuditError> {
         unimplemented!();
     }
 
@@ -140,6 +140,7 @@ impl Committable for CAPEBlock {
 
 impl Block for CAPEBlock {
     type Transaction = CAPETransaction;
+    type Error = ValidationError;
 
     fn add_transaction(&mut self, _txn: Self::Transaction) -> Result<(), ValidationError> {
         unimplemented!()
@@ -232,4 +233,8 @@ pub struct CAPELedger;
 
 impl Ledger for CAPELedger {
     type Validator = CAPEValidator;
+
+    fn name() -> String {
+        unimplemented!()
+    }
 }

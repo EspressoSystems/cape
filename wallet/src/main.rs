@@ -13,7 +13,7 @@ use std::str::FromStr;
 use structopt::StructOpt;
 use tide::StatusCode;
 use tide_websockets::{WebSocket, WebSocketConnection};
-use zerok_lib::api::server;
+use zerok_lib::{api::server, spectrum_api::SpectrumError};
 
 mod disco;
 mod ip;
@@ -249,7 +249,9 @@ fn init_server(
         api: api.clone(),
         wallet: Arc::new(Mutex::new(None)),
     });
-    web_server.with(server::trace).with(server::add_error_body);
+    web_server
+        .with(server::trace)
+        .with(server::add_error_body::<_, SpectrumError>);
 
     // Define the routes handled by the web server.
     web_server.at("/public").serve_dir(web_path)?;
@@ -352,7 +354,13 @@ mod tests {
     use tagged_base64::TaggedBase64;
     use tempdir::TempDir;
     use tracing_test::traced_test;
-    use zerok_lib::{api, api::client, txn_builder::AssetInfo, wallet::hd::KeyTree};
+    use zerok_lib::{
+        api,
+        api::client,
+        cape_state::{Erc20Code, EthereumAddr},
+        txn_builder::AssetInfo,
+        wallet::hd::KeyTree,
+    };
 
     lazy_static! {
         static ref PORT: Arc<Mutex<u64>> = {
@@ -394,7 +402,7 @@ mod tests {
                 .try_into()
                 .unwrap();
             Self {
-                client: client.with(client::parse_error_body),
+                client: client.with(client::parse_error_body::<SpectrumError>),
                 temp_dir: TempDir::new("test_cape_wallet").unwrap(),
             }
         }
@@ -701,7 +709,7 @@ mod tests {
         server.requires_wallet::<PubKey>("newkey/trace").await;
         server.requires_wallet::<PubKey>("newkey/freeze").await;
 
-        // Now open a wallet and call newkey.
+        // Now open a wallet.
         server
             .get::<()>(&format!(
                 "newwallet/{}/path/{}",
@@ -721,7 +729,7 @@ mod tests {
                 assert_eq!(info.spend_keys, vec![key]);
             }
             _ => {
-                panic!("Expected Spend, found {:?}", spend_key);
+                panic!("Expected PubKey::Spend, found {:?}", spend_key);
             }
         }
         match audit_key {
@@ -729,7 +737,7 @@ mod tests {
                 assert_eq!(info.audit_keys, vec![key]);
             }
             _ => {
-                panic!("Expected Audit, found {:?}", audit_key);
+                panic!("Expected PubKey::Audit, found {:?}", audit_key);
             }
         }
         match freeze_key {
@@ -737,7 +745,7 @@ mod tests {
                 assert_eq!(info.freeze_keys, vec![key]);
             }
             _ => {
-                panic!("Expected Freeze, found {:?}", freeze_key);
+                panic!("Expected PubKey::Freeze, found {:?}", freeze_key);
             }
         }
 
@@ -746,5 +754,81 @@ mod tests {
             .get::<PubKey>("newkey/invalid_key_type")
             .await
             .expect_err("newkey succeeded with an invaild key type");
+    }
+
+    #[async_std::test]
+    #[traced_test]
+    async fn test_newasset() {
+        let server = TestServer::new().await;
+        let mut rng = ChaChaRng::from_seed([42u8; 32]);
+
+        // Set parameters for newasset.
+        let erc20_code = Erc20Code(EthereumAddr([1u8; 20]));
+        let sponsor_addr = EthereumAddr([2u8; 20]);
+        let reveal_threshold = 10;
+        let trace_amount = true;
+        let trace_address = false;
+        let description = TaggedBase64::new("DESC", &[3u8; 32]).unwrap();
+
+        // Should fail if a wallet is not already open.
+        server
+            .requires_wallet::<AssetDefinition>(&format!(
+                "newasset/erc20/{}/issuer/{}/traceamount/{}/traceaddress/{}/revealthreshold/{}",
+                erc20_code, sponsor_addr, trace_amount, trace_address, reveal_threshold
+            ))
+            .await;
+        server
+            .requires_wallet::<AssetDefinition>(&format!(
+                "newasset/description/{}/traceamount/{}/traceaddress/{}/revealthreshold/{}",
+                description, trace_amount, trace_address, reveal_threshold
+            ))
+            .await;
+
+        // Now open a wallet.
+        server
+            .get::<()>(&format!(
+                "newwallet/{}/path/{}",
+                random_mnemonic(&mut rng),
+                server.path()
+            ))
+            .await
+            .unwrap();
+
+        // Create keys.
+        server.get::<PubKey>("newkey/trace").await.unwrap();
+        server.get::<PubKey>("newkey/freeze").await.unwrap();
+        let info = server.get::<WalletSummary>("getinfo").await.unwrap();
+        let audit_key = &info.audit_keys[0];
+        let freeze_key = &info.freeze_keys[0];
+
+        // newasset should return a sponsored asset with the correct policy if an ERC20 code is given.
+        let sponsored_asset = server
+            .get::<AssetDefinition>(&format!(
+                "newasset/erc20/{}/issuer/{}/freezekey/{}/tracekey/{}/traceamount/{}/traceaddress/{}/revealthreshold/{}",
+                erc20_code, sponsor_addr, freeze_key, audit_key, trace_amount, trace_address, reveal_threshold
+            ))
+            .await
+            .unwrap();
+        assert_eq!(sponsored_asset.policy_ref().auditor_pub_key(), audit_key);
+        assert_eq!(sponsored_asset.policy_ref().freezer_pub_key(), freeze_key);
+        assert_eq!(
+            sponsored_asset.policy_ref().reveal_threshold(),
+            reveal_threshold
+        );
+
+        // newasset should return a defined asset with the correct policy if no ERC20 code is given.
+        let defined_asset = server
+            .get::<AssetDefinition>(&format!(
+                "newasset/description/{}/freezekey/{}/tracekey/{}/traceamount/{}/traceaddress/{}/revealthreshold/{}",
+                description, freeze_key, audit_key, trace_amount, trace_address, reveal_threshold
+            ))
+            .await
+            .unwrap();
+        assert_eq!(defined_asset.policy_ref().auditor_pub_key(), audit_key);
+        assert_eq!(defined_asset.policy_ref().freezer_pub_key(), freeze_key);
+        assert_eq!(
+            defined_asset.policy_ref().reveal_threshold(),
+            reveal_threshold
+        );
     }
 }

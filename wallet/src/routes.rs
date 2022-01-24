@@ -5,7 +5,7 @@ use async_std::sync::{Arc, Mutex};
 use futures::{prelude::*, stream::iter};
 use jf_aap::{
     keys::{AuditorPubKey, FreezerPubKey, UserPubKey},
-    structs::{AssetCode, AssetDefinition},
+    structs::{AssetCode, AssetDefinition, AssetPolicy},
     MerkleTree, TransactionVerifyingKey,
 };
 use serde::{Deserialize, Serialize};
@@ -22,6 +22,7 @@ use zerok_lib::{
     api,
     api::{server::response, TaggedBlob},
     cape_ledger::CapeLedger,
+    cape_state::{Erc20Code, EthereumAddr},
     state::{key_set::KeySet, VerifierKeySet, MERKLE_HEIGHT},
     txn_builder::AssetInfo,
     universal_params::UNIVERSAL_PARAM,
@@ -88,6 +89,17 @@ impl UrlSegmentValue {
             Err(tide::Error::from_str(
                 StatusCode::BadRequest,
                 format!("expected index, got {:?}", self),
+            ))
+        }
+    }
+
+    pub fn as_u64(&self) -> Result<u64, tide::Error> {
+        if let Integer(i) = self {
+            Ok(*i as u64)
+        } else {
+            Err(tide::Error::from_str(
+                StatusCode::BadRequest,
+                format!("expected integer, got {:?}", self),
             ))
         }
     }
@@ -220,7 +232,7 @@ pub fn dummy_url_eval(
         .build())
 }
 
-fn wallet_error(source: WalletError) -> tide::Error {
+fn wallet_error(source: WalletError<CapeLedger>) -> tide::Error {
     tide::Error::from_str(StatusCode::InternalServerError, source.to_string())
 }
 
@@ -488,6 +500,64 @@ async fn newkey(key_type: &str, wallet: &mut Option<Wallet>) -> Result<PubKey, t
     }
 }
 
+async fn newasset(
+    bindings: &HashMap<String, RouteBinding>,
+    wallet: &mut Option<Wallet>,
+) -> Result<AssetDefinition, tide::Error> {
+    let wallet = require_wallet(wallet)?;
+
+    // Construct the asset policy.
+    // TODO !keyao Make the policy parameters optional.
+    // Issue: https://github.com/SpectrumXYZ/cape/issues/345.
+    let mut policy = AssetPolicy::default();
+    policy = policy
+        .set_auditor_pub_key(
+            bindings
+                .get(":trace_key")
+                .unwrap()
+                .value
+                .to::<AuditorPubKey>()?,
+        )
+        .set_freezer_pub_key(
+            bindings
+                .get(":freeze_key")
+                .unwrap()
+                .value
+                .to::<FreezerPubKey>()?,
+        )
+        .set_reveal_threshold(bindings.get(":reveal_threshold").unwrap().value.as_u64()?);
+    if bindings.get(":trace_amount").unwrap().value.as_boolean()? {
+        policy = policy.reveal_amount()?;
+    }
+    if bindings.get(":trace_address").unwrap().value.as_boolean()? {
+        policy = policy.reveal_user_address()?;
+    }
+
+    // If an ERC20 code is given, sponsor the asset. Otherwise, define an asset.
+    match bindings.get(":erc20") {
+        Some(erc20_code) => {
+            let erc20_code = erc20_code.value.to::<Erc20Code>()?;
+            let sponsor_address = bindings
+                .get(":issuer")
+                .unwrap()
+                .value
+                .to::<EthereumAddr>()?;
+            Ok(wallet.sponsor(erc20_code, sponsor_address, policy).await?)
+        }
+        None => {
+            // TODO !keyao Make the description optional.
+            // Issue: https://github.com/SpectrumXYZ/cape/issues/345.
+            let description = bindings
+                .get(":description")
+                .unwrap()
+                .value
+                .as_identifier()?
+                .value();
+            Ok(wallet.define_asset(&description, policy).await?)
+        }
+    }
+}
+
 pub async fn dispatch_url(
     req: tide::Request<WebState>,
     route_pattern: &str,
@@ -505,7 +575,7 @@ pub async fn dispatch_url(
         ApiRouteKey::getinfo => response(&req, getinfo(wallet).await?),
         ApiRouteKey::importkey => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::mint => dummy_url_eval(route_pattern, bindings),
-        ApiRouteKey::newasset => dummy_url_eval(route_pattern, bindings),
+        ApiRouteKey::newasset => response(&req, newasset(bindings, wallet).await?),
         ApiRouteKey::newkey => response(&req, newkey(segments.1, wallet).await?),
         ApiRouteKey::newwallet => response(&req, newwallet(bindings, wallet).await?),
         ApiRouteKey::openwallet => response(&req, openwallet(bindings, wallet).await?),

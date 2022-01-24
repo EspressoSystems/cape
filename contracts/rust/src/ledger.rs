@@ -2,12 +2,12 @@ use ark_serialize::*;
 use generic_array::GenericArray;
 use jf_aap::{structs::Nullifier, TransactionNote};
 use jf_utils::tagged_blob;
+use reef::traits::*;
 use serde::{Deserialize, Serialize};
 use sha3::{Digest, Keccak256};
 use zerok_lib::{
+    cape_state::CapeValidationError,
     commit::{Commitment, Committable, RawCommitmentBuilder},
-    ledger::traits::*,
-    state::ValidationError,
 };
 
 // In CAPE, we don't store a sparse local copy of the nullifiers set; instead we use the on-ledger
@@ -53,7 +53,7 @@ pub enum CAPETransactionKind {
     Unknown,
 }
 
-impl zerok_lib::ledger::traits::TransactionKind for CAPETransactionKind {
+impl reef::traits::TransactionKind for CAPETransactionKind {
     fn send() -> Self {
         Self::Send
     }
@@ -108,7 +108,7 @@ impl Transaction for CAPETransaction {
             jf_aap::keys::AuditorPubKey,
             jf_aap::keys::AuditorKeyPair,
         >,
-    ) -> Result<zerok_lib::ledger::AuditMemoOpening, zerok_lib::ledger::AuditError> {
+    ) -> Result<reef::AuditMemoOpening, reef::AuditError> {
         unimplemented!();
     }
 
@@ -140,8 +140,9 @@ impl Committable for CAPEBlock {
 
 impl Block for CAPEBlock {
     type Transaction = CAPETransaction;
+    type Error = CapeValidationError;
 
-    fn add_transaction(&mut self, _txn: Self::Transaction) -> Result<(), ValidationError> {
+    fn add_transaction(&mut self, _txn: Self::Transaction) -> Result<(), CapeValidationError> {
         unimplemented!()
     }
 
@@ -200,7 +201,7 @@ impl Validator for CAPEValidator {
         self.commitment
     }
 
-    fn validate_and_apply(&mut self, block: Self::Block) -> Result<Vec<u64>, ValidationError> {
+    fn validate_and_apply(&mut self, block: Self::Block) -> Result<Vec<u64>, CapeValidationError> {
         // We don't actually do validation here, since in this implementation we trust the query
         // service to provide only valid blocks. Instead, just compute a new commitment (by chaining
         // the new block onto the current commitment hash, with a domain separator tag).
@@ -232,4 +233,8 @@ pub struct CAPELedger;
 
 impl Ledger for CAPELedger {
     type Validator = CAPEValidator;
+
+    fn name() -> String {
+        String::from("CAPE")
+    }
 }

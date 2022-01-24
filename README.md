@@ -19,6 +19,7 @@
     - [Hardhat node integrated in test command](#hardhat-node-integrated-in-test-command)
   - [Running scripts](#running-scripts)
   - [Deployment](#deployment)
+    - [Linking to deployed contracts](#linking-to-deployed-contracts)
   - [Precompiled solidity binaries](#precompiled-solidity-binaries)
     - [Details about solidity compiler (solc) management](#details-about-solidity-compiler-solc-management)
   - [Ethereum contracts](#ethereum-contracts)
@@ -43,6 +44,7 @@
 - [Running local arb-dev-node (not officially supported!)](#running-local-arb-dev-node-not-officially-supported)
 - [Gas Reporter](#gas-reporter)
 - [CI](#ci)
+  - [Nightly CI builds](#nightly-ci-builds)
 - [Documentation](#documentation)
   - [Ethereum Asset (Un)Wrapping Workflow](#ethereum-asset-unwrapping-workflow)
 
@@ -59,10 +61,12 @@ via the [nix](https://nixos.org) package manager.
 
 You also need access to the following git repos
 
-- https://gitlab.com/translucence/crypto/jellyfish
-- https://gitlab.com/translucence/crypto/curves
-- https://gitlab.com/translucence/common/tagged-base64
-- https://gitlab.com/translucence/systems/system (wallet crate)
+- https://github.com/SpectrumXYZ/commit
+- https://github.com/SpectrumXYZ/curves
+- https://github.com/SpectrumXYZ/jellyfish-aap
+- https://github.com/SpectrumXYZ/reef
+- https://github.com/SpectrumXYZ/spectrum
+- https://github.com/SpectrumXYZ/tagged-base64
 
 Ping Mat for access.
 
@@ -99,7 +103,7 @@ Try running some tests to verify the installation
     cape-test-geth
 
 If this fails with errors that don't point to obvious problems please open an
-issue on gitlab. M1 Macs need to have node@16 installed to avoid memory allocation errors.
+issue on github. M1 Macs need to have node@16 installed to avoid memory allocation errors.
 
 Note that these tests use `cargo test --release` which is slower for compiling but then faster for executing.
 
@@ -494,7 +498,7 @@ at https://testnet.arbiscan.io/address/0x2FB18F4b4519a5fc792cb6508C6505675BA659E
 
 # CAP on Arbitrum (a.k.a CAPA)
 
-Clone the arbitrum submodule (https://gitlab.com/translucence/arbitrum fork)
+Clone the arbitrum submodule (https://github.com/SpectrumXYZ/arbitrum fork)
 
     git submodule update --init --recursive
     cd contracts/arbitrum
@@ -536,19 +540,7 @@ contract functions called in the tests.
 
 To locally spin up a docker container like the one used in the CI
 
-    docker run \
-        -v $SSH_AUTH_SOCK:/ssh-agent \
-        -e SSH_AUTH_SOCK=/ssh-agent \
-        -v $(pwd):/code -it lnl7/nix
-
-The code in the current directory will be at `/code`. You may have to delete the
-`./node_modules` directory with root permissions afterwards.
-
-To run the CI locally install [gitlab-runner](https://docs.gitlab.com/runner/install/) and run
-
-    gitlab-runner exec docker test
-
-Where the last argument is the name of the job to run.
+    TODO: how to run CI locally?
 
 ## Nightly CI builds
 

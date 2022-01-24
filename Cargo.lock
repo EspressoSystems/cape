@@ -840,9 +840,9 @@ dependencies = [
 
 [[package]]
 name = "bitvec"
-version = "0.20.4"
+version = "0.20.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7774144344a4faa177370406a7ff5f1da24303817368584c6206c8303eb07848"
+checksum = "f5011ffc90248764d7005b0e10c7294f5aa1bd87d9dd7248f4ad475b347c294d"
 dependencies = [
  "funty",
  "radium 0.6.2",
@@ -1078,7 +1078,7 @@ dependencies = [
  "rand_chacha 0.3.1",
  "serde",
  "serde_json",
- "sha3",
+ "sha3 0.9.1",
  "strum_macros",
  "tokio",
  "zerok_lib",
@@ -1140,9 +1140,9 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
 name = "chacha20"
-version = "0.7.3"
+version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f08493fa7707effc63254c66c6ea908675912493cd67952eda23c09fae2610b1"
+checksum = "01b72a433d0cf2aef113ba70f62634c56fddb0f244e6377185c56a7cadbd8f91"
 dependencies = [
  "cfg-if 1.0.0",
  "cipher 0.3.0",
@@ -1151,24 +1151,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "chacha20"
-version = "0.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "01b72a433d0cf2aef113ba70f62634c56fddb0f244e6377185c56a7cadbd8f91"
-dependencies = [
- "cfg-if 1.0.0",
- "cipher 0.3.0",
- "cpufeatures",
-]
-
-[[package]]
 name = "chacha20poly1305"
-version = "0.8.2"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b6547abe025f4027edacd9edaa357aded014eecec42a5070d9b885c3c334aba2"
+checksum = "3b84ed6d1d5f7aa9bdde921a5090e0ca4d934d250ea3b402a5fab3a994e28a2a"
 dependencies = [
  "aead 0.4.3",
- "chacha20 0.7.3",
+ "chacha20",
  "cipher 0.3.0",
  "poly1305",
  "zeroize",
@@ -1284,7 +1273,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "sha2 0.9.8",
- "sha3",
+ "sha3 0.9.1",
  "thiserror",
 ]
 
@@ -1297,6 +1286,21 @@ dependencies = [
  "atty",
  "lazy_static",
  "winapi",
+]
+
+[[package]]
+name = "commit"
+version = "0.1.0"
+source = "git+ssh://git@github.com/SpectrumXYZ/commit.git?rev=f48cd52c59755eade0605111826eef3df6abdcf8#f48cd52c59755eade0605111826eef3df6abdcf8"
+dependencies = [
+ "arbitrary",
+ "ark-serialize",
+ "bitvec 0.20.1",
+ "funty",
+ "generic-array 0.14.4",
+ "hex",
+ "serde",
+ "sha3 0.9.1",
 ]
 
 [[package]]
@@ -1529,14 +1533,14 @@ dependencies = [
 
 [[package]]
 name = "crypto_box"
-version = "0.6.1"
+version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a41c3b5488899ea68ee2dd99e089b95629c6407150bda8e56f2602d78fec8e4"
+checksum = "5c2b974d4124d78e9d061e06ff1d3a2aaef9d925b5f23bb3e0b9410240279f16"
 dependencies = [
- "chacha20 0.7.3",
+ "chacha20",
  "chacha20poly1305",
  "rand_core 0.6.3",
- "salsa20",
+ "salsa20 0.9.0",
  "x25519-dalek",
  "xsalsa20poly1305",
  "zeroize",
@@ -1916,7 +1920,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2 0.9.8",
- "sha3",
+ "sha3 0.9.1",
  "thiserror",
  "uuid",
 ]
@@ -1932,7 +1936,7 @@ dependencies = [
  "hex",
  "serde",
  "serde_json",
- "sha3",
+ "sha3 0.9.1",
  "thiserror",
  "uint",
 ]
@@ -3180,7 +3184,7 @@ checksum = "1aab8fc367588b89dcee83ab0fd66b72b50b72fa1904d7095045ace2b0c81c35"
 [[package]]
 name = "jf-aap"
 version = "0.0.1"
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#bd25cbb823fbd27cd6b3790e52b64b9fb21ade69"
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#bdd2b2a19810f16825c7a06c1faea5e6460e83df"
 dependencies = [
  "anyhow",
  "ark-bls12-377",
@@ -3194,6 +3198,7 @@ dependencies = [
  "ark-serialize",
  "ark-std",
  "bincode",
+ "commit",
  "csv",
  "derivative",
  "displaydoc",
@@ -3208,11 +3213,11 @@ dependencies = [
  "rand 0.8.4",
  "rand_chacha 0.3.1",
  "rayon",
- "rustc-serialize",
  "serde",
  "serde_derive",
+ "serde_json",
  "sha2 0.9.8",
- "sha3",
+ "sha3 0.10.0",
  "structopt",
  "thiserror",
 ]
@@ -3220,7 +3225,7 @@ dependencies = [
 [[package]]
 name = "jf-plonk"
 version = "0.0.1"
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#bd25cbb823fbd27cd6b3790e52b64b9fb21ade69"
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=feat-APIs-for-testing#7a000fa408ebeb7ca9f93d779ab1abed7a2eb57a"
 dependencies = [
  "ark-bls12-377",
  "ark-bls12-381",
@@ -3244,14 +3249,14 @@ dependencies = [
  "rand_chacha 0.3.1",
  "rayon",
  "serde",
- "sha3",
+ "sha3 0.10.0",
  "thiserror",
 ]
 
 [[package]]
 name = "jf-primitives"
 version = "0.0.1"
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#bd25cbb823fbd27cd6b3790e52b64b9fb21ade69"
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=feat-APIs-for-testing#7a000fa408ebeb7ca9f93d779ab1abed7a2eb57a"
 dependencies = [
  "ark-ec",
  "ark-ff",
@@ -3274,7 +3279,7 @@ dependencies = [
 [[package]]
 name = "jf-rescue"
 version = "0.0.1"
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#bd25cbb823fbd27cd6b3790e52b64b9fb21ade69"
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=feat-APIs-for-testing#7a000fa408ebeb7ca9f93d779ab1abed7a2eb57a"
 dependencies = [
  "ark-bls12-377",
  "ark-bls12-381",
@@ -3302,24 +3307,24 @@ dependencies = [
 [[package]]
 name = "jf-utils"
 version = "0.0.1"
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#bd25cbb823fbd27cd6b3790e52b64b9fb21ade69"
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=feat-APIs-for-testing#7a000fa408ebeb7ca9f93d779ab1abed7a2eb57a"
 dependencies = [
  "anyhow",
  "ark-ec",
  "ark-ff",
  "ark-serialize",
  "ark-std",
- "digest 0.9.0",
+ "digest 0.10.1",
  "jf-utils-derive",
  "serde",
- "sha2 0.9.8",
+ "sha2 0.10.1",
  "tagged-base64",
 ]
 
 [[package]]
 name = "jf-utils-derive"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#bd25cbb823fbd27cd6b3790e52b64b9fb21ade69"
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=feat-APIs-for-testing#7a000fa408ebeb7ca9f93d779ab1abed7a2eb57a"
 dependencies = [
  "ark-serialize",
  "ark-std",
@@ -3346,7 +3351,7 @@ dependencies = [
  "ecdsa",
  "elliptic-curve 0.10.6",
  "sha2 0.9.8",
- "sha3",
+ "sha3 0.9.1",
 ]
 
 [[package]]
@@ -3822,7 +3827,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "373b1a4c1338d9cd3d1fa53b3a11bdab5ab6bd80a20f7f7becd76953ae2be909"
 dependencies = [
  "arrayvec 0.7.2",
- "bitvec 0.20.4",
+ "bitvec 0.20.1",
  "byte-slice-cast",
  "impl-trait-for-tuples",
  "parity-scale-codec-derive",
@@ -4634,12 +4639,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3e75f6a532d0fd9f7f13144f392b6ad56a32696bfcd9c78f797f16bbb6f072d6"
 
 [[package]]
-name = "rustc-serialize"
-version = "0.3.24"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dcf128d1287d2ea9d80910b5f1120d0b8eede3fbf1abe91c40d39ea7d51e6fda"
-
-[[package]]
 name = "rustc_version"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4742,6 +4741,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ecbd2eb639fd7cab5804a0837fe373cc2172d15437e804c054a9fb885cb923b0"
 dependencies = [
  "cipher 0.3.0",
+]
+
+[[package]]
+name = "salsa20"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0c0fbb5f676da676c260ba276a8f43a8dc67cf02d1438423aeb1c677a7212686"
+dependencies = [
+ "cipher 0.3.0",
  "zeroize",
 ]
 
@@ -4780,7 +4788,7 @@ dependencies = [
  "hmac 0.11.0",
  "password-hash",
  "pbkdf2",
- "salsa20",
+ "salsa20 0.8.1",
  "sha2 0.9.8",
 ]
 
@@ -5008,6 +5016,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "sha2"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "99c3bd8169c58782adad9290a9af5939994036b76187f7b4f0e6de91dbbfc0ec"
+dependencies = [
+ "cfg-if 1.0.0",
+ "cpufeatures",
+ "digest 0.10.1",
+]
+
+[[package]]
 name = "sha2-asm"
 version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5026,6 +5045,16 @@ dependencies = [
  "digest 0.9.0",
  "keccak",
  "opaque-debug 0.3.0",
+]
+
+[[package]]
+name = "sha3"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "31f935e31cf406e8c0e96c2815a5516181b7004ae8c5f296293221e9b1e356bd"
+dependencies = [
+ "digest 0.10.1",
+ "keccak",
 ]
 
 [[package]]
@@ -6289,14 +6318,14 @@ dependencies = [
 
 [[package]]
 name = "xsalsa20poly1305"
-version = "0.7.2"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2e0f69b133860e3614a4d4fdd6f0d7fe3219e9d67a7e8cd537676a4ebc8313db"
+checksum = "e68bcb965d6c650091450b95cea12f07dcd299a01c15e2f9433b0813ea3c0886"
 dependencies = [
  "aead 0.4.3",
  "poly1305",
  "rand_core 0.6.3",
- "salsa20",
+ "salsa20 0.9.0",
  "subtle",
  "zeroize",
 ]
@@ -6325,7 +6354,7 @@ dependencies = [
 [[package]]
 name = "zerok-macros"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/spectrum.git?branch=plonk-verifier#0ae7d2bb3c5d41203cb2417fe42e306cbf523703"
+source = "git+ssh://git@github.com/SpectrumXYZ/spectrum.git?branch=plonk-verifier#b72d7eb3f803f31ee8824397a292a3dbd0f1a79e"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -6335,7 +6364,7 @@ dependencies = [
 [[package]]
 name = "zerok_lib"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/spectrum.git?branch=plonk-verifier#0ae7d2bb3c5d41203cb2417fe42e306cbf523703"
+source = "git+ssh://git@github.com/SpectrumXYZ/spectrum.git?branch=plonk-verifier#b72d7eb3f803f31ee8824397a292a3dbd0f1a79e"
 dependencies = [
  "arbitrary",
  "ark-ff",
@@ -6348,8 +6377,8 @@ dependencies = [
  "async_executors",
  "atomic_store",
  "bincode",
- "bitvec 0.20.4",
- "chacha20 0.8.1",
+ "bitvec 0.20.1",
+ "chacha20",
  "chrono",
  "futures",
  "generic-array 0.14.4",
@@ -6375,7 +6404,7 @@ dependencies = [
  "serde_derive",
  "serde_json",
  "serde_with",
- "sha3",
+ "sha3 0.9.1",
  "snafu",
  "strum",
  "strum_macros",

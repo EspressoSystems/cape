@@ -8,9 +8,9 @@ doctest = false
 
 [dependencies]
 
-jf-aap = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", branch = "plonk-verifier"}
+jf-aap = { features=[ "std", "test_apis" ], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", branch = "plonk-verifier"}
 
-jf-plonk = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git", branch = "feat-APIs-for-testing"}
+jf-plonk = { features=[ "std", "test_apis" ], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git", branch = "feat-APIs-for-testing"}
 jf-primitives = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git", branch = "feat-APIs-for-testing"}
 jf-rescue = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git", branch = "feat-APIs-for-testing"}
 jf-utils = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish", branch = "feat-APIs-for-testing"}

@@ -4,6 +4,9 @@ on:
   push:
   workflow_dispatch:
 
+env:
+  RUST_TEST_THREADS: 4
+
 jobs:
   build:
     runs-on: self-hosted

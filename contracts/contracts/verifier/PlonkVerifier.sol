@@ -270,16 +270,9 @@ contract PlonkVerifier is IPlonkVerifier {
         // compute the constant term of the linearization polynomial
         uint256 linPolyConstant = _computeLinPolyConstantTerm(chal, proof, evalData);
 
-        uint256 length = _preparePolyCommitments(
-            verifyingKey,
-            chal,
-            evalData,
-            proof,
-            commScalars,
-            commBases
-        );
+        _preparePolyCommitments(verifyingKey, chal, evalData, proof, commScalars, commBases);
 
-        eval = _prepareEvaluations(linPolyConstant, proof, commScalars, length);
+        eval = _prepareEvaluations(linPolyConstant, proof, commScalars);
     }
 
     // `aggregate_poly_commitments()` in Jellyfish, but since we are not aggregating multiple,
@@ -293,15 +286,8 @@ contract PlonkVerifier is IPlonkVerifier {
         PlonkProof memory proof,
         uint256[] memory commScalars,
         BN254.G1Point[] memory commBases
-    ) internal pure returns (uint256 length) {
-        length = _linearizationScalarsAndBases(
-            verifyingKey,
-            chal,
-            evalData,
-            proof,
-            commBases,
-            commScalars
-        );
+    ) internal pure {
+        _linearizationScalarsAndBases(verifyingKey, chal, evalData, proof, commBases, commScalars);
 
         uint256 p = BN254.R_MOD;
         uint256 v = chal.v;
@@ -309,57 +295,57 @@ contract PlonkVerifier is IPlonkVerifier {
 
         // TODO: simplify the code into loops?
         // Add wire witness polynomial commitments.
-        commScalars[length] = vBase;
-        commBases[length] = proof.wire0;
+        commScalars[20] = vBase;
+        commBases[20] = proof.wire0;
         assembly {
             vBase := mulmod(vBase, v, p)
         }
 
-        commScalars[length + 1] = vBase;
-        commBases[length + 1] = proof.wire1;
+        commScalars[21] = vBase;
+        commBases[21] = proof.wire1;
         assembly {
             vBase := mulmod(vBase, v, p)
         }
 
-        commScalars[length + 2] = vBase;
-        commBases[length + 2] = proof.wire2;
+        commScalars[22] = vBase;
+        commBases[22] = proof.wire2;
         assembly {
             vBase := mulmod(vBase, v, p)
         }
 
-        commScalars[length + 3] = vBase;
-        commBases[length + 3] = proof.wire3;
+        commScalars[23] = vBase;
+        commBases[23] = proof.wire3;
         assembly {
             vBase := mulmod(vBase, v, p)
         }
 
-        commScalars[length + 4] = vBase;
-        commBases[length + 4] = proof.wire4;
+        commScalars[24] = vBase;
+        commBases[24] = proof.wire4;
         assembly {
             vBase := mulmod(vBase, v, p)
         }
 
         // Add wire sigma polynomial commitments. The last sigma commitment is excluded.
-        commScalars[length + 5] = vBase;
-        commBases[length + 5] = verifyingKey.sigma0;
+        commScalars[25] = vBase;
+        commBases[25] = verifyingKey.sigma0;
         assembly {
             vBase := mulmod(vBase, v, p)
         }
 
-        commScalars[length + 6] = vBase;
-        commBases[length + 6] = verifyingKey.sigma1;
+        commScalars[26] = vBase;
+        commBases[26] = verifyingKey.sigma1;
         assembly {
             vBase := mulmod(vBase, v, p)
         }
 
-        commScalars[length + 7] = vBase;
-        commBases[length + 7] = verifyingKey.sigma2;
+        commScalars[27] = vBase;
+        commBases[27] = verifyingKey.sigma2;
         assembly {
             vBase := mulmod(vBase, v, p)
         }
 
-        commScalars[length + 8] = vBase;
-        commBases[length + 8] = verifyingKey.sigma3;
+        commScalars[28] = vBase;
+        commBases[28] = verifyingKey.sigma3;
         assembly {
             vBase := mulmod(vBase, v, p)
         }
@@ -367,8 +353,8 @@ contract PlonkVerifier is IPlonkVerifier {
         // Add poly commitments to be evaluated at point `zeta * g`.
         // TODO this bases is the same as commBases[0]
         // consider merging those
-        commScalars[length + 9] = chal.u;
-        commBases[length + 9] = proof.prodPerm;
+        commScalars[29] = chal.u;
+        commBases[29] = proof.prodPerm;
     }
 
     // `aggregate_evaluations()` in Jellyfish, but since we are not aggregating multiple, but rather preparing `[E]1` from a single proof.
@@ -378,11 +364,9 @@ contract PlonkVerifier is IPlonkVerifier {
     function _prepareEvaluations(
         uint256 linPolyConstant,
         PlonkProof memory proof,
-        uint256[] memory commScalars,
-        uint256 length
+        uint256[] memory commScalars
     ) internal pure returns (uint256 eval) {
         uint256 p = BN254.R_MOD;
-        uint256 offset = length + 1;
         assembly {
             eval := sub(p, linPolyConstant)
             for {
@@ -390,7 +374,10 @@ contract PlonkVerifier is IPlonkVerifier {
             } lt(i, 10) {
                 i := add(i, 1)
             } {
-                let combiner := mload(add(commScalars, mul(add(i, offset), 0x20)))
+                // the first u256 stores the length of this array;
+                // the next 20 elements are used to store the linearization of the scalars
+                // the first free space starts from 21
+                let combiner := mload(add(commScalars, mul(add(i, 21), 0x20)))
                 let termEval := mload(add(proof, add(0x1a0, mul(i, 0x20))))
                 eval := addmod(eval, mulmod(combiner, termEval, p), p)
             }
@@ -524,15 +511,7 @@ contract PlonkVerifier is IPlonkVerifier {
         PlonkProof memory proof,
         BN254.G1Point[] memory bases,
         uint256[] memory scalars
-    )
-        internal
-        pure
-        returns (
-            // BN254.G1Point[] memory bases,
-            // uint256[] memory scalars,
-            uint256 counter
-        )
-    {
+    ) internal pure {
         // TODO: optimize this code
         uint256 firstScalar;
         uint256 secondScalar;
@@ -540,9 +519,6 @@ contract PlonkVerifier is IPlonkVerifier {
         uint256 tmp;
         uint256 tmp2;
         uint256 p = BN254.R_MOD;
-
-        // bases = new BN254.G1Point[](20);
-        // scalars = new uint256[](20);
 
         // ============================================
         // Compute coefficient for the permutation product polynomial commitment.
@@ -693,124 +669,97 @@ contract PlonkVerifier is IPlonkVerifier {
         // ============
         // q_M
         // ============
-        counter = 6;
         // q_M12 and q_M34
         // q_M12 = w_evals[0] * w_evals[1];
-        if (!BN254.isInfinity(verifyingKey.qM12)) {
-            assembly {
-                tmp := mulmod(mload(add(proof, 0x1A0)), mload(add(proof, 0x1C0)), p)
-            }
-            scalars[counter] = tmp;
-            bases[counter] = verifyingKey.qM12;
-            counter++;
+        assembly {
+            tmp := mulmod(mload(add(proof, 0x1A0)), mload(add(proof, 0x1C0)), p)
         }
+        scalars[6] = tmp;
+        bases[6] = verifyingKey.qM12;
 
-        if (!BN254.isInfinity(verifyingKey.qM34)) {
-            assembly {
-                tmp := mulmod(mload(add(proof, 0x1E0)), mload(add(proof, 0x200)), p)
-            }
-            scalars[counter] = tmp;
-
-            bases[counter] = verifyingKey.qM34;
-            counter++;
+        assembly {
+            tmp := mulmod(mload(add(proof, 0x1E0)), mload(add(proof, 0x200)), p)
         }
+        scalars[7] = tmp;
+
+        bases[7] = verifyingKey.qM34;
 
         // ============
         // q_H
         // ============
         // w_evals[0].pow([5]);
-        if (!BN254.isInfinity(verifyingKey.qH1)) {
-            assembly {
-                tmp := mload(add(proof, 0x1A0))
-                tmp2 := mulmod(tmp, tmp, p)
-                tmp2 := mulmod(tmp2, tmp2, p)
-                tmp := mulmod(tmp, tmp2, p)
-            }
-            scalars[counter] = tmp;
-            bases[counter] = verifyingKey.qH1;
-            counter++;
+
+        assembly {
+            tmp := mload(add(proof, 0x1A0))
+            tmp2 := mulmod(tmp, tmp, p)
+            tmp2 := mulmod(tmp2, tmp2, p)
+            tmp := mulmod(tmp, tmp2, p)
         }
+        scalars[8] = tmp;
+        bases[8] = verifyingKey.qH1;
 
         // w_evals[1].pow([5]);
-        if (!BN254.isInfinity(verifyingKey.qH2)) {
-            assembly {
-                tmp := mload(add(proof, 0x1C0))
-                tmp2 := mulmod(tmp, tmp, p)
-                tmp2 := mulmod(tmp2, tmp2, p)
-                tmp := mulmod(tmp, tmp2, p)
-            }
-            scalars[counter] = tmp;
-            bases[counter] = verifyingKey.qH2;
-            counter++;
+        assembly {
+            tmp := mload(add(proof, 0x1C0))
+            tmp2 := mulmod(tmp, tmp, p)
+            tmp2 := mulmod(tmp2, tmp2, p)
+            tmp := mulmod(tmp, tmp2, p)
         }
+        scalars[9] = tmp;
+        bases[9] = verifyingKey.qH2;
 
         // w_evals[2].pow([5]);
-        if (!BN254.isInfinity(verifyingKey.qH3)) {
-            assembly {
-                tmp := mload(add(proof, 0x1E0))
-                tmp2 := mulmod(tmp, tmp, p)
-                tmp2 := mulmod(tmp2, tmp2, p)
-                tmp := mulmod(tmp, tmp2, p)
-            }
-            scalars[counter] = tmp;
-            bases[counter] = verifyingKey.qH3;
-            counter++;
+        assembly {
+            tmp := mload(add(proof, 0x1E0))
+            tmp2 := mulmod(tmp, tmp, p)
+            tmp2 := mulmod(tmp2, tmp2, p)
+            tmp := mulmod(tmp, tmp2, p)
         }
+        scalars[10] = tmp;
+        bases[10] = verifyingKey.qH3;
 
         // w_evals[3].pow([5]);
-        if (!BN254.isInfinity(verifyingKey.qH4)) {
-            assembly {
-                tmp := mload(add(proof, 0x200))
-                tmp2 := mulmod(tmp, tmp, p)
-                tmp2 := mulmod(tmp2, tmp2, p)
-                tmp := mulmod(tmp, tmp2, p)
-            }
-            scalars[counter] = tmp;
-            bases[counter] = verifyingKey.qH4;
-            counter++;
+
+        assembly {
+            tmp := mload(add(proof, 0x200))
+            tmp2 := mulmod(tmp, tmp, p)
+            tmp2 := mulmod(tmp2, tmp2, p)
+            tmp := mulmod(tmp, tmp2, p)
         }
+        scalars[11] = tmp;
+        bases[11] = verifyingKey.qH4;
 
         // ============
         // q_o and q_c
         // ============
         // q_o
-        if (!BN254.isInfinity(verifyingKey.qO)) {
-            scalars[counter] = p - proof.wireEval4;
-            bases[counter] = verifyingKey.qO;
-            counter++;
-        }
+        scalars[12] = p - proof.wireEval4;
+        bases[12] = verifyingKey.qO;
 
         // q_c
-        if (!BN254.isInfinity(verifyingKey.qC)) {
-            scalars[counter] = 1;
-            bases[counter] = verifyingKey.qC;
-            counter++;
-        }
+        scalars[13] = 1;
+        bases[13] = verifyingKey.qC;
 
         // ============
         // q_Ecc
         // ============
         // q_Ecc = w_evals[0] * w_evals[1] * w_evals[2] * w_evals[3] * w_evals[4];
-        if (!BN254.isInfinity(verifyingKey.qEcc)) {
-            assembly {
-                tmp := mulmod(mload(add(proof, 0x1A0)), mload(add(proof, 0x1C0)), p)
-                tmp := mulmod(tmp, mload(add(proof, 0x1E0)), p)
-                tmp := mulmod(tmp, mload(add(proof, 0x200)), p)
-                tmp := mulmod(tmp, mload(add(proof, 0x220)), p)
-            }
-            scalars[counter] = tmp;
-            bases[counter] = verifyingKey.qEcc;
-            counter++;
+        assembly {
+            tmp := mulmod(mload(add(proof, 0x1A0)), mload(add(proof, 0x1C0)), p)
+            tmp := mulmod(tmp, mload(add(proof, 0x1E0)), p)
+            tmp := mulmod(tmp, mload(add(proof, 0x200)), p)
+            tmp := mulmod(tmp, mload(add(proof, 0x220)), p)
         }
+        scalars[14] = tmp;
+        bases[14] = verifyingKey.qEcc;
 
         // ============================================
         // the last 5 are for splitting quotient commitments
         // ============================================
 
         // first one is 1-zeta^n
-        scalars[counter] = p - evalData.vanishEval;
-        bases[counter] = proof.split0;
-        counter++;
+        scalars[15] = p - evalData.vanishEval;
+        bases[15] = proof.split0;
 
         assembly {
             // tmp = zeta^{n+2}
@@ -822,36 +771,34 @@ contract PlonkVerifier is IPlonkVerifier {
 
         // second one is (1-zeta^n) zeta^(n+2)
         assembly {
-            tmp2 := mulmod(mload(add(scalars, mul(counter, 0x20))), tmp, p)
+            tmp2 := mulmod(mload(add(scalars, mul(16, 0x20))), tmp, p)
         }
 
-        scalars[counter] = tmp2;
-        bases[counter] = proof.split1;
-        counter++;
+        scalars[16] = tmp2;
+        bases[16] = proof.split1;
+
         // thrid one is (1-zeta^n) zeta^2(n+2)
         assembly {
-            tmp2 := mulmod(mload(add(scalars, mul(counter, 0x20))), tmp, p)
+            tmp2 := mulmod(mload(add(scalars, mul(17, 0x20))), tmp, p)
         }
 
-        scalars[counter] = tmp2;
-        bases[counter] = proof.split2;
-        counter++;
+        scalars[17] = tmp2;
+        bases[17] = proof.split2;
 
         // forth one is (1-zeta^n) zeta^3(n+2)
         assembly {
-            tmp2 := mulmod(mload(add(scalars, mul(counter, 0x20))), tmp, p)
+            tmp2 := mulmod(mload(add(scalars, mul(18, 0x20))), tmp, p)
         }
 
-        scalars[counter] = tmp2;
-        bases[counter] = proof.split3;
-        counter++;
+        scalars[18] = tmp2;
+        bases[18] = proof.split3;
+
         // fifth one is (1-zeta^n) zeta^4(n+2)
         assembly {
-            tmp2 := mulmod(mload(add(scalars, mul(counter, 0x20))), tmp, p)
+            tmp2 := mulmod(mload(add(scalars, mul(19, 0x20))), tmp, p)
         }
-        scalars[counter] = tmp2;
-        bases[counter] = proof.split4;
-        counter++;
+        scalars[19] = tmp2;
+        bases[19] = proof.split4;
     }
 
     // TODO: remove the next line

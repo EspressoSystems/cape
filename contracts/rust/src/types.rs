@@ -176,7 +176,7 @@ impl From<EvalDomain> for Radix2EvaluationDomain<Fr> {
     }
 }
 
-impl From<Challenges> for jf_plonk::proof_system::structs::Challenges<Fr> {
+impl From<Challenges> for jf_plonk::testing_apis::Challenges<Fr> {
     fn from(chal_sol: Challenges) -> Self {
         Self {
             tau: Fr::zero(), // not used
@@ -190,8 +190,8 @@ impl From<Challenges> for jf_plonk::proof_system::structs::Challenges<Fr> {
     }
 }
 
-impl From<jf_plonk::proof_system::structs::Challenges<Fr>> for Challenges {
-    fn from(chal: jf_plonk::proof_system::structs::Challenges<Fr>) -> Self {
+impl From<jf_plonk::testing_apis::Challenges<Fr>> for Challenges {
+    fn from(chal: jf_plonk::testing_apis::Challenges<Fr>) -> Self {
         let alpha2 = chal.alpha * chal.alpha;
         let alpha3 = chal.alpha * alpha2;
 
@@ -796,8 +796,8 @@ impl From<jf_aap::VerifyingKey> for VerifyingKey {
 }
 
 // TODO: remove this when PcsInfo visibility was changed back to private
-impl From<jf_plonk::proof_system::verifier::PcsInfo<Bn254>> for PcsInfo {
-    fn from(info: jf_plonk::proof_system::verifier::PcsInfo<Bn254>) -> Self {
+impl From<jf_plonk::testing_apis::PcsInfo<Bn254>> for PcsInfo {
+    fn from(info: jf_plonk::testing_apis::PcsInfo<Bn254>) -> Self {
         let mut comm_scalars = vec![];
         let mut comm_bases = vec![];
         for (&base, &scalar) in info.comm_scalars_and_bases.base_scalar_map.iter() {

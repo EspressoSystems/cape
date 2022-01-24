@@ -20,12 +20,10 @@ use ark_std::{test_rng, One, UniformRand};
 use ethers::core::k256::ecdsa::SigningKey;
 use ethers::prelude::*;
 use itertools::multiunzip;
-use jf_plonk::proof_system::verifier::PcsInfo;
+use jf_plonk::testing_apis::PcsInfo;
 use jf_plonk::{
-    proof_system::{
-        structs::{Proof, VerifyingKey},
-        verifier::Verifier,
-    },
+    proof_system::structs::{Proof, VerifyingKey},
+    testing_apis::Verifier,
     transcript::SolidityTranscript,
 };
 use jf_utils::field_switching;

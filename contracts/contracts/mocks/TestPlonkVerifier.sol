@@ -19,10 +19,9 @@ contract TestPlonkVerifier is V, TestPoly {
     function prepareEvaluations(
         uint256 linPolyConstant,
         PlonkProof memory proof,
-        uint256[] memory scalars,
-        uint256 length
+        uint256[] memory scalars
     ) public pure returns (uint256 eval) {
-        return V._prepareEvaluations(linPolyConstant, proof, scalars, length);
+        return V._prepareEvaluations(linPolyConstant, proof, scalars);
     }
 
     function batchVerifyOpeningProofs(PcsInfo[] memory pcsInfos) public view returns (bool) {
@@ -43,26 +42,11 @@ contract TestPlonkVerifier is V, TestPoly {
         V.Challenges memory challenge,
         Poly.EvalData memory evalData,
         V.PlonkProof memory proof
-    )
-        public
-        pure
-        returns (
-            BN254.G1Point[] memory bases,
-            uint256[] memory scalars,
-            uint256 length
-        )
-    {
+    ) public pure returns (BN254.G1Point[] memory bases, uint256[] memory scalars) {
         bases = new BN254.G1Point[](30);
         scalars = new uint256[](30);
 
-        length = V._linearizationScalarsAndBases(
-            verifyingKey,
-            challenge,
-            evalData,
-            proof,
-            bases,
-            scalars
-        );
+        V._linearizationScalarsAndBases(verifyingKey, challenge, evalData, proof, bases, scalars);
     }
 
     function preparePolyCommitments(
@@ -70,25 +54,10 @@ contract TestPlonkVerifier is V, TestPoly {
         Challenges memory chal,
         Poly.EvalData memory evalData,
         PlonkProof memory proof
-    )
-        public
-        pure
-        returns (
-            uint256[] memory commScalars,
-            BN254.G1Point[] memory commBases,
-            uint256 length
-        )
-    {
+    ) public pure returns (uint256[] memory commScalars, BN254.G1Point[] memory commBases) {
         commBases = new BN254.G1Point[](30);
         commScalars = new uint256[](30);
-        length = V._preparePolyCommitments(
-            verifyingKey,
-            chal,
-            evalData,
-            proof,
-            commScalars,
-            commBases
-        );
+        V._preparePolyCommitments(verifyingKey, chal, evalData, proof, commScalars, commBases);
     }
 
     // helper so that test code doesn't have to deploy both PlonkVerifier.sol and BN254.sol

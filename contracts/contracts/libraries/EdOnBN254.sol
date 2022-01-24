@@ -32,7 +32,7 @@ library EdOnBN254 {
         return (point.y << 1) < P_MOD;
     }
 
-    function edSerialize(EdOnBN254Point memory point) internal pure returns (bytes memory res) {
+    function serialize(EdOnBN254Point memory point) internal pure returns (bytes memory res) {
         uint256 mask;
         // Edward curve does not have an infinity flag.
         // Set the 255-th bit to 1 for positive Y

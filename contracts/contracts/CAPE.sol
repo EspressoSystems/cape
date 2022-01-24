@@ -447,7 +447,10 @@ contract CAPE is RecordsMerkleTree, RootStore {
         proof = note.proof;
 
         // prepare transcript init messages
-        transcriptInitMsg = EdOnBN254.edSerialize(note.auxInfo.txnMemoVerKey);
+        transcriptInitMsg = abi.encodePacked(
+            EdOnBN254.serialize(note.auxInfo.txnMemoVerKey),
+            note.auxInfo.extraProofBoundData
+        );
     }
 
     function _prepareForProofVerification(BurnNote memory note)
@@ -511,7 +514,7 @@ contract CAPE is RecordsMerkleTree, RootStore {
         proof = note.proof;
 
         // prepare transcript init messages
-        transcriptInitMsg = EdOnBN254.edSerialize(note.auxInfo.txnMemoVerKey);
+        transcriptInitMsg = EdOnBN254.serialize(note.auxInfo.txnMemoVerKey);
     }
 
     function _prepareForProofVerification(FreezeNote memory note)
@@ -549,6 +552,6 @@ contract CAPE is RecordsMerkleTree, RootStore {
         proof = note.proof;
 
         // prepare transcript init messages
-        transcriptInitMsg = EdOnBN254.edSerialize(note.auxInfo.txnMemoVerKey);
+        transcriptInitMsg = EdOnBN254.serialize(note.auxInfo.txnMemoVerKey);
     }
 }

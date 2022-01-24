@@ -6,8 +6,8 @@ import {EdOnBN254 as C} from "../libraries/EdOnBN254.sol";
 contract TestEdOnBN254 {
     constructor() {}
 
-    function edSerialize(C.EdOnBN254Point memory p) public pure returns (bytes memory res) {
-        return C.edSerialize(p);
+    function serialize(C.EdOnBN254Point memory p) public pure returns (bytes memory res) {
+        return C.serialize(p);
     }
 
     function checkEdOnBn254Point(C.EdOnBN254Point memory p)

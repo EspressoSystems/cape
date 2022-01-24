@@ -43,7 +43,7 @@ async fn test_serialization() -> Result<()> {
     let point = EdwardsAffine::zero();
     point.serialize(&mut rust_ser)?;
     let sol_point: EdOnBN254Point = point.into();
-    let sol_ser = contract.ed_serialize(sol_point.into()).call().await?;
+    let sol_ser = contract.serialize(sol_point.into()).call().await?;
 
     assert_eq!(sol_ser.to_vec(), rust_ser);
 
@@ -52,7 +52,7 @@ async fn test_serialization() -> Result<()> {
     let point = EdwardsAffine::prime_subgroup_generator();
     point.serialize(&mut rust_ser)?;
     let sol_point: EdOnBN254Point = point.into();
-    let sol_ser = contract.ed_serialize(sol_point.into()).call().await?;
+    let sol_ser = contract.serialize(sol_point.into()).call().await?;
 
     assert_eq!(sol_ser.to_vec(), rust_ser);
 
@@ -62,7 +62,7 @@ async fn test_serialization() -> Result<()> {
         point.serialize(&mut rust_ser)?;
 
         let sol_point: EdOnBN254Point = point.into();
-        let sol_ser = contract.ed_serialize(sol_point.into()).call().await?;
+        let sol_ser = contract.serialize(sol_point.into()).call().await?;
 
         assert_eq!(sol_ser.to_vec(), rust_ser);
     }

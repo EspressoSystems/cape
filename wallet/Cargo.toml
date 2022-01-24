@@ -16,10 +16,10 @@ bincode = "1.3.3"
 futures = "0.3.0"
 futures-util = "0.3.8"
 itertools = "0.10.1"
-jf-aap = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", rev = "eb8d3d3b03fec0d88327f4686e8a2787c85274d9" }
-jf-plonk = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", rev = "eb8d3d3b03fec0d88327f4686e8a2787c85274d9" }
-jf-primitives = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", rev = "eb8d3d3b03fec0d88327f4686e8a2787c85274d9"}
-jf-utils = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", rev = "eb8d3d3b03fec0d88327f4686e8a2787c85274d9"}
+jf-aap = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", rev = "eca7b7e85718c7770c24ad90dd34b8a07209a01b" }
+jf-plonk = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git" }
+jf-primitives = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git" }
+jf-utils = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git" }
 lazy_static = "1.4.0"
 markdown = "0.3"
 rand_chacha = "0.3.1"
@@ -40,7 +40,7 @@ tracing = "0.1.26"
 tracing-distributed = "0.3.1"
 tracing-futures = "0.2"
 tracing-subscriber = "0.2.19"
-zerok_lib = { git = "ssh://git@github.com/SpectrumXYZ/spectrum.git", branch = "keyao-serialize", features = ["mocks"] }
+zerok_lib = { git = "ssh://git@github.com/SpectrumXYZ/spectrum.git", rev = "59141a5a085e4d04cef81a01916f01ef3183b990", features = ["mocks"] }
 
 [dev-dependencies]
 surf = "2.3.2"

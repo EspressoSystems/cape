@@ -7,13 +7,13 @@ edition = "2018"
 doctest = false
 
 [dependencies]
-jf-plonk = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", rev = "eb8d3d3b03fec0d88327f4686e8a2787c85274d9"}
-jf-primitives = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", rev = "eb8d3d3b03fec0d88327f4686e8a2787c85274d9"}
-jf-aap = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", rev = "eb8d3d3b03fec0d88327f4686e8a2787c85274d9"}
-jf-rescue = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", rev = "eb8d3d3b03fec0d88327f4686e8a2787c85274d9"}
-jf-utils = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", rev = "eb8d3d3b03fec0d88327f4686e8a2787c85274d9"}
-reef = { git = "ssh://git@github.com/SpectrumXYZ/reef.git", rev = "34725636bbde038176d39dbf6b948ab0a0a0793c" }
-zerok_lib = { git = "ssh://git@github.com/SpectrumXYZ/spectrum.git", branch = "keyao-serialize" }
+jf-plonk = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git" }
+jf-primitives = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git" }
+jf-aap = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", rev = "eca7b7e85718c7770c24ad90dd34b8a07209a01b" }
+jf-rescue = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git" }
+jf-utils = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git" }
+reef = { git = "ssh://git@github.com/SpectrumXYZ/reef.git", rev = "28c52c6d14f39294bd099288d29d4f1052b7c144" }
+zerok_lib = { git = "ssh://git@github.com/SpectrumXYZ/spectrum.git", rev = "59141a5a085e4d04cef81a01916f01ef3183b990", features = ["mocks"] }
 ethers = { git = "https://github.com/gakonst/ethers-rs", branch = "master" }
 itertools = "0.10.1" # needed for jf-aap to compile
 ark-std = "0.3.0"

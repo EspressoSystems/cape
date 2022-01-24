@@ -71,6 +71,10 @@ abigen!(
     Greeter,
     "../abi/contracts/Greeter.sol/Greeter/abi.json",
     event_derives(serde::Deserialize, serde::Serialize);
+
+    TestVerifyingKeys,
+    "../abi/contracts/mocks/TestVerifyingKeys.sol/TestVerifyingKeys/abi.json",
+    event_derives(serde::Deserialize, serde::Serialize);
 );
 
 impl From<ark_bn254::G1Affine> for G1Point {

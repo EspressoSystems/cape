@@ -143,10 +143,67 @@ Unwrap amount units of the given asset into the given ERC-20 address. Returns a 
 [route.newasset]
 PATH = [
   # `symbol` may be added as a parameter in the future but it's not used for now.
-  # TODO !keyao Make the description and policy parameters optional.
-  # Issue: https://github.com/SpectrumXYZ/cape/issues/345.
+  # Only if `tracekey` is given, can `traceamount`, `traceaddress` and `revealthreshold` be specified.
+
+  # Paths for asset sponsor.
   "newasset/erc20/:erc20/issuer/:issuer/freezekey/:freeze_key/tracekey/:trace_key/traceamount/:trace_amount/traceaddress/:trace_address/revealthreshold/:reveal_threshold",
+  "newasset/erc20/:erc20/issuer/:issuer/freezekey/:freeze_key/tracekey/:trace_key/traceamount/:trace_amount/traceaddress/:trace_address",
+  "newasset/erc20/:erc20/issuer/:issuer/freezekey/:freeze_key/tracekey/:trace_key/traceamount/:trace_amount/revealthreshold/:reveal_threshold",
+  "newasset/erc20/:erc20/issuer/:issuer/freezekey/:freeze_key/tracekey/:trace_key/traceamount/:trace_amount",
+  "newasset/erc20/:erc20/issuer/:issuer/freezekey/:freeze_key/tracekey/:trace_key/traceaddress/:trace_address/revealthreshold/:reveal_threshold",
+  "newasset/erc20/:erc20/issuer/:issuer/freezekey/:freeze_key/tracekey/:trace_key/traceaddress/:trace_address",
+  "newasset/erc20/:erc20/issuer/:issuer/freezekey/:freeze_key/tracekey/:trace_key/revealthreshold/:reveal_threshold",
+  "newasset/erc20/:erc20/issuer/:issuer/freezekey/:freeze_key/tracekey/:trace_key",
+  "newasset/erc20/:erc20/issuer/:issuer/freezekey/:freeze_key",
+  "newasset/erc20/:erc20/issuer/:issuer/tracekey/:trace_key/traceamount/:trace_amount/traceaddress/:trace_address/revealthreshold/:reveal_threshold",
+  "newasset/erc20/:erc20/issuer/:issuer/tracekey/:trace_key/traceamount/:trace_amount/traceaddress/:trace_address",
+  "newasset/erc20/:erc20/issuer/:issuer/tracekey/:trace_key/traceamount/:trace_amount/revealthreshold/:reveal_threshold",
+  "newasset/erc20/:erc20/issuer/:issuer/tracekey/:trace_key/traceamount/:trace_amount",
+  "newasset/erc20/:erc20/issuer/:issuer/tracekey/:trace_key/traceaddress/:trace_address/revealthreshold/:reveal_threshold",
+  "newasset/erc20/:erc20/issuer/:issuer/tracekey/:trace_key/traceaddress/:trace_address",
+  "newasset/erc20/:erc20/issuer/:issuer/tracekey/:trace_key/revealthreshold/:reveal_threshold",
+  "newasset/erc20/:erc20/issuer/:issuer/tracekey/:trace_key",
+  "newasset/erc20/:erc20/issuer/:issuer",
+
+  # Paths for asset definition with a given description.
   "newasset/description/:description/freezekey/:freeze_key/tracekey/:trace_key/traceamount/:trace_amount/traceaddress/:trace_address/revealthreshold/:reveal_threshold",
+  "newasset/description/:description/freezekey/:freeze_key/tracekey/:trace_key/traceamount/:trace_amount/traceaddress/:trace_address",
+  "newasset/description/:description/freezekey/:freeze_key/tracekey/:trace_key/traceamount/:trace_amount/revealthreshold/:reveal_threshold",
+  "newasset/description/:description/freezekey/:freeze_key/tracekey/:trace_key/traceamount/:trace_amount",
+  "newasset/description/:description/freezekey/:freeze_key/tracekey/:trace_key/traceaddress/:trace_address/revealthreshold/:reveal_threshold",
+  "newasset/description/:description/freezekey/:freeze_key/tracekey/:trace_key/traceaddress/:trace_address",
+  "newasset/description/:description/freezekey/:freeze_key/tracekey/:trace_key/revealthreshold/:reveal_threshold",
+  "newasset/description/:description/freezekey/:freeze_key/tracekey/:trace_key",
+  "newasset/description/:description/freezekey/:freeze_key",
+  "newasset/description/:description/tracekey/:trace_key/traceamount/:trace_amount/traceaddress/:trace_address/revealthreshold/:reveal_threshold",
+  "newasset/description/:description/tracekey/:trace_key/traceamount/:trace_amount/traceaddress/:trace_address",
+  "newasset/description/:description/tracekey/:trace_key/traceamount/:trace_amount/revealthreshold/:reveal_threshold",
+  "newasset/description/:description/tracekey/:trace_key/traceamount/:trace_amount",
+  "newasset/description/:description/tracekey/:trace_key/traceaddress/:trace_address/revealthreshold/:reveal_threshold",
+  "newasset/description/:description/tracekey/:trace_key/traceaddress/:trace_address",
+  "newasset/description/:description/tracekey/:trace_key/revealthreshold/:reveal_threshold",
+  "newasset/description/:description/tracekey/:trace_key",
+  "newasset/description/:description",
+
+  # Paths for asset definition without a given description.
+  "newasset/freezekey/:freeze_key/tracekey/:trace_key/traceamount/:trace_amount/traceaddress/:trace_address/revealthreshold/:reveal_threshold",
+  "newasset/freezekey/:freeze_key/tracekey/:trace_key/traceamount/:trace_amount/traceaddress/:trace_address",
+  "newasset/freezekey/:freeze_key/tracekey/:trace_key/traceamount/:trace_amount/revealthreshold/:reveal_threshold",
+  "newasset/freezekey/:freeze_key/tracekey/:trace_key/traceamount/:trace_amount",
+  "newasset/freezekey/:freeze_key/tracekey/:trace_key/traceaddress/:trace_address/revealthreshold/:reveal_threshold",
+  "newasset/freezekey/:freeze_key/tracekey/:trace_key/traceaddress/:trace_address",
+  "newasset/freezekey/:freeze_key/tracekey/:trace_key/revealthreshold/:reveal_threshold",
+  "newasset/freezekey/:freeze_key/tracekey/:trace_key",
+  "newasset/freezekey/:freeze_key",
+  "newasset/tracekey/:trace_key/traceamount/:trace_amount/traceaddress/:trace_address/revealthreshold/:reveal_threshold",
+  "newasset/tracekey/:trace_key/traceamount/:trace_amount/traceaddress/:trace_address",
+  "newasset/tracekey/:trace_key/traceamount/:trace_amount/revealthreshold/:reveal_threshold",
+  "newasset/tracekey/:trace_key/traceamount/:trace_amount",
+  "newasset/tracekey/:trace_key/traceaddress/:trace_address/revealthreshold/:reveal_threshold",
+  "newasset/tracekey/:trace_key/traceaddress/:trace_address",
+  "newasset/tracekey/:trace_key/revealthreshold/:reveal_threshold",
+  "newasset/tracekey/:trace_key",
+  "newasset",
 ]
 ":erc20" = "TaggedBase64"
 ":description" = "TaggedBase64"

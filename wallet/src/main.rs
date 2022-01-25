@@ -749,7 +749,7 @@ mod tests {
             }
         }
 
-        // Should fail if the key type is invaild,
+        // Should fail if the key type is invaild.
         server
             .get::<PubKey>("newkey/invalid_key_type")
             .await
@@ -830,5 +830,72 @@ mod tests {
             defined_asset.policy_ref().reveal_threshold(),
             reveal_threshold
         );
+        let defined_asset = server
+            .get::<AssetDefinition>(&format!(
+            "newasset/freezekey/{}/tracekey/{}/traceamount/{}/traceaddress/{}/revealthreshold/{}",
+            freeze_key, audit_key, trace_amount, trace_address, reveal_threshold
+        ))
+            .await
+            .unwrap();
+        assert_eq!(defined_asset.policy_ref().auditor_pub_key(), audit_key);
+        assert_eq!(defined_asset.policy_ref().freezer_pub_key(), freeze_key);
+        assert_eq!(
+            defined_asset.policy_ref().reveal_threshold(),
+            reveal_threshold
+        );
+
+        // newasset should return an asset with the default freezer public key if it's not given.
+        let sponsored_asset = server
+                .get::<AssetDefinition>(&format!(
+                    "newasset/erc20/{}/issuer/{}/tracekey/{}/traceamount/{}/traceaddress/{}/revealthreshold/{}",
+                    erc20_code, sponsor_addr, audit_key, trace_amount, trace_address, reveal_threshold
+                ))
+                .await
+                .unwrap();
+        assert!(!sponsored_asset.policy_ref().is_freezer_pub_key_set());
+        let sponsored_asset = server
+            .get::<AssetDefinition>(&format!(
+                "newasset/description/{}/tracekey/{}/traceamount/{}/traceaddress/{}/revealthreshold/{}",
+                description, audit_key, trace_amount, trace_address, reveal_threshold
+            ))
+            .await
+            .unwrap();
+        assert!(!sponsored_asset.policy_ref().is_freezer_pub_key_set());
+
+        // newasset should return an asset with the default auditor public key and no reveal threshold if an
+        // auditor public key isn't given.
+        let sponsored_asset = server
+            .get::<AssetDefinition>(&format!(
+                "newasset/erc20/{}/issuer/{}/freezekey/{}",
+                erc20_code, sponsor_addr, freeze_key
+            ))
+            .await
+            .unwrap();
+        assert!(!sponsored_asset.policy_ref().is_auditor_pub_key_set());
+        assert_eq!(sponsored_asset.policy_ref().reveal_threshold(), 0);
+        let sponsored_asset = server
+            .get::<AssetDefinition>(&format!("newasset/description/{}", description))
+            .await
+            .unwrap();
+        assert!(!sponsored_asset.policy_ref().is_auditor_pub_key_set());
+        assert_eq!(sponsored_asset.policy_ref().reveal_threshold(), 0);
+
+        // newasset should return an asset with no reveal threshold if it's not given.
+        let sponsored_asset = server
+                .get::<AssetDefinition>(&format!(
+                    "newasset/erc20/{}/issuer/{}/freezekey/{}/tracekey/{}/traceamount/{}/traceaddress/{}",
+                    erc20_code, sponsor_addr, freeze_key, audit_key, trace_amount, trace_address
+                ))
+                .await
+                .unwrap();
+        assert_eq!(sponsored_asset.policy_ref().reveal_threshold(), 0);
+        let defined_asset = server
+            .get::<AssetDefinition>(&format!(
+                "newasset/description/{}/freezekey/{}/tracekey/{}/traceamount/{}/traceaddress/{}",
+                description, freeze_key, audit_key, trace_amount, trace_address
+            ))
+            .await
+            .unwrap();
+        assert_eq!(defined_asset.policy_ref().reveal_threshold(), 0);
     }
 }

@@ -507,31 +507,32 @@ async fn newasset(
     let wallet = require_wallet(wallet)?;
 
     // Construct the asset policy.
-    // TODO !keyao Make the policy parameters optional.
-    // Issue: https://github.com/SpectrumXYZ/cape/issues/345.
     let mut policy = AssetPolicy::default();
-    policy = policy
-        .set_auditor_pub_key(
-            bindings
-                .get(":trace_key")
-                .unwrap()
-                .value
-                .to::<AuditorPubKey>()?,
-        )
-        .set_freezer_pub_key(
-            bindings
-                .get(":freeze_key")
-                .unwrap()
-                .value
-                .to::<FreezerPubKey>()?,
-        )
-        .set_reveal_threshold(bindings.get(":reveal_threshold").unwrap().value.as_u64()?);
-    if bindings.get(":trace_amount").unwrap().value.as_boolean()? {
-        policy = policy.reveal_amount()?;
-    }
-    if bindings.get(":trace_address").unwrap().value.as_boolean()? {
-        policy = policy.reveal_user_address()?;
-    }
+    if let Some(freeze_key) = bindings.get(":freeze_key") {
+        policy = policy.set_freezer_pub_key(freeze_key.value.to::<FreezerPubKey>()?)
+    };
+    if let Some(trace_key) = bindings.get(":trace_key") {
+        // Always reveal blinding factor if an auditor public key is given.
+        policy = policy
+            .set_auditor_pub_key(trace_key.value.to::<AuditorPubKey>()?)
+            .reveal_blinding_factor()?;
+
+        // Only if an auditor public key is given, can amount and user address be revealed
+        // and reveal threshold be specified.
+        if let Some(trace_flag) = bindings.get(":trace_amount") {
+            if trace_flag.value.as_boolean()? {
+                policy = policy.reveal_amount()?;
+            }
+        }
+        if let Some(trace_flag) = bindings.get(":trace_address") {
+            if trace_flag.value.as_boolean()? {
+                policy = policy.reveal_user_address()?;
+            }
+        }
+        if let Some(threshold) = bindings.get(":reveal_threshold") {
+            policy = policy.set_reveal_threshold(threshold.value.as_u64()?);
+        };
+    };
 
     // If an ERC20 code is given, sponsor the asset. Otherwise, define an asset.
     match bindings.get(":erc20") {
@@ -545,14 +546,10 @@ async fn newasset(
             Ok(wallet.sponsor(erc20_code, sponsor_address, policy).await?)
         }
         None => {
-            // TODO !keyao Make the description optional.
-            // Issue: https://github.com/SpectrumXYZ/cape/issues/345.
-            let description = bindings
-                .get(":description")
-                .unwrap()
-                .value
-                .as_identifier()?
-                .value();
+            let description = match bindings.get(":description") {
+                Some(description) => description.value.as_identifier()?.value(),
+                _ => Vec::new(),
+            };
             Ok(wallet.define_asset(&description, policy).await?)
         }
     }

@@ -28,6 +28,10 @@ abigen!(
     "../abi/contracts/mocks/TestBN254.sol/TestBN254/abi.json",
     event_derives(serde::Deserialize, serde::Serialize);
 
+    TestEdOnBN254,
+    "../abi/contracts/mocks/TestEdOnBN254.sol/TestEdOnBN254/abi.json",
+    event_derives(serde::Deserialize, serde::Serialize);
+
     TestRecordsMerkleTree,
     "../abi/contracts/mocks/TestRecordsMerkleTree.sol/TestRecordsMerkleTree/abi.json",
     event_derives(serde::Deserialize, serde::Serialize);
@@ -149,11 +153,19 @@ pub fn u256_to_field<F: PrimeField>(v: U256) -> F {
     F::from_le_bytes_mod_order(&bytes)
 }
 
-impl From<ark_ed_on_bn254::EdwardsAffine> for EdOnBn254Point {
+impl From<ark_ed_on_bn254::EdwardsAffine> for EdOnBN254Point {
     fn from(p: ark_ed_on_bn254::EdwardsAffine) -> Self {
-        Self {
-            x: U256::from_little_endian(&to_bytes!(p.x).unwrap()[..]),
-            y: U256::from_little_endian(&to_bytes!(p.y).unwrap()[..]),
+        if p.is_zero() {
+            // Solidity precompile have a different affine repr for Point of Infinity
+            Self {
+                x: U256::from(0),
+                y: U256::from(0),
+            }
+        } else {
+            Self {
+                x: U256::from_little_endian(&to_bytes!(p.x).unwrap()[..]),
+                y: U256::from_little_endian(&to_bytes!(p.y).unwrap()[..]),
+            }
         }
     }
 }
@@ -275,22 +287,22 @@ jf_conversion_for_u256_new_type!(BlindFactorSol, BlindFactor);
 
 macro_rules! jf_conversion_for_ed_on_bn254_new_type {
     ($jf_type:ident) => {
-        impl From<EdOnBn254Point> for $jf_type {
-            fn from(p: EdOnBn254Point) -> Self {
+        impl From<EdOnBN254Point> for $jf_type {
+            fn from(p: EdOnBN254Point) -> Self {
                 let x: ark_bn254::Fr = u256_to_field(p.x);
                 let y: ark_bn254::Fr = u256_to_field(p.y);
                 let mut bytes = vec![];
                 (x, y)
                     .serialize(&mut bytes)
-                    .expect("Failed to serialize EdOnBn254Point into bytes.");
+                    .expect("Failed to serialize EdOnBN254Point into bytes.");
                 assert_eq!(bytes.len(), 64); // 32 bytes for each coordinate
                 let pk: $jf_type = CanonicalDeserialize::deserialize_uncompressed(&bytes[..])
-                    .expect("Fail to deserialize EdOnBn254Point bytes into Jellyfish types.");
+                    .expect("Fail to deserialize EdOnBN254Point bytes into Jellyfish types.");
                 pk
             }
         }
 
-        impl From<$jf_type> for EdOnBn254Point {
+        impl From<$jf_type> for EdOnBN254Point {
             fn from(pk: $jf_type) -> Self {
                 let mut bytes = vec![];
                 CanonicalSerialize::serialize_uncompressed(&pk, &mut bytes).unwrap();
@@ -402,7 +414,7 @@ impl From<RecordOpening> for jf_aap::structs::RecordOpening {
 impl From<jf_aap::structs::AuditMemo> for AuditMemo {
     fn from(memo: jf_aap::structs::AuditMemo) -> Self {
         let scalars = memo.internal().clone().to_scalars();
-        let ephemeral_key = EdOnBn254Point {
+        let ephemeral_key = EdOnBN254Point {
             x: field_to_u256(scalars[0]),
             y: field_to_u256(scalars[1]),
         };
@@ -903,7 +915,7 @@ mod test {
 
         // check ed_on_bn254 point conversion
         let p4 = EdwardsAffine::prime_subgroup_generator();
-        let p4_sol: EdOnBn254Point = p4.into();
+        let p4_sol: EdOnBN254Point = p4.into();
         assert_eq!(
             p4_sol.x,
             U256::from_str_radix(

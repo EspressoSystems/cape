@@ -76,4 +76,8 @@ contract TestBN254 {
     {
         return C.multiScalarMul(bases, scalars);
     }
+
+    function g1Serialize(C.G1Point memory p) public pure returns (bytes memory res) {
+        return C.g1Serialize(p);
+    }
 }

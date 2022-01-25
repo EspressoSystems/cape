@@ -65,14 +65,6 @@ contract TestCapeTypes {
         return t;
     }
 
-    function checkEdOnBn254Point(CAPE.EdOnBn254Point memory p)
-        public
-        pure
-        returns (CAPE.EdOnBn254Point memory)
-    {
-        return p;
-    }
-
     function checkMintNote(CAPE.MintNote memory note) public pure returns (CAPE.MintNote memory) {
         return note;
     }

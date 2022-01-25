@@ -1,6 +1,7 @@
 #![cfg(test)]
 mod helpers;
 mod poly_eval;
+mod vk;
 
 use self::helpers::gen_plonk_proof_for_test;
 use crate::types::GenericInto;

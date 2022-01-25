@@ -3149,6 +3149,7 @@ version = "0.0.1"
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=eca7b7e85718c7770c24ad90dd34b8a07209a01b#eca7b7e85718c7770c24ad90dd34b8a07209a01b"
 =======
 source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier#40ad4f2dc376fd7f65e0bf611aaa8b63f9e93529"
@@ -3212,6 +3213,9 @@ source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-v
 =======
 source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#bdd2b2a19810f16825c7a06c1faea5e6460e83df"
 >>>>>>> 6a012ac... e2e test for prepare_pcs_info (#357)
+=======
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#25fe27408db86bda0d0293bc4198d2c039bac74e"
+>>>>>>> ee462b0... Load hardcoded verifying key into contract (#371)
 dependencies = [
  "anyhow",
  "ark-bls12-377",
@@ -3266,6 +3270,7 @@ version = "0.0.1"
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#9b678f5156ad48e0cad318056b3fd73a5188e02d"
 =======
 source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier#40ad4f2dc376fd7f65e0bf611aaa8b63f9e93529"
@@ -3288,6 +3293,9 @@ source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-v
 =======
 source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=feat-APIs-for-testing#7a000fa408ebeb7ca9f93d779ab1abed7a2eb57a"
 >>>>>>> 6a012ac... e2e test for prepare_pcs_info (#357)
+=======
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=feat-APIs-for-testing#5ad412a26fc36258708c7e8af66b37aa0fc57ea7"
+>>>>>>> ee462b0... Load hardcoded verifying key into contract (#371)
 dependencies = [
  "ark-bls12-377",
  "ark-bls12-381",
@@ -3359,6 +3367,7 @@ dependencies = [
 [[package]]
 name = "jf-primitives"
 version = "0.0.1"
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -3449,6 +3458,9 @@ source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-v
 =======
 source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=feat-APIs-for-testing#7a000fa408ebeb7ca9f93d779ab1abed7a2eb57a"
 >>>>>>> 6a012ac... e2e test for prepare_pcs_info (#357)
+=======
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=feat-APIs-for-testing#5ad412a26fc36258708c7e8af66b37aa0fc57ea7"
+>>>>>>> ee462b0... Load hardcoded verifying key into contract (#371)
 dependencies = [
  "ark-ec",
  "ark-ff",
@@ -3482,6 +3494,7 @@ version = "0.0.1"
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#9b678f5156ad48e0cad318056b3fd73a5188e02d"
 =======
 source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier#8ec5e6d3bb5dd81b745cc1de7042a4fa3467f2d3"
@@ -3501,6 +3514,9 @@ source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-v
 =======
 source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=feat-APIs-for-testing#7a000fa408ebeb7ca9f93d779ab1abed7a2eb57a"
 >>>>>>> 6a012ac... e2e test for prepare_pcs_info (#357)
+=======
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=feat-APIs-for-testing#5ad412a26fc36258708c7e8af66b37aa0fc57ea7"
+>>>>>>> ee462b0... Load hardcoded verifying key into contract (#371)
 dependencies = [
  "ark-bls12-377",
  "ark-bls12-381",
@@ -3535,6 +3551,7 @@ version = "0.0.1"
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#9b678f5156ad48e0cad318056b3fd73a5188e02d"
 =======
 source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier#40ad4f2dc376fd7f65e0bf611aaa8b63f9e93529"
@@ -3557,6 +3574,9 @@ source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-v
 =======
 source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=feat-APIs-for-testing#7a000fa408ebeb7ca9f93d779ab1abed7a2eb57a"
 >>>>>>> 6a012ac... e2e test for prepare_pcs_info (#357)
+=======
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=feat-APIs-for-testing#5ad412a26fc36258708c7e8af66b37aa0fc57ea7"
+>>>>>>> ee462b0... Load hardcoded verifying key into contract (#371)
 dependencies = [
  "anyhow",
  "ark-ec",
@@ -3591,6 +3611,7 @@ dependencies = [
 <<<<<<< HEAD
 name = "jf-utils-derive"
 version = "0.1.0"
+<<<<<<< HEAD
 <<<<<<< HEAD
 source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#9b678f5156ad48e0cad318056b3fd73a5188e02d"
 =======
@@ -3632,6 +3653,9 @@ source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-v
 =======
 source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=feat-APIs-for-testing#7a000fa408ebeb7ca9f93d779ab1abed7a2eb57a"
 >>>>>>> 6a012ac... e2e test for prepare_pcs_info (#357)
+=======
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=feat-APIs-for-testing#5ad412a26fc36258708c7e8af66b37aa0fc57ea7"
+>>>>>>> ee462b0... Load hardcoded verifying key into contract (#371)
 dependencies = [
  "ark-serialize",
  "ark-std",

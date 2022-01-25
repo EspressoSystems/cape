@@ -13,6 +13,7 @@ import "./libraries/AccumulatingArray.sol";
 import "./libraries/BN254.sol";
 import "./libraries/RescueLib.sol";
 import "./verifier/Transcript.sol";
+import "./libraries/VerifyingKeys.sol";
 import "./interfaces/IPlonkVerifier.sol";
 import "./AssetRegistry.sol";
 import "./RecordsMerkleTree.sol";
@@ -417,7 +418,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
     // for batch verification of the plonk proof
     function _prepareForProofVerification(TransferNote memory note)
         internal
-        pure
+        view
         returns (
             IPlonkVerifier.VerifyingKey memory vk,
             uint256[] memory publicInput,
@@ -425,8 +426,15 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
             bytes memory transcriptInitMsg
         )
     {
-        // TODO: add code to load the correct (hardcoded) vk
-
+        // load the correct (hardcoded) vk
+        vk = VerifyingKeys.getVkById(
+            VerifyingKeys.getEncodedId(
+                uint8(NoteType.TRANSFER),
+                uint8(note.inputNullifiers.length),
+                uint8(note.outputCommitments.length),
+                uint8(height)
+            )
+        );
         // prepare public inputs
         // 4: root, native_asset_code, valid_until, fee
         // 2: audit_memo.ephemeral_key (x and y)
@@ -470,7 +478,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
 
     function _prepareForProofVerification(BurnNote memory note)
         internal
-        pure
+        view
         returns (
             IPlonkVerifier.VerifyingKey memory,
             uint256[] memory,
@@ -483,7 +491,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
 
     function _prepareForProofVerification(MintNote memory note)
         internal
-        pure
+        view
         returns (
             IPlonkVerifier.VerifyingKey memory vk,
             uint256[] memory publicInput,
@@ -491,7 +499,15 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
             bytes memory transcriptInitMsg
         )
     {
-        // TODO: add code to load the correct (hardcoded) vk
+        // load the correct (hardcoded) vk
+        vk = VerifyingKeys.getVkById(
+            VerifyingKeys.getEncodedId(
+                uint8(NoteType.MINT),
+                1, // num of input
+                2, // num of output
+                uint8(height)
+            )
+        );
 
         // prepare public inputs
         // 9: see below; 8: asset policy; rest: audit memo
@@ -533,7 +549,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
 
     function _prepareForProofVerification(FreezeNote memory note)
         internal
-        pure
+        view
         returns (
             IPlonkVerifier.VerifyingKey memory vk,
             uint256[] memory publicInput,
@@ -541,7 +557,15 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
             bytes memory transcriptInitMsg
         )
     {
-        // TODO: add code to load the correct (hardcoded) vk
+        // load the correct (hardcoded) vk
+        vk = VerifyingKeys.getVkById(
+            VerifyingKeys.getEncodedId(
+                uint8(NoteType.FREEZE),
+                uint8(note.inputNullifiers.length),
+                uint8(note.outputCommitments.length),
+                uint8(height)
+            )
+        );
 
         // prepare public inputs
         publicInput = new uint256[](

@@ -2,13 +2,23 @@
 
 use crate::WebState;
 use async_std::sync::{Arc, Mutex};
+use cap_rust_sandbox::universal_param::UNIVERSAL_PARAM;
 use futures::{prelude::*, stream::iter};
 use jf_aap::{
     keys::{AuditorPubKey, FreezerPubKey, UserPubKey},
     structs::{AssetCode, AssetDefinition, AssetPolicy},
     MerkleTree, TransactionVerifyingKey,
 };
+use key_set::{KeySet, VerifierKeySet};
+use net::{server::response, TaggedBlob, UserAddress};
+use reef::traits::Ledger;
+use seahorse::{
+    loader::{Loader, LoaderMetadata},
+    txn_builder::AssetInfo,
+    WalletBackend, WalletError, WalletStorage,
+};
 use serde::{Deserialize, Serialize};
+use snafu::Snafu;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::path::PathBuf;
@@ -19,22 +29,60 @@ use tagged_base64::TaggedBase64;
 use tide::StatusCode;
 use tide_websockets::WebSocketConnection;
 use zerok_lib::{
-    api,
-    api::{server::response, TaggedBlob},
     cape_ledger::CapeLedger,
     cape_state::{Erc20Code, EthereumAddr},
-    state::{key_set::KeySet, VerifierKeySet, MERKLE_HEIGHT},
-    txn_builder::AssetInfo,
-    universal_params::UNIVERSAL_PARAM,
-    wallet,
     wallet::{
-        loader::{Loader, LoaderMetadata},
+        cape::CapeWalletExt,
         testing::mocks::{MockCapeBackend, MockCapeNetwork, MockLedger},
-        WalletBackend, WalletError, WalletStorage,
     },
 };
 
-pub type Wallet = wallet::Wallet<'static, MockCapeBackend<'static, LoaderMetadata>, CapeLedger>;
+#[derive(Debug, Snafu, Serialize, Deserialize)]
+#[snafu(module(error))]
+pub enum CapeAPIError {
+    #[snafu(display("error accessing wallet: {}", msg))]
+    Wallet { msg: String },
+
+    #[snafu(display("failed to open wallet: {}", msg))]
+    OpenWallet { msg: String },
+
+    #[snafu(display("you must open a wallet to use this enpdoint"))]
+    MissingWallet,
+
+    #[snafu(display("invalid parameter: expected {}, got {}", expected, actual))]
+    Param { expected: String, actual: String },
+
+    #[snafu(display("invalid TaggedBase64 tag: expected {}, got {}", expected, actual))]
+    Tag { expected: String, actual: String },
+
+    #[snafu(display("failed to deserialize request parameter: {}", msg))]
+    Deserialize { msg: String },
+
+    #[snafu(display("internal server error: {}", msg))]
+    Internal { msg: String },
+}
+
+impl net::Error for CapeAPIError {
+    fn catch_all(msg: String) -> Self {
+        Self::Internal { msg }
+    }
+    fn status(&self) -> StatusCode {
+        match self {
+            Self::Param { .. }
+            | Self::Tag { .. }
+            | Self::Deserialize { .. }
+            | Self::OpenWallet { .. }
+            | Self::MissingWallet => StatusCode::BadRequest,
+            Self::Wallet { .. } | Self::Internal { .. } => StatusCode::InternalServerError,
+        }
+    }
+}
+
+pub fn server_error<E: Into<CapeAPIError>>(err: E) -> tide::Error {
+    net::server_error(err)
+}
+
+pub type Wallet = seahorse::Wallet<'static, MockCapeBackend<'static, LoaderMetadata>, CapeLedger>;
 
 #[derive(Clone, Copy, Debug, EnumString)]
 pub enum UrlSegmentType {
@@ -46,7 +94,7 @@ pub enum UrlSegmentType {
 }
 
 #[allow(dead_code)]
-#[derive(Debug)]
+#[derive(Debug, strum_macros::Display)]
 pub enum UrlSegmentValue {
     Boolean(bool),
     Hexadecimal(u128),
@@ -75,10 +123,10 @@ impl UrlSegmentValue {
         if let Boolean(b) = self {
             Ok(*b)
         } else {
-            Err(tide::Error::from_str(
-                StatusCode::BadRequest,
-                format!("expected boolean, got {:?}", self),
-            ))
+            Err(server_error(CapeAPIError::Param {
+                expected: String::from("Boolean"),
+                actual: self.to_string(),
+            }))
         }
     }
 
@@ -86,10 +134,10 @@ impl UrlSegmentValue {
         if let Integer(ix) = self {
             Ok(*ix as usize)
         } else {
-            Err(tide::Error::from_str(
-                StatusCode::BadRequest,
-                format!("expected index, got {:?}", self),
-            ))
+            Err(server_error(CapeAPIError::Param {
+                expected: String::from("Index"),
+                actual: self.to_string(),
+            }))
         }
     }
 
@@ -97,10 +145,10 @@ impl UrlSegmentValue {
         if let Integer(i) = self {
             Ok(*i as u64)
         } else {
-            Err(tide::Error::from_str(
-                StatusCode::BadRequest,
-                format!("expected integer, got {:?}", self),
-            ))
+            Err(server_error(CapeAPIError::Param {
+                expected: String::from("Integer"),
+                actual: self.to_string(),
+            }))
         }
     }
 
@@ -108,10 +156,10 @@ impl UrlSegmentValue {
         if let Identifier(i) = self {
             Ok(i.clone())
         } else {
-            Err(tide::Error::from_str(
-                StatusCode::BadRequest,
-                format!("expected tagged base 64, got {:?}", self),
-            ))
+            Err(server_error(CapeAPIError::Param {
+                expected: String::from("TaggedBase64"),
+                actual: self.to_string(),
+            }))
         }
     }
 
@@ -120,10 +168,10 @@ impl UrlSegmentValue {
         if tb64.tag() == "PATH" {
             Ok(PathBuf::from(std::str::from_utf8(&tb64.value())?))
         } else {
-            Err(tide::Error::from_str(
-                StatusCode::BadRequest,
-                format!("expected tag PATH, got {}", tb64.tag()),
-            ))
+            Err(server_error(CapeAPIError::Tag {
+                expected: String::from("PATH"),
+                actual: tb64.tag(),
+            }))
         }
     }
 
@@ -131,16 +179,19 @@ impl UrlSegmentValue {
         match self {
             Self::Literal(s) => Ok(String::from(s)),
             Self::Identifier(tb64) => Ok(String::from(std::str::from_utf8(&tb64.value())?)),
-            _ => Err(tide::Error::from_str(
-                StatusCode::BadRequest,
-                format!("expected string, got {:?}", self),
-            )),
+            _ => Err(server_error(CapeAPIError::Param {
+                expected: String::from("String"),
+                actual: self.to_string(),
+            })),
         }
     }
 
     pub fn to<T: TaggedBlob>(&self) -> Result<T, tide::Error> {
-        T::from_tagged_blob(&self.as_identifier()?)
-            .map_err(|err| tide::Error::from_str(StatusCode::BadRequest, format!("{}", err)))
+        T::from_tagged_blob(&self.as_identifier()?).map_err(|err| {
+            server_error(CapeAPIError::Deserialize {
+                msg: err.to_string(),
+            })
+        })
     }
 }
 
@@ -233,7 +284,9 @@ pub fn dummy_url_eval(
 }
 
 fn wallet_error(source: WalletError<CapeLedger>) -> tide::Error {
-    tide::Error::from_str(StatusCode::InternalServerError, source.to_string())
+    server_error(CapeAPIError::Wallet {
+        msg: source.to_string(),
+    })
 }
 
 // Create a wallet (if !existing) or open an existing one.
@@ -246,11 +299,12 @@ pub async fn init_wallet(
         Some(path) => path,
         None => {
             let home = std::env::var("HOME").map_err(|_| {
-                tide::Error::from_str(
-                    StatusCode::InternalServerError,
-                    "HOME directory is not set. Please set the server's HOME directory, or specify \
-                    a different storage location using :path.",
-                )
+                server_error(CapeAPIError::Internal {
+                    msg: String::from(
+                        "HOME directory is not set. Please set the server's HOME directory, or \
+                            specify a different storage location using :path.",
+                    ),
+                })
             })?;
             let mut path = PathBuf::from(home);
             path.push(".translucence/wallet");
@@ -260,18 +314,29 @@ pub async fn init_wallet(
 
     let verif_crs = VerifierKeySet {
         mint: TransactionVerifyingKey::Mint(
-            jf_aap::proof::mint::preprocess(&*UNIVERSAL_PARAM, MERKLE_HEIGHT)?.1,
+            jf_aap::proof::mint::preprocess(&*UNIVERSAL_PARAM, CapeLedger::merkle_height())?.1,
         ),
         xfr: KeySet::new(
             vec![TransactionVerifyingKey::Transfer(
-                jf_aap::proof::transfer::preprocess(&*UNIVERSAL_PARAM, 3, 3, MERKLE_HEIGHT)?.1,
+                jf_aap::proof::transfer::preprocess(
+                    &*UNIVERSAL_PARAM,
+                    3,
+                    3,
+                    CapeLedger::merkle_height(),
+                )?
+                .1,
             )]
             .into_iter(),
         )
         .unwrap(),
         freeze: KeySet::new(
             vec![TransactionVerifyingKey::Freeze(
-                jf_aap::proof::freeze::preprocess(&*UNIVERSAL_PARAM, 2, MERKLE_HEIGHT)?.1,
+                jf_aap::proof::freeze::preprocess(
+                    &*UNIVERSAL_PARAM,
+                    2,
+                    CapeLedger::merkle_height(),
+                )?
+                .1,
             )]
             .into_iter(),
         )
@@ -280,21 +345,20 @@ pub async fn init_wallet(
     //TODO replace this mock backend with a connection to a real backend when available.
     let ledger = Arc::new(Mutex::new(MockLedger::new(MockCapeNetwork::new(
         verif_crs,
-        MerkleTree::new(MERKLE_HEIGHT).unwrap(),
+        MerkleTree::new(CapeLedger::merkle_height()).unwrap(),
         vec![],
     ))));
     let mut loader = Loader::from_mnemonic(mnemonic, true, path);
     let mut backend = MockCapeBackend::new(ledger.clone(), &mut loader)?;
 
     if backend.storage().await.exists() != existing {
-        return Err(tide::Error::from_str(
-            StatusCode::BadRequest,
-            if existing {
+        return Err(server_error(CapeAPIError::OpenWallet {
+            msg: String::from(if existing {
                 "cannot open wallet that does not exist"
             } else {
                 "cannot create wallet that already exists"
-            },
-        ));
+            }),
+        }));
     }
 
     Wallet::new(backend).await.map_err(wallet_error)
@@ -314,12 +378,9 @@ async fn known_assets(wallet: &Wallet) -> HashMap<AssetCode, AssetInfo> {
 }
 
 fn require_wallet(wallet: &mut Option<Wallet>) -> Result<&mut Wallet, tide::Error> {
-    wallet.as_mut().ok_or_else(|| {
-        tide::Error::from_str(
-            StatusCode::BadRequest,
-            "you most open a wallet to use this endpoint",
-        )
-    })
+    wallet
+        .as_mut()
+        .ok_or_else(|| server_error(CapeAPIError::MissingWallet))
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -375,7 +436,7 @@ async fn closewallet(wallet: &mut Option<Wallet>) -> Result<(), tide::Error> {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct WalletSummary {
-    pub addresses: Vec<api::UserAddress>,
+    pub addresses: Vec<UserAddress>,
     pub spend_keys: Vec<UserPubKey>,
     pub audit_keys: Vec<AuditorPubKey>,
     pub freeze_keys: Vec<FreezerPubKey>,
@@ -398,7 +459,7 @@ async fn getinfo(wallet: &mut Option<Wallet>) -> Result<WalletSummary, tide::Err
     })
 }
 
-async fn getaddress(wallet: &mut Option<Wallet>) -> Result<Vec<api::UserAddress>, tide::Error> {
+async fn getaddress(wallet: &mut Option<Wallet>) -> Result<Vec<UserAddress>, tide::Error> {
     let wallet = require_wallet(wallet)?;
     Ok(wallet
         .pub_keys()
@@ -415,7 +476,7 @@ pub enum BalanceInfo {
     /// All the balances of an account, by asset type.
     AccountBalances(HashMap<AssetCode, u64>),
     /// All the balances of all accounts owned by the wallet.
-    AllBalances(HashMap<api::UserAddress, HashMap<AssetCode, u64>>),
+    AllBalances(HashMap<UserAddress, HashMap<AssetCode, u64>>),
 }
 
 // Get all balances for the current wallet, all the balances for a given address, or the balance for
@@ -439,7 +500,7 @@ async fn getbalance(
     // Therefore, we can determine which form we are handling just by checking for the presence of
     // :address and :asset.
     let address = match bindings.get(":address") {
-        Some(address) => Some(address.value.to::<api::UserAddress>()?),
+        Some(address) => Some(address.value.to::<UserAddress>()?),
         None => None,
     };
     let asset = match bindings.get(":asset") {
@@ -447,10 +508,9 @@ async fn getbalance(
         None => None,
     };
 
-    let one_balance = |address: api::UserAddress, asset| async move {
-        wallet.balance(&address.into(), &asset).await
-    };
-    let account_balances = |address: api::UserAddress| async move {
+    let one_balance =
+        |address: UserAddress, asset| async move { wallet.balance(&address.into(), &asset).await };
+    let account_balances = |address: UserAddress| async move {
         iter(known_assets(wallet).await.into_keys())
             .then(|asset| {
                 let address = address.clone();
@@ -462,7 +522,7 @@ async fn getbalance(
     let all_balances = || async {
         iter(wallet.pub_keys().await)
             .then(|key| async move {
-                let address = api::UserAddress::from(key.address());
+                let address = UserAddress::from(key.address());
                 (address.clone(), account_balances(address).await)
             })
             .collect()
@@ -490,13 +550,10 @@ async fn newkey(key_type: &str, wallet: &mut Option<Wallet>) -> Result<PubKey, t
         "send" => Ok(PubKey::Spend(wallet.generate_user_key(None).await?)),
         "trace" => Ok(PubKey::Audit(wallet.generate_audit_key().await?)),
         "freeze" => Ok(PubKey::Freeze(wallet.generate_freeze_key().await?)),
-        _ => Err(tide::Error::from_str(
-            StatusCode::BadRequest,
-            format!(
-                "expected key type (send, trace or freeze), got {:?}",
-                key_type
-            ),
-        )),
+        _ => Err(server_error(CapeAPIError::Param {
+            expected: String::from("key type (send, trace or freeze)"),
+            actual: String::from(key_type),
+        })),
     }
 }
 

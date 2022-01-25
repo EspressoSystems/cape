@@ -1,19 +1,20 @@
 // Copyright © 2021 Translucence Research, Inc. All rights reserved.
 
 use crate::routes::{
-    dispatch_url, dispatch_web_socket, RouteBinding, UrlSegmentType, UrlSegmentValue, Wallet,
+    dispatch_url, dispatch_web_socket, CapeAPIError, RouteBinding, UrlSegmentType, UrlSegmentValue,
+    Wallet,
 };
 use async_std::{
     sync::{Arc, Mutex},
     task::{spawn, JoinHandle},
 };
+use net::server;
 use std::collections::hash_map::HashMap;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use structopt::StructOpt;
 use tide::StatusCode;
 use tide_websockets::{WebSocket, WebSocketConnection};
-use zerok_lib::{api::server, spectrum_api::SpectrumError};
 
 mod disco;
 mod ip;
@@ -251,7 +252,7 @@ fn init_server(
     });
     web_server
         .with(server::trace)
-        .with(server::add_error_body::<_, SpectrumError>);
+        .with(server::add_error_body::<_, CapeAPIError>);
 
     // Define the routes handled by the web server.
     web_server.at("/public").serve_dir(web_path)?;
@@ -344,8 +345,10 @@ mod tests {
         structs::{AssetCode, AssetDefinition},
     };
     use lazy_static::lazy_static;
+    use net::{client, UserAddress};
     use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
     use routes::{BalanceInfo, PubKey, WalletSummary};
+    use seahorse::{hd::KeyTree, txn_builder::AssetInfo};
     use serde::de::DeserializeOwned;
     use std::convert::TryInto;
     use std::fmt::Debug;
@@ -354,13 +357,7 @@ mod tests {
     use tagged_base64::TaggedBase64;
     use tempdir::TempDir;
     use tracing_test::traced_test;
-    use zerok_lib::{
-        api,
-        api::client,
-        cape_state::{Erc20Code, EthereumAddr},
-        txn_builder::AssetInfo,
-        wallet::hd::KeyTree,
-    };
+    use zerok_lib::cape_state::{Erc20Code, EthereumAddr};
 
     lazy_static! {
         static ref PORT: Arc<Mutex<u64>> = {
@@ -402,7 +399,7 @@ mod tests {
                 .try_into()
                 .unwrap();
             Self {
-                client: client.with(client::parse_error_body::<SpectrumError>),
+                client: client.with(client::parse_error_body::<CapeAPIError>),
                 temp_dir: TempDir::new("test_cape_wallet").unwrap(),
             }
         }
@@ -575,7 +572,7 @@ mod tests {
 
         // Should fail if a wallet is not already open.
         server
-            .requires_wallet::<Vec<api::UserAddress>>("getaddress")
+            .requires_wallet::<Vec<UserAddress>>("getaddress")
             .await;
 
         // Now open a wallet and call getaddress.
@@ -587,10 +584,7 @@ mod tests {
             ))
             .await
             .unwrap();
-        let addresses = server
-            .get::<Vec<api::UserAddress>>("getaddress")
-            .await
-            .unwrap();
+        let addresses = server.get::<Vec<UserAddress>>("getaddress").await.unwrap();
 
         // The result is not very interesting before we add any keys, but that's for another
         // endpoint.
@@ -603,7 +597,7 @@ mod tests {
         let server = TestServer::new().await;
         let mut rng = ChaChaRng::from_seed([42u8; 32]);
 
-        let addr = api::UserAddress::from(UserKeyPair::generate(&mut rng).address());
+        let addr = UserAddress::from(UserKeyPair::generate(&mut rng).address());
         let asset = AssetCode::native();
 
         // Should fail if a wallet is not already open.

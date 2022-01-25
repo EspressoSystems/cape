@@ -13,54 +13,6 @@ library Transcript {
     }
 
     // ================================
-    // Helper functions
-    // ================================
-    function reverseEndianness(uint256 input) internal pure returns (uint256 v) {
-        v = input;
-
-        // swap bytes
-        v =
-            ((v & 0xFF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00) >> 8) |
-            ((v & 0x00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF) << 8);
-
-        // swap 2-byte long pairs
-        v =
-            ((v & 0xFFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000) >> 16) |
-            ((v & 0x0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF) << 16);
-
-        // swap 4-byte long pairs
-        v =
-            ((v & 0xFFFFFFFF00000000FFFFFFFF00000000FFFFFFFF00000000FFFFFFFF00000000) >> 32) |
-            ((v & 0x00000000FFFFFFFF00000000FFFFFFFF00000000FFFFFFFF00000000FFFFFFFF) << 32);
-
-        // swap 8-byte long pairs
-        v =
-            ((v & 0xFFFFFFFFFFFFFFFF0000000000000000FFFFFFFFFFFFFFFF0000000000000000) >> 64) |
-            ((v & 0x0000000000000000FFFFFFFFFFFFFFFF0000000000000000FFFFFFFFFFFFFFFF) << 64);
-
-        // swap 16-byte long pairs
-        v = (v >> 128) | (v << 128);
-    }
-
-    function g1Serialize(BN254.G1Point memory point) internal pure returns (bytes memory) {
-        uint256 mask;
-
-        // Set the 254-th bit to 1 for infinity
-        // https://docs.rs/ark-serialize/0.3.0/src/ark_serialize/flags.rs.html#117
-        if (BN254.isInfinity(point)) {
-            mask |= 0x4000000000000000000000000000000000000000000000000000000000000000;
-        }
-
-        // Set the 255-th bit to 1 for positive Y
-        // https://docs.rs/ark-serialize/0.3.0/src/ark_serialize/flags.rs.html#118
-        if (!BN254.isYNegative(point)) {
-            mask = 0x8000000000000000000000000000000000000000000000000000000000000000;
-        }
-
-        return abi.encodePacked(reverseEndianness(point.x | mask));
-    }
-
-    // ================================
     // Primitive functions
     // ================================
     function appendMessage(TranscriptData memory self, bytes memory message) internal pure {
@@ -68,14 +20,14 @@ library Transcript {
     }
 
     function appendFieldElement(TranscriptData memory self, uint256 fieldElement) internal pure {
-        appendMessage(self, abi.encodePacked(reverseEndianness(fieldElement)));
+        appendMessage(self, abi.encodePacked(BN254.reverseEndianness(fieldElement)));
     }
 
     function appendGroupElement(TranscriptData memory self, BN254.G1Point memory comm)
         internal
         pure
     {
-        bytes memory commBytes = g1Serialize(comm);
+        bytes memory commBytes = BN254.g1Serialize(comm);
         appendMessage(self, commBytes);
     }
 
@@ -129,18 +81,25 @@ library Transcript {
         uint64 sizeInBits = 254;
 
         // Fr field size in bits
-        appendMessage(self, BytesLib.slice(abi.encodePacked(reverseEndianness(sizeInBits)), 0, 8));
+        appendMessage(
+            self,
+            BytesLib.slice(abi.encodePacked(BN254.reverseEndianness(sizeInBits)), 0, 8)
+        );
 
         // domain size
         appendMessage(
             self,
-            BytesLib.slice(abi.encodePacked(reverseEndianness(verifyingKey.domainSize)), 0, 8)
+            BytesLib.slice(
+                abi.encodePacked(BN254.reverseEndianness(verifyingKey.domainSize)),
+                0,
+                8
+            )
         );
 
         // number of inputs
         appendMessage(
             self,
-            BytesLib.slice(abi.encodePacked(reverseEndianness(verifyingKey.numInputs)), 0, 8)
+            BytesLib.slice(abi.encodePacked(BN254.reverseEndianness(verifyingKey.numInputs)), 0, 8)
         );
 
         // =====================

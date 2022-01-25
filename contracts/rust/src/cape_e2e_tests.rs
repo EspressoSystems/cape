@@ -27,6 +27,11 @@ use rand_chacha::ChaChaRng;
 use reef::traits::Ledger as _;
 use std::path::Path;
 use std::time::Instant;
+use zerok_lib::cape_state::CapeContractState;
+use zerok_lib::cape_state::CapeTransaction;
+use zerok_lib::cape_state::{CapeEthEffect, CapeEvent, CapeOperation};
+use zerok_lib::state::MERKLE_HEIGHT;
+use zerok_lib::universal_params::UNIVERSAL_PARAM;
 
 async fn test_2user_maybe_submit(should_submit: bool) -> Result<()> {
     let now = Instant::now();

@@ -199,7 +199,7 @@ contract PlonkVerifier is IPlonkVerifier {
         Challenges memory chal,
         PlonkProof memory proof,
         Poly.EvalData memory evalData
-    ) internal view returns (uint256 res) {
+    ) internal pure returns (uint256 res) {
         uint256 p = BN254.R_MOD;
         uint256 lagrangeOneEval = evalData.lagrangeOne;
         uint256 piEval = evalData.piEval;
@@ -258,7 +258,7 @@ contract PlonkVerifier is IPlonkVerifier {
         Challenges memory chal
     )
         internal
-        view
+        pure
         returns (
             uint256[] memory commScalars,
             BN254.G1Point[] memory commBases,

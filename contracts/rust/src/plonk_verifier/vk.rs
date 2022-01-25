@@ -7,8 +7,9 @@ use anyhow::Result;
 use ark_std::{rand::Rng, test_rng};
 use ethers::core::k256::ecdsa::SigningKey;
 use ethers::prelude::*;
-use jf_aap::proof::{freeze, mint, transfer, universal_setup_for_test};
+use jf_aap::proof::{freeze, mint, transfer};
 use jf_aap::structs::NoteType;
+use jf_aap::testing_apis::universal_setup_for_test;
 use std::path::Path;
 
 const TREE_DEPTH: u8 = 24;
@@ -74,15 +75,15 @@ async fn test_get_vk_by_id() -> Result<()> {
                     num_output as usize,
                     tree_depth,
                 )?;
-                vk.verifying_key
+                vk.get_verifying_key()
             }
             NoteType::Mint => {
                 let (_, vk, _) = mint::preprocess(&srs, tree_depth)?;
-                vk.verifying_key
+                vk.get_verifying_key()
             }
             NoteType::Freeze => {
                 let (_, vk, _) = freeze::preprocess(&srs, num_input as usize, tree_depth)?;
-                vk.verifying_key
+                vk.get_verifying_key()
             }
         };
         let vk: sol::VerifyingKey = vk.into();

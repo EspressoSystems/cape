@@ -7,6 +7,7 @@ mod bn254;
 pub mod cape;
 #[cfg(test)]
 mod cape_e2e_tests;
+mod ed_on_bn254;
 pub mod ethereum;
 pub mod helpers;
 mod ledger;

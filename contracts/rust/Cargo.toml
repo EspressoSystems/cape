@@ -20,12 +20,16 @@ zerok-macros = { git = "ssh://git@github.com/SpectrumXYZ/zerok-macros.git" }
 arbitrary = { version="1.0", features=["derive"] }
 arbitrary-wrappers = { git = "ssh://git@github.com/SpectrumXYZ/arbitrary-wrappers.git" }
 
-jf-plonk = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git", branch = "plonk-verifier"}
-jf-primitives = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git", branch = "plonk-verifier"}
-jf-aap = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git", branch = "plonk-verifier"}
-jf-rescue = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git", branch = "plonk-verifier"}
-jf-utils = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git", branch = "plonk-verifier"}
+jf-aap = { features=[ "std", "test_apis" ], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", branch = "plonk-verifier"}
 
+jf-plonk = { features=[ "std", "test_apis" ], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git" }
+jf-primitives = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git" }
+jf-rescue = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git" }
+jf-utils = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish" }
+
+reef = { git = "ssh://git@github.com/SpectrumXYZ/reef.git", branch = "plonk-verifier" }
+key-set = { git = "ssh://git@github.com/SpectrumXYZ/key-set.git", branch = "plonk-verifier" }
+commit = { git = "ssh://git@github.com/SpectrumXYZ/commit.git", rev = "f48cd52c59755eade0605111826eef3df6abdcf8" }
 zerok_lib = { git = "ssh://git@github.com/SpectrumXYZ/spectrum.git", branch = "plonk-verifier" }
 
 ethers = { git = "https://github.com/gakonst/ethers-rs", branch = "master" }

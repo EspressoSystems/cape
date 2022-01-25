@@ -12,6 +12,7 @@ use ark_ec::AffineCurve;
 use ark_ec::{group::Group, ProjectiveCurve};
 use ark_ff::{field_new, to_bytes, Field};
 use ark_ff::{FpParameters, PrimeField};
+use ark_serialize::CanonicalSerialize;
 use ark_std::UniformRand;
 use ark_std::Zero;
 use ethers::core::k256::ecdsa::SigningKey;
@@ -328,6 +329,42 @@ async fn test_pow_small() -> Result<()> {
                 .await?,
             field_to_u256(base.pow([exponent])),
         );
+    }
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_serialization() -> Result<()> {
+    let rng = &mut ark_std::test_rng();
+    let contract = deploy_contract().await?;
+    let mut rust_ser = Vec::new();
+
+    // infinity
+    let point: G1Affine = G1Affine::zero();
+    point.serialize(&mut rust_ser)?;
+    let sol_point: G1Point = point.into();
+    let sol_ser = contract.g_1_serialize(sol_point.into()).call().await?;
+
+    assert_eq!(sol_ser.to_vec(), rust_ser);
+
+    // generator
+    rust_ser = Vec::new();
+    let point = G1Affine::prime_subgroup_generator();
+    point.serialize(&mut rust_ser)?;
+    let sol_point: G1Affine = point.into();
+    let sol_ser = contract.g_1_serialize(sol_point.into()).call().await?;
+
+    assert_eq!(sol_ser.to_vec(), rust_ser);
+
+    for _ in 0..10 {
+        rust_ser = Vec::new();
+        let point: G1Affine = G1Projective::rand(rng).into();
+        point.serialize(&mut rust_ser)?;
+
+        let sol_point: G1Point = point.into();
+        let sol_ser = contract.g_1_serialize(sol_point.into()).call().await?;
+
+        assert_eq!(sol_ser.to_vec(), rust_ser);
     }
     Ok(())
 }

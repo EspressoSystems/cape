@@ -114,8 +114,8 @@ pub async fn deploy<M: 'static + Middleware, T: Tokenize>(
 
     // TODO remove client clones, pass reference instead?
     link_unlinked_libraries(&mut bytecode, client.clone()).await?;
-
     let factory = ContractFactory::new(abi.clone(), bytecode.into_bytes().unwrap(), client.clone());
+
     let contract = factory
         .deploy(constructor_args)?
         .legacy() // XXX This is required!

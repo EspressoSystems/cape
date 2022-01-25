@@ -1,9 +1,8 @@
+use cap_rust_sandbox::universal_param::UNIVERSAL_PARAM;
 use jf_aap::keys::{UserAddress, UserKeyPair};
 use jf_aap::TransactionVerifyingKey;
+use key_set::{KeySet, VerifierKeySet};
 use zerok_lib::cape_state::CAPE_MERKLE_HEIGHT;
-use zerok_lib::state::key_set::KeySet;
-use zerok_lib::state::VerifierKeySet;
-use zerok_lib::universal_params::UNIVERSAL_PARAM;
 
 use dirs::data_local_dir;
 use rand_chacha::{rand_core::SeedableRng, ChaChaRng};

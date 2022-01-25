@@ -4,6 +4,7 @@ use crate::cape::*;
 use crate::ethereum::{deploy, get_funded_deployer};
 use crate::types::field_to_u256;
 use crate::types::{GenericInto, NullifierSol, TestCAPE};
+use crate::universal_param::UNIVERSAL_PARAM;
 use anyhow::Result;
 use ethers::prelude::{Address, U256};
 use jf_aap::keys::{UserKeyPair, UserPubKey};
@@ -16,16 +17,16 @@ use jf_aap::MerkleTree;
 use jf_aap::TransactionNote;
 use jf_aap::TransactionVerifyingKey;
 use jf_utils::CanonicalBytes;
+use key_set::{KeySet, ProverKeySet, VerifierKeySet};
 use rand::SeedableRng;
 use rand_chacha::ChaChaRng;
+use reef::traits::Ledger as _;
 use std::path::Path;
 use std::time::Instant;
+use zerok_lib::cape_ledger::CapeLedger;
 use zerok_lib::cape_state::CapeContractState;
 use zerok_lib::cape_state::CapeTransaction;
 use zerok_lib::cape_state::{CapeEthEffect, CapeEvent, CapeOperation};
-use zerok_lib::state::ProverKeySet;
-use zerok_lib::state::{key_set, key_set::KeySet, VerifierKeySet, MERKLE_HEIGHT};
-use zerok_lib::universal_params::UNIVERSAL_PARAM;
 
 async fn test_2user_maybe_submit(should_submit: bool) -> Result<()> {
     let now = Instant::now();
@@ -37,11 +38,11 @@ async fn test_2user_maybe_submit(should_submit: bool) -> Result<()> {
     let univ_setup = &*UNIVERSAL_PARAM;
 
     let (xfr_prove_key, xfr_verif_key, _) =
-        jf_aap::proof::transfer::preprocess(univ_setup, 1, 2, MERKLE_HEIGHT).unwrap();
+        jf_aap::proof::transfer::preprocess(univ_setup, 1, 2, CapeLedger::merkle_height()).unwrap();
     let (mint_prove_key, mint_verif_key, _) =
-        jf_aap::proof::mint::preprocess(univ_setup, MERKLE_HEIGHT).unwrap();
+        jf_aap::proof::mint::preprocess(univ_setup, CapeLedger::merkle_height()).unwrap();
     let (freeze_prove_key, freeze_verif_key, _) =
-        jf_aap::proof::freeze::preprocess(univ_setup, 2, MERKLE_HEIGHT).unwrap();
+        jf_aap::proof::freeze::preprocess(univ_setup, 2, CapeLedger::merkle_height()).unwrap();
 
     for (label, key) in vec![
         ("xfr", CanonicalBytes::from(xfr_verif_key.clone())),
@@ -76,7 +77,7 @@ async fn test_2user_maybe_submit(should_submit: bool) -> Result<()> {
             // TODO using mock contract to be able to manually add root
             Path::new("../abi/contracts/mocks/TestCAPE.sol/TestCAPE"),
             CAPEConstructorArgs::new(
-                MERKLE_HEIGHT,
+                CapeLedger::merkle_height(),
                 CapeContractState::RECORD_ROOT_HISTORY_SIZE as u64,
             )
             .generic_into::<(u8, u64)>(),
@@ -106,12 +107,15 @@ async fn test_2user_maybe_submit(should_submit: bool) -> Result<()> {
         FreezeFlag::Unfrozen,
     );
 
-    let mut t = MerkleTree::new(MERKLE_HEIGHT).unwrap();
+    let mut t = MerkleTree::new(CapeLedger::merkle_height()).unwrap();
     let alice_rec_comm = RecordCommitment::from(&alice_rec1);
     let alice_rec_field_elem = alice_rec_comm.to_field_element();
     t.push(alice_rec_field_elem);
     let alice_rec_path = t.get_leaf(0).expect_ok().unwrap().1.path;
-    assert_eq!(alice_rec_path.nodes.len(), MERKLE_HEIGHT as usize);
+    assert_eq!(
+        alice_rec_path.nodes.len(),
+        CapeLedger::merkle_height() as usize
+    );
 
     if let Some(contract) = contract.as_ref() {
         assert_eq!(

@@ -12,8 +12,9 @@ jf-primitives = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jell
 jf-aap = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", rev = "eca7b7e85718c7770c24ad90dd34b8a07209a01b" }
 jf-rescue = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git" }
 jf-utils = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git" }
-reef = { git = "ssh://git@github.com/SpectrumXYZ/reef.git", rev = "28c52c6d14f39294bd099288d29d4f1052b7c144" }
-zerok_lib = { git = "ssh://git@github.com/SpectrumXYZ/spectrum.git", rev = "59141a5a085e4d04cef81a01916f01ef3183b990", features = ["mocks"] }
+reef = { git = "ssh://git@github.com/SpectrumXYZ/reef.git", rev = "6e3e7f683d2f8c1c1da662301f8ca8c2863018cc" }
+universal-param = { git = "ssh://git@github.com/SpectrumXYZ/universal-param.git" }
+zerok_lib = { git = "ssh://git@github.com/SpectrumXYZ/spectrum.git", rev = "a1af8c87e5f5546b60dbd455dffa20ff211629c8", features = ["mocks"] }
 ethers = { git = "https://github.com/gakonst/ethers-rs", branch = "master" }
 itertools = "0.10.1" # needed for jf-aap to compile
 ark-std = "0.3.0"
@@ -24,6 +25,7 @@ ark-ff = "0.3.0"
 ark-ec = "0.3.0"
 ark-ed-on-bn254 = { version = "0.3.0", default-features = false }
 hex = "0.4.3"
+lazy_static = "1.4.0"
 tokio = { version = "1.5", features = ["macros", "rt-multi-thread"] }
 rand = "0.8.4"
 serde = { version = "1.0.124", features = ["derive"] }
@@ -47,4 +49,5 @@ rev = "cafc05e39692bbc5c383990063ad851f0b94a553"
 default-features = false
 
 [dev-dependencies]
+key-set = { git = "ssh://git@github.com/SpectrumXYZ/key-set.git" }
 proptest = "1.0.0"

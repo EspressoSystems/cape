@@ -10,11 +10,14 @@ doctest = false
 
 jf-aap = { features=[ "std", "test_apis" ], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", branch = "plonk-verifier"}
 
-jf-plonk = { features=[ "std", "test_apis" ], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git", branch = "feat-APIs-for-testing"}
-jf-primitives = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git", branch = "feat-APIs-for-testing"}
-jf-rescue = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git", branch = "feat-APIs-for-testing"}
-jf-utils = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish", branch = "feat-APIs-for-testing"}
+jf-plonk = { features=[ "std", "test_apis" ], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git" }
+jf-primitives = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git" }
+jf-rescue = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git" }
+jf-utils = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish" }
 
+reef = { git = "ssh://git@github.com/SpectrumXYZ/reef.git", branch = "plonk-verifier" }
+key-set = { git = "ssh://git@github.com/SpectrumXYZ/key-set.git", branch = "plonk-verifier" }
+commit = { git = "ssh://git@github.com/SpectrumXYZ/commit.git", rev = "f48cd52c59755eade0605111826eef3df6abdcf8" }
 zerok_lib = { git = "ssh://git@github.com/SpectrumXYZ/spectrum.git", branch = "plonk-verifier" }
 ethers = { git = "https://github.com/gakonst/ethers-rs", branch = "master" }
 itertools = "0.10.1" # needed for jf-aap to compile

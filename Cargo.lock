@@ -147,6 +147,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "arbitrary-wrappers"
+version = "0.1.0"
+source = "git+ssh://git@github.com/SpectrumXYZ/arbitrary-wrappers.git?branch=plonk-verifier#17c7ccf3052a77f91a6c74437c5e155a27b4aec2"
+dependencies = [
+ "arbitrary",
+ "ark-std",
+ "itertools 0.10.3",
+ "jf-aap",
+ "rand_chacha 0.3.1",
+ "serde",
+ "zerok-macros",
+]
+
+[[package]]
 name = "ark-bls12-377"
 version = "0.3.0"
 source = "git+https://github.com/arkworks-rs/curves?rev=677b4ae751a274037880ede86e9b6f30f62635af#677b4ae751a274037880ede86e9b6f30f62635af"
@@ -1061,6 +1075,7 @@ dependencies = [
  "async-std",
  "async-trait",
  "bincode",
+ "commit",
  "ethers 0.6.0 (git+https://github.com/gakonst/ethers-rs?branch=master)",
  "futures",
  "generic-array 0.14.4",
@@ -1071,11 +1086,13 @@ dependencies = [
  "jf-primitives",
  "jf-rescue",
  "jf-utils",
+ "key-set",
  "num-derive",
  "num-traits",
  "proptest",
  "rand 0.8.4",
  "rand_chacha 0.3.1",
+ "reef",
  "serde",
  "serde_json",
  "sha3 0.9.1",
@@ -3184,7 +3201,7 @@ checksum = "1aab8fc367588b89dcee83ab0fd66b72b50b72fa1904d7095045ace2b0c81c35"
 [[package]]
 name = "jf-aap"
 version = "0.0.1"
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#25fe27408db86bda0d0293bc4198d2c039bac74e"
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#4887d6847526c97cac6546f4cbcba77b331ea388"
 dependencies = [
  "anyhow",
  "ark-bls12-377",
@@ -3225,7 +3242,7 @@ dependencies = [
 [[package]]
 name = "jf-plonk"
 version = "0.0.1"
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=feat-APIs-for-testing#5ad412a26fc36258708c7e8af66b37aa0fc57ea7"
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#22132b13b507eebdf5de5b0acc33ed253893af39"
 dependencies = [
  "ark-bls12-377",
  "ark-bls12-381",
@@ -3256,7 +3273,7 @@ dependencies = [
 [[package]]
 name = "jf-primitives"
 version = "0.0.1"
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=feat-APIs-for-testing#5ad412a26fc36258708c7e8af66b37aa0fc57ea7"
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#22132b13b507eebdf5de5b0acc33ed253893af39"
 dependencies = [
  "ark-ec",
  "ark-ff",
@@ -3279,7 +3296,7 @@ dependencies = [
 [[package]]
 name = "jf-rescue"
 version = "0.0.1"
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=feat-APIs-for-testing#5ad412a26fc36258708c7e8af66b37aa0fc57ea7"
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#22132b13b507eebdf5de5b0acc33ed253893af39"
 dependencies = [
  "ark-bls12-377",
  "ark-bls12-381",
@@ -3307,7 +3324,7 @@ dependencies = [
 [[package]]
 name = "jf-utils"
 version = "0.0.1"
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=feat-APIs-for-testing#5ad412a26fc36258708c7e8af66b37aa0fc57ea7"
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#22132b13b507eebdf5de5b0acc33ed253893af39"
 dependencies = [
  "anyhow",
  "ark-ec",
@@ -3324,7 +3341,7 @@ dependencies = [
 [[package]]
 name = "jf-utils-derive"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=feat-APIs-for-testing#5ad412a26fc36258708c7e8af66b37aa0fc57ea7"
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#22132b13b507eebdf5de5b0acc33ed253893af39"
 dependencies = [
  "ark-serialize",
  "ark-std",
@@ -3359,6 +3376,21 @@ name = "keccak"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "67c21572b4949434e4fc1e1978b99c5f77064153c59d998bf13ecd96fb5ecba7"
+
+[[package]]
+name = "key-set"
+version = "0.1.0"
+source = "git+ssh://git@github.com/SpectrumXYZ/key-set.git?branch=plonk-verifier#0c1c0b7ec5a86a92b489014fa739cb45503d3e1e"
+dependencies = [
+ "ark-serialize",
+ "bincode",
+ "commit",
+ "itertools 0.10.3",
+ "jf-aap",
+ "serde",
+ "serde_with",
+ "snafu",
+]
 
 [[package]]
 name = "kv-log-macro"
@@ -3606,6 +3638,29 @@ dependencies = [
  "security-framework",
  "security-framework-sys",
  "tempfile",
+]
+
+[[package]]
+name = "net"
+version = "0.1.0"
+source = "git+ssh://git@github.com/SpectrumXYZ/net.git?branch=plonk-verifier#a55c3f09e3d27490ce2c5833d28160dbdcf42518"
+dependencies = [
+ "ark-serialize",
+ "ark-std",
+ "bincode",
+ "commit",
+ "futures",
+ "generic-array 0.14.4",
+ "itertools 0.10.3",
+ "jf-aap",
+ "jf-utils",
+ "serde",
+ "serde_json",
+ "snafu",
+ "surf",
+ "tagged-base64",
+ "tide",
+ "tracing",
 ]
 
 [[package]]
@@ -4451,6 +4506,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "reef"
+version = "0.1.0"
+source = "git+ssh://git@github.com/SpectrumXYZ/reef.git?branch=plonk-verifier#be9312a5f3b6a3c093476edccf0c1a03cdc2dae8"
+dependencies = [
+ "ark-serialize",
+ "itertools 0.10.3",
+ "jf-aap",
+ "serde",
+ "snafu",
+ "strum_macros",
+]
+
+[[package]]
 name = "regex"
 version = "1.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4488,6 +4556,7 @@ dependencies = [
  "ethers 0.6.0 (git+https://github.com/gakonst/ethers-rs?branch=master)",
  "jf-aap",
  "jf-primitives",
+ "key-set",
  "lazy_static",
  "rand_chacha 0.3.1",
  "serde",
@@ -6354,7 +6423,7 @@ dependencies = [
 [[package]]
 name = "zerok-macros"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/spectrum.git?branch=plonk-verifier#b72d7eb3f803f31ee8824397a292a3dbd0f1a79e"
+source = "git+ssh://git@github.com/SpectrumXYZ/zerok-macros.git#0a9e9ca4ef8870bcd9a2373c00c4a697f704453a"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -6364,9 +6433,10 @@ dependencies = [
 [[package]]
 name = "zerok_lib"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/spectrum.git?branch=plonk-verifier#b72d7eb3f803f31ee8824397a292a3dbd0f1a79e"
+source = "git+ssh://git@github.com/SpectrumXYZ/spectrum.git?branch=plonk-verifier#3ec158b0ed53ddef3e8994211ca295b2532061c7"
 dependencies = [
  "arbitrary",
+ "arbitrary-wrappers",
  "ark-ff",
  "ark-serialize",
  "ark-std",
@@ -6380,6 +6450,7 @@ dependencies = [
  "bitvec 0.20.1",
  "chacha20",
  "chrono",
+ "commit",
  "futures",
  "generic-array 0.14.4",
  "hex",
@@ -6389,13 +6460,16 @@ dependencies = [
  "jf-plonk",
  "jf-primitives",
  "jf-utils",
+ "key-set",
  "lazy_static",
  "mnemonic",
+ "net",
  "phaselock 0.0.5",
  "procfs",
  "rand 0.7.3",
  "rand_chacha 0.3.1",
  "rayon",
+ "reef",
  "rpassword",
  "rust-argon2",
  "rustyline",

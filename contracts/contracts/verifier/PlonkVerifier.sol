@@ -681,14 +681,12 @@ contract PlonkVerifier is IPlonkVerifier {
             tmp := mulmod(mload(add(proof, 0x1E0)), mload(add(proof, 0x200)), p)
         }
         scalars[7] = tmp;
-
         bases[7] = verifyingKey.qM34;
 
         // ============
         // q_H
         // ============
         // w_evals[0].pow([5]);
-
         assembly {
             tmp := mload(add(proof, 0x1A0))
             tmp2 := mulmod(tmp, tmp, p)
@@ -719,7 +717,6 @@ contract PlonkVerifier is IPlonkVerifier {
         bases[10] = verifyingKey.qH3;
 
         // w_evals[3].pow([5]);
-
         assembly {
             tmp := mload(add(proof, 0x200))
             tmp2 := mulmod(tmp, tmp, p)
@@ -735,7 +732,6 @@ contract PlonkVerifier is IPlonkVerifier {
         // q_o
         scalars[12] = p - proof.wireEval4;
         bases[12] = verifyingKey.qO;
-
         // q_c
         scalars[13] = 1;
         bases[13] = verifyingKey.qC;
@@ -760,7 +756,6 @@ contract PlonkVerifier is IPlonkVerifier {
         // first one is 1-zeta^n
         scalars[15] = p - evalData.vanishEval;
         bases[15] = proof.split0;
-
         assembly {
             // tmp = zeta^{n+2}
             tmp := addmod(mload(evalData), 1, p)
@@ -773,7 +768,6 @@ contract PlonkVerifier is IPlonkVerifier {
         assembly {
             tmp2 := mulmod(mload(add(scalars, mul(16, 0x20))), tmp, p)
         }
-
         scalars[16] = tmp2;
         bases[16] = proof.split1;
 
@@ -781,7 +775,6 @@ contract PlonkVerifier is IPlonkVerifier {
         assembly {
             tmp2 := mulmod(mload(add(scalars, mul(17, 0x20))), tmp, p)
         }
-
         scalars[17] = tmp2;
         bases[17] = proof.split2;
 
@@ -789,7 +782,6 @@ contract PlonkVerifier is IPlonkVerifier {
         assembly {
             tmp2 := mulmod(mload(add(scalars, mul(18, 0x20))), tmp, p)
         }
-
         scalars[18] = tmp2;
         bases[18] = proof.split3;
 

@@ -11,6 +11,8 @@
 
 pragma solidity ^0.8.0;
 
+import "solidity-bytes-utils/contracts/BytesLib.sol";
+
 /// @notice Barreto-Naehrig curve over a 254 bit prime field
 library BN254 {
     // use notation from https://datatracker.ietf.org/doc/draft-irtf-cfrg-pairing-friendly-curves/
@@ -239,11 +241,20 @@ library BN254 {
     }
 
     function fromLeBytesModOrder(bytes memory leBytes) internal pure returns (uint256 ret) {
-        // TODO: Can likely be gas optimized by copying the first 31 bytes directly.
-        for (uint256 i = 0; i < leBytes.length; i++) {
-            ret = mulmod(ret, 256, R_MOD);
-            ret = addmod(ret, uint256(uint8(leBytes[leBytes.length - 1 - i])), R_MOD);
-        }
+        require(leBytes.length < 62, "Bn254: truncation to scalar field failed");
+        ret = uint256(BytesLib.slice(leBytes, 0, 31));
+        ret = mulmod(ret, 1<<248, R_MOD);
+        ret = addmod(
+            uint256(BytesLib.slice(leBytes, 31, leBytes.length)),
+            ret,
+            R_MOD
+            );
+
+        // // TODO: Can likely be gas optimized by copying the first 31 bytes directly.
+        // for (uint256 i = 0; i < leBytes.length; i++) {
+        //     ret = mulmod(ret, 256, R_MOD);
+        //     ret = addmod(ret, uint256(uint8(leBytes[leBytes.length - 1 - i])), R_MOD);
+        // }
     }
 
     /// @dev Check if y-coordinate of G1 point is negative.

@@ -205,6 +205,7 @@ library BN254 {
 
     /// @dev Evaluate the following pairing product:
     /// @dev e(a1, a2).e(-b1, b2) == 1
+    /// @dev caller needs to ensure that a1, a2, b1 and b2 are within proper group
     /// @notice credit: Aztec, Spilsbury Holdings Ltd
     function pairingProd2(
         G1Point memory a1,
@@ -212,8 +213,6 @@ library BN254 {
         G1Point memory b1,
         G2Point memory b2
     ) internal view returns (bool) {
-        validateG1Point(a1);
-        validateG1Point(b1);
         uint256 out;
         bool success;
         assembly {
@@ -281,22 +280,94 @@ library BN254 {
         return result;
     }
 
-    function g1Serialize(BN254.G1Point memory point) internal pure returns (bytes memory) {
+    function g1Serialize(G1Point memory point) internal pure returns (bytes memory) {
         uint256 mask;
 
         // Set the 254-th bit to 1 for infinity
         // https://docs.rs/ark-serialize/0.3.0/src/ark_serialize/flags.rs.html#117
-        if (BN254.isInfinity(point)) {
+        if (isInfinity(point)) {
             mask |= 0x4000000000000000000000000000000000000000000000000000000000000000;
         }
 
         // Set the 255-th bit to 1 for positive Y
         // https://docs.rs/ark-serialize/0.3.0/src/ark_serialize/flags.rs.html#118
-        if (!BN254.isYNegative(point)) {
+        if (!isYNegative(point)) {
             mask = 0x8000000000000000000000000000000000000000000000000000000000000000;
         }
 
         return abi.encodePacked(reverseEndianness(point.x | mask));
+    }
+
+    function g1Deserialize(bytes32 input) internal view returns (G1Point memory point) {
+        uint256 mask = 0x4000000000000000000000000000000000000000000000000000000000000000;
+        uint256 x = reverseEndianness(uint256(input));
+        uint256 y;
+        bool isQuadraticResidue;
+        bool isYPositive;
+        if (x & mask != 0) {
+            // the 254-th bit == 1 for infinity
+            x = 0;
+            y = 0;
+        } else {
+            // Set the 255-th bit to 1 for positive Y
+            mask = 0x8000000000000000000000000000000000000000000000000000000000000000;
+            isYPositive = (x & mask != 0);
+            // mask off the first two bits of x
+            mask = 0x3FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF;
+            x &= mask;
+
+            // solve for y where E: y^2 = x^3 + 3
+            y = mulmod(x, x, P_MOD);
+            y = mulmod(y, x, P_MOD);
+            y = addmod(y, 3, P_MOD);
+            (isQuadraticResidue, y) = quadraticResidue(y);
+
+            require(isQuadraticResidue, "deser fail: not on curve");
+
+            if (isYPositive) {
+                y = P_MOD - y;
+            }
+        }
+
+        point = G1Point(x, y);
+    }
+
+    function quadraticResidue(uint256 x)
+        internal
+        view
+        returns (bool isQuadraticResidue, uint256 a)
+    {
+        bool success;
+        // e = (p+1)/4
+        uint256 e = 0xc19139cb84c680a6e14116da060561765e05aa45a1c72a34f082305b61f3f52;
+        uint256 p = P_MOD;
+
+        // we have p == 3 mod 4 therefore
+        // a = x^((p+1)/4)
+        assembly {
+            // credit: Aztec
+            // FIXME: gas cost
+            let mPtr := mload(0x40)
+            mstore(mPtr, 0x20)
+            mstore(add(mPtr, 0x20), 0x20)
+            mstore(add(mPtr, 0x40), 0x20)
+            mstore(add(mPtr, 0x60), x)
+            mstore(add(mPtr, 0x80), e)
+            mstore(add(mPtr, 0xa0), p)
+            success := staticcall(gas(), 0x05, mPtr, 0xc0, 0x00, 0x20)
+            a := mload(0x00)
+        }
+        require(success, "pow precompile call failed!");
+
+        // ensure a < p/2
+        if (a << 1 > p) {
+            a = p - a;
+        }
+
+        // check if a^2 = x, if not x is not a quadratic residue
+        e = mulmod(a, a, p);
+
+        isQuadraticResidue = (e == x);
     }
 
     function reverseEndianness(uint256 input) internal pure returns (uint256 v) {

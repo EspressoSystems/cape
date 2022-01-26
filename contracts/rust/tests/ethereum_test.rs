@@ -17,25 +17,25 @@ async fn deploy_contract() -> Result<Greeter<SignerMiddleware<Provider<Http>, Wa
 }
 
 #[tokio::test]
-async fn test_basic_contract_deployment() {
-    let contract = deploy_contract().await.unwrap();
-    let res: String = contract.greet().call().await.unwrap().into();
-    assert_eq!(res, "Initial Greeting")
+async fn test_basic_contract_deployment() -> Result<()> {
+    let contract = deploy_contract().await?;
+    assert_eq!(contract.greet().call().await?, "Initial Greeting");
+
+    Ok(())
 }
 
 #[tokio::test]
-async fn test_basic_contract_transaction() {
-    let contract = deploy_contract().await.unwrap();
-    let _receipt = contract
-        .set_greeting("Hi!".to_string())
-        .legacy()
-        .send()
-        .await
-        .unwrap()
-        .await
-        .unwrap()
-        .expect("Failed to get TX receipt");
+async fn test_basic_contract_transaction() -> Result<()> {
+    let contract = deploy_contract().await?;
+    let greeting = String::from("Hi!");
 
-    let res: String = contract.greet().call().await.unwrap();
-    assert_eq!(res, "Hi!");
+    let _receipt = contract
+        .method::<_, String>("setGreeting", greeting.clone())?
+        .send()
+        .await?
+        .confirmations(0)
+        .await?;
+    assert_eq!(contract.greet().call().await?, greeting);
+
+    Ok(())
 }

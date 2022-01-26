@@ -17,7 +17,7 @@ cap-rust-sandbox = { path = "../contracts/rust" }
 futures = "0.3.0"
 futures-util = "0.3.8"
 itertools = "0.10.1"
-jf-aap = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", rev = "eca7b7e85718c7770c24ad90dd34b8a07209a01b" }
+jf-aap = { features=["std"], path = "/Users/keyao/Code/jellyfish-apps/aap" }
 jf-plonk = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git" }
 jf-primitives = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git" }
 jf-utils = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git" }

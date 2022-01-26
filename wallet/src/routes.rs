@@ -612,6 +612,28 @@ async fn newasset(
     }
 }
 
+async fn wrap(
+    bindings: &HashMap<String, RouteBinding>,
+    wallet: &mut Option<Wallet>,
+) -> Result<(), tide::Error> {
+    let wallet = require_wallet(wallet)?;
+
+    let owner = bindings.get(":owner").unwrap().value.to::<UserAddress>()?;
+    let eth_address = bindings
+        .get(":eth_address")
+        .unwrap()
+        .value
+        .to::<EthereumAddr>()?;
+    let asset = bindings
+        .get(":asset")
+        .unwrap()
+        .value
+        .to::<AssetDefinition>()?;
+    let amount = bindings.get(":amount").unwrap().value.as_u64()?;
+
+    Ok(wallet.wrap(eth_address, asset, owner, amount).await?)
+}
+
 pub async fn dispatch_url(
     req: tide::Request<WebState>,
     route_pattern: &str,
@@ -638,7 +660,7 @@ pub async fn dispatch_url(
         ApiRouteKey::transaction => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::unfreeze => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::unwrap => dummy_url_eval(route_pattern, bindings),
-        ApiRouteKey::wrap => dummy_url_eval(route_pattern, bindings),
+        ApiRouteKey::wrap => response(&req, wrap(bindings, wallet).await?),
     }
 }
 

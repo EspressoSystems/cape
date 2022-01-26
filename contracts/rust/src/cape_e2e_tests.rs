@@ -71,6 +71,14 @@ async fn test_2user_maybe_submit(should_submit: bool) -> Result<()> {
     let contract = if should_submit {
         let client = get_funded_deployer().await.unwrap();
 
+        let verifier = deploy(
+            client.clone(),
+            Path::new("../abi/contracts/verifier/PlonkVerifier.sol/PlonkVerifier"),
+            (),
+        )
+        .await
+        .unwrap();
+
         let contract_address: Address = deploy(
             client.clone(),
             // TODO using mock contract to be able to manually add root
@@ -78,8 +86,9 @@ async fn test_2user_maybe_submit(should_submit: bool) -> Result<()> {
             CAPEConstructorArgs::new(
                 MERKLE_HEIGHT,
                 CapeContractState::RECORD_ROOT_HISTORY_SIZE as u64,
+                verifier.address(),
             )
-            .generic_into::<(u8, u64)>(),
+            .generic_into::<(u8, u64, Address)>(),
         )
         .await
         .unwrap()

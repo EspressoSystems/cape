@@ -247,18 +247,23 @@ impl From<TransactionNote> for NoteType {
 pub(crate) struct CAPEConstructorArgs {
     height: u8,
     n_roots: u64,
+    verifier_addr: Address,
 }
 
 #[allow(dead_code)]
 impl CAPEConstructorArgs {
-    pub(crate) fn new(height: u8, n_roots: u64) -> Self {
-        Self { height, n_roots }
+    pub(crate) fn new(height: u8, n_roots: u64, verifier_addr: Address) -> Self {
+        Self {
+            height,
+            n_roots,
+            verifier_addr,
+        }
     }
 }
 
-impl From<CAPEConstructorArgs> for (u8, u64) {
-    fn from(args: CAPEConstructorArgs) -> (u8, u64) {
-        (args.height, args.n_roots)
+impl From<CAPEConstructorArgs> for (u8, u64, Address) {
+    fn from(args: CAPEConstructorArgs) -> (u8, u64, Address) {
+        (args.height, args.n_roots, args.verifier_addr)
     }
 }
 
@@ -269,6 +274,7 @@ mod tests {
         k256::ecdsa::SigningKey, Http, Provider, SignerMiddleware, Wallet, U256,
     };
     use jf_aap::structs::RecordOpening;
+    use jf_aap::{txn_batch_verify, TransactionVerifyingKey};
     use rand::Rng;
 
     use crate::assertion::Matcher;
@@ -277,20 +283,73 @@ mod tests {
         GenericInto, MerkleRootSol, NullifierSol, RecordCommitmentSol, TestCAPE, TestCapeTypes,
     };
     use anyhow::Result;
-    use jf_aap::keys::UserPubKey;
+    use jf_aap::keys::{UserKeyPair, UserPubKey};
     use jf_aap::utils::TxnsParams;
     use std::path::Path;
 
     async fn deploy_cape_test() -> TestCAPE<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>> {
         let client = get_funded_deployer().await.unwrap();
-        let call = deploy(
+        // deploy the PlonkVerifier
+        let verifier = deploy(
+            client.clone(),
+            Path::new("../abi/contracts/verifier/PlonkVerifier.sol/PlonkVerifier"),
+            (),
+        )
+        .await
+        .unwrap();
+
+        // deploy TestCAPE.sol
+        let contract = deploy(
             client.clone(),
             Path::new("../abi/contracts/mocks/TestCAPE.sol/TestCAPE"),
-            CAPEConstructorArgs::new(5, 2).generic_into::<(u8, u64)>(),
+            CAPEConstructorArgs::new(24, 10, verifier.address())
+                .generic_into::<(u8, u64, Address)>(),
         )
-        .await;
-        let contract = call.unwrap();
+        .await
+        .unwrap();
         TestCAPE::new(contract.address(), client)
+    }
+
+    #[tokio::test]
+    async fn test_batch_verify_validity_proof() -> Result<()> {
+        let rng = &mut ark_std::test_rng();
+
+        // Create a block with 3 transfer, 1 mint, 2 freeze
+        let params = TxnsParams::generate_txns(rng, 1, 0, 0);
+        let miner = UserKeyPair::generate(rng);
+        // {
+        //     let verifying_keys: Vec<TransactionVerifyingKey> = params
+        //         .verifying_keys
+        //         .iter()
+        //         .take(1)
+        //         .map(|vk| (**vk).clone())
+        //         .collect();
+        //     txn_batch_verify(
+        //         &params.txns,
+        //         &[params.merkle_root],
+        //         params.valid_until - 1,
+        //         &verifying_keys.iter().collect::<Vec<_>>(),
+        //     )
+        //     .unwrap();
+        // }
+        // simulate initial contract state to contain those record to be consumed
+        let contract = deploy_cape_test().await;
+        for txn in params.txns.iter() {
+            contract
+                .add_root(txn.merkle_root().generic_into::<MerkleRootSol>().0)
+                .send()
+                .await?
+                .await?;
+        }
+
+        // submit the block during which validity proofs would be verified in batch
+        let cape_block = CapeBlock::generate(params.txns, vec![], miner.address())?;
+        contract
+            .submit_cape_block(cape_block.into(), vec![])
+            .send()
+            .await?
+            .await?;
+        Ok(())
     }
 
     #[tokio::test]

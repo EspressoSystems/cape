@@ -11,8 +11,6 @@
 
 pragma solidity ^0.8.0;
 
-import "hardhat/console.sol";
-
 /// @notice Barreto-Naehrig curve over a 254 bit prime field
 library BN254 {
     // use notation from https://datatracker.ietf.org/doc/draft-irtf-cfrg-pairing-friendly-curves/
@@ -304,9 +302,7 @@ library BN254 {
 
     function g1Deserialize(bytes32 input) internal view returns (G1Point memory point) {
         uint256 mask = 0x4000000000000000000000000000000000000000000000000000000000000000;
-        console.logBytes(abi.encodePacked(uint256(input)));
         uint256 x = reverseEndianness(uint256(input));
-        console.logBytes(abi.encodePacked(x));
         uint256 y;
         bool isQuadraticResidue;
         bool isYPositive;

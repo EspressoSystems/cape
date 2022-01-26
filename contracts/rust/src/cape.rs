@@ -297,6 +297,7 @@ mod tests {
         )
         .await
         .unwrap();
+        println!("deploy verifier");
 
         // deploy TestCAPE.sol
         let contract = deploy(
@@ -307,6 +308,9 @@ mod tests {
         )
         .await
         .unwrap();
+
+        println!("deploy cape");
+
         TestCAPE::new(contract.address(), client)
     }
 
@@ -315,23 +319,23 @@ mod tests {
         let rng = &mut ark_std::test_rng();
 
         // Create a block with 3 transfer, 1 mint, 2 freeze
-        let params = TxnsParams::generate_txns(rng, 1, 0, 0);
+        let params = TxnsParams::generate_txns(rng, 1, 0, 0, 24);
         let miner = UserKeyPair::generate(rng);
-        // {
-        //     let verifying_keys: Vec<TransactionVerifyingKey> = params
-        //         .verifying_keys
-        //         .iter()
-        //         .take(1)
-        //         .map(|vk| (**vk).clone())
-        //         .collect();
-        //     txn_batch_verify(
-        //         &params.txns,
-        //         &[params.merkle_root],
-        //         params.valid_until - 1,
-        //         &verifying_keys.iter().collect::<Vec<_>>(),
-        //     )
-        //     .unwrap();
-        // }
+        {
+            let verifying_keys: Vec<TransactionVerifyingKey> = params
+                .verifying_keys
+                .iter()
+                .take(1)
+                .map(|vk| (**vk).clone())
+                .collect();
+            txn_batch_verify(
+                &params.txns,
+                &[params.merkle_root],
+                params.valid_until - 1,
+                &verifying_keys.iter().collect::<Vec<_>>(),
+            )
+            .unwrap();
+        }
         // simulate initial contract state to contain those record to be consumed
         let contract = deploy_cape_test().await;
         for txn in params.txns.iter() {
@@ -341,7 +345,6 @@ mod tests {
                 .await?
                 .await?;
         }
-
         // submit the block during which validity proofs would be verified in batch
         let cape_block = CapeBlock::generate(params.txns, vec![], miner.address())?;
         contract
@@ -358,7 +361,7 @@ mod tests {
 
         // Create an empty block transactions
         let rng = &mut ark_std::test_rng();
-        let params = TxnsParams::generate_txns(rng, 0, 0, 0);
+        let params = TxnsParams::generate_txns(rng, 0, 0, 0, 24);
         let miner = UserPubKey::default();
 
         let cape_block = CapeBlock::generate(params.txns, vec![], miner.address())?;
@@ -385,7 +388,8 @@ mod tests {
         let num_transfer_txn = 1;
         let num_mint_txn = 1;
         let num_freeze_txn = 1;
-        let params = TxnsParams::generate_txns(rng, num_transfer_txn, num_mint_txn, num_freeze_txn);
+        let params =
+            TxnsParams::generate_txns(rng, num_transfer_txn, num_mint_txn, num_freeze_txn, 24);
         let miner = UserPubKey::default();
 
         let nf = params.txns[0].nullifiers()[0];
@@ -432,7 +436,7 @@ mod tests {
         assert_eq!(contract.height().call().await?, 0u64);
 
         let rng = &mut ark_std::test_rng();
-        let params = TxnsParams::generate_txns(rng, 1, 0, 0);
+        let params = TxnsParams::generate_txns(rng, 1, 0, 0, 24);
         let miner = UserPubKey::default();
 
         let root = params.txns[0].merkle_root();
@@ -460,7 +464,7 @@ mod tests {
         let contract = deploy_cape_test().await;
 
         let rng = &mut ark_std::test_rng();
-        let params = TxnsParams::generate_txns(rng, 1, 0, 0);
+        let params = TxnsParams::generate_txns(rng, 1, 0, 0, 24);
         let miner = UserPubKey::default();
 
         let root = params.txns[0].merkle_root();
@@ -638,7 +642,7 @@ mod tests {
         let contract = deploy_cape_test().await;
 
         let rng = &mut ark_std::test_rng();
-        let params = TxnsParams::generate_txns(rng, 1, 0, 0);
+        let params = TxnsParams::generate_txns(rng, 1, 0, 0, 24);
         let miner = UserPubKey::default();
 
         let tx = params.txns[0].clone();
@@ -985,7 +989,7 @@ mod tests {
             let num_mint_txn = 1;
             let num_freeze_txn = 1;
             let params =
-                TxnsParams::generate_txns(rng, num_transfer_txn, num_mint_txn, num_freeze_txn);
+                TxnsParams::generate_txns(rng, num_transfer_txn, num_mint_txn, num_freeze_txn, 24);
 
             for txn in params.txns {
                 let proof = txn.validity_proof();

@@ -4,7 +4,11 @@ pragma solidity ^0.8.0;
 import "../CAPE.sol";
 
 contract TestCAPE is CAPE {
-    constructor(uint8 height, uint64 nRoots) CAPE(height, nRoots) {}
+    constructor(
+        uint8 height,
+        uint64 nRoots,
+        address verifierAddr
+    ) CAPE(height, nRoots, verifierAddr) {}
 
     function getNumLeaves() public view returns (uint256) {
         return _numLeaves;

@@ -26,6 +26,7 @@ import "./RootStore.sol";
 contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
     mapping(uint256 => bool) public nullifiers;
     uint64 public height;
+    IPlonkVerifier private _verifier;
 
     using AccumulatingArray for AccumulatingArray.Data;
 
@@ -139,7 +140,13 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
         BurnNote[] burnNotes;
     }
 
-    constructor(uint8 height, uint64 nRoots) RecordsMerkleTree(height) RootStore(nRoots) {}
+    constructor(
+        uint8 height,
+        uint64 nRoots,
+        address verifierAddr
+    ) RecordsMerkleTree(height) RootStore(nRoots) {
+        _verifier = IPlonkVerifier(verifierAddr);
+    }
 
     // Checks if a block is empty
     function _isBlockEmpty(CapeBlock memory block) internal returns (bool) {
@@ -256,6 +263,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
         uint256 freezeIdx = 0;
         uint256 burnIdx = 0;
         bool[] memory includedNotes = new bool[](newBlock.noteTypes.length);
+        uint256 numIncludedNotes = 0;
 
         AccumulatingArray.Data memory comms = AccumulatingArray.create(
             _computeMaxCommitments(newBlock)
@@ -272,7 +280,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
                 if (!_isExpired(note) && _publish(note.inputNullifiers)) {
                     comms.add(note.outputCommitments);
                     includedNotes[i] = true;
-                    // TODO extract proof for batch verification
+                    numIncludedNotes++;
                 }
 
                 transferIdx += 1;
@@ -285,6 +293,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
                     includedNotes[i] = true;
                     _checkDomesticAssetCode(note.mintAssetDef.code, note.mintInternalAssetCode);
                     // TODO extract proof for batch verification
+                    numIncludedNotes++;
                 }
 
                 mintIdx += 1;
@@ -295,7 +304,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
                 if (_publish(note.inputNullifiers)) {
                     comms.add(note.outputCommitments);
                     includedNotes[i] = true;
-                    // TODO extract proof for batch verification
+                    numIncludedNotes++;
                 }
 
                 freezeIdx += 1;
@@ -303,14 +312,13 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
                 BurnNote memory note = newBlock.burnNotes[burnIdx];
                 TransferNote memory transfer = note.transferNote;
                 _checkContainsRoot(transfer.auxInfo.merkleRoot);
-
                 _checkBurn(note);
 
                 if (_publish(transfer.inputNullifiers)) {
                     // TODO do we need a special logic for how to handle outputs record commitments with BURN notes
                     comms.add(transfer.outputCommitments);
                     includedNotes[i] = true;
-                    // TODO extract proof for batch verification
+                    numIncludedNotes++;
                 }
 
                 // TODO handle withdrawal (better done at end if call is external
@@ -320,7 +328,80 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
             }
         }
 
-        // TODO verify plonk proof
+        // batch verify plonk proofs for includedNotes
+        if (numIncludedNotes > 0) {
+            IPlonkVerifier.VerifyingKey[] memory vks = new IPlonkVerifier.VerifyingKey[](
+                numIncludedNotes
+            );
+            uint256[][] memory publicInputs = new uint256[][](numIncludedNotes);
+            IPlonkVerifier.PlonkProof[] memory proofs = new IPlonkVerifier.PlonkProof[](
+                numIncludedNotes
+            );
+            bytes[] memory extraMsgs = new bytes[](numIncludedNotes);
+            transferIdx = 0;
+            mintIdx = 0;
+            freezeIdx = 0;
+            burnIdx = 0;
+            uint256 proofIdx = 0;
+
+            for (uint256 i = 0; i < includedNotes.length; i++) {
+                if (newBlock.noteTypes[i] == NoteType.TRANSFER) {
+                    TransferNote memory note = newBlock.transferNotes[transferIdx];
+                    transferIdx++;
+                    if (includedNotes[i]) {
+                        (
+                            vks[proofIdx],
+                            publicInputs[proofIdx],
+                            proofs[proofIdx],
+                            extraMsgs[proofIdx]
+                        ) = _prepareForProofVerification(note);
+                        proofIdx++;
+                    }
+                } else if (newBlock.noteTypes[i] == NoteType.MINT) {
+                    MintNote memory note = newBlock.mintNotes[mintIdx];
+                    mintIdx++;
+                    if (includedNotes[i]) {
+                        (
+                            vks[proofIdx],
+                            publicInputs[proofIdx],
+                            proofs[proofIdx],
+                            extraMsgs[proofIdx]
+                        ) = _prepareForProofVerification(note);
+                        proofIdx++;
+                    }
+                } else if (newBlock.noteTypes[i] == NoteType.FREEZE) {
+                    FreezeNote memory note = newBlock.freezeNotes[freezeIdx];
+                    freezeIdx++;
+                    if (includedNotes[i]) {
+                        (
+                            vks[proofIdx],
+                            publicInputs[proofIdx],
+                            proofs[proofIdx],
+                            extraMsgs[proofIdx]
+                        ) = _prepareForProofVerification(note);
+                        proofIdx++;
+                    }
+                } else if (newBlock.noteTypes[i] == NoteType.BURN) {
+                    BurnNote memory note = newBlock.burnNotes[burnIdx];
+                    burnIdx++;
+                    if (includedNotes[i]) {
+                        (
+                            vks[proofIdx],
+                            publicInputs[proofIdx],
+                            proofs[proofIdx],
+                            extraMsgs[proofIdx]
+                        ) = _prepareForProofVerification(note);
+                        proofIdx++;
+                    }
+                } else {
+                    revert("Cape: unreachable!");
+                }
+            }
+            require(
+                _verifier.batchVerify(vks, publicInputs, proofs, extraMsgs),
+                "Cape: batch verify failed."
+            );
+        }
 
         if (!_isBlockEmpty(newBlock)) {
             // TODO Check that this is correct
@@ -446,7 +527,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
                 uint8(NoteType.TRANSFER),
                 uint8(note.inputNullifiers.length),
                 uint8(note.outputCommitments.length),
-                uint8(height)
+                uint8(_height)
             )
         );
         // prepare public inputs
@@ -523,7 +604,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
                 uint8(NoteType.MINT),
                 1, // num of input
                 2, // num of output
-                uint8(height)
+                uint8(_height)
             )
         );
 
@@ -582,7 +663,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
                 uint8(NoteType.FREEZE),
                 uint8(note.inputNullifiers.length),
                 uint8(note.outputCommitments.length),
-                uint8(height)
+                uint8(_height)
             )
         );
 

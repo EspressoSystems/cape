@@ -1,10 +1,14 @@
 #![deny(warnings)]
 
-use crate::cape::*;
-use crate::ethereum::{deploy, get_funded_deployer};
-use crate::types::field_to_u256;
-use crate::types::{GenericInto, NullifierSol, TestCAPE};
-use crate::universal_param::UNIVERSAL_PARAM;
+use crate::{
+    cape::*,
+    ethereum::{deploy, get_funded_deployer},
+    ledger::CapeLedger,
+    state::{CapeContractState, CapeEthEffect, CapeEvent, CapeOperation, CapeTransaction},
+    types::field_to_u256,
+    types::{GenericInto, NullifierSol, TestCAPE},
+    universal_param::UNIVERSAL_PARAM,
+};
 use anyhow::Result;
 use ethers::prelude::{Address, U256};
 use jf_aap::keys::{UserKeyPair, UserPubKey};
@@ -23,10 +27,6 @@ use rand_chacha::ChaChaRng;
 use reef::traits::Ledger as _;
 use std::path::Path;
 use std::time::Instant;
-use zerok_lib::cape_ledger::CapeLedger;
-use zerok_lib::cape_state::CapeContractState;
-use zerok_lib::cape_state::CapeTransaction;
-use zerok_lib::cape_state::{CapeEthEffect, CapeEvent, CapeOperation};
 
 async fn test_2user_maybe_submit(should_submit: bool) -> Result<()> {
     let now = Instant::now();

@@ -18,7 +18,9 @@ use tide_websockets::{WebSocket, WebSocketConnection};
 
 mod disco;
 mod ip;
+mod mocks;
 mod routes;
+mod wallet;
 
 #[derive(Debug, StructOpt)]
 #[structopt(
@@ -340,6 +342,7 @@ async fn main() -> Result<(), std::io::Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use cap_rust_sandbox::state::{Erc20Code, EthereumAddr};
     use jf_aap::{
         keys::UserKeyPair,
         structs::{AssetCode, AssetDefinition},
@@ -357,7 +360,6 @@ mod tests {
     use tagged_base64::TaggedBase64;
     use tempdir::TempDir;
     use tracing_test::traced_test;
-    use zerok_lib::cape_state::{Erc20Code, EthereumAddr};
 
     lazy_static! {
         static ref PORT: Arc<Mutex<u64>> = {

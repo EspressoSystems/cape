@@ -27,4 +27,3 @@ tide-websockets = "0.4.0"
 toml = "0.5"
 tracing = "0.1.26"
 tracing-subscriber = "0.3"
-zerok_lib = { git = "ssh://git@github.com/SpectrumXYZ/spectrum.git", rev = "a1af8c87e5f5546b60dbd455dffa20ff211629c8", features = ["mocks"] }

@@ -1,5 +1,5 @@
 #![deny(warnings)]
-use crate::types as sol;
+use crate::{state::CapeTransaction, types as sol};
 use anyhow::{anyhow, bail, Result};
 use ark_serialize::*;
 use ethers::prelude::Address;
@@ -11,7 +11,6 @@ use jf_aap::transfer::TransferNote;
 use jf_aap::TransactionNote;
 use num_traits::{FromPrimitive, ToPrimitive};
 use std::str::from_utf8;
-use zerok_lib::cape_state::CapeTransaction;
 
 pub const DOM_SEP_CAPE_BURN: &[u8] = b"TRICAPE burn";
 
@@ -265,6 +264,7 @@ impl From<CAPEConstructorArgs> for (u8, u64) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::state::{erc20_asset_description, Erc20Code, EthereumAddr};
     use ethers::prelude::{
         k256::ecdsa::SigningKey, Http, Provider, SignerMiddleware, Wallet, U256,
     };
@@ -272,7 +272,6 @@ mod tests {
         AssetCode, AssetCodeSeed, AssetDefinition, AssetPolicy, FreezeFlag, RecordOpening,
     };
     use rand::Rng;
-    use zerok_lib::cape_state::{erc20_asset_description, Erc20Code, EthereumAddr};
 
     use crate::assertion::Matcher;
     use crate::ethereum::{deploy, get_funded_deployer};

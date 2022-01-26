@@ -1,8 +1,8 @@
 #![deny(warnings)]
+use crate::state::CAPE_MERKLE_HEIGHT;
 use lazy_static::lazy_static;
 use rand_chacha::rand_core::SeedableRng;
 use rand_chacha::ChaChaRng;
-use zerok_lib::cape_state::CAPE_MERKLE_HEIGHT;
 
 pub use universal_param::get as get_universal_param;
 pub use universal_param::set as set_universal_param;

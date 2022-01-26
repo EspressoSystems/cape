@@ -297,7 +297,6 @@ mod tests {
         )
         .await
         .unwrap();
-        println!("deploy verifier");
 
         // deploy TestCAPE.sol
         let contract = deploy(
@@ -308,9 +307,6 @@ mod tests {
         )
         .await
         .unwrap();
-
-        println!("deploy cape");
-
         TestCAPE::new(contract.address(), client)
     }
 
@@ -345,6 +341,7 @@ mod tests {
                 .await?
                 .await?;
         }
+
         // submit the block during which validity proofs would be verified in batch
         let cape_block = CapeBlock::generate(params.txns, vec![], miner.address())?;
         contract

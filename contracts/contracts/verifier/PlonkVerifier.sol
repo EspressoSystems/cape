@@ -84,6 +84,13 @@ contract PlonkVerifier is IPlonkVerifier {
 
         PcsInfo[] memory pcsInfos = new PcsInfo[](proofs.length);
         for (uint256 i = 0; i < proofs.length; i++) {
+            // validate proofs are proper group/field elements
+            _validateProof(proofs[i]);
+            // validate public input are all proper scalar fields
+            for (uint256 j = 0; j < publicInputs[i].length; j++) {
+                BN254.validateScalarField(publicInputs[i][j]);
+            }
+            // prepare pcs info
             pcsInfos[i] = _preparePcsInfo(
                 verifyingKeys[i],
                 publicInputs[i],
@@ -93,6 +100,32 @@ contract PlonkVerifier is IPlonkVerifier {
         }
 
         return _batchVerifyOpeningProofs(pcsInfos);
+    }
+
+    /// @dev Check all group points and scalar fields are valid, or else revert
+    function _validateProof(PlonkProof memory proof) internal pure {
+        BN254.validateG1Point(proof.wire0);
+        BN254.validateG1Point(proof.wire1);
+        BN254.validateG1Point(proof.wire2);
+        BN254.validateG1Point(proof.wire3);
+        BN254.validateG1Point(proof.wire4);
+        BN254.validateG1Point(proof.prodPerm);
+        BN254.validateG1Point(proof.split0);
+        BN254.validateG1Point(proof.split1);
+        BN254.validateG1Point(proof.split2);
+        BN254.validateG1Point(proof.split3);
+        BN254.validateG1Point(proof.split4);
+        BN254.validateG1Point(proof.zeta);
+        BN254.validateScalarField(proof.wireEval0);
+        BN254.validateScalarField(proof.wireEval1);
+        BN254.validateScalarField(proof.wireEval2);
+        BN254.validateScalarField(proof.wireEval3);
+        BN254.validateScalarField(proof.wireEval4);
+        BN254.validateScalarField(proof.sigmaEval0);
+        BN254.validateScalarField(proof.sigmaEval1);
+        BN254.validateScalarField(proof.sigmaEval2);
+        BN254.validateScalarField(proof.sigmaEval3);
+        BN254.validateScalarField(proof.prodPermZetaOmegaEval);
     }
 
     function _preparePcsInfo(

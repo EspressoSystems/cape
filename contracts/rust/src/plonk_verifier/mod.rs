@@ -4,6 +4,7 @@ mod poly_eval;
 mod vk;
 
 use self::helpers::gen_plonk_proof_for_test;
+use crate::assertion::Matcher;
 use crate::types::GenericInto;
 use crate::{
     ethereum::{deploy, get_funded_deployer},
@@ -12,7 +13,7 @@ use crate::{
     types::{field_to_u256, TestPlonkVerifier},
 };
 use anyhow::Result;
-use ark_bn254::{Bn254, Fq, Fr, G1Projective};
+use ark_bn254::{Bn254, Fq, Fr, G1Affine, G1Projective};
 use ark_ec::ProjectiveCurve;
 use ark_ff::{Field, Zero};
 use ark_poly::{EvaluationDomain, Radix2EvaluationDomain};
@@ -28,6 +29,7 @@ use jf_plonk::{
     transcript::SolidityTranscript,
 };
 use jf_utils::field_switching;
+use rand::prelude::SliceRandom;
 use std::{convert::TryInto, path::Path};
 
 async fn deploy_contract(
@@ -506,6 +508,179 @@ async fn test_batch_verify_plonk_proofs() -> Result<()> {
                 .await?
         );
     }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_proof_and_pub_inputs_validation() -> Result<()> {
+    let rng = &mut test_rng();
+
+    let (proof, vk, public_inputs, extra_msg, _domain_size) =
+        gen_plonk_proof_for_test(1)?[0].clone();
+    let proof_sol: sol::PlonkProof = proof.into();
+    let vk_sol: sol::VerifyingKey = vk.into();
+    let pi_sol: Vec<U256> = public_inputs.iter().map(|f| field_to_u256(*f)).collect();
+    let extra_msg_sol: Bytes = if let Some(msg) = extra_msg {
+        Bytes::from(msg)
+    } else {
+        Bytes::default()
+    };
+
+    let bad_point_choices: Vec<sol::G1Point> = [
+        G1Affine::default(),
+        G1Affine::new(Fq::rand(rng), Fq::rand(rng), false),
+        G1Affine::new(Fq::rand(rng), Fq::rand(rng), false),
+        G1Affine::new(Fq::rand(rng), Fq::rand(rng), false),
+    ]
+    .iter()
+    .filter(|p| p.is_zero() || !p.is_on_curve())
+    .map(|p| (*p).into())
+    .collect();
+    let bad_scalar_choices = vec![U256::MAX, U256::MAX - 1, U256::MAX - 100, U256::MAX - 1000];
+
+    let contract = deploy_contract().await?;
+
+    async fn test_bad_point_in_proof(
+        contract: &TestPlonkVerifier<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>,
+        vk_sol: &sol::VerifyingKey,
+        pi_sol: &[U256],
+        bad_proof: sol::PlonkProof,
+        extra_msg_sol: &Bytes,
+    ) {
+        contract
+            .test_batch_verify(
+                vec![vk_sol.clone()],
+                vec![pi_sol.to_vec()],
+                vec![bad_proof],
+                vec![extra_msg_sol.clone()],
+            )
+            .call()
+            .await
+            .should_revert_with_message("Bn254: invalid G1 point");
+    }
+
+    async fn test_bad_field_in_proof(
+        contract: &TestPlonkVerifier<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>,
+        vk_sol: &sol::VerifyingKey,
+        pi_sol: &[U256],
+        bad_proof: sol::PlonkProof,
+        extra_msg_sol: &Bytes,
+    ) {
+        contract
+            .test_batch_verify(
+                vec![vk_sol.clone()],
+                vec![pi_sol.to_vec()],
+                vec![bad_proof],
+                vec![extra_msg_sol.clone()],
+            )
+            .call()
+            .await
+            .should_revert_with_message("Bn254: invalid scalar field");
+    }
+
+    // test potentially malformed proof
+    let mut bad_proof = proof_sol.clone();
+    bad_proof.wire_0 = bad_point_choices.choose(rng).unwrap().clone();
+    test_bad_point_in_proof(&contract, &vk_sol, &pi_sol, bad_proof, &extra_msg_sol).await;
+
+    let mut bad_proof = proof_sol.clone();
+    bad_proof.wire_1 = bad_point_choices.choose(rng).unwrap().clone();
+    test_bad_point_in_proof(&contract, &vk_sol, &pi_sol, bad_proof, &extra_msg_sol).await;
+
+    let mut bad_proof = proof_sol.clone();
+    bad_proof.wire_2 = bad_point_choices.choose(rng).unwrap().clone();
+    test_bad_point_in_proof(&contract, &vk_sol, &pi_sol, bad_proof, &extra_msg_sol).await;
+
+    let mut bad_proof = proof_sol.clone();
+    bad_proof.wire_3 = bad_point_choices.choose(rng).unwrap().clone();
+    test_bad_point_in_proof(&contract, &vk_sol, &pi_sol, bad_proof, &extra_msg_sol).await;
+
+    let mut bad_proof = proof_sol.clone();
+    bad_proof.wire_4 = bad_point_choices.choose(rng).unwrap().clone();
+    test_bad_point_in_proof(&contract, &vk_sol, &pi_sol, bad_proof, &extra_msg_sol).await;
+
+    let mut bad_proof = proof_sol.clone();
+    bad_proof.prod_perm = bad_point_choices.choose(rng).unwrap().clone();
+    test_bad_point_in_proof(&contract, &vk_sol, &pi_sol, bad_proof, &extra_msg_sol).await;
+
+    let mut bad_proof = proof_sol.clone();
+    bad_proof.split_0 = bad_point_choices.choose(rng).unwrap().clone();
+    test_bad_point_in_proof(&contract, &vk_sol, &pi_sol, bad_proof, &extra_msg_sol).await;
+
+    let mut bad_proof = proof_sol.clone();
+    bad_proof.split_1 = bad_point_choices.choose(rng).unwrap().clone();
+    test_bad_point_in_proof(&contract, &vk_sol, &pi_sol, bad_proof, &extra_msg_sol).await;
+
+    let mut bad_proof = proof_sol.clone();
+    bad_proof.split_2 = bad_point_choices.choose(rng).unwrap().clone();
+    test_bad_point_in_proof(&contract, &vk_sol, &pi_sol, bad_proof, &extra_msg_sol).await;
+
+    let mut bad_proof = proof_sol.clone();
+    bad_proof.split_3 = bad_point_choices.choose(rng).unwrap().clone();
+    test_bad_point_in_proof(&contract, &vk_sol, &pi_sol, bad_proof, &extra_msg_sol).await;
+
+    let mut bad_proof = proof_sol.clone();
+    bad_proof.split_4 = bad_point_choices.choose(rng).unwrap().clone();
+    test_bad_point_in_proof(&contract, &vk_sol, &pi_sol, bad_proof, &extra_msg_sol).await;
+
+    let mut bad_proof = proof_sol.clone();
+    bad_proof.zeta = bad_point_choices.choose(rng).unwrap().clone();
+    test_bad_point_in_proof(&contract, &vk_sol, &pi_sol, bad_proof, &extra_msg_sol).await;
+
+    let mut bad_proof = proof_sol.clone();
+    bad_proof.wire_eval_0 = bad_scalar_choices.choose(rng).unwrap().clone();
+    test_bad_field_in_proof(&contract, &vk_sol, &pi_sol, bad_proof, &extra_msg_sol).await;
+
+    let mut bad_proof = proof_sol.clone();
+    bad_proof.wire_eval_1 = bad_scalar_choices.choose(rng).unwrap().clone();
+    test_bad_field_in_proof(&contract, &vk_sol, &pi_sol, bad_proof, &extra_msg_sol).await;
+
+    let mut bad_proof = proof_sol.clone();
+    bad_proof.wire_eval_2 = bad_scalar_choices.choose(rng).unwrap().clone();
+    test_bad_field_in_proof(&contract, &vk_sol, &pi_sol, bad_proof, &extra_msg_sol).await;
+
+    let mut bad_proof = proof_sol.clone();
+    bad_proof.wire_eval_3 = bad_scalar_choices.choose(rng).unwrap().clone();
+    test_bad_field_in_proof(&contract, &vk_sol, &pi_sol, bad_proof, &extra_msg_sol).await;
+
+    let mut bad_proof = proof_sol.clone();
+    bad_proof.wire_eval_4 = bad_scalar_choices.choose(rng).unwrap().clone();
+    test_bad_field_in_proof(&contract, &vk_sol, &pi_sol, bad_proof, &extra_msg_sol).await;
+
+    let mut bad_proof = proof_sol.clone();
+    bad_proof.sigma_eval_0 = bad_scalar_choices.choose(rng).unwrap().clone();
+    test_bad_field_in_proof(&contract, &vk_sol, &pi_sol, bad_proof, &extra_msg_sol).await;
+
+    let mut bad_proof = proof_sol.clone();
+    bad_proof.sigma_eval_1 = bad_scalar_choices.choose(rng).unwrap().clone();
+    test_bad_field_in_proof(&contract, &vk_sol, &pi_sol, bad_proof, &extra_msg_sol).await;
+
+    let mut bad_proof = proof_sol.clone();
+    bad_proof.sigma_eval_2 = bad_scalar_choices.choose(rng).unwrap().clone();
+    test_bad_field_in_proof(&contract, &vk_sol, &pi_sol, bad_proof, &extra_msg_sol).await;
+
+    let mut bad_proof = proof_sol.clone();
+    bad_proof.sigma_eval_3 = bad_scalar_choices.choose(rng).unwrap().clone();
+    test_bad_field_in_proof(&contract, &vk_sol, &pi_sol, bad_proof, &extra_msg_sol).await;
+
+    let mut bad_proof = proof_sol.clone();
+    bad_proof.prod_perm_zeta_omega_eval = bad_scalar_choices.choose(rng).unwrap().clone();
+    test_bad_field_in_proof(&contract, &vk_sol, &pi_sol, bad_proof, &extra_msg_sol).await;
+
+    // test potentially malformed public input
+    let mut bad_pi = pi_sol.clone();
+    bad_pi[0] = bad_scalar_choices.choose(rng).unwrap().clone();
+    contract
+        .test_batch_verify(
+            vec![vk_sol.clone()],
+            vec![bad_pi],
+            vec![proof_sol.clone()],
+            vec![extra_msg_sol.clone()],
+        )
+        .call()
+        .await
+        .should_revert_with_message("Bn254: invalid scalar field");
 
     Ok(())
 }

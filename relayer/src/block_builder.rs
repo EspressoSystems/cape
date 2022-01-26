@@ -2,8 +2,10 @@ use crate::configuration::relayer_addr;
 use crate::state_persistence::StatePersistence;
 use crate::txn_queue::TxnQueue;
 
-use cap_rust_sandbox::cape::CapeBlock;
-use zerok_lib::cape_state::{CapeContractState, CapeOperation};
+use cap_rust_sandbox::{
+    cape::CapeBlock,
+    state::{CapeContractState, CapeOperation},
+};
 
 use std::vec::Vec;
 

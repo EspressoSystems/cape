@@ -1,7 +1,7 @@
 use atomic_store::{
     load_store::BincodeLoadStore, AppendLog, AtomicStore, AtomicStoreLoader, PersistenceError,
 };
-use zerok_lib::cape_state::CapeContractState;
+use cap_rust_sandbox::state::CapeContractState;
 
 use std::path::{Path, PathBuf};
 

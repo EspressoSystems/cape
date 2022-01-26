@@ -1,7 +1,7 @@
 // when it comes to Condvar usage, clippy gets this so very, very wrong...
 #![allow(clippy::mutex_atomic)]
 
-use zerok_lib::cape_state::CapeTransaction;
+use cap_rust_sandbox::state::CapeTransaction;
 
 use std::sync::{Condvar, Mutex};
 

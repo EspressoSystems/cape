@@ -3,14 +3,15 @@
 use crate::{
     assertion::Matcher,
     ethereum::{deploy, get_funded_deployer},
-    types::{field_to_u256, G1Point, G2Point, TestBN254},
+    types::{field_to_u256, u256_to_field, G1Point, G2Point, TestBN254},
 };
 use anyhow::Result;
 use ark_bn254::{Fq, Fr, G1Affine, G1Projective, G2Affine, G2Projective};
 use ark_ec::msm::VariableBaseMSM;
 use ark_ec::AffineCurve;
 use ark_ec::{group::Group, ProjectiveCurve};
-use ark_ff::{field_new, to_bytes, Field};
+use ark_ff::SquareRootField;
+use ark_ff::{field_new, to_bytes, Field, LegendreSymbol};
 use ark_ff::{FpParameters, PrimeField};
 use ark_serialize::CanonicalSerialize;
 use ark_std::UniformRand;
@@ -31,6 +32,24 @@ async fn deploy_contract() -> Result<TestBN254<SignerMiddleware<Provider<Http>, 
     .await
     .unwrap();
     Ok(TestBN254::new(contract.address(), client))
+}
+
+#[tokio::test]
+async fn test_quadratic_residue() -> Result<()> {
+    let rng = &mut ark_std::test_rng();
+    let contract = deploy_contract().await?;
+
+    // test random group addition
+    for _ in 0..100 {
+        let x = Fq::rand(rng);
+        let (is_residue, y) = contract.quadratic_residue(field_to_u256(x)).call().await?;
+        assert_eq!(x.legendre() == LegendreSymbol::QuadraticResidue, is_residue);
+        if is_residue {
+            let y = u256_to_field::<Fq>(y);
+            assert_eq!(x, y * y);
+        }
+    }
+    Ok(())
 }
 
 #[tokio::test]
@@ -365,6 +384,40 @@ async fn test_serialization() -> Result<()> {
         let sol_ser = contract.g_1_serialize(sol_point.into()).call().await?;
 
         assert_eq!(sol_ser.to_vec(), rust_ser);
+    }
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_deserialization() -> Result<()> {
+    let rng = &mut ark_std::test_rng();
+    let contract = deploy_contract().await?;
+    let mut rust_buf = Vec::new();
+    let mut sol_buf = [0u8; 32];
+
+    // infinity
+    let point: G1Affine = G1Affine::zero();
+    point.serialize(&mut rust_buf)?;
+    sol_buf.copy_from_slice(&rust_buf);
+    let sol_point: G1Point = contract.g_1_deserialize(sol_buf).call().await?;
+
+    assert_eq!(sol_point, point.into());
+
+    // generator
+    rust_buf = Vec::new();
+    let point = G1Affine::prime_subgroup_generator();
+    point.serialize(&mut rust_buf)?;
+    sol_buf.copy_from_slice(&rust_buf);
+    let sol_point: G1Point = contract.g_1_deserialize(sol_buf).call().await?;
+    assert_eq!(sol_point, point.into());
+
+    for _ in 0..10 {
+        rust_buf = Vec::new();
+        let point: G1Affine = G1Projective::rand(rng).into();
+        point.serialize(&mut rust_buf)?;
+        sol_buf.copy_from_slice(&rust_buf);
+        let sol_point: G1Point = contract.g_1_deserialize(sol_buf).call().await?;
+        assert_eq!(sol_point, point.into());
     }
     Ok(())
 }

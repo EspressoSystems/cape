@@ -77,7 +77,15 @@ contract TestBN254 {
         return C.multiScalarMul(bases, scalars);
     }
 
-    function g1Serialize(C.G1Point memory p) public pure returns (bytes memory res) {
-        return C.g1Serialize(p);
+    function g1Serialize(C.G1Point memory point) public pure returns (bytes memory res) {
+        return C.g1Serialize(point);
+    }
+
+    function g1Deserialize(bytes32 input) public view returns (C.G1Point memory point) {
+        return C.g1Deserialize(input);
+    }
+
+    function quadraticResidue(uint256 x) public view returns (bool isQuadraticResidue, uint256 a) {
+        return C.quadraticResidue(x);
     }
 }

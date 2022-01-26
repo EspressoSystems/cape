@@ -6,7 +6,3 @@ members = [
     "relayer",
     "wallet",
 ]
-
-# TODO: remove this, for testing and local logging only
-[patch."ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git"]
-jf-aap = { path = "../jellyfish-apps/aap" }

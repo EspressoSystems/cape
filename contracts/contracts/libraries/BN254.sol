@@ -205,6 +205,7 @@ library BN254 {
 
     /// @dev Evaluate the following pairing product:
     /// @dev e(a1, a2).e(-b1, b2) == 1
+    /// @dev caller needs to ensure that a1, a2, b1 and b2 are within proper group
     /// @notice credit: Aztec, Spilsbury Holdings Ltd
     function pairingProd2(
         G1Point memory a1,
@@ -212,9 +213,6 @@ library BN254 {
         G1Point memory b1,
         G2Point memory b2
     ) internal view returns (bool) {
-        // question: why we only validates a1 and b1 here?
-        validateG1Point(a1);
-        validateG1Point(b1);
         uint256 out;
         bool success;
         assembly {

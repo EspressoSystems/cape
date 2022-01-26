@@ -3162,6 +3162,7 @@ version = "0.0.1"
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=eca7b7e85718c7770c24ad90dd34b8a07209a01b#eca7b7e85718c7770c24ad90dd34b8a07209a01b"
 =======
 source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier#40ad4f2dc376fd7f65e0bf611aaa8b63f9e93529"
@@ -3231,6 +3232,9 @@ source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-v
 =======
 source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#4887d6847526c97cac6546f4cbcba77b331ea388"
 >>>>>>> 7665913... refactoring ed_on_bn254; prepare init msg (#366)
+=======
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#c2d54dc6553d81d5b0b3ee6ac850278ac3871a56"
+>>>>>>> 1316042... support 2^14 for mint, and transfer-2-3 in test
 dependencies = [
  "anyhow",
  "ark-bls12-377",

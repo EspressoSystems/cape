@@ -6,9 +6,12 @@ use std::process::Command;
 use std::{fs::OpenOptions, io::prelude::*, path::PathBuf};
 
 const TREE_DEPTH: u8 = 24;
-const SUPPORTED_VKS: [(NoteType, u8, u8, u8); 3] = [
+const SUPPORTED_VKS: [(NoteType, u8, u8, u8); 6] = [
+    (NoteType::Transfer, 1, 2, TREE_DEPTH),
     (NoteType::Transfer, 2, 2, TREE_DEPTH),
+    (NoteType::Transfer, 2, 3, TREE_DEPTH),
     (NoteType::Mint, 1, 2, TREE_DEPTH),
+    (NoteType::Freeze, 2, 2, TREE_DEPTH),
     (NoteType::Freeze, 3, 3, TREE_DEPTH),
 ];
 

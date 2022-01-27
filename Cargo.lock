@@ -1063,6 +1063,7 @@ dependencies = [
 name = "cape-workflow"
 version = "0.1.0"
 dependencies = [
+ "cap-rust-sandbox",
  "ethers 0.6.0 (git+https://github.com/gakonst/ethers-rs)",
  "itertools 0.10.3",
  "jf-aap",

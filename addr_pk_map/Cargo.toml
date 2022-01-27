@@ -1,0 +1,14 @@
+[package]
+name = "addr_pk_map"
+version = "0.0.1"
+edition = "2018"
+
+[dependencies]
+async-std = { version = "1.6.0", features = ["attributes"] }
+atomic_store = { git = "ssh://git@github.com/SpectrumXYZ/atomicstore.git" }
+bincode = "1.3.3"
+itertools = "0.10.1"
+jf-aap = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", rev = "eca7b7e85718c7770c24ad90dd34b8a07209a01b" }
+net = { git = "ssh://git@github.com/SpectrumXYZ/net.git" }
+serde = { version = "1.0", features = ["derive"] }
+tide = "0.16.0"

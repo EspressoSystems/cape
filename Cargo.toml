@@ -1,6 +1,7 @@
 [workspace]
 
 members = [
+    "addr_pk_map",
     "contracts/rust",
     "doc/workflow",
     "relayer",

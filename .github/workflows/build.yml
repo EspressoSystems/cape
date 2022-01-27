@@ -13,8 +13,8 @@ jobs:
     container:
       image: ghcr.io/spectrumxyz/nix:main
       credentials:
-         username: ancient123
-         password: ${{ secrets.ORG_GITHUB_PAT }}
+        username: ancient123
+        password: ${{ secrets.ORG_GITHUB_PAT }}
       volumes:
         - github_nix_251:/nix
     steps:
@@ -57,7 +57,7 @@ jobs:
         run: nix-shell --run "prepend-timestamps lint-ci"
 
       - name: Run Tests
-        run: nix-shell --run "prepend-timestamps cape-test-geth"
+        run: nix-shell --run "prepend-timestamps cape-test-hardhat"
 
       - name: Generate Docs
         run: nix-shell --run "prepend-timestamps make-doc"

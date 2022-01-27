@@ -9,7 +9,8 @@ jf-utils = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish
 jf-rescue = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git" }
 jf-aap = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", rev = "fd1de050c214584a296a11f366846a53a316c4d4" }
 
-ethers = { git = "https://github.com/gakonst/ethers-rs", features = ["abigen"] }
+# temporarily pin a revision since master is broken
+ethers = { git = "https://github.com/gakonst/ethers-rs", rev = "b619a5522f4aa814f56599d7be8463bca12c23fa", features = ["abigen"] }
 
 serde_json = "1.0.67"
 serde = { version = "1.0.124", features = ["derive"] }

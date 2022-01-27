@@ -21,10 +21,10 @@ arbitrary = { version="1.0", features=["derive"] }
 arbitrary-wrappers = { git = "ssh://git@github.com/SpectrumXYZ/arbitrary-wrappers.git" }
 
 # We need the legacy feature in order to avoid gas estimation issues. See https://github.com/gakonst/ethers-rs/issues/825
-ethers = { features=["legacy"], git = "https://github.com/gakonst/ethers-rs", branch = "master" }
-ethers-core = { features=["legacy"], git = "https://github.com/gakonst/ethers-rs", branch = "master" }
-ethers-contract = { features=["legacy"], git = "https://github.com/gakonst/ethers-rs", branch = "master" }
-
+# temporarily pin a revision since master is broken
+ethers = { features=["legacy"], git = "https://github.com/gakonst/ethers-rs", rev = "b619a5522f4aa814f56599d7be8463bca12c23fa" }
+ethers-core = { features=["legacy"], git = "https://github.com/gakonst/ethers-rs", rev = "b619a5522f4aa814f56599d7be8463bca12c23fa" }
+ethers-contract = { features=["legacy"], git = "https://github.com/gakonst/ethers-rs", rev = "b619a5522f4aa814f56599d7be8463bca12c23fa" }
 itertools = "0.10.1" # needed for jf-aap to compile
 ark-std = "0.3.0"
 serde_json = "1.0.67"

@@ -255,7 +255,7 @@ pub fn erc20_asset_description(erc20_code: &Erc20Code, sponsor: &EthereumAddr) -
     .concat()
 }
 
-fn is_erc20_asset_def_valid(
+pub fn is_erc20_asset_def_valid(
     def: &AssetDefinition,
     erc20_code: &Erc20Code,
     sponsor: &EthereumAddr,

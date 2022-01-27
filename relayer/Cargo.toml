@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-async-std = { version = "1.10.0", features = ["unstable", "attributes"] }
+async-std = { version = "1.10.0", features = ["unstable", "attributes", "tokio1"] }
 atomic_store = { version="0.0.2", registry="translucence" }
 bincode = "1.3.3"
 cap-rust-sandbox = { path = "../contracts/rust" }
@@ -19,13 +19,19 @@ jf-primitives = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jell
 key-set = { git = "ssh://git@github.com/SpectrumXYZ/key-set.git" }
 
 lazy_static = "1.4.0"
+net = { git = "ssh://git@github.com/SpectrumXYZ/net.git" }
 rand_chacha = { version = "0.3.1", features = ["serde1"] }
+reef = { git = "ssh://git@github.com/SpectrumXYZ/reef.git" }
 serde = { version = "1.0.123", features = ["derive", "rc"] }
 serde_derive = "1.0.118"
 serde_json = "1.0.61"
+snafu = { version = "0.7", features = ["backtraces"] }
 structopt = { version = "0.3" }
 tide = "0.16.0"
 tide-websockets = "0.4.0"
 toml = "0.5"
 tracing = "0.1.26"
 tracing-subscriber = "0.3"
+
+[dev-dependencies]
+surf = "2.3.2"

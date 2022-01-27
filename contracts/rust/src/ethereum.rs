@@ -12,7 +12,13 @@ use ethers::{
     },
 };
 
-use std::{convert::TryFrom, env, fs, path::Path, sync::Arc, time::Duration};
+use std::{
+    convert::TryFrom,
+    env, fs,
+    path::{Path, PathBuf},
+    sync::Arc,
+    time::Duration,
+};
 
 pub async fn get_funded_deployer(
 ) -> Result<Arc<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>> {
@@ -82,13 +88,16 @@ async fn link_unlinked_libraries<M: 'static + Middleware>(
         // otherwise, deploy the library.
         let rescue_lib_address = match env::var("RESCUE_LIB_ADDRESS") {
             Ok(val) => val.parse::<Address>()?,
-            Err(_) => deploy(
-                client.clone(),
-                Path::new("../abi/contracts/libraries/RescueLib.sol/RescueLib"),
-                (),
-            )
-            .await?
-            .address(),
+            Err(_) => {
+                let path: PathBuf = [
+                    &PathBuf::from(env!("CARGO_MANIFEST_DIR")),
+                    Path::new("../abi/contracts/libraries/RescueLib.sol/RescueLib"),
+                ]
+                .iter()
+                .collect();
+
+                deploy(client.clone(), &path, ()).await?.address()
+            }
         };
         bytecode
             .link(

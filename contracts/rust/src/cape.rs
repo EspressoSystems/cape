@@ -243,7 +243,7 @@ impl From<TransactionNote> for NoteType {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub(crate) struct CAPEConstructorArgs {
+pub struct CAPEConstructorArgs {
     height: u8,
     n_roots: u64,
     verifier_addr: Address,
@@ -251,7 +251,7 @@ pub(crate) struct CAPEConstructorArgs {
 
 #[allow(dead_code)]
 impl CAPEConstructorArgs {
-    pub(crate) fn new(height: u8, n_roots: u64, verifier_addr: Address) -> Self {
+    pub fn new(height: u8, n_roots: u64, verifier_addr: Address) -> Self {
         Self {
             height,
             n_roots,

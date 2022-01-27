@@ -1,0 +1,390 @@
+use async_std::task;
+use builders::ContractCall;
+use cap_rust_sandbox::{
+    cape::{CAPEConstructorArgs, CapeBlock},
+    ethereum::{deploy, get_funded_deployer},
+    ledger::CapeLedger,
+    state::CapeTransaction,
+    types,
+    types::{GenericInto, CAPE},
+};
+use ethers::{core::k256::ecdsa::SigningKey, prelude::*};
+use jf_aap::keys::UserPubKey;
+use net::server::{add_error_body, request_body, response};
+use reef::traits::Ledger;
+use serde::{Deserialize, Serialize};
+use snafu::Snafu;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
+use tide::StatusCode;
+
+type Middleware = SignerMiddleware<Provider<Http>, Wallet<SigningKey>>;
+type Client = Arc<Middleware>;
+
+#[derive(Clone, Debug)]
+enum Contract {
+    Real(CAPE<Middleware>),
+    #[cfg(test)]
+    Test(types::TestCAPE<Middleware>),
+}
+
+impl Contract {
+    fn submit_cape_block(
+        &self,
+        block: types::CapeBlock,
+        burned_ros: Vec<types::RecordOpening>,
+    ) -> ContractCall<Middleware, ()> {
+        match self {
+            Self::Real(contract) => contract.submit_cape_block(block, burned_ros),
+            #[cfg(test)]
+            Self::Test(contract) => contract.submit_cape_block(block, burned_ros),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Snafu, Serialize, Deserialize)]
+pub enum RelayerError {
+    #[snafu(display("failed to deserialize request body: {}", msg))]
+    Deserialize { msg: String },
+
+    #[snafu(display("submitted transaction does not form a valid block: {}", msg))]
+    BadBlock { msg: String },
+
+    #[snafu(display("error during transaction submission: {}", msg))]
+    Submission { msg: String },
+
+    #[snafu(display("transaction was not accepted by Ethereum miners"))]
+    Rejected,
+
+    #[snafu(display("internal server error: {}", msg))]
+    Internal { msg: String },
+}
+
+impl net::Error for RelayerError {
+    fn catch_all(msg: String) -> Self {
+        Self::Internal { msg }
+    }
+
+    fn status(&self) -> StatusCode {
+        match self {
+            Self::Deserialize { .. } | Self::BadBlock { .. } => StatusCode::BadRequest,
+            Self::Submission { .. } | Self::Rejected | Self::Internal { .. } => {
+                StatusCode::InternalServerError
+            }
+        }
+    }
+}
+
+fn server_error<E: Into<RelayerError>>(err: E) -> tide::Error {
+    net::server_error(err)
+}
+
+#[derive(Clone)]
+pub struct WebState {
+    contract: Contract,
+}
+
+async fn submit_endpoint(mut req: tide::Request<WebState>) -> Result<tide::Response, tide::Error> {
+    let tx = request_body(&mut req).await.map_err(|err| {
+        server_error(RelayerError::Deserialize {
+            msg: err.to_string(),
+        })
+    })?;
+    let ret = relay(&req.state().contract, tx)
+        .await
+        .map_err(server_error)?;
+    response(&req, ret)
+}
+
+const DEFAULT_RELAYER_PORT: u16 = 50077u16;
+
+fn init_web_server(
+    contract: Contract,
+    port: String,
+) -> task::JoinHandle<Result<(), std::io::Error>> {
+    let mut web_server = tide::with_state(WebState { contract });
+    web_server
+        .with(add_error_body::<_, RelayerError>)
+        .at("/submit")
+        .post(submit_endpoint);
+    let addr = format!("0.0.0.0:{}", port);
+    async_std::task::spawn(web_server.listen(addr))
+}
+
+async fn relay(
+    contract: &Contract,
+    transaction: CapeTransaction,
+) -> Result<TransactionReceipt, RelayerError> {
+    let miner = UserPubKey::default();
+    let burned_ros = match &transaction {
+        CapeTransaction::Burn { ro, .. } => vec![(**ro).clone().into()],
+        _ => vec![],
+    };
+    let cape_block = CapeBlock::from_cape_transactions(vec![transaction], miner.address())
+        .map_err(|err| RelayerError::BadBlock {
+            msg: err.to_string(),
+        })?;
+    contract
+        .submit_cape_block(cape_block.into(), burned_ros)
+        .send()
+        .await
+        .map_err(|err| RelayerError::Submission { msg: err.to_string() })?
+        .await
+        .map_err(|err| RelayerError::Submission { msg: err.to_string() })?
+        // If we are successful but get None instead of Some(TransactionReceipt), it means the
+        // transaction was finalized but not accepted; i.e. it was rejected or expired.
+        .ok_or(RelayerError::Rejected)
+}
+
+async fn deploy_contract(client: Client) -> Address {
+    let path = |contract| [
+        &PathBuf::from(env!("CARGO_MANIFEST_DIR")),
+        Path::new(contract),
+    ]
+    .iter()
+    .collect::<PathBuf>();
+
+    let verifier = deploy(
+        client.clone(),
+        &path("../abi/contracts/verifier/PlonkVerifier.sol/PlonkVerifier"),
+        (),
+    )
+    .await
+    .unwrap();
+
+    deploy(
+        client.clone(),
+        &path("../contracts/abi/contracts/CAPE.sol/CAPE"),
+        CAPEConstructorArgs::new(
+            CapeLedger::merkle_height(),
+            CapeLedger::record_root_history() as u64,
+            verifier.address(),
+        )
+        .generic_into::<(u8, u64, Address)>(),
+    )
+    .await
+    .unwrap()
+    .address()
+}
+
+#[async_std::main]
+async fn main() -> std::io::Result<()> {
+    let client = get_funded_deployer().await.unwrap();
+    let contract_address = deploy_contract(client.clone()).await;
+    let contract = CAPE::new(contract_address, client);
+    let port = std::env::var("PORT").unwrap_or_else(|_| DEFAULT_RELAYER_PORT.to_string());
+    init_web_server(Contract::Real(contract), port).await
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use async_std::sync::Mutex;
+    use cap_rust_sandbox::universal_param::UNIVERSAL_PARAM;
+    use jf_aap::{
+        keys::UserKeyPair,
+        structs::{AssetDefinition, FreezeFlag, RecordCommitment, RecordOpening},
+        transfer::{TransferNote, TransferNoteInput},
+        AccMemberWitness, MerkleTree, TransactionNote,
+    };
+    use lazy_static::lazy_static;
+    use net::{
+        client::{parse_error_body, response_body},
+        Error,
+    };
+    use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
+    use surf::Url;
+    use types::{field_to_u256, TestCAPE};
+
+    lazy_static! {
+        static ref PORT: Arc<Mutex<u64>> = {
+            let port_offset =
+                std::env::var("PORT").unwrap_or_else(|_| DEFAULT_RELAYER_PORT.to_string());
+            Arc::new(Mutex::new(port_offset.parse().unwrap()))
+        };
+    }
+
+    async fn get_port() -> u64 {
+        let mut counter = PORT.lock().await;
+        let port = *counter;
+        *counter += 1;
+        port
+    }
+
+    async fn deploy_test_contract(
+        rng: &mut ChaChaRng,
+        faucet: UserPubKey,
+    ) -> (TestCAPE<Middleware>, RecordOpening, MerkleTree) {
+        let client = get_funded_deployer().await.unwrap();
+        let path = |contract| [
+            &PathBuf::from(env!("CARGO_MANIFEST_DIR")),
+            Path::new(contract),
+        ]
+        .iter()
+        .collect::<PathBuf>();
+        let verifier = deploy(
+            client.clone(),
+            &path("../abi/contracts/verifier/PlonkVerifier.sol/PlonkVerifier"),
+            (),
+        )
+        .await
+        .unwrap();
+        let address = deploy(
+            client.clone(),
+            &path("../contracts/abi/contracts/CAPE.sol/CAPE"),
+            CAPEConstructorArgs::new(
+                CapeLedger::merkle_height(),
+                CapeLedger::record_root_history() as u64,
+                verifier.address(),
+            )
+            .generic_into::<(u8, u64, Address)>(),
+        )
+        .await
+        .unwrap()
+        .address();
+
+        let faucet_rec = RecordOpening::new(
+            rng,
+            u64::MAX / 2,
+            AssetDefinition::native(),
+            faucet,
+            FreezeFlag::Unfrozen,
+        );
+        let faucet_comm = RecordCommitment::from(&faucet_rec);
+        let contract = TestCAPE::new(address, client);
+        contract
+            .set_initial_record_commitments(vec![field_to_u256(faucet_comm.to_field_element())])
+            .send()
+            .await
+            .unwrap()
+            .await
+            .unwrap();
+        assert_eq!(contract.get_num_leaves().call().await.unwrap(), 1.into());
+
+        let mut records = MerkleTree::new(CapeLedger::merkle_height()).unwrap();
+        records.push(faucet_comm.to_field_element());
+
+        (contract, faucet_rec, records)
+    }
+
+    fn generate_transfer(
+        rng: &mut ChaChaRng,
+        faucet: &UserKeyPair,
+        faucet_rec: RecordOpening,
+        receiver: UserPubKey,
+        records: &MerkleTree,
+    ) -> CapeTransaction {
+        let xfr_prove_key = jf_aap::proof::transfer::preprocess(
+            &*UNIVERSAL_PARAM,
+            1,
+            2,
+            CapeLedger::merkle_height(),
+        )
+        .unwrap()
+        .0;
+        let valid_until = 2u64.pow(jf_aap::constants::MAX_TIMESTAMP_LEN as u32) - 1;
+        let inputs = vec![TransferNoteInput {
+            ro: faucet_rec.clone(),
+            acc_member_witness: AccMemberWitness::lookup_from_tree(&records, 0)
+                .expect_ok()
+                .unwrap()
+                .1,
+            owner_keypair: faucet,
+            cred: None,
+        }];
+        let outputs = [RecordOpening::new(
+            rng,
+            1,
+            AssetDefinition::native(),
+            receiver,
+            FreezeFlag::Unfrozen,
+        )];
+        let note =
+            TransferNote::generate_native(rng, inputs, &outputs, 1, valid_until, &xfr_prove_key)
+                .unwrap()
+                .0;
+        CapeTransaction::AAP(TransactionNote::Transfer(Box::new(note)))
+    }
+
+    #[async_std::test]
+    async fn test_relay() {
+        let mut rng = ChaChaRng::from_seed([42; 32]);
+        let faucet = UserKeyPair::generate(&mut rng);
+        let user = UserKeyPair::generate(&mut rng);
+
+        let (contract, faucet_rec, records) =
+            deploy_test_contract(&mut rng, faucet.pub_key()).await;
+        let transaction =
+            generate_transfer(&mut rng, &faucet, faucet_rec, user.pub_key(), &records);
+
+        // Submit a transaction and verify that the 2 output commitments get added to the contract's
+        // records Merkle tree.
+        relay(&Contract::Test(contract.clone()), transaction.clone())
+            .await
+            .unwrap();
+        assert_eq!(contract.get_num_leaves().call().await.unwrap(), 3.into());
+
+        // Submit an invalid transaction (e.g.the same one again) and check that the contract's
+        // records Merkle tree is not modified.
+        relay(&Contract::Test(contract.clone()), transaction)
+            .await
+            .unwrap();
+        assert_eq!(contract.get_num_leaves().call().await.unwrap(), 3.into());
+    }
+
+    fn get_client(port: u64) -> surf::Client {
+        let client: surf::Client = surf::Config::new()
+            .set_base_url(Url::parse(&format!("http://localhost:{}", port)).unwrap())
+            .try_into()
+            .unwrap();
+        client.with(parse_error_body::<RelayerError>)
+    }
+
+    #[async_std::test]
+    async fn test_submit() {
+        let mut rng = ChaChaRng::from_seed([42; 32]);
+        let faucet = UserKeyPair::generate(&mut rng);
+        let user = UserKeyPair::generate(&mut rng);
+
+        let (contract, faucet_rec, records) =
+            deploy_test_contract(&mut rng, faucet.pub_key()).await;
+        let transaction =
+            generate_transfer(&mut rng, &faucet, faucet_rec, user.pub_key(), &records);
+
+        let port = get_port().await;
+        init_web_server(Contract::Test(contract.clone()), port.to_string());
+        let client = get_client(port);
+        let mut res = client
+            .post("/submit")
+            .body_json(&transaction)
+            .unwrap()
+            .send()
+            .await
+            .unwrap();
+        let receipt = response_body::<TransactionReceipt>(&mut res).await.unwrap();
+        assert_eq!(receipt.transaction_index, 0.into());
+        assert_eq!(contract.get_num_leaves().call().await.unwrap(), 3.into());
+
+        // Test with the non-mock CAPE contract. We can't generate any valid transactions for this
+        // contract, since there's no faucet yet and it doesn't have the
+        // `set_initial_record_commitments` method, but we can at least check that our transaction
+        // is submitted correctly.
+        let deployer = get_funded_deployer().await.unwrap();
+        let contract = CAPE::new(deploy_contract(deployer.clone()).await, deployer);
+        let port = get_port().await;
+        init_web_server(Contract::Real(contract), port.to_string());
+        let client = get_client(port);
+        match RelayerError::from_client_error(
+            client
+                .post("/submit")
+                .body_json(&transaction)
+                .unwrap()
+                .send()
+                .await
+                .expect_err("expected submission of invalid transaction to fail"),
+        ) {
+            RelayerError::Submission { .. } => {}
+            err => panic!("expected submission error, got {:?}", err),
+        }
+    }
+}

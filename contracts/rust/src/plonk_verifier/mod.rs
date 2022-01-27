@@ -541,6 +541,20 @@ async fn test_proof_and_pub_inputs_validation() -> Result<()> {
 
     let contract = deploy_contract().await?;
 
+    // good path
+    assert!(
+        contract
+            .test_batch_verify(
+                vec![vk_sol.clone()],
+                vec![pi_sol.to_vec()],
+                vec![proof_sol.clone()],
+                vec![extra_msg_sol.clone()],
+            )
+            .call()
+            .await?
+    );
+
+    // bad path
     async fn test_bad_point_in_proof(
         contract: &TestPlonkVerifier<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>,
         vk_sol: &sol::VerifyingKey,

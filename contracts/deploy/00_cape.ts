@@ -11,6 +11,22 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     args: [],
     log: true,
   });
+  let edOnBN254 = await deploy("EdOnBN254", {
+    from: deployer,
+    args: [],
+    log: true,
+  });
+  let accumulatingArray = await deploy("AccumulatingArray", {
+    from: deployer,
+    args: [],
+    log: true,
+  });
+  let verifyingKeys = await deploy("VerifyingKeys", {
+    from: deployer,
+    args: [],
+    log: true,
+  });
+
   let plonkVerifierContract = await deploy("PlonkVerifier", {
     from: deployer,
     args: [],
@@ -26,8 +42,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     log: true,
     libraries: {
       RescueLib: rescueLib.address,
+      EdOnBN254: edOnBN254.address,
+      AccumulatingArray: accumulatingArray.address,
+      VerifyingKeys: verifyingKeys.address,
     },
   });
 };
+
 export default func;
 func.tags = ["CAPE"];

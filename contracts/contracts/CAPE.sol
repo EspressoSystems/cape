@@ -10,7 +10,6 @@ pragma solidity ^0.8.0;
 import "hardhat/console.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 import "./libraries/AccumulatingArray.sol";
-import "./libraries/BN254.sol";
 import "./libraries/EdOnBN254.sol";
 import "./libraries/RescueLib.sol";
 import "./libraries/VerifyingKeys.sol";

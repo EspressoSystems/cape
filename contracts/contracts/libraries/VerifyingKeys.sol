@@ -11,7 +11,7 @@ import "./Freeze3In3Out24DepthVk.sol";
 
 library VerifyingKeys {
     function getVkById(uint256 encodedId)
-        internal
+        external
         pure
         returns (IPlonkVerifier.VerifyingKey memory)
     {
@@ -45,7 +45,7 @@ library VerifyingKeys {
         uint8 numInput,
         uint8 numOutput,
         uint8 treeDepth
-    ) internal pure returns (uint256 encodedId) {
+    ) public pure returns (uint256 encodedId) {
         assembly {
             encodedId := add(
                 shl(24, noteType),

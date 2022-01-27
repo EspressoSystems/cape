@@ -8,14 +8,18 @@ describe("CAPE", function () {
 
     beforeEach(async function () {
       let rescue = await (await ethers.getContractFactory("RescueLib")).deploy();
+      let verifyingKeys = await (await ethers.getContractFactory("VerifyingKeys")).deploy();
+      let plonkVerifier = await (await ethers.getContractFactory("PlonkVerifier")).deploy();
       let capeFactory = await ethers.getContractFactory("TestCAPE", {
         libraries: {
           RescueLib: rescue.address,
+          VerifyingKeys: verifyingKeys.address,
         },
       });
-      const TREE_HEIGHT = 20;
-      const N_ROOTS = 3;
-      cape = await capeFactory.deploy(TREE_HEIGHT, N_ROOTS);
+
+      const TREE_HEIGHT = 24;
+      const N_ROOTS = 10;
+      cape = await capeFactory.deploy(TREE_HEIGHT, N_ROOTS, plonkVerifier.address);
     });
 
     it("is possible to check for non-membership", async function () {

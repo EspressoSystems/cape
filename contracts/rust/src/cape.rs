@@ -274,7 +274,6 @@ mod tests {
         k256::ecdsa::SigningKey, Http, Provider, SignerMiddleware, Wallet, U256,
     };
     use jf_aap::structs::RecordOpening;
-    use jf_aap::{txn_batch_verify, TransactionVerifyingKey};
     use rand::Rng;
 
     use crate::assertion::Matcher;
@@ -315,23 +314,9 @@ mod tests {
         let rng = &mut ark_std::test_rng();
 
         // Create a block with 3 transfer, 1 mint, 2 freeze
-        let params = TxnsParams::generate_txns(rng, 1, 0, 0, 24);
+        let params = TxnsParams::generate_txns(rng, 3, 1, 2, 24);
         let miner = UserKeyPair::generate(rng);
-        {
-            let verifying_keys: Vec<TransactionVerifyingKey> = params
-                .verifying_keys
-                .iter()
-                .take(1)
-                .map(|vk| (**vk).clone())
-                .collect();
-            txn_batch_verify(
-                &params.txns,
-                &[params.merkle_root],
-                params.valid_until - 1,
-                &verifying_keys.iter().collect::<Vec<_>>(),
-            )
-            .unwrap();
-        }
+
         // simulate initial contract state to contain those record to be consumed
         let contract = deploy_cape_test().await;
         for txn in params.txns.iter() {
@@ -354,8 +339,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_submit_empty_block_to_cape_contract() -> Result<()> {
-        let contract = deploy_cape_test().await;
-
         // Create an empty block transactions
         let rng = &mut ark_std::test_rng();
         let params = TxnsParams::generate_txns(rng, 0, 0, 0, 24);
@@ -364,6 +347,7 @@ mod tests {
         let cape_block = CapeBlock::generate(params.txns, vec![], miner.address())?;
 
         // Submitting an empty block does not yield a reject from the contract
+        let contract = deploy_cape_test().await;
         contract
             .submit_cape_block(cape_block.into(), vec![])
             .send()
@@ -378,8 +362,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_submit_block_to_cape_contract() -> Result<()> {
-        let contract = deploy_cape_test().await;
-
         // Create three transactions
         let rng = &mut ark_std::test_rng();
         let num_transfer_txn = 1;
@@ -396,6 +378,7 @@ mod tests {
         let cape_block = CapeBlock::generate(params.txns, vec![], miner.address())?;
 
         // Check that some nullifier is not yet inserted
+        let contract = deploy_cape_test().await;
         assert!(
             !contract
                 .nullifiers(nf.generic_into::<NullifierSol>().0)
@@ -429,9 +412,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_block_height() -> Result<()> {
-        let contract = deploy_cape_test().await;
-        assert_eq!(contract.height().call().await?, 0u64);
-
         let rng = &mut ark_std::test_rng();
         let params = TxnsParams::generate_txns(rng, 1, 0, 0, 24);
         let miner = UserPubKey::default();
@@ -440,6 +420,9 @@ mod tests {
         let cape_block = CapeBlock::generate(params.txns, vec![], miner.address())?;
 
         // TODO should not require to manually submit the root here
+        let contract = deploy_cape_test().await;
+        assert_eq!(contract.height().call().await?, 0u64);
+
         contract
             .add_root(root.generic_into::<MerkleRootSol>().0)
             .send()
@@ -451,15 +434,13 @@ mod tests {
             .send()
             .await?
             .await?;
-
         assert_eq!(contract.height().call().await?, 1u64);
+
         Ok(())
     }
 
     #[tokio::test]
     async fn test_event_block_committed() -> Result<()> {
-        let contract = deploy_cape_test().await;
-
         let rng = &mut ark_std::test_rng();
         let params = TxnsParams::generate_txns(rng, 1, 0, 0, 24);
         let miner = UserPubKey::default();
@@ -467,7 +448,7 @@ mod tests {
         let root = params.txns[0].merkle_root();
         let cape_block = CapeBlock::generate(params.txns, vec![], miner.address())?;
 
-        // TODO should not require to manually submit the root here
+        let contract = deploy_cape_test().await;
         contract
             .add_root(root.generic_into::<MerkleRootSol>().0)
             .send()
@@ -636,8 +617,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_check_transfer_expired_note_removed() -> Result<()> {
-        let contract = deploy_cape_test().await;
-
         let rng = &mut ark_std::test_rng();
         let params = TxnsParams::generate_txns(rng, 1, 0, 0, 24);
         let miner = UserPubKey::default();
@@ -653,7 +632,9 @@ mod tests {
         };
 
         // Set the height to expire note
+        let contract = deploy_cape_test().await;
         contract.set_height(valid_until + 1).send().await?.await?;
+
         contract
             .add_root(root.generic_into::<MerkleRootSol>().0)
             .send()
@@ -667,6 +648,8 @@ mod tests {
             .await?;
 
         // Verify nullifier *not* spent
+        let client = get_funded_deployer().await?;
+        let contract = TestCAPE::new(contract.address(), client);
         assert!(
             !contract
                 .nullifiers(nf.generic_into::<NullifierSol>().0)
@@ -981,14 +964,18 @@ mod tests {
         #[tokio::test]
         async fn test_plonk_proof_and_txn_notes() -> Result<()> {
             let rng = &mut ark_std::test_rng();
-            let contract = deploy_type_contract().await?;
             let num_transfer_txn = 1;
             let num_mint_txn = 1;
             let num_freeze_txn = 1;
             let params =
                 TxnsParams::generate_txns(rng, num_transfer_txn, num_mint_txn, num_freeze_txn, 24);
 
+            let contract = deploy_type_contract().await?;
             for txn in params.txns {
+                // reconnect with peer
+                let client = get_funded_deployer().await?;
+                let contract = TestCapeTypes::new(contract.address(), client);
+
                 let proof = txn.validity_proof();
                 assert_eq!(
                     proof.clone(),

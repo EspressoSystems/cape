@@ -295,77 +295,79 @@ contract CAPE is RecordsMerkleTree, RootStore {
         }
 
         // batch verify plonk proofs for includedNotes
-        IPlonkVerifier.VerifyingKey[] memory vks = new IPlonkVerifier.VerifyingKey[](
-            numIncludedNotes
-        );
-        uint256[][] memory publicInputs = new uint256[][](numIncludedNotes);
-        IPlonkVerifier.PlonkProof[] memory proofs = new IPlonkVerifier.PlonkProof[](
-            numIncludedNotes
-        );
-        bytes[] memory extraMsgs = new bytes[](numIncludedNotes);
-        transferIdx = 0;
-        mintIdx = 0;
-        freezeIdx = 0;
-        burnIdx = 0;
-        uint256 proofIdx = 0;
+        if (numIncludedNotes > 0) {
+            IPlonkVerifier.VerifyingKey[] memory vks = new IPlonkVerifier.VerifyingKey[](
+                numIncludedNotes
+            );
+            uint256[][] memory publicInputs = new uint256[][](numIncludedNotes);
+            IPlonkVerifier.PlonkProof[] memory proofs = new IPlonkVerifier.PlonkProof[](
+                numIncludedNotes
+            );
+            bytes[] memory extraMsgs = new bytes[](numIncludedNotes);
+            transferIdx = 0;
+            mintIdx = 0;
+            freezeIdx = 0;
+            burnIdx = 0;
+            uint256 proofIdx = 0;
 
-        for (uint256 i = 0; i < includedNotes.length; i++) {
-            if (newBlock.noteTypes[i] == NoteType.TRANSFER) {
-                TransferNote memory note = newBlock.transferNotes[transferIdx];
-                transferIdx++;
-                if (includedNotes[i]) {
-                    (
-                        vks[proofIdx],
-                        publicInputs[proofIdx],
-                        proofs[proofIdx],
-                        extraMsgs[proofIdx]
-                    ) = _prepareForProofVerification(note);
-                    proofIdx++;
+            for (uint256 i = 0; i < includedNotes.length; i++) {
+                if (newBlock.noteTypes[i] == NoteType.TRANSFER) {
+                    TransferNote memory note = newBlock.transferNotes[transferIdx];
+                    transferIdx++;
+                    if (includedNotes[i]) {
+                        (
+                            vks[proofIdx],
+                            publicInputs[proofIdx],
+                            proofs[proofIdx],
+                            extraMsgs[proofIdx]
+                        ) = _prepareForProofVerification(note);
+                        proofIdx++;
+                    }
+                } else if (newBlock.noteTypes[i] == NoteType.MINT) {
+                    MintNote memory note = newBlock.mintNotes[mintIdx];
+                    mintIdx++;
+                    if (includedNotes[i]) {
+                        (
+                            vks[proofIdx],
+                            publicInputs[proofIdx],
+                            proofs[proofIdx],
+                            extraMsgs[proofIdx]
+                        ) = _prepareForProofVerification(note);
+                        proofIdx++;
+                    }
+                } else if (newBlock.noteTypes[i] == NoteType.FREEZE) {
+                    FreezeNote memory note = newBlock.freezeNotes[freezeIdx];
+                    freezeIdx++;
+                    if (includedNotes[i]) {
+                        (
+                            vks[proofIdx],
+                            publicInputs[proofIdx],
+                            proofs[proofIdx],
+                            extraMsgs[proofIdx]
+                        ) = _prepareForProofVerification(note);
+                        proofIdx++;
+                    }
+                } else if (newBlock.noteTypes[i] == NoteType.BURN) {
+                    BurnNote memory note = newBlock.burnNotes[burnIdx];
+                    burnIdx++;
+                    if (includedNotes[i]) {
+                        (
+                            vks[proofIdx],
+                            publicInputs[proofIdx],
+                            proofs[proofIdx],
+                            extraMsgs[proofIdx]
+                        ) = _prepareForProofVerification(note);
+                        proofIdx++;
+                    }
+                } else {
+                    revert("Cape: unreachable!");
                 }
-            } else if (newBlock.noteTypes[i] == NoteType.MINT) {
-                MintNote memory note = newBlock.mintNotes[mintIdx];
-                mintIdx++;
-                if (includedNotes[i]) {
-                    (
-                        vks[proofIdx],
-                        publicInputs[proofIdx],
-                        proofs[proofIdx],
-                        extraMsgs[proofIdx]
-                    ) = _prepareForProofVerification(note);
-                    proofIdx++;
-                }
-            } else if (newBlock.noteTypes[i] == NoteType.FREEZE) {
-                FreezeNote memory note = newBlock.freezeNotes[freezeIdx];
-                freezeIdx++;
-                if (includedNotes[i]) {
-                    (
-                        vks[proofIdx],
-                        publicInputs[proofIdx],
-                        proofs[proofIdx],
-                        extraMsgs[proofIdx]
-                    ) = _prepareForProofVerification(note);
-                    proofIdx++;
-                }
-            } else if (newBlock.noteTypes[i] == NoteType.BURN) {
-                BurnNote memory note = newBlock.burnNotes[burnIdx];
-                burnIdx++;
-                if (includedNotes[i]) {
-                    (
-                        vks[proofIdx],
-                        publicInputs[proofIdx],
-                        proofs[proofIdx],
-                        extraMsgs[proofIdx]
-                    ) = _prepareForProofVerification(note);
-                    proofIdx++;
-                }
-            } else {
-                revert("Cape: unreachable!");
             }
+            require(
+                _verifier.batchVerify(vks, publicInputs, proofs, extraMsgs),
+                "Cape: batch verify failed."
+            );
         }
-        require(
-            _verifier.batchVerify(vks, publicInputs, proofs, extraMsgs),
-            "Cape: batch verify failed."
-        );
 
         if (!_isBlockEmpty(newBlock)) {
             // TODO Check that this is correct

@@ -54,7 +54,7 @@ jobs:
         run: nix-shell --run "prepend-timestamps lint-ci"
 
       - name: Run Tests
-        run: nix-shell --run "prepend-timestamps cape-test-hardhat"
+        run: nix-shell --run "prepend-timestamps cape-test-geth"
 
       - name: Generate Docs
         run: nix-shell --run "prepend-timestamps make-doc"

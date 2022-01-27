@@ -78,7 +78,7 @@ async fn link_unlinked_libraries<M: 'static + Middleware>(
     {
         // Connect to linked library if env var with address is set
         // otherwise, deploy the library.
-        let lib_address = match env::var("RESCUE_LIB_ADDRESS") {
+        let rescue_lib_address = match env::var("RESCUE_LIB_ADDRESS") {
             Ok(val) => val.parse::<Address>()?,
             Err(_) => deploy(
                 client.clone(),
@@ -92,10 +92,34 @@ async fn link_unlinked_libraries<M: 'static + Middleware>(
             .link(
                 "contracts/libraries/RescueLib.sol",
                 "RescueLib",
-                lib_address,
+                rescue_lib_address,
             )
             .resolve();
-    };
+    }
+
+    if bytecode
+        .contains_fully_qualified_placeholder("contracts/libraries/VerifyingKeys.sol:VerifyingKeys")
+    {
+        // Connect to linked library if env var with address is set
+        // otherwise, deploy the library.
+        let verifying_keys_lib_address = match env::var("VERIFYING_KEYS_LIB_ADDRESS") {
+            Ok(val) => val.parse::<Address>()?,
+            Err(_) => deploy(
+                client.clone(),
+                Path::new("../abi/contracts/libraries/VerifyingKeys.sol/VerifyingKeys"),
+                (),
+            )
+            .await?
+            .address(),
+        };
+        bytecode
+            .link(
+                "contracts/libraries/VerifyingKeys.sol",
+                "VerifyingKeys",
+                verifying_keys_lib_address,
+            )
+            .resolve();
+    }
 
     Ok(())
 }

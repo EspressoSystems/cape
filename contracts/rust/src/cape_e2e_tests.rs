@@ -8,6 +8,7 @@ use anyhow::Result;
 use ethers::prelude::{Address, U256};
 use jf_aap::keys::{UserKeyPair, UserPubKey};
 use jf_aap::structs::{AssetDefinition, FreezeFlag, RecordCommitment, RecordOpening};
+use jf_aap::testing_apis::universal_setup_for_test;
 use jf_aap::transfer::TransferNote;
 use jf_aap::transfer::TransferNoteInput;
 use jf_aap::AccMemberWitness;
@@ -24,8 +25,10 @@ use std::time::Instant;
 use zerok_lib::cape_state::CapeContractState;
 use zerok_lib::cape_state::CapeTransaction;
 use zerok_lib::cape_state::{CapeEthEffect, CapeEvent, CapeOperation};
-use zerok_lib::state::MERKLE_HEIGHT;
-use zerok_lib::universal_params::UNIVERSAL_PARAM;
+
+// NOTE: currently supported among list of hardcoded VK inside contract,
+// can be changed later.
+const MERKLE_HEIGHT: u8 = 24;
 
 async fn test_2user_maybe_submit(should_submit: bool) -> Result<()> {
     let now = Instant::now();
@@ -34,14 +37,15 @@ async fn test_2user_maybe_submit(should_submit: bool) -> Result<()> {
 
     let mut prng = ChaChaRng::from_seed([0x8au8; 32]);
 
-    let univ_setup = &*UNIVERSAL_PARAM;
+    let max_degree = 2usize.pow(16);
+    let srs = universal_setup_for_test(max_degree, &mut prng)?;
 
     let (xfr_prove_key, xfr_verif_key, _) =
-        jf_aap::proof::transfer::preprocess(univ_setup, 1, 2, MERKLE_HEIGHT).unwrap();
+        jf_aap::proof::transfer::preprocess(&srs, 1, 2, MERKLE_HEIGHT).unwrap();
     let (mint_prove_key, mint_verif_key, _) =
-        jf_aap::proof::mint::preprocess(univ_setup, MERKLE_HEIGHT).unwrap();
+        jf_aap::proof::mint::preprocess(&srs, MERKLE_HEIGHT).unwrap();
     let (freeze_prove_key, freeze_verif_key, _) =
-        jf_aap::proof::freeze::preprocess(univ_setup, 2, MERKLE_HEIGHT).unwrap();
+        jf_aap::proof::freeze::preprocess(&srs, 2, MERKLE_HEIGHT).unwrap();
 
     for (label, key) in vec![
         ("xfr", CanonicalBytes::from(xfr_verif_key.clone())),

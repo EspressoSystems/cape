@@ -138,6 +138,14 @@ contract TestPlonkVerifier is V, TestPoly {
 
         PcsInfo[] memory pcsInfos = new PcsInfo[](proofs.length);
         for (uint256 i = 0; i < proofs.length; i++) {
+            // validate proofs are proper group/field elements
+            V._validateProof(proofs[i]);
+
+            // validate public input are all proper scalar fields
+            for (uint256 j = 0; j < publicInputs[i].length; j++) {
+                BN254.validateScalarField(publicInputs[i][j]);
+            }
+
             // NOTE: only difference with actual code
             pcsInfos[i] = preparePcsInfo(
                 verifyingKeys[i],

@@ -27,4 +27,7 @@ echo "Running rust tests against hardhat backend"
 bin/build-abi
 env RPC_URL=http://localhost:$RPC_PORT cargo test --release -- --test-threads=1
 
+echo "Running js tests against hardhat backend"
+env RPC_PORT=$RPC_PORT hardhat test
+
 echo "All tests passed!"

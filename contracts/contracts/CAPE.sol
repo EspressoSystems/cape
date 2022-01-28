@@ -33,7 +33,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
     bytes14 public constant DOM_SEP_DOMESTIC_ASSET = "DOMESTIC_ASSET";
     uint256 public constant AAP_NATIVE_ASSET_CODE = 1;
 
-    event BlockCommitted(uint64 indexed height, bool[] includedNotes);
+    event BlockCommitted(uint64 indexed height);
 
     struct AuditMemo {
         EdOnBN254.EdOnBN254Point ephemeralKey;
@@ -247,14 +247,14 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
         uint256 mintIdx = 0;
         uint256 freezeIdx = 0;
         uint256 burnIdx = 0;
-        bool[] memory includedNotes = new bool[](newBlock.noteTypes.length);
-        uint256 numIncludedNotes = 0;
 
         AccumulatingArray.Data memory comms = AccumulatingArray.create(
             _computeMaxCommitments(newBlock)
         );
 
-        for (uint256 i = 0; i < newBlock.noteTypes.length; i++) {
+        uint256 numNotes = newBlock.noteTypes.length;
+
+        for (uint256 i = 0; i < numNotes; i++) {
             NoteType noteType = newBlock.noteTypes[i];
 
             if (noteType == NoteType.TRANSFER) {
@@ -262,35 +262,25 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
                 _checkContainsRoot(note.auxInfo.merkleRoot);
                 _checkTransfer(note);
                 // NOTE: expiry must be checked before publishing the nullifiers
-                if (!_isExpired(note) && _publish(note.inputNullifiers)) {
-                    comms.add(note.outputCommitments);
-                    includedNotes[i] = true;
-                    numIncludedNotes++;
-                }
+                require(!_isExpired(note), "Expired note");
+                require(_publish(note.inputNullifiers), "Duplicated nullifiers");
 
+                comms.add(note.outputCommitments);
                 transferIdx += 1;
             } else if (noteType == NoteType.MINT) {
                 MintNote memory note = newBlock.mintNotes[mintIdx];
                 _checkContainsRoot(note.auxInfo.merkleRoot);
-                if (_publish(note.inputNullifier)) {
-                    comms.add(note.mintComm);
-                    comms.add(note.chgComm);
-                    includedNotes[i] = true;
-                    _checkDomesticAssetCode(note.mintAssetDef.code, note.mintInternalAssetCode);
-                    // TODO extract proof for batch verification
-                    numIncludedNotes++;
-                }
-
+                require(_publish(note.inputNullifier), "Duplicated nullifiers");
+                comms.add(note.mintComm);
+                comms.add(note.chgComm);
+                _checkDomesticAssetCode(note.mintAssetDef.code, note.mintInternalAssetCode);
                 mintIdx += 1;
             } else if (noteType == NoteType.FREEZE) {
                 FreezeNote memory note = newBlock.freezeNotes[freezeIdx];
                 _checkContainsRoot(note.auxInfo.merkleRoot);
 
-                if (_publish(note.inputNullifiers)) {
-                    comms.add(note.outputCommitments);
-                    includedNotes[i] = true;
-                    numIncludedNotes++;
-                }
+                require(_publish(note.inputNullifiers), "Duplicated nullifiers");
+                comms.add(note.outputCommitments);
 
                 freezeIdx += 1;
             } else if (noteType == NoteType.BURN) {
@@ -299,12 +289,9 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
                 _checkContainsRoot(transfer.auxInfo.merkleRoot);
                 _checkBurn(note);
 
-                if (_publish(transfer.inputNullifiers)) {
-                    // TODO do we need a special logic for how to handle outputs record commitments with BURN notes
-                    comms.add(transfer.outputCommitments);
-                    includedNotes[i] = true;
-                    numIncludedNotes++;
-                }
+                require(_publish(transfer.inputNullifiers), "Dupl. nullifier(s)");
+                // TODO do we need a special logic for how to handle outputs record commitments with BURN notes
+                comms.add(transfer.outputCommitments);
 
                 // TODO handle withdrawal (better done at end if call is external
                 //      or have other reentrancy protection)
@@ -313,75 +300,67 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
             }
         }
 
-        // batch verify plonk proofs for includedNotes
-        if (numIncludedNotes > 0) {
-            IPlonkVerifier.VerifyingKey[] memory vks = new IPlonkVerifier.VerifyingKey[](
-                numIncludedNotes
-            );
-            uint256[][] memory publicInputs = new uint256[][](numIncludedNotes);
-            IPlonkVerifier.PlonkProof[] memory proofs = new IPlonkVerifier.PlonkProof[](
-                numIncludedNotes
-            );
-            bytes[] memory extraMsgs = new bytes[](numIncludedNotes);
-            transferIdx = 0;
-            mintIdx = 0;
-            freezeIdx = 0;
-            burnIdx = 0;
-            uint256 proofIdx = 0;
+        // Batch verify plonk proofs
+        IPlonkVerifier.VerifyingKey[] memory vks = new IPlonkVerifier.VerifyingKey[](numNotes);
+        uint256[][] memory publicInputs = new uint256[][](numNotes);
+        IPlonkVerifier.PlonkProof[] memory proofs = new IPlonkVerifier.PlonkProof[](numNotes);
+        bytes[] memory extraMsgs = new bytes[](numNotes);
+        transferIdx = 0;
+        mintIdx = 0;
+        freezeIdx = 0;
+        burnIdx = 0;
+        uint256 proofIdx = 0;
 
-            for (uint256 i = 0; i < includedNotes.length; i++) {
-                if (newBlock.noteTypes[i] == NoteType.TRANSFER) {
-                    TransferNote memory note = newBlock.transferNotes[transferIdx];
-                    transferIdx++;
-                    if (includedNotes[i]) {
-                        (
-                            vks[proofIdx],
-                            publicInputs[proofIdx],
-                            proofs[proofIdx],
-                            extraMsgs[proofIdx]
-                        ) = _prepareForProofVerification(note);
-                        proofIdx++;
-                    }
-                } else if (newBlock.noteTypes[i] == NoteType.MINT) {
-                    MintNote memory note = newBlock.mintNotes[mintIdx];
-                    mintIdx++;
-                    if (includedNotes[i]) {
-                        (
-                            vks[proofIdx],
-                            publicInputs[proofIdx],
-                            proofs[proofIdx],
-                            extraMsgs[proofIdx]
-                        ) = _prepareForProofVerification(note);
-                        proofIdx++;
-                    }
-                } else if (newBlock.noteTypes[i] == NoteType.FREEZE) {
-                    FreezeNote memory note = newBlock.freezeNotes[freezeIdx];
-                    freezeIdx++;
-                    if (includedNotes[i]) {
-                        (
-                            vks[proofIdx],
-                            publicInputs[proofIdx],
-                            proofs[proofIdx],
-                            extraMsgs[proofIdx]
-                        ) = _prepareForProofVerification(note);
-                        proofIdx++;
-                    }
-                } else if (newBlock.noteTypes[i] == NoteType.BURN) {
-                    BurnNote memory note = newBlock.burnNotes[burnIdx];
-                    burnIdx++;
-                    if (includedNotes[i]) {
-                        (
-                            vks[proofIdx],
-                            publicInputs[proofIdx],
-                            proofs[proofIdx],
-                            extraMsgs[proofIdx]
-                        ) = _prepareForProofVerification(note);
-                        proofIdx++;
-                    }
-                } else {
-                    revert("Cape: unreachable!");
-                }
+        for (uint256 i = 0; i < numNotes; i++) {
+            if (newBlock.noteTypes[i] == NoteType.TRANSFER) {
+                TransferNote memory note = newBlock.transferNotes[transferIdx];
+                transferIdx++;
+                (
+                    vks[proofIdx],
+                    publicInputs[proofIdx],
+                    proofs[proofIdx],
+                    extraMsgs[proofIdx]
+                ) = _prepareForProofVerification(note);
+                proofIdx++;
+            } else if (newBlock.noteTypes[i] == NoteType.MINT) {
+                MintNote memory note = newBlock.mintNotes[mintIdx];
+                mintIdx++;
+
+                (
+                    vks[proofIdx],
+                    publicInputs[proofIdx],
+                    proofs[proofIdx],
+                    extraMsgs[proofIdx]
+                ) = _prepareForProofVerification(note);
+                proofIdx++;
+            } else if (newBlock.noteTypes[i] == NoteType.FREEZE) {
+                FreezeNote memory note = newBlock.freezeNotes[freezeIdx];
+                freezeIdx++;
+
+                (
+                    vks[proofIdx],
+                    publicInputs[proofIdx],
+                    proofs[proofIdx],
+                    extraMsgs[proofIdx]
+                ) = _prepareForProofVerification(note);
+                proofIdx++;
+            } else if (newBlock.noteTypes[i] == NoteType.BURN) {
+                BurnNote memory note = newBlock.burnNotes[burnIdx];
+                burnIdx++;
+
+                (
+                    vks[proofIdx],
+                    publicInputs[proofIdx],
+                    proofs[proofIdx],
+                    extraMsgs[proofIdx]
+                ) = _prepareForProofVerification(note);
+                proofIdx++;
+            } else {
+                revert("Cape: unreachable!");
             }
+        }
+        // Skip the batch plonk verification if the block is empty
+        if (numNotes > 0) {
             require(
                 _verifier.batchVerify(vks, publicInputs, proofs, extraMsgs),
                 "Cape: batch verify failed."
@@ -396,7 +375,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
 
         // In all cases (the block is empty or not), the height is incremented.
         blockHeight += 1;
-        emit BlockCommitted(blockHeight, includedNotes);
+        emit BlockCommitted(blockHeight);
     }
 
     function _handleWithdrawal() internal {

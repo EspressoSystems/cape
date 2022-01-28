@@ -4,7 +4,6 @@ use async_trait::async_trait;
 use cap_rust_sandbox::{
     ledger::{CapeLedger, CapeNullifierSet, CapeTransition},
     types::CAPE,
-    universal_param::UNIVERSAL_PARAM,
 };
 use ethers::{
     core::k256::ecdsa::SigningKey,
@@ -18,6 +17,7 @@ use ethers::{
 use futures::Stream;
 use jf_aap::{
     keys::{UserAddress, UserPubKey},
+    proof::UniversalParam,
     structs::{Nullifier, ReceiverMemo},
     Signature,
 };
@@ -66,6 +66,7 @@ async fn connect_to_eth(
 }
 
 pub struct CapeBackend<'a, Meta: Serialize + DeserializeOwned> {
+    universal_param: &'a UniversalParam,
     relayer: surf::Client,
     contract: CAPE<EthMiddleware>,
     storage: Arc<Mutex<AtomicWalletStorage<'a, CapeLedger, Meta>>>,
@@ -75,6 +76,7 @@ pub struct CapeBackend<'a, Meta: Serialize + DeserializeOwned> {
 
 impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeBackend<'a, Meta> {
     pub async fn new(
+        universal_param: &'a UniversalParam,
         relayer_url: Url,
         contract_address: Address,
         eth_mnemonic: Option<String>,
@@ -91,6 +93,7 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeBackend<'a, Meta> {
         let storage = AtomicWalletStorage::new(loader, 1024)?;
         let key_stream = storage.key_stream();
         Ok(Self {
+            universal_param,
             relayer,
             contract,
             storage: Arc::new(Mutex::new(storage)),
@@ -158,13 +161,12 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
     //
 
     async fn create(&mut self) -> Result<WalletState<'a, CapeLedger>, CapeWalletError> {
-        let univ_param = &*UNIVERSAL_PARAM;
         let state = self
             .mock_eqs
             .lock()
             .await
             .network()
-            .create_wallet(univ_param)?;
+            .create_wallet(self.universal_param)?;
         self.storage().await.create(&state).await?;
         Ok(state)
     }

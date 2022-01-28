@@ -269,22 +269,23 @@ impl From<CAPEConstructorArgs> for (u8, u64, Address) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::state::{erc20_asset_description, Erc20Code, EthereumAddr};
-    use ethers::prelude::{
-        k256::ecdsa::SigningKey, Http, Provider, SignerMiddleware, Wallet, U256,
-    };
-    use jf_aap::structs::{AssetCode, AssetCodeSeed, InternalAssetCode, RecordOpening};
-    use rand::Rng;
-
     use crate::assertion::Matcher;
     use crate::ethereum::{deploy, get_funded_deployer};
+    use crate::ledger::CapeLedger;
+    use crate::state::{erc20_asset_description, Erc20Code, EthereumAddr};
     use crate::types::{
         AssetCodeSol, GenericInto, InternalAssetCodeSol, MerkleRootSol, NullifierSol,
         RecordCommitmentSol, TestCAPE, TestCapeTypes,
     };
     use anyhow::Result;
+    use ethers::prelude::{
+        k256::ecdsa::SigningKey, Http, Provider, SignerMiddleware, Wallet, U256,
+    };
     use jf_aap::keys::{UserKeyPair, UserPubKey};
+    use jf_aap::structs::{AssetCode, AssetCodeSeed, InternalAssetCode, RecordOpening};
     use jf_aap::utils::TxnsParams;
+    use rand::Rng;
+    use reef::Ledger;
     use std::path::Path;
 
     async fn deploy_cape_test() -> TestCAPE<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>> {
@@ -315,7 +316,7 @@ mod tests {
         let rng = &mut ark_std::test_rng();
 
         // Create a block with 3 transfer, 1 mint, 2 freeze
-        let params = TxnsParams::generate_txns(rng, 3, 1, 2, 24);
+        let params = TxnsParams::generate_txns(rng, 3, 1, 2, CapeLedger::merkle_height());
         let miner = UserKeyPair::generate(rng);
 
         // simulate initial contract state to contain those record to be consumed
@@ -342,7 +343,7 @@ mod tests {
     async fn test_submit_empty_block_to_cape_contract() -> Result<()> {
         // Create an empty block transactions
         let rng = &mut ark_std::test_rng();
-        let params = TxnsParams::generate_txns(rng, 0, 0, 0, 24);
+        let params = TxnsParams::generate_txns(rng, 0, 0, 0, CapeLedger::merkle_height());
         let miner = UserPubKey::default();
 
         let cape_block = CapeBlock::generate(params.txns, vec![], miner.address())?;
@@ -368,8 +369,13 @@ mod tests {
         let num_transfer_txn = 1;
         let num_mint_txn = 1;
         let num_freeze_txn = 1;
-        let params =
-            TxnsParams::generate_txns(rng, num_transfer_txn, num_mint_txn, num_freeze_txn, 24);
+        let params = TxnsParams::generate_txns(
+            rng,
+            num_transfer_txn,
+            num_mint_txn,
+            num_freeze_txn,
+            CapeLedger::merkle_height(),
+        );
         let miner = UserPubKey::default();
 
         let nf = params.txns[0].nullifiers()[0];
@@ -414,7 +420,7 @@ mod tests {
     #[tokio::test]
     async fn test_block_height() -> Result<()> {
         let rng = &mut ark_std::test_rng();
-        let params = TxnsParams::generate_txns(rng, 1, 0, 0, 24);
+        let params = TxnsParams::generate_txns(rng, 1, 0, 0, CapeLedger::merkle_height());
         let miner = UserPubKey::default();
 
         let root = params.txns[0].merkle_root();
@@ -443,7 +449,7 @@ mod tests {
     #[tokio::test]
     async fn test_event_block_committed() -> Result<()> {
         let rng = &mut ark_std::test_rng();
-        let params = TxnsParams::generate_txns(rng, 1, 0, 0, 24);
+        let params = TxnsParams::generate_txns(rng, 1, 0, 0, CapeLedger::merkle_height());
         let miner = UserPubKey::default();
 
         let root = params.txns[0].merkle_root();
@@ -619,7 +625,7 @@ mod tests {
     #[tokio::test]
     async fn test_check_transfer_expired_note_removed() -> Result<()> {
         let rng = &mut ark_std::test_rng();
-        let params = TxnsParams::generate_txns(rng, 1, 0, 0, 24);
+        let params = TxnsParams::generate_txns(rng, 1, 0, 0, CapeLedger::merkle_height());
         let miner = UserPubKey::default();
 
         let tx = params.txns[0].clone();
@@ -949,7 +955,7 @@ mod tests {
     async fn test_check_domestic_asset_code_in_submit_cape_block() -> Result<()> {
         let contract = deploy_cape_test().await;
         let rng = &mut ark_std::test_rng();
-        let params = TxnsParams::generate_txns(rng, 0, 1, 0);
+        let params = TxnsParams::generate_txns(rng, 0, 1, 0, CapeLedger::merkle_height());
 
         contract
             .add_root(params.merkle_root.generic_into::<MerkleRootSol>().0)
@@ -974,7 +980,7 @@ mod tests {
 
     mod type_conversion {
         use super::*;
-        use crate::types::GenericInto;
+        use crate::{ledger::CapeLedger, types::GenericInto};
         use ark_bn254::{Bn254, Fr};
         use ark_std::UniformRand;
         use jf_aap::{
@@ -1151,8 +1157,13 @@ mod tests {
             let num_transfer_txn = 1;
             let num_mint_txn = 1;
             let num_freeze_txn = 1;
-            let params =
-                TxnsParams::generate_txns(rng, num_transfer_txn, num_mint_txn, num_freeze_txn, 24);
+            let params = TxnsParams::generate_txns(
+                rng,
+                num_transfer_txn,
+                num_mint_txn,
+                num_freeze_txn,
+                CapeLedger::merkle_height(),
+            );
 
             let contract = deploy_type_contract().await?;
             for txn in params.txns {

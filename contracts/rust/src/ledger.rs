@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 use crate::state::*;
 use arbitrary::{Arbitrary, Unstructured};
 use arbitrary_wrappers::*;
@@ -29,17 +28,6 @@ impl CapeNullifierSet {
     pub fn get(&self, n: Nullifier) -> Option<bool> {
         self.0.get(&n).cloned()
     }
-=======
-use ark_serialize::*;
-use commit::{Commitment, Committable, RawCommitmentBuilder};
-use generic_array::GenericArray;
-use jf_aap::{structs::Nullifier, TransactionNote};
-use jf_utils::tagged_blob;
-use reef::traits::*;
-use serde::{Deserialize, Serialize};
-use sha3::{Digest, Keccak256};
-use zerok_lib::cape_state::CapeValidationError;
->>>>>>> 7665913... refactoring ed_on_bn254; prepare init msg (#366)
 
     pub fn insert(&mut self, n: Nullifier, value: bool) {
         self.0.insert(n, value);
@@ -71,11 +59,7 @@ pub enum CapeTransactionKind {
     Wrap,
 }
 
-<<<<<<< HEAD
 impl TransactionKind for CapeTransactionKind {
-=======
-impl reef::traits::TransactionKind for CAPETransactionKind {
->>>>>>> 7665913... refactoring ed_on_bn254; prepare init msg (#366)
     fn send() -> Self {
         Self::AAP(aap::TransactionKind::send())
     }
@@ -134,7 +118,6 @@ impl Transaction for CapeTransition {
 
     fn open_audit_memo(
         &self,
-<<<<<<< HEAD
         assets: &HashMap<AssetCode, AssetDefinition>,
         keys: &HashMap<AuditorPubKey, AuditorKeyPair>,
     ) -> Result<AuditMemoOpening, AuditError> {
@@ -171,18 +154,6 @@ impl Transaction for CapeTransition {
 
     fn hash(&self) -> Self::Hash {
         self.commit()
-=======
-        auditable_assets: &std::collections::HashMap<
-            jf_aap::structs::AssetCode,
-            jf_aap::structs::AssetDefinition,
-        >,
-        auditor_keys: &std::collections::HashMap<
-            jf_aap::keys::AuditorPubKey,
-            jf_aap::keys::AuditorKeyPair,
-        >,
-    ) -> Result<reef::AuditMemoOpening, reef::AuditError> {
-        unimplemented!();
->>>>>>> 7665913... refactoring ed_on_bn254; prepare init msg (#366)
     }
 
     fn kind(&self) -> CapeTransactionKind {
@@ -227,13 +198,9 @@ impl Committable for CapeBlock {
     }
 }
 
-impl Block for CAPEBlock {
-    type Transaction = CAPETransaction;
+impl Block for CapeBlock {
+    type Transaction = CapeTransition;
     type Error = CapeValidationError;
-
-    fn add_transaction(&mut self, _txn: Self::Transaction) -> Result<(), CapeValidationError> {
-        unimplemented!()
-    }
 
     fn new(txns: Vec<CapeTransition>) -> Self {
         Self(txns)
@@ -242,18 +209,11 @@ impl Block for CAPEBlock {
     fn txns(&self) -> Vec<CapeTransition> {
         self.0.clone()
     }
-<<<<<<< HEAD
 
-<<<<<<< HEAD
     fn add_transaction(&mut self, txn: CapeTransition) -> Result<(), CapeValidationError> {
-=======
-    fn add_transaction(&mut self, txn: Self::Transaction) -> Result<(), ValidationError> {
->>>>>>> bf2d89c... pin plonk-verifier dev branch for upstreams
         self.0.push(txn);
         Ok(())
     }
-=======
->>>>>>> 7665913... refactoring ed_on_bn254; prepare init msg (#366)
 }
 
 // In CAPE, we don't do local lightweight validation to check the results of queries. We trust the
@@ -313,18 +273,12 @@ impl Validator for CapeTruster {
 #[derive(Clone, Copy, Debug, Default)]
 pub struct CapeLedger;
 
-<<<<<<< HEAD
 impl Ledger for CapeLedger {
     type Validator = CapeTruster;
-=======
-impl Ledger for CAPELedger {
-    type Validator = CAPEValidator;
->>>>>>> 7665913... refactoring ed_on_bn254; prepare init msg (#366)
 
     fn name() -> String {
         String::from("CAPE")
     }
-<<<<<<< HEAD
 
     fn record_root_history() -> usize {
         CapeContractState::RECORD_ROOT_HISTORY_SIZE
@@ -333,6 +287,4 @@ impl Ledger for CAPELedger {
     fn merkle_height() -> u8 {
         CAPE_MERKLE_HEIGHT
     }
-=======
->>>>>>> 7665913... refactoring ed_on_bn254; prepare init msg (#366)
 }

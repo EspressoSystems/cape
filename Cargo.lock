@@ -149,11 +149,7 @@ dependencies = [
 [[package]]
 name = "arbitrary-wrappers"
 version = "0.1.0"
-<<<<<<< HEAD
-source = "git+ssh://git@github.com/SpectrumXYZ/arbitrary-wrappers.git#eff347321c035a7286c5e158ca586e86313aec32"
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/arbitrary-wrappers.git?branch=plonk-verifier#17c7ccf3052a77f91a6c74437c5e155a27b4aec2"
->>>>>>> 7665913... refactoring ed_on_bn254; prepare init msg (#366)
+source = "git+ssh://git@github.com/SpectrumXYZ/arbitrary-wrappers.git#165c544d82310ca8001590ca67e76aa959394711"
 dependencies = [
  "arbitrary",
  "ark-std",
@@ -165,10 +161,6 @@ dependencies = [
 ]
 
 [[package]]
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 7665913... refactoring ed_on_bn254; prepare init msg (#366)
 name = "ark-bls12-377"
 version = "0.3.0"
 source = "git+https://github.com/arkworks-rs/curves?rev=677b4ae751a274037880ede86e9b6f30f62635af#677b4ae751a274037880ede86e9b6f30f62635af"
@@ -179,8 +171,6 @@ dependencies = [
 ]
 
 [[package]]
-=======
->>>>>>> a25a242... Feat/impl additional transcript apis (#277)
 name = "ark-bls12-381"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1047,31 +1037,13 @@ dependencies = [
  "generic-array 0.14.5",
  "hex",
  "itertools 0.10.3",
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> a25a242... Feat/impl additional transcript apis (#277)
  "jf-aap",
  "jf-plonk",
  "jf-primitives",
  "jf-rescue",
  "jf-utils",
-<<<<<<< HEAD
-<<<<<<< HEAD
  "key-set",
  "lazy_static",
-=======
- "jf-aap 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier)",
- "jf-plonk 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier)",
- "jf-primitives 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier)",
- "jf-rescue 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier)",
- "jf-utils 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier)",
->>>>>>> bf2d89c... pin plonk-verifier dev branch for upstreams
-=======
->>>>>>> a25a242... Feat/impl additional transcript apis (#277)
-=======
- "key-set",
->>>>>>> 7665913... refactoring ed_on_bn254; prepare init msg (#366)
  "num-derive",
  "num-traits",
  "proptest 1.0.0",
@@ -1080,12 +1052,8 @@ dependencies = [
  "reef",
  "serde",
  "serde_json",
-<<<<<<< HEAD
- "sha3",
- "snafu 0.7.0",
-=======
  "sha3 0.9.1",
->>>>>>> 6a012ac... e2e test for prepare_pcs_info (#357)
+ "snafu 0.7.0",
  "strum_macros",
  "tokio",
  "universal-param",
@@ -1099,21 +1067,9 @@ dependencies = [
  "cap-rust-sandbox",
  "ethers 0.6.0 (git+https://github.com/gakonst/ethers-rs)",
  "itertools 0.10.3",
-<<<<<<< HEAD
-<<<<<<< HEAD
  "jf-aap",
  "jf-rescue",
  "jf-utils",
-=======
- "jf-aap 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?rev=2a40d01c938cdcc716071af5a0dc9b3242181c2c)",
- "jf-rescue 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?rev=2a40d01c938cdcc716071af5a0dc9b3242181c2c)",
- "jf-utils 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?rev=2a40d01c938cdcc716071af5a0dc9b3242181c2c)",
->>>>>>> bf2d89c... pin plonk-verifier dev branch for upstreams
-=======
- "jf-aap",
- "jf-rescue",
- "jf-utils",
->>>>>>> a25a242... Feat/impl additional transcript apis (#277)
  "rand 0.8.4",
  "serde",
  "serde_json",
@@ -1137,7 +1093,7 @@ dependencies = [
  "key-set",
  "lazy_static",
  "markdown",
- "net 0.1.0 (git+ssh://git@github.com/SpectrumXYZ/net.git)",
+ "net",
  "rand_chacha 0.3.1",
  "reef",
  "seahorse",
@@ -1347,13 +1303,8 @@ dependencies = [
  "ripemd160",
  "serde",
  "serde_derive",
-<<<<<<< HEAD
  "sha2 0.9.9",
- "sha3",
-=======
- "sha2 0.9.8",
  "sha3 0.9.1",
->>>>>>> 6a012ac... e2e test for prepare_pcs_info (#357)
  "thiserror",
 ]
 
@@ -1377,17 +1328,10 @@ dependencies = [
  "ark-serialize",
  "bitvec 0.20.1",
  "funty",
-<<<<<<< HEAD
  "generic-array 0.14.5",
  "hex",
  "serde",
- "sha3",
-=======
- "generic-array 0.14.4",
- "hex",
- "serde",
  "sha3 0.9.1",
->>>>>>> 6a012ac... e2e test for prepare_pcs_info (#357)
 ]
 
 [[package]]
@@ -1962,13 +1906,8 @@ dependencies = [
  "scrypt",
  "serde",
  "serde_json",
-<<<<<<< HEAD
  "sha2 0.9.9",
- "sha3",
-=======
- "sha2 0.9.8",
  "sha3 0.9.1",
->>>>>>> 6a012ac... e2e test for prepare_pcs_info (#357)
  "thiserror",
  "uuid",
 ]
@@ -2830,15 +2769,6 @@ checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 [[package]]
 name = "hex-literal"
 version = "0.3.4"
-<<<<<<< HEAD
-=======
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7ebdb29d2ea9ed0083cd8cece49bbd968021bd99b0849edb4a9a7ee0fdf6a4e0"
-
-[[package]]
-name = "hex_fmt"
-version = "0.3.0"
->>>>>>> bf2d89c... pin plonk-verifier dev branch for upstreams
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7ebdb29d2ea9ed0083cd8cece49bbd968021bd99b0849edb4a9a7ee0fdf6a4e0"
 
@@ -3153,88 +3083,7 @@ checksum = "1aab8fc367588b89dcee83ab0fd66b72b50b72fa1904d7095045ace2b0c81c35"
 [[package]]
 name = "jf-aap"
 version = "0.0.1"
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=eca7b7e85718c7770c24ad90dd34b8a07209a01b#eca7b7e85718c7770c24ad90dd34b8a07209a01b"
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier#40ad4f2dc376fd7f65e0bf611aaa8b63f9e93529"
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier#8ec5e6d3bb5dd81b745cc1de7042a4fa3467f2d3"
->>>>>>> a25a242... Feat/impl additional transcript apis (#277)
-dependencies = [
- "anyhow",
- "ark-bls12-377",
- "ark-bls12-381",
- "ark-bn254",
- "ark-ec",
- "ark-ed-on-bls12-377",
- "ark-ed-on-bls12-381",
- "ark-ed-on-bn254",
- "ark-ff",
- "ark-serialize",
- "ark-std",
- "bincode",
- "csv",
- "derivative",
- "displaydoc",
- "hex-literal",
- "itertools 0.10.3",
-<<<<<<< HEAD
- "jf-plonk 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier)",
- "jf-primitives 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier)",
- "jf-rescue 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier)",
- "jf-utils 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier)",
- "num_cpus",
- "percentage",
- "rand 0.8.4",
- "rand_chacha 0.3.1",
- "rayon",
- "rustc-serialize",
- "serde",
- "serde_derive",
- "sha2 0.9.8",
- "sha3",
- "structopt",
- "thiserror",
-]
-
-[[package]]
-name = "jf-aap"
-version = "0.0.1"
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?rev=2a40d01c938cdcc716071af5a0dc9b3242181c2c#2a40d01c938cdcc716071af5a0dc9b3242181c2c"
->>>>>>> bf2d89c... pin plonk-verifier dev branch for upstreams
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#ae0d524067bb2cc4b361a17a0820d4ea20b5335b"
->>>>>>> 49e30ca... compute alpha powers
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#fee8dda6062c358c616521c2805c32847bcfd20f"
->>>>>>> 30e1dc5... feat: add prepare_evaluations
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#6d98265d749adae416de62d86b13276869143e8d"
->>>>>>> bd5a4f4... add batch opening proof verification
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#bd25cbb823fbd27cd6b3790e52b64b9fb21ade69"
->>>>>>> ff7b224... feat: impl components for pcs info
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#bdd2b2a19810f16825c7a06c1faea5e6460e83df"
->>>>>>> 6a012ac... e2e test for prepare_pcs_info (#357)
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#25fe27408db86bda0d0293bc4198d2c039bac74e"
->>>>>>> ee462b0... Load hardcoded verifying key into contract (#371)
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#4887d6847526c97cac6546f4cbcba77b331ea388"
->>>>>>> 7665913... refactoring ed_on_bn254; prepare init msg (#366)
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#c2d54dc6553d81d5b0b3ee6ac850278ac3871a56"
->>>>>>> 1316042... support 2^14 for mint, and transfer-2-3 in test
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=fd1de050c214584a296a11f366846a53a316c4d4#fd1de050c214584a296a11f366846a53a316c4d4"
 dependencies = [
  "anyhow",
  "ark-bls12-377",
@@ -3254,8 +3103,6 @@ dependencies = [
  "displaydoc",
  "hex-literal",
  "itertools 0.10.3",
-=======
->>>>>>> a25a242... Feat/impl additional transcript apis (#277)
  "jf-plonk",
  "jf-primitives",
  "jf-rescue",
@@ -3268,13 +3115,8 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_json",
-<<<<<<< HEAD
  "sha2 0.9.9",
- "sha3",
-=======
- "sha2 0.9.8",
  "sha3 0.10.0",
->>>>>>> 6a012ac... e2e test for prepare_pcs_info (#357)
  "structopt",
  "thiserror",
 ]
@@ -3282,43 +3124,7 @@ dependencies = [
 [[package]]
 name = "jf-plonk"
 version = "0.0.1"
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#9b678f5156ad48e0cad318056b3fd73a5188e02d"
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier#40ad4f2dc376fd7f65e0bf611aaa8b63f9e93529"
->>>>>>> bf2d89c... pin plonk-verifier dev branch for upstreams
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier#8ec5e6d3bb5dd81b745cc1de7042a4fa3467f2d3"
->>>>>>> a25a242... Feat/impl additional transcript apis (#277)
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#ae0d524067bb2cc4b361a17a0820d4ea20b5335b"
->>>>>>> 49e30ca... compute alpha powers
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#fee8dda6062c358c616521c2805c32847bcfd20f"
->>>>>>> 30e1dc5... feat: add prepare_evaluations
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#6d98265d749adae416de62d86b13276869143e8d"
->>>>>>> bd5a4f4... add batch opening proof verification
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#bd25cbb823fbd27cd6b3790e52b64b9fb21ade69"
->>>>>>> ff7b224... feat: impl components for pcs info
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=feat-APIs-for-testing#7a000fa408ebeb7ca9f93d779ab1abed7a2eb57a"
->>>>>>> 6a012ac... e2e test for prepare_pcs_info (#357)
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=feat-APIs-for-testing#5ad412a26fc36258708c7e8af66b37aa0fc57ea7"
->>>>>>> ee462b0... Load hardcoded verifying key into contract (#371)
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#22132b13b507eebdf5de5b0acc33ed253893af39"
->>>>>>> 7665913... refactoring ed_on_bn254; prepare init msg (#366)
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#2dbcc60c0bc87a1ce0c9779eb7e2153d42e6d014"
 dependencies = [
  "ark-bls12-377",
  "ark-bls12-381",
@@ -3335,49 +3141,8 @@ dependencies = [
  "displaydoc",
  "downcast-rs",
  "itertools 0.10.3",
-<<<<<<< HEAD
-<<<<<<< HEAD
  "jf-rescue",
  "jf-utils",
-=======
- "jf-rescue 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier)",
- "jf-utils 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier)",
- "merlin",
- "num-bigint 0.4.3",
- "rand_chacha 0.3.1",
- "rayon",
- "serde",
- "sha3",
- "thiserror",
-]
-
-[[package]]
-name = "jf-plonk"
-version = "0.0.1"
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?rev=2a40d01c938cdcc716071af5a0dc9b3242181c2c#2a40d01c938cdcc716071af5a0dc9b3242181c2c"
-dependencies = [
- "ark-bls12-377 0.3.0 (git+https://github.com/arkworks-rs/curves)",
- "ark-bls12-381",
- "ark-bn254",
- "ark-bw6-761 0.3.0 (git+https://github.com/arkworks-rs/curves)",
- "ark-ec",
- "ark-ed-on-bls12-381-bandersnatch 0.3.0 (git+https://github.com/arkworks-rs/curves)",
- "ark-ff",
- "ark-poly",
- "ark-poly-commit",
- "ark-serialize",
- "ark-std",
- "derivative",
- "displaydoc",
- "downcast-rs",
- "itertools 0.10.3",
- "jf-rescue 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?rev=2a40d01c938cdcc716071af5a0dc9b3242181c2c)",
- "jf-utils 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?rev=2a40d01c938cdcc716071af5a0dc9b3242181c2c)",
->>>>>>> bf2d89c... pin plonk-verifier dev branch for upstreams
-=======
- "jf-rescue",
- "jf-utils",
->>>>>>> a25a242... Feat/impl additional transcript apis (#277)
  "merlin",
  "num-bigint 0.4.3",
  "rand_chacha 0.3.1",
@@ -3390,19 +3155,7 @@ dependencies = [
 [[package]]
 name = "jf-primitives"
 version = "0.0.1"
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#9b678f5156ad48e0cad318056b3fd73a5188e02d"
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier#40ad4f2dc376fd7f65e0bf611aaa8b63f9e93529"
->>>>>>> bf2d89c... pin plonk-verifier dev branch for upstreams
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#2dbcc60c0bc87a1ce0c9779eb7e2153d42e6d014"
 dependencies = [
  "ark-ec",
  "ark-ff",
@@ -3411,49 +3164,11 @@ dependencies = [
  "crypto_box",
  "derivative",
  "displaydoc",
-<<<<<<< HEAD
  "generic-array 0.14.5",
  "itertools 0.10.3",
  "jf-plonk",
  "jf-rescue",
  "jf-utils",
-=======
- "generic-array 0.14.4",
- "itertools 0.10.3",
- "jf-plonk 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier)",
- "jf-rescue 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier)",
- "jf-utils 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier)",
- "rayon",
- "serde",
- "thiserror",
- "zeroize",
-]
-
-[[package]]
-name = "jf-primitives"
-version = "0.0.1"
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?rev=2a40d01c938cdcc716071af5a0dc9b3242181c2c#2a40d01c938cdcc716071af5a0dc9b3242181c2c"
-dependencies = [
- "ark-bls12-377 0.3.0 (git+https://github.com/arkworks-rs/curves)",
- "ark-bls12-381",
- "ark-bn254",
- "ark-bw6-761 0.3.0 (git+https://github.com/arkworks-rs/curves)",
- "ark-ec",
- "ark-ed-on-bls12-377 0.3.0 (git+https://github.com/arkworks-rs/curves)",
- "ark-ed-on-bls12-381",
- "ark-ed-on-bls12-381-bandersnatch 0.3.0 (git+https://github.com/arkworks-rs/curves)",
- "ark-ed-on-bn254",
- "ark-ff",
- "ark-serialize",
- "ark-std",
- "crypto_box",
- "derivative",
- "displaydoc",
- "generic-array 0.14.4",
- "itertools 0.10.3",
- "jf-plonk 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?rev=2a40d01c938cdcc716071af5a0dc9b3242181c2c)",
- "jf-rescue 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?rev=2a40d01c938cdcc716071af5a0dc9b3242181c2c)",
- "jf-utils 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?rev=2a40d01c938cdcc716071af5a0dc9b3242181c2c)",
  "rayon",
  "serde",
  "thiserror",
@@ -3463,91 +3178,7 @@ dependencies = [
 [[package]]
 name = "jf-rescue"
 version = "0.0.1"
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier#40ad4f2dc376fd7f65e0bf611aaa8b63f9e93529"
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier#8ec5e6d3bb5dd81b745cc1de7042a4fa3467f2d3"
->>>>>>> a25a242... Feat/impl additional transcript apis (#277)
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#ae0d524067bb2cc4b361a17a0820d4ea20b5335b"
->>>>>>> 49e30ca... compute alpha powers
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#fee8dda6062c358c616521c2805c32847bcfd20f"
->>>>>>> 30e1dc5... feat: add prepare_evaluations
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#6d98265d749adae416de62d86b13276869143e8d"
->>>>>>> bd5a4f4... add batch opening proof verification
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#bd25cbb823fbd27cd6b3790e52b64b9fb21ade69"
->>>>>>> ff7b224... feat: impl components for pcs info
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=feat-APIs-for-testing#7a000fa408ebeb7ca9f93d779ab1abed7a2eb57a"
->>>>>>> 6a012ac... e2e test for prepare_pcs_info (#357)
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=feat-APIs-for-testing#5ad412a26fc36258708c7e8af66b37aa0fc57ea7"
->>>>>>> ee462b0... Load hardcoded verifying key into contract (#371)
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#22132b13b507eebdf5de5b0acc33ed253893af39"
->>>>>>> 7665913... refactoring ed_on_bn254; prepare init msg (#366)
-dependencies = [
- "ark-ec",
- "ark-ff",
- "ark-serialize",
- "ark-std",
- "crypto_box",
- "derivative",
- "displaydoc",
- "generic-array 0.14.4",
- "itertools 0.10.3",
-<<<<<<< HEAD
- "jf-utils 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier)",
->>>>>>> bf2d89c... pin plonk-verifier dev branch for upstreams
-=======
- "jf-plonk",
- "jf-rescue",
- "jf-utils",
->>>>>>> a25a242... Feat/impl additional transcript apis (#277)
- "rayon",
- "serde",
- "thiserror",
- "zeroize",
-]
-
-[[package]]
-name = "jf-rescue"
-version = "0.0.1"
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#9b678f5156ad48e0cad318056b3fd73a5188e02d"
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier#8ec5e6d3bb5dd81b745cc1de7042a4fa3467f2d3"
->>>>>>> a25a242... Feat/impl additional transcript apis (#277)
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#ae0d524067bb2cc4b361a17a0820d4ea20b5335b"
->>>>>>> 49e30ca... compute alpha powers
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#fee8dda6062c358c616521c2805c32847bcfd20f"
->>>>>>> 30e1dc5... feat: add prepare_evaluations
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#6d98265d749adae416de62d86b13276869143e8d"
->>>>>>> bd5a4f4... add batch opening proof verification
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#bd25cbb823fbd27cd6b3790e52b64b9fb21ade69"
->>>>>>> ff7b224... feat: impl components for pcs info
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=feat-APIs-for-testing#7a000fa408ebeb7ca9f93d779ab1abed7a2eb57a"
->>>>>>> 6a012ac... e2e test for prepare_pcs_info (#357)
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=feat-APIs-for-testing#5ad412a26fc36258708c7e8af66b37aa0fc57ea7"
->>>>>>> ee462b0... Load hardcoded verifying key into contract (#371)
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#22132b13b507eebdf5de5b0acc33ed253893af39"
->>>>>>> 7665913... refactoring ed_on_bn254; prepare init msg (#366)
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#2dbcc60c0bc87a1ce0c9779eb7e2153d42e6d014"
 dependencies = [
  "ark-bls12-377",
  "ark-bls12-381",
@@ -3575,126 +3206,24 @@ dependencies = [
 [[package]]
 name = "jf-utils"
 version = "0.0.1"
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#9b678f5156ad48e0cad318056b3fd73a5188e02d"
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier#40ad4f2dc376fd7f65e0bf611aaa8b63f9e93529"
->>>>>>> bf2d89c... pin plonk-verifier dev branch for upstreams
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier#8ec5e6d3bb5dd81b745cc1de7042a4fa3467f2d3"
->>>>>>> a25a242... Feat/impl additional transcript apis (#277)
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#ae0d524067bb2cc4b361a17a0820d4ea20b5335b"
->>>>>>> 49e30ca... compute alpha powers
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#fee8dda6062c358c616521c2805c32847bcfd20f"
->>>>>>> 30e1dc5... feat: add prepare_evaluations
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#6d98265d749adae416de62d86b13276869143e8d"
->>>>>>> bd5a4f4... add batch opening proof verification
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#bd25cbb823fbd27cd6b3790e52b64b9fb21ade69"
->>>>>>> ff7b224... feat: impl components for pcs info
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=feat-APIs-for-testing#7a000fa408ebeb7ca9f93d779ab1abed7a2eb57a"
->>>>>>> 6a012ac... e2e test for prepare_pcs_info (#357)
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=feat-APIs-for-testing#5ad412a26fc36258708c7e8af66b37aa0fc57ea7"
->>>>>>> ee462b0... Load hardcoded verifying key into contract (#371)
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#22132b13b507eebdf5de5b0acc33ed253893af39"
->>>>>>> 7665913... refactoring ed_on_bn254; prepare init msg (#366)
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#2dbcc60c0bc87a1ce0c9779eb7e2153d42e6d014"
 dependencies = [
  "anyhow",
  "ark-ec",
  "ark-ff",
  "ark-serialize",
  "ark-std",
-<<<<<<< HEAD
- "digest 0.9.0",
-<<<<<<< HEAD
-<<<<<<< HEAD
- "jf-utils-derive",
-=======
- "jf-utils-derive 0.1.0 (git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier)",
->>>>>>> bf2d89c... pin plonk-verifier dev branch for upstreams
- "serde",
- "sha2 0.9.9",
-=======
- "jf-utils-derive",
- "serde",
- "sha2 0.9.8",
->>>>>>> a25a242... Feat/impl additional transcript apis (#277)
-=======
  "digest 0.10.1",
  "jf-utils-derive",
  "serde",
  "sha2 0.10.1",
->>>>>>> 6a012ac... e2e test for prepare_pcs_info (#357)
  "tagged-base64",
 ]
 
 [[package]]
-<<<<<<< HEAD
 name = "jf-utils-derive"
 version = "0.1.0"
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#9b678f5156ad48e0cad318056b3fd73a5188e02d"
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier#40ad4f2dc376fd7f65e0bf611aaa8b63f9e93529"
-dependencies = [
- "ark-serialize",
- "ark-std",
- "quote",
- "syn",
-]
-
-[[package]]
-name = "jf-utils-derive"
-version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?rev=2a40d01c938cdcc716071af5a0dc9b3242181c2c#2a40d01c938cdcc716071af5a0dc9b3242181c2c"
->>>>>>> bf2d89c... pin plonk-verifier dev branch for upstreams
-=======
-name = "jf-utils-derive"
-version = "0.1.0"
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier#8ec5e6d3bb5dd81b745cc1de7042a4fa3467f2d3"
->>>>>>> a25a242... Feat/impl additional transcript apis (#277)
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#ae0d524067bb2cc4b361a17a0820d4ea20b5335b"
->>>>>>> 49e30ca... compute alpha powers
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#fee8dda6062c358c616521c2805c32847bcfd20f"
->>>>>>> 30e1dc5... feat: add prepare_evaluations
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#6d98265d749adae416de62d86b13276869143e8d"
->>>>>>> bd5a4f4... add batch opening proof verification
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?branch=plonk-verifier#bd25cbb823fbd27cd6b3790e52b64b9fb21ade69"
->>>>>>> ff7b224... feat: impl components for pcs info
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=feat-APIs-for-testing#7a000fa408ebeb7ca9f93d779ab1abed7a2eb57a"
->>>>>>> 6a012ac... e2e test for prepare_pcs_info (#357)
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=feat-APIs-for-testing#5ad412a26fc36258708c7e8af66b37aa0fc57ea7"
->>>>>>> ee462b0... Load hardcoded verifying key into contract (#371)
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#22132b13b507eebdf5de5b0acc33ed253893af39"
->>>>>>> 7665913... refactoring ed_on_bn254; prepare init msg (#366)
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#2dbcc60c0bc87a1ce0c9779eb7e2153d42e6d014"
 dependencies = [
  "ark-serialize",
  "ark-std",
@@ -3719,16 +3248,10 @@ checksum = "7511aa19fa182a8a4885760c4e5675b17173b02ae86ec5d376d34f5278c874b9"
 dependencies = [
  "cfg-if 1.0.0",
  "ecdsa",
-<<<<<<< HEAD
  "elliptic-curve",
  "sec1",
  "sha2 0.9.9",
- "sha3",
-=======
- "elliptic-curve 0.10.6",
- "sha2 0.9.8",
  "sha3 0.9.1",
->>>>>>> 6a012ac... e2e test for prepare_pcs_info (#357)
 ]
 
 [[package]]
@@ -3740,11 +3263,7 @@ checksum = "67c21572b4949434e4fc1e1978b99c5f77064153c59d998bf13ecd96fb5ecba7"
 [[package]]
 name = "key-set"
 version = "0.1.0"
-<<<<<<< HEAD
-source = "git+ssh://git@github.com/SpectrumXYZ/key-set.git#31d3f6f1433e2542af286cf31590a68a402fb5c5"
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/key-set.git?branch=plonk-verifier#0c1c0b7ec5a86a92b489014fa739cb45503d3e1e"
->>>>>>> 7665913... refactoring ed_on_bn254; prepare init msg (#366)
+source = "git+ssh://git@github.com/SpectrumXYZ/key-set.git#f8eefd5a26219aeb68a8c6a54c6f9f6c866a1314"
 dependencies = [
  "ark-serialize",
  "bincode",
@@ -3753,11 +3272,7 @@ dependencies = [
  "jf-aap",
  "serde",
  "serde_with",
-<<<<<<< HEAD
  "snafu 0.6.10",
-=======
- "snafu",
->>>>>>> 7665913... refactoring ed_on_bn254; prepare init msg (#366)
 ]
 
 [[package]]
@@ -3986,46 +3501,7 @@ dependencies = [
 [[package]]
 name = "net"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/net.git?rev=8d04d5578de00539bbaa218eaa1c12d02adef3ba#8d04d5578de00539bbaa218eaa1c12d02adef3ba"
-dependencies = [
- "ark-serialize",
- "ark-std",
- "bincode",
- "commit",
- "futures",
- "generic-array 0.14.5",
- "itertools 0.10.3",
-<<<<<<< HEAD
-<<<<<<< HEAD
- "jf-aap",
- "jf-utils",
-=======
- "jf-plonk 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier)",
- "jf-primitives 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier)",
- "jf-utils 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier)",
-=======
- "jf-plonk",
- "jf-primitives",
- "jf-utils",
->>>>>>> a25a242... Feat/impl additional transcript apis (#277)
- "markdown",
- "phaselock 0.0.5-dev",
- "procfs",
- "rand_chacha 0.2.2",
->>>>>>> bf2d89c... pin plonk-verifier dev branch for upstreams
- "serde",
- "serde_json",
- "snafu 0.6.10",
- "surf",
- "tagged-base64",
- "tide",
- "tracing",
-]
-
-[[package]]
-name = "net"
-version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/net.git#8d04d5578de00539bbaa218eaa1c12d02adef3ba"
+source = "git+ssh://git@github.com/SpectrumXYZ/net.git#7f46bc8df52f99e61a723122107e6f45f082928a"
 dependencies = [
  "ark-serialize",
  "ark-std",
@@ -4050,29 +3526,6 @@ name = "new_debug_unreachable"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e4a24736216ec316047a1fc4252e27dabb04218aa4a3f37c6e7ddbf1f9782b54"
-
-[[package]]
-name = "net"
-version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/net.git?branch=plonk-verifier#a55c3f09e3d27490ce2c5833d28160dbdcf42518"
-dependencies = [
- "ark-serialize",
- "ark-std",
- "bincode",
- "commit",
- "futures",
- "generic-array 0.14.4",
- "itertools 0.10.3",
- "jf-aap",
- "jf-utils",
- "serde",
- "serde_json",
- "snafu",
- "surf",
- "tagged-base64",
- "tide",
- "tracing",
-]
 
 [[package]]
 name = "nibble_vec"
@@ -4928,8 +4381,7 @@ dependencies = [
 [[package]]
 name = "reef"
 version = "0.1.0"
-<<<<<<< HEAD
-source = "git+ssh://git@github.com/SpectrumXYZ/reef.git?rev=6e3e7f683d2f8c1c1da662301f8ca8c2863018cc#6e3e7f683d2f8c1c1da662301f8ca8c2863018cc"
+source = "git+ssh://git@github.com/SpectrumXYZ/reef.git#ba644231992f52f7fd8498ce029a85bd82c204a6"
 dependencies = [
  "arbitrary",
  "arbitrary-wrappers",
@@ -4939,15 +4391,6 @@ dependencies = [
  "jf-aap",
  "serde",
  "snafu 0.6.10",
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/reef.git?branch=plonk-verifier#be9312a5f3b6a3c093476edccf0c1a03cdc2dae8"
-dependencies = [
- "ark-serialize",
- "itertools 0.10.3",
- "jf-aap",
- "serde",
- "snafu",
->>>>>>> 7665913... refactoring ed_on_bn254; prepare init msg (#366)
  "strum_macros",
 ]
 
@@ -4987,23 +4430,9 @@ dependencies = [
  "cap-rust-sandbox",
  "dirs",
  "ethers 0.6.0 (git+https://github.com/gakonst/ethers-rs?branch=master)",
-<<<<<<< HEAD
-<<<<<<< HEAD
  "jf-aap",
  "jf-primitives",
  "key-set",
-=======
- "jf-aap 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier)",
- "jf-primitives 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish.git?branch=plonk-verifier)",
->>>>>>> bf2d89c... pin plonk-verifier dev branch for upstreams
-=======
- "jf-aap",
- "jf-primitives",
-<<<<<<< HEAD
->>>>>>> a25a242... Feat/impl additional transcript apis (#277)
-=======
- "key-set",
->>>>>>> 7665913... refactoring ed_on_bn254; prepare init msg (#366)
  "lazy_static",
  "rand_chacha 0.3.1",
  "serde",
@@ -5324,13 +4753,8 @@ dependencies = [
  "hmac 0.11.0",
  "password-hash",
  "pbkdf2",
-<<<<<<< HEAD
- "salsa20",
- "sha2 0.9.9",
-=======
  "salsa20 0.8.1",
- "sha2 0.9.8",
->>>>>>> 6a012ac... e2e test for prepare_pcs_info (#357)
+ "sha2 0.9.9",
 ]
 
 [[package]]
@@ -5346,7 +4770,7 @@ dependencies = [
 [[package]]
 name = "seahorse"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/seahorse.git#73a10140007c4065707d4d164c2067183c9ba024"
+source = "git+ssh://git@github.com/SpectrumXYZ/seahorse.git#0e09d318e96fd8cc6dbeac1e9f15e4a1997be2f3"
 dependencies = [
  "arbitrary",
  "arbitrary-wrappers",
@@ -5357,7 +4781,7 @@ dependencies = [
  "async-trait",
  "atomic_store 0.0.2 (git+ssh://git@github.com/SpectrumXYZ/atomicstore.git)",
  "bincode",
- "chacha20 0.8.1",
+ "chacha20",
  "chrono",
  "commit",
  "futures",
@@ -5369,7 +4793,7 @@ dependencies = [
  "key-set",
  "lazy_static",
  "mnemonic",
- "net 0.1.0 (git+ssh://git@github.com/SpectrumXYZ/net.git?rev=8d04d5578de00539bbaa218eaa1c12d02adef3ba)",
+ "net",
  "proptest 0.8.7",
  "rand_chacha 0.3.1",
  "reef",
@@ -5377,7 +4801,7 @@ dependencies = [
  "rust-argon2",
  "rustyline",
  "serde",
- "sha3",
+ "sha3 0.9.1",
  "snafu 0.6.10",
  "strum",
  "strum_macros",
@@ -5579,9 +5003,6 @@ dependencies = [
  "cpufeatures",
  "digest 0.9.0",
  "opaque-debug 0.3.0",
-<<<<<<< HEAD
-=======
- "sha2-asm",
 ]
 
 [[package]]
@@ -5593,16 +5014,6 @@ dependencies = [
  "cfg-if 1.0.0",
  "cpufeatures",
  "digest 0.10.1",
-]
-
-[[package]]
-name = "sha2-asm"
-version = "0.6.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bf27176fb5d15398e3a479c652c20459d9dac830dedd1fa55b42a77dbcdbfcea"
-dependencies = [
- "cc",
->>>>>>> 6a012ac... e2e test for prepare_pcs_info (#357)
 ]
 
 [[package]]
@@ -6005,7 +5416,7 @@ dependencies = [
 [[package]]
 name = "tagged-base64"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/tagged-base64.git?branch=main#408f79ee1cdcfcfedfca796ea1f35a35ddc67042"
+source = "git+ssh://git@github.com/SpectrumXYZ/tagged-base64.git?branch=main#a90cb4e2302f432873579b2b2ab3bb9d6012f048"
 dependencies = [
  "base64 0.13.0",
  "console_error_panic_hook",
@@ -6521,7 +5932,7 @@ dependencies = [
 [[package]]
 name = "universal-param"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/universal-param.git#142dc6ced12a314cc0a5962a9e579d6632d9fb56"
+source = "git+ssh://git@github.com/SpectrumXYZ/universal-param.git#988da65b09eca7547ecdb878409455c4f95d4687"
 dependencies = [
  "ark-serialize",
  "ark-std",
@@ -6925,90 +6336,9 @@ dependencies = [
 [[package]]
 name = "zerok-macros"
 version = "0.1.0"
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
 source = "git+ssh://git@github.com/SpectrumXYZ/zerok-macros.git#0a9e9ca4ef8870bcd9a2373c00c4a697f704453a"
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/spectrum.git?branch=plonk-verifier#f66838b2a399d05586bfc12bbe9f96e89ff6a8fa"
->>>>>>> bf2d89c... pin plonk-verifier dev branch for upstreams
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/spectrum.git?branch=plonk-verifier#0ae7d2bb3c5d41203cb2417fe42e306cbf523703"
->>>>>>> 49e30ca... compute alpha powers
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/spectrum.git?branch=plonk-verifier#b72d7eb3f803f31ee8824397a292a3dbd0f1a79e"
->>>>>>> 6a012ac... e2e test for prepare_pcs_info (#357)
-=======
-source = "git+ssh://git@github.com/SpectrumXYZ/zerok-macros.git#0a9e9ca4ef8870bcd9a2373c00c4a697f704453a"
->>>>>>> 7665913... refactoring ed_on_bn254; prepare init msg (#366)
 dependencies = [
  "proc-macro2",
  "quote",
  "syn",
 ]
-<<<<<<< HEAD
-=======
-
-[[package]]
-name = "zerok_lib"
-version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/spectrum.git?branch=plonk-verifier#3ec158b0ed53ddef3e8994211ca295b2532061c7"
-dependencies = [
- "arbitrary",
- "arbitrary-wrappers",
- "ark-ff",
- "ark-serialize",
- "ark-std",
- "async-scoped",
- "async-std",
- "async-trait",
- "async-tungstenite 0.15.0",
- "async_executors",
- "atomic_store",
- "bincode",
- "bitvec 0.20.1",
- "chacha20",
- "chrono",
- "commit",
- "futures",
- "generic-array 0.14.4",
- "hex",
- "hmac 0.11.0",
- "itertools 0.10.3",
- "jf-aap",
- "jf-plonk",
- "jf-primitives",
- "jf-utils",
- "key-set",
- "lazy_static",
- "mnemonic",
- "net",
- "phaselock 0.0.5",
- "procfs",
- "rand 0.7.3",
- "rand_chacha 0.3.1",
- "rayon",
- "reef",
- "rpassword",
- "rust-argon2",
- "rustyline",
- "serde",
- "serde_cbor",
- "serde_derive",
- "serde_json",
- "serde_with",
- "sha3 0.9.1",
- "snafu",
- "strum",
- "strum_macros",
- "surf",
- "tagged-base64",
- "tempdir",
- "threshold_crypto",
- "tide",
- "tracing",
- "zeroize",
- "zerok-macros",
-]
->>>>>>> bf2d89c... pin plonk-verifier dev branch for upstreams

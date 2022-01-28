@@ -18,7 +18,9 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use std::hash::Hash;
 use std::sync::Arc;
 
-pub const CAPE_MERKLE_HEIGHT: u8 = 20 /*H*/;
+// NOTE: currently supported among list of hardcoded VK inside contract,
+// can be changed later.
+pub const CAPE_MERKLE_HEIGHT: u8 = 24 /*H*/;
 pub const CAPE_BURN_MAGIC_BYTES: &str = "TRICAPE burn";
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]

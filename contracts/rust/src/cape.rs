@@ -357,7 +357,7 @@ mod tests {
             .await?;
 
         // The height is incremented anyways.
-        assert_eq!(contract.height().call().await?, 1u64);
+        assert_eq!(contract.block_height().call().await?, 1u64);
 
         Ok(())
     }
@@ -428,7 +428,7 @@ mod tests {
 
         // TODO should not require to manually submit the root here
         let contract = deploy_cape_test().await;
-        assert_eq!(contract.height().call().await?, 0u64);
+        assert_eq!(contract.block_height().call().await?, 0u64);
 
         contract
             .add_root(root.generic_into::<MerkleRootSol>().0)
@@ -441,7 +441,7 @@ mod tests {
             .send()
             .await?
             .await?;
-        assert_eq!(contract.height().call().await?, 1u64);
+        assert_eq!(contract.block_height().call().await?, 1u64);
 
         Ok(())
     }
@@ -665,7 +665,7 @@ mod tests {
         );
 
         // Check that the height increased by one
-        assert_eq!(contract.height().call().await?, valid_until + 2);
+        assert_eq!(contract.block_height().call().await?, valid_until + 2);
         Ok(())
     }
 

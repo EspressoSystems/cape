@@ -5,10 +5,10 @@ import "../CAPE.sol";
 
 contract TestCAPE is CAPE {
     constructor(
-        uint8 height,
+        uint8 merkleTreeHeight,
         uint64 nRoots,
         address verifierAddr
-    ) CAPE(height, nRoots, verifierAddr) {}
+    ) CAPE(merkleTreeHeight, nRoots, verifierAddr) {}
 
     function getNumLeaves() public view returns (uint256) {
         return _numLeaves;
@@ -59,7 +59,7 @@ contract TestCAPE is CAPE {
     }
 
     function setHeight(uint64 newHeight) public {
-        height = newHeight;
+        blockHeight = newHeight;
     }
 
     function computeMaxCommitments(CapeBlock memory newBlock) public pure returns (uint256) {

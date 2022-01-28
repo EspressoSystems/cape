@@ -23,7 +23,7 @@ import "./RootStore.sol";
 
 contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
     mapping(uint256 => bool) public nullifiers;
-    uint64 public height;
+    uint64 public blockHeight;
     IPlonkVerifier private _verifier;
 
     using AccumulatingArray for AccumulatingArray.Data;
@@ -126,10 +126,10 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
     }
 
     constructor(
-        uint8 height,
+        uint8 merkleTreeHeight,
         uint64 nRoots,
         address verifierAddr
-    ) RecordsMerkleTree(height) RootStore(nRoots) {
+    ) RecordsMerkleTree(merkleTreeHeight) RootStore(nRoots) {
         _verifier = IPlonkVerifier(verifierAddr);
     }
 
@@ -395,8 +395,8 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
         }
 
         // In all cases (the block is empty or not), the height is incremented.
-        height += 1;
-        emit BlockCommitted(height, includedNotes);
+        blockHeight += 1;
+        emit BlockCommitted(blockHeight, includedNotes);
     }
 
     function _handleWithdrawal() internal {
@@ -428,7 +428,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
     }
 
     function _isExpired(TransferNote memory note) internal view returns (bool) {
-        return note.auxInfo.validUntil < height;
+        return note.auxInfo.validUntil < blockHeight;
     }
 
     function _checkBurn(BurnNote memory note) internal view {
@@ -512,7 +512,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
                 uint8(NoteType.TRANSFER),
                 uint8(note.inputNullifiers.length),
                 uint8(note.outputCommitments.length),
-                uint8(_height)
+                uint8(_merkleTreeHeight)
             )
         );
         // prepare public inputs
@@ -589,7 +589,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
                 uint8(NoteType.MINT),
                 1, // num of input
                 2, // num of output
-                uint8(_height)
+                uint8(_merkleTreeHeight)
             )
         );
 
@@ -648,7 +648,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
                 uint8(NoteType.FREEZE),
                 uint8(note.inputNullifiers.length),
                 uint8(note.outputCommitments.length),
-                uint8(_height)
+                uint8(_merkleTreeHeight)
             )
         );
 

@@ -12,7 +12,13 @@ use ethers::{
     },
 };
 
-use std::{convert::TryFrom, env, fs, path::Path, sync::Arc, time::Duration};
+use std::{
+    convert::TryFrom,
+    env, fs,
+    path::{Path, PathBuf},
+    sync::Arc,
+    time::Duration,
+};
 
 pub async fn get_funded_deployer(
 ) -> Result<Arc<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>> {
@@ -76,6 +82,16 @@ async fn link_unlinked_libraries<M: 'static + Middleware>(
     bytecode: &mut BytecodeObject,
     client: Arc<M>,
 ) -> Result<()> {
+    let path = |contract| {
+        [
+            &PathBuf::from(env!("CARGO_MANIFEST_DIR")),
+            Path::new("../abi/contracts"),
+            Path::new(contract),
+        ]
+        .iter()
+        .collect::<PathBuf>()
+    };
+
     if bytecode.contains_fully_qualified_placeholder("contracts/libraries/RescueLib.sol:RescueLib")
     {
         // Connect to linked library if env var with address is set
@@ -84,7 +100,7 @@ async fn link_unlinked_libraries<M: 'static + Middleware>(
             Ok(val) => val.parse::<Address>()?,
             Err(_) => deploy(
                 client.clone(),
-                Path::new("../abi/contracts/libraries/RescueLib.sol/RescueLib"),
+                &path("libraries/RescueLib.sol/RescueLib"),
                 (),
             )
             .await?
@@ -108,7 +124,7 @@ async fn link_unlinked_libraries<M: 'static + Middleware>(
             Ok(val) => val.parse::<Address>()?,
             Err(_) => deploy(
                 client.clone(),
-                Path::new("../abi/contracts/libraries/VerifyingKeys.sol/VerifyingKeys"),
+                &path("libraries/VerifyingKeys.sol/VerifyingKeys"),
                 (),
             )
             .await?

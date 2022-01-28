@@ -12,7 +12,6 @@ import "solidity-bytes-utils/contracts/BytesLib.sol";
 import "./libraries/AccumulatingArray.sol";
 import "./libraries/EdOnBN254.sol";
 import "./libraries/RescueLib.sol";
-import "./verifier/Transcript.sol";
 import "./libraries/VerifyingKeys.sol";
 import "./interfaces/IPlonkVerifier.sol";
 import "./AssetRegistry.sol";

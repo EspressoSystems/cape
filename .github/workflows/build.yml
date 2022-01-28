@@ -6,6 +6,8 @@ on:
 
 env:
   RUST_TEST_THREADS: 4
+  # TODO: remove this or increase this when contract size limit is not a problem
+  SOLC_OPTIMIZER_RUNS: 20
 
 jobs:
   build:

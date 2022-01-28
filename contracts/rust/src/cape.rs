@@ -357,7 +357,7 @@ mod tests {
             .await?;
 
         // The height is incremented anyways.
-        assert_eq!(contract.height().call().await?, 1u64);
+        assert_eq!(contract.block_height().call().await?, 1u64);
 
         Ok(())
     }
@@ -428,7 +428,7 @@ mod tests {
 
         // TODO should not require to manually submit the root here
         let contract = deploy_cape_test().await;
-        assert_eq!(contract.height().call().await?, 0u64);
+        assert_eq!(contract.block_height().call().await?, 0u64);
 
         contract
             .add_root(root.generic_into::<MerkleRootSol>().0)
@@ -441,7 +441,7 @@ mod tests {
             .send()
             .await?
             .await?;
-        assert_eq!(contract.height().call().await?, 1u64);
+        assert_eq!(contract.block_height().call().await?, 1u64);
 
         Ok(())
     }
@@ -474,11 +474,8 @@ mod tests {
             .query()
             .await?;
         assert_eq!(logs[0].height, 1);
-        assert_eq!(logs[0].included_notes, vec![true]);
         Ok(())
     }
-
-    // TODO add a test to check if includedNotes is computed correctly
 
     #[test]
     fn test_note_types() {
@@ -623,14 +620,14 @@ mod tests {
     // main block validaton loop.
 
     #[tokio::test]
-    async fn test_check_transfer_expired_note_removed() -> Result<()> {
+    async fn test_check_transfer_expired_note_triggers_an_error() -> Result<()> {
         let rng = &mut ark_std::test_rng();
         let params = TxnsParams::generate_txns(rng, 1, 0, 0, CapeLedger::merkle_height());
         let miner = UserPubKey::default();
 
         let tx = params.txns[0].clone();
         let root = tx.merkle_root();
-        let nf = tx.nullifiers()[0];
+
         let cape_block = CapeBlock::generate(params.txns, vec![], miner.address())?;
         let valid_until = match tx {
             TransactionNote::Transfer(note) => note.aux_info.valid_until,
@@ -648,24 +645,13 @@ mod tests {
             .await?
             .await?;
 
-        contract
+        let call = contract
             .submit_cape_block(cape_block.into(), vec![])
-            .send()
-            .await?
-            .await?;
+            .call()
+            .await;
 
-        // Verify nullifier *not* spent
-        let client = get_funded_deployer().await?;
-        let contract = TestCAPE::new(contract.address(), client);
-        assert!(
-            !contract
-                .nullifiers(nf.generic_into::<NullifierSol>().0)
-                .call()
-                .await?
-        );
+        call.should_revert_with_message("Expired note");
 
-        // Check that the height increased by one
-        assert_eq!(contract.height().call().await?, valid_until + 2);
         Ok(())
     }
 

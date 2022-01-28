@@ -16,6 +16,8 @@ use structopt::StructOpt;
 use tide::StatusCode;
 use tide_websockets::{WebSocket, WebSocketConnection};
 
+mod cli;
+mod cli_client;
 mod disco;
 mod ip;
 mod mocks;
@@ -342,6 +344,10 @@ async fn main() -> Result<(), std::io::Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{
+        cli::{cli_basic_info, cli_burn, create_wallet},
+        cli_client::cli_test,
+    };
     use cap_rust_sandbox::state::{Erc20Code, EthereumAddr};
     use jf_aap::{
         keys::UserKeyPair,
@@ -893,5 +899,16 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(defined_asset.policy_ref().reveal_threshold(), 0);
+    }
+
+    #[test]
+    fn cli_burn_test() {
+        cli_test(|t| {
+            create_wallet(t, 0)?;
+            cli_basic_info(t)?;
+            cli_burn(t)?;
+
+            Ok(())
+        });
     }
 }

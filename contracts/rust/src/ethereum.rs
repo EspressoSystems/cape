@@ -82,22 +82,29 @@ async fn link_unlinked_libraries<M: 'static + Middleware>(
     bytecode: &mut BytecodeObject,
     client: Arc<M>,
 ) -> Result<()> {
+    let path = |contract| {
+        [
+            &PathBuf::from(env!("CARGO_MANIFEST_DIR")),
+            Path::new("../abi/contracts"),
+            Path::new(contract),
+        ]
+        .iter()
+        .collect::<PathBuf>()
+    };
+
     if bytecode.contains_fully_qualified_placeholder("contracts/libraries/RescueLib.sol:RescueLib")
     {
         // Connect to linked library if env var with address is set
         // otherwise, deploy the library.
         let rescue_lib_address = match env::var("RESCUE_LIB_ADDRESS") {
             Ok(val) => val.parse::<Address>()?,
-            Err(_) => {
-                let path: PathBuf = [
-                    &PathBuf::from(env!("CARGO_MANIFEST_DIR")),
-                    Path::new("../abi/contracts/libraries/RescueLib.sol/RescueLib"),
-                ]
-                .iter()
-                .collect();
-
-                deploy(client.clone(), &path, ()).await?.address()
-            }
+            Err(_) => deploy(
+                client.clone(),
+                &path("libraries/RescueLib.sol/RescueLib"),
+                (),
+            )
+            .await?
+            .address(),
         };
         bytecode
             .link(
@@ -117,7 +124,7 @@ async fn link_unlinked_libraries<M: 'static + Middleware>(
             Ok(val) => val.parse::<Address>()?,
             Err(_) => deploy(
                 client.clone(),
-                Path::new("../abi/contracts/libraries/VerifyingKeys.sol/VerifyingKeys"),
+                &path("libraries/VerifyingKeys.sol/VerifyingKeys"),
                 (),
             )
             .await?

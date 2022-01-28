@@ -1,25 +1,17 @@
 use async_std::task;
 use builders::ContractCall;
-use cap_rust_sandbox::{
-    cape::{CAPEConstructorArgs, CapeBlock},
-    ethereum::{deploy, get_funded_deployer},
-    ledger::CapeLedger,
-    state::CapeTransaction,
-    types,
-    types::{GenericInto, CAPE},
-};
+use cap_rust_sandbox::{cape::CapeBlock, state::CapeTransaction, types, types::CAPE};
+use coins_bip39::English;
 use ethers::{core::k256::ecdsa::SigningKey, prelude::*};
 use jf_aap::keys::UserPubKey;
 use net::server::{add_error_body, request_body, response};
-use reef::traits::Ledger;
 use serde::{Deserialize, Serialize};
 use snafu::Snafu;
-use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use structopt::StructOpt;
 use tide::StatusCode;
 
 type Middleware = SignerMiddleware<Provider<Http>, Wallet<SigningKey>>;
-type Client = Arc<Middleware>;
 
 #[derive(Clone, Debug)]
 enum Contract {
@@ -136,42 +128,37 @@ async fn relay(
         .ok_or(RelayerError::Rejected)
 }
 
-async fn deploy_contract(client: Client) -> Address {
-    let path = |contract| [
-        &PathBuf::from(env!("CARGO_MANIFEST_DIR")),
-        Path::new(contract),
-    ]
-    .iter()
-    .collect::<PathBuf>();
+#[derive(Debug, StructOpt)]
+#[structopt(name = "Minimal CAPE Relayer", about = "DO NOT USE IN PRODUCTION")]
+struct MinimalRelayerOptions {
+    /// URL for Ethers provider
+    #[structopt(short = "u", long = "rpc-url", default_value = "http://localhost:8545")]
+    rpc_url: String,
 
-    let verifier = deploy(
-        client.clone(),
-        &path("../abi/contracts/verifier/PlonkVerifier.sol/PlonkVerifier"),
-        (),
-    )
-    .await
-    .unwrap();
+    /// Address for CAPE submit
+    cape_address: Address,
 
-    deploy(
-        client.clone(),
-        &path("../contracts/abi/contracts/CAPE.sol/CAPE"),
-        CAPEConstructorArgs::new(
-            CapeLedger::merkle_height(),
-            CapeLedger::record_root_history() as u64,
-            verifier.address(),
-        )
-        .generic_into::<(u8, u64, Address)>(),
-    )
-    .await
-    .unwrap()
-    .address()
+    /// Mnemonic phrase for ETH wallet, for paying submission gas fees.
+    mnemonic: String,
 }
 
 #[async_std::main]
 async fn main() -> std::io::Result<()> {
-    let client = get_funded_deployer().await.unwrap();
-    let contract_address = deploy_contract(client.clone()).await;
-    let contract = CAPE::new(contract_address, client);
+    let opt = MinimalRelayerOptions::from_args();
+
+    // Set up a client to submit ETH transactions.
+    let wallet = MnemonicBuilder::<English>::default()
+        .phrase(opt.mnemonic.as_str())
+        .build()
+        .expect("could not open relayer wallet");
+    let provider = Provider::<Http>::try_from(opt.rpc_url.clone())
+        .expect("could not instantiate HTTP Provider");
+    let client = Arc::new(SignerMiddleware::new(provider, wallet));
+
+    // Connect to CAPE smart contract.
+    let contract = CAPE::new(opt.cape_address, client);
+
+    // Start serving CAPE transaction submissions.
     let port = std::env::var("PORT").unwrap_or_else(|_| DEFAULT_RELAYER_PORT.to_string());
     init_web_server(Contract::Real(contract), port).await
 }
@@ -180,10 +167,18 @@ async fn main() -> std::io::Result<()> {
 mod test {
     use super::*;
     use async_std::sync::Mutex;
-    use cap_rust_sandbox::universal_param::UNIVERSAL_PARAM;
+    use cap_rust_sandbox::{
+        cape::CAPEConstructorArgs,
+        ethereum::{deploy, get_funded_deployer},
+        ledger::CapeLedger,
+        state::CapeTransaction,
+        types,
+        types::{GenericInto, CAPE},
+    };
     use jf_aap::{
         keys::UserKeyPair,
         structs::{AssetDefinition, FreezeFlag, RecordCommitment, RecordOpening},
+        testing_apis::universal_setup_for_test,
         transfer::{TransferNote, TransferNoteInput},
         AccMemberWitness, MerkleTree, TransactionNote,
     };
@@ -193,6 +188,8 @@ mod test {
         Error,
     };
     use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
+    use reef::traits::Ledger;
+    use std::path::{Path, PathBuf};
     use surf::Url;
     use types::{field_to_u256, TestCAPE};
 
@@ -216,22 +213,25 @@ mod test {
         faucet: UserPubKey,
     ) -> (TestCAPE<Middleware>, RecordOpening, MerkleTree) {
         let client = get_funded_deployer().await.unwrap();
-        let path = |contract| [
-            &PathBuf::from(env!("CARGO_MANIFEST_DIR")),
-            Path::new(contract),
-        ]
-        .iter()
-        .collect::<PathBuf>();
+        let path = |contract| {
+            [
+                &PathBuf::from(env!("CARGO_MANIFEST_DIR")),
+                Path::new("../contracts/abi/contracts"),
+                Path::new(contract),
+            ]
+            .iter()
+            .collect::<PathBuf>()
+        };
         let verifier = deploy(
             client.clone(),
-            &path("../abi/contracts/verifier/PlonkVerifier.sol/PlonkVerifier"),
+            &path("verifier/PlonkVerifier.sol/PlonkVerifier"),
             (),
         )
         .await
         .unwrap();
         let address = deploy(
             client.clone(),
-            &path("../contracts/abi/contracts/CAPE.sol/CAPE"),
+            &path("mocks/TestCAPE.sol/TestCAPE"),
             CAPEConstructorArgs::new(
                 CapeLedger::merkle_height(),
                 CapeLedger::record_root_history() as u64,
@@ -274,14 +274,11 @@ mod test {
         receiver: UserPubKey,
         records: &MerkleTree,
     ) -> CapeTransaction {
-        let xfr_prove_key = jf_aap::proof::transfer::preprocess(
-            &*UNIVERSAL_PARAM,
-            1,
-            2,
-            CapeLedger::merkle_height(),
-        )
-        .unwrap()
-        .0;
+        let srs = universal_setup_for_test(2usize.pow(16), rng).unwrap();
+        let xfr_prove_key =
+            jf_aap::proof::transfer::preprocess(&srs, 1, 2, CapeLedger::merkle_height())
+                .unwrap()
+                .0;
         let valid_until = 2u64.pow(jf_aap::constants::MAX_TIMESTAMP_LEN as u32) - 1;
         let inputs = vec![TransferNoteInput {
             ro: faucet_rec.clone(),
@@ -369,8 +366,39 @@ mod test {
         // contract, since there's no faucet yet and it doesn't have the
         // `set_initial_record_commitments` method, but we can at least check that our transaction
         // is submitted correctly.
-        let deployer = get_funded_deployer().await.unwrap();
-        let contract = CAPE::new(deploy_contract(deployer.clone()).await, deployer);
+        let contract = {
+            let deployer = get_funded_deployer().await.unwrap();
+            let path = |contract| {
+                [
+                    &PathBuf::from(env!("CARGO_MANIFEST_DIR")),
+                    Path::new("../contracts/abi/contracts"),
+                    Path::new(contract),
+                ]
+                .iter()
+                .collect::<PathBuf>()
+            };
+            let verifier = deploy(
+                deployer.clone(),
+                &path("verifier/PlonkVerifier.sol/PlonkVerifier"),
+                (),
+            )
+            .await
+            .unwrap();
+            let address = deploy(
+                deployer.clone(),
+                &path("CAPE.sol/CAPE"),
+                CAPEConstructorArgs::new(
+                    CapeLedger::merkle_height(),
+                    CapeLedger::record_root_history() as u64,
+                    verifier.address(),
+                )
+                .generic_into::<(u8, u64, Address)>(),
+            )
+            .await
+            .unwrap()
+            .address();
+            CAPE::new(address, deployer)
+        };
         let port = get_port().await;
         init_web_server(Contract::Real(contract), port.to_string());
         let client = get_client(port);

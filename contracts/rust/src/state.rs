@@ -90,6 +90,18 @@ impl CanonicalDeserialize for EthereumAddr {
     }
 }
 
+impl From<ethers::prelude::Address> for EthereumAddr {
+    fn from(eth_addr: ethers::prelude::Address) -> Self {
+        Self(eth_addr.to_fixed_bytes())
+    }
+}
+
+impl From<EthereumAddr> for ethers::prelude::Address {
+    fn from(addr: EthereumAddr) -> Self {
+        addr.0.into()
+    }
+}
+
 impl EthereumAddr {
     pub fn as_bytes(&self) -> &[u8; 20] {
         &self.0
@@ -101,6 +113,30 @@ impl EthereumAddr {
 #[tagged_blob("ERC20")]
 #[derive(CanonicalSerialize, CanonicalDeserialize, Debug, Default, Clone, PartialEq, Eq, Hash)]
 pub struct Erc20Code(pub EthereumAddr);
+
+impl From<EthereumAddr> for Erc20Code {
+    fn from(addr: EthereumAddr) -> Self {
+        Self(addr)
+    }
+}
+
+impl From<Erc20Code> for EthereumAddr {
+    fn from(code: Erc20Code) -> Self {
+        code.0
+    }
+}
+
+impl From<ethers::prelude::Address> for Erc20Code {
+    fn from(eth_addr: ethers::prelude::Address) -> Self {
+        Self::from(EthereumAddr::from(eth_addr))
+    }
+}
+
+impl From<Erc20Code> for ethers::prelude::Address {
+    fn from(code: Erc20Code) -> Self {
+        Self::from(EthereumAddr::from(code))
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum CapeOperation {

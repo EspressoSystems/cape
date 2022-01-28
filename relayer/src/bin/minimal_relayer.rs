@@ -4,46 +4,11 @@ use coins_bip39::English;
 use ethers::{core::k256::ecdsa::SigningKey, prelude::*};
 use jf_aap::keys::UserPubKey;
 use net::server::{add_error_body, request_body, response};
-use serde::{Deserialize, Serialize};
-use snafu::Snafu;
+use relayer::Error as RelayerError;
 use std::sync::Arc;
 use structopt::StructOpt;
-use tide::StatusCode;
 
 type Middleware = SignerMiddleware<Provider<Http>, Wallet<SigningKey>>;
-
-#[derive(Clone, Debug, Snafu, Serialize, Deserialize)]
-pub enum RelayerError {
-    #[snafu(display("failed to deserialize request body: {}", msg))]
-    Deserialize { msg: String },
-
-    #[snafu(display("submitted transaction does not form a valid block: {}", msg))]
-    BadBlock { msg: String },
-
-    #[snafu(display("error during transaction submission: {}", msg))]
-    Submission { msg: String },
-
-    #[snafu(display("transaction was not accepted by Ethereum miners"))]
-    Rejected,
-
-    #[snafu(display("internal server error: {}", msg))]
-    Internal { msg: String },
-}
-
-impl net::Error for RelayerError {
-    fn catch_all(msg: String) -> Self {
-        Self::Internal { msg }
-    }
-
-    fn status(&self) -> StatusCode {
-        match self {
-            Self::Deserialize { .. } | Self::BadBlock { .. } => StatusCode::BadRequest,
-            Self::Submission { .. } | Self::Rejected | Self::Internal { .. } => {
-                StatusCode::InternalServerError
-            }
-        }
-    }
-}
 
 fn server_error<E: Into<RelayerError>>(err: E) -> tide::Error {
     net::server_error(err)

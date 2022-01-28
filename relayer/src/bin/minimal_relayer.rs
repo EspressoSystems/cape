@@ -323,9 +323,10 @@ mod test {
 
         // Submit an invalid transaction (e.g.the same one again) and check that the contract's
         // records Merkle tree is not modified.
-        relay(&Contract::Test(contract.clone()), transaction)
-            .await
-            .unwrap();
+        match relay(&Contract::Test(contract.clone()), transaction).await {
+            Err(RelayerError::Submission { .. }) => {}
+            res => panic!("expected submission error, got {:?}", res),
+        }
         assert_eq!(contract.get_num_leaves().call().await.unwrap(), 3.into());
     }
 

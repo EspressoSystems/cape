@@ -398,6 +398,7 @@ mod tests {
 
             let client: surf::Client = surf::Config::new()
                 .set_base_url(Url::parse(&format!("http://localhost:{}", port)).unwrap())
+                .set_timeout(None)
                 .try_into()
                 .unwrap();
             Self {

@@ -7,7 +7,6 @@ use crate::{
     state::{CapeContractState, CapeEthEffect, CapeEvent, CapeOperation, CapeTransaction},
     types::field_to_u256,
     types::{GenericInto, NullifierSol, TestCAPE},
-    universal_param::UNIVERSAL_PARAM,
 };
 use anyhow::Result;
 use ethers::prelude::{Address, U256};
@@ -28,13 +27,6 @@ use rand_chacha::ChaChaRng;
 use reef::traits::Ledger as _;
 use std::path::Path;
 use std::time::Instant;
-use zerok_lib::cape_state::CapeContractState;
-use zerok_lib::cape_state::CapeTransaction;
-use zerok_lib::cape_state::{CapeEthEffect, CapeEvent, CapeOperation};
-
-// NOTE: currently supported among list of hardcoded VK inside contract,
-// can be changed later.
-const MERKLE_HEIGHT: u8 = 24;
 
 async fn test_2user_maybe_submit(should_submit: bool) -> Result<()> {
     let now = Instant::now();

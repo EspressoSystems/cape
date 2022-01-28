@@ -1,22 +1,13 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import "./libraries/EdOnBN254.sol";
+
 // TODO Remove once functions are implemented
 /* solhint-disable no-unused-vars */
 
 contract AssetRegistry {
     mapping(bytes32 => address) public assets;
-
-    // TODO Types can't be shared between contracts unless we put them in a library
-    // or they are defined in a contract we inherit from. The EdOnBn254Point
-    // does not really belong into this contract. It works fine the way it is
-    // now because on only this contract and CAPE need it. If we also need it in
-    // another contract and we can consider putting this type into a solidity
-    // library.
-    struct EdOnBn254Point {
-        uint256 x;
-        uint256 y;
-    }
 
     struct AssetDefinition {
         uint256 code;
@@ -24,9 +15,9 @@ contract AssetRegistry {
     }
 
     struct AssetPolicy {
-        EdOnBn254Point auditorPk;
-        EdOnBn254Point credPk;
-        EdOnBn254Point freezerPk;
+        EdOnBN254.EdOnBN254Point auditorPk;
+        EdOnBN254.EdOnBN254Point credPk;
+        EdOnBN254.EdOnBN254Point freezerPk;
         uint256 revealMap;
         uint64 revealThreshold;
     }

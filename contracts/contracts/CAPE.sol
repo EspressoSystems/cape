@@ -109,19 +109,6 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
         EdOnBN254.EdOnBN254Point txnMemoVerKey;
     }
 
-    struct AssetDefinition {
-        uint256 code;
-        AssetPolicy policy;
-    }
-
-    struct AssetPolicy {
-        EdOnBN254.EdOnBN254Point auditorPk;
-        EdOnBN254.EdOnBN254Point credPk;
-        EdOnBN254.EdOnBN254Point freezerPk;
-        uint256 revealMap;
-        uint64 revealThreshold;
-    }
-
     struct RecordOpening {
         uint64 amount;
         AssetDefinition assetDef;
@@ -233,7 +220,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
             keccak256(
                 bytes.concat(
                     DOM_SEP_DOMESTIC_ASSET,
-                    bytes32(Transcript.reverseEndianness(internalAssetCode))
+                    bytes32(BN254.reverseEndianness(internalAssetCode))
                 )
             )
         );

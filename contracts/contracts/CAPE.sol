@@ -8,6 +8,11 @@ pragma solidity ^0.8.0;
 /// @dev Developers are awesome!
 
 import "hardhat/console.sol";
+
+// Learn more about the ERC20 implementation
+// on OpenZeppelin docs: https://docs.openzeppelin.com/contracts/4.x/erc20
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 import "./libraries/AccumulatingArray.sol";
 import "./libraries/EdOnBN254.sol";
@@ -17,14 +22,21 @@ import "./interfaces/IPlonkVerifier.sol";
 import "./AssetRegistry.sol";
 import "./RecordsMerkleTree.sol";
 import "./RootStore.sol";
+import "./Queue.sol";
 
 // TODO Remove once functions are implemented
 /* solhint-disable no-unused-vars */
 
-contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
+contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue {
     mapping(uint256 => bool) public nullifiers;
     uint64 public blockHeight;
     IPlonkVerifier private _verifier;
+
+    // In order to avoid the contract running out of gas if the queue is too large
+    // we set the maximum number of pending deposits record commitments to process
+    // when a new block is submitted. This is a temporary solution.
+    // See https://github.com/SpectrumXYZ/cape/issues/400
+    uint64 public constant MAX_QUEUE_SIZE = 10;
 
     using AccumulatingArray for AccumulatingArray.Data;
 
@@ -34,6 +46,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
     uint256 public constant AAP_NATIVE_ASSET_CODE = 1;
 
     event BlockCommitted(uint64 indexed height);
+    event Erc20TokensDeposited(bytes roBytes, address erc20TokenAddress, address from);
 
     struct AuditMemo {
         EdOnBN254.EdOnBN254Point ephemeralKey;
@@ -129,7 +142,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
         uint8 merkleTreeHeight,
         uint64 nRoots,
         address verifierAddr
-    ) RecordsMerkleTree(merkleTreeHeight) RootStore(nRoots) {
+    ) RecordsMerkleTree(merkleTreeHeight) RootStore(nRoots) Queue() {
         _verifier = IPlonkVerifier(verifierAddr);
     }
 
@@ -191,8 +204,19 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
     /// @param ro record opening that will be inserted in the records merkle tree once the deposit is validated.
     /// @param erc20Address address of the ERC20 token corresponding to the deposit.
     function depositErc20(RecordOpening memory ro, address erc20Address) public {
-        address depositorAddress = msg.sender;
+        ERC20 token = ERC20(erc20Address);
         _checkForeignAssetCode(ro.assetDef.code, erc20Address);
+        require(isCapeAssetRegistered(ro.assetDef), "asset definition not registered");
+
+        // We skip the sanity checks mentioned in the rust specification as they are optional.
+
+        uint256 recordCommitment = _deriveRecordCommitment(ro);
+        _pushToQueue(recordCommitment);
+        bytes32 assetDefHash = keccak256(abi.encode(ro.assetDef));
+
+        token.transferFrom(msg.sender, address(this), ro.amount);
+        bytes memory roBytes = abi.encode(ro);
+        emit Erc20TokensDeposited(roBytes, erc20Address, msg.sender);
     }
 
     /// @notice Checks if the asset definition code is correctly derived from the ERC20 address
@@ -248,9 +272,8 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
         uint256 freezeIdx = 0;
         uint256 burnIdx = 0;
 
-        AccumulatingArray.Data memory comms = AccumulatingArray.create(
-            _computeMaxCommitments(newBlock)
-        );
+        uint256 maxSizeCommsArray = _computeMaxCommitments(newBlock) + _getQueueSize();
+        AccumulatingArray.Data memory comms = AccumulatingArray.create(maxSizeCommsArray);
 
         uint256 numNotes = newBlock.noteTypes.length;
 
@@ -367,8 +390,22 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry {
             );
         }
 
-        if (!_isBlockEmpty(newBlock)) {
-            // TODO Check that this is correct
+        // Process the pending deposits obtained after calling `depositErc20`
+        // There are some pending deposits to process
+        uint256 numPendingDeposits = _getQueueSize();
+
+        // See See https://github.com/SpectrumXYZ/cape/issues/400 for why we check that the queue has at most MAX_QUEUE_SIZE elements
+        if ((numPendingDeposits > 0) && (numPendingDeposits < MAX_QUEUE_SIZE)) {
+            for (uint256 i = 0; i < numPendingDeposits; i++) {
+                uint256 rc = _getQueueElem(i);
+                comms.add(rc);
+            }
+            // Empty the queue now the record commitments are ready to be inserted
+            _emptyQueue();
+        }
+
+        // Only update the merkle tree and add the root if the list of records commitments is non empty
+        if (!comms.isEmpty()) {
             _updateRecordsMerkleTree(comms.toArray());
             _addRoot(_rootValue);
         }

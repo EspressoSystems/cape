@@ -44,7 +44,7 @@ contract AssetRegistry {
     /// @param newAsset asset type to be registered in the contract.
     /// @dev will revert if asset is already registered
     function sponsorCapeAsset(address erc20Address, AssetDefinition memory newAsset) public {
-        // TODO check if real token (figure out if this is nececssary/useful:
+        // TODO check if real token (figure out if this is necessary/useful):
         //      the contract could still do whatever it wants even if it has
         //      the right interface)
         require(erc20Address != address(0), "Bad asset address");

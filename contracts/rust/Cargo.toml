@@ -19,7 +19,12 @@ universal-param = { git = "ssh://git@github.com/SpectrumXYZ/universal-param.git"
 zerok-macros = { git = "ssh://git@github.com/SpectrumXYZ/zerok-macros.git" }
 arbitrary = { version="1.0", features=["derive"] }
 arbitrary-wrappers = { git = "ssh://git@github.com/SpectrumXYZ/arbitrary-wrappers.git" }
-ethers = { git = "https://github.com/gakonst/ethers-rs", branch = "master" }
+
+# We need the legacy feature in order to avoid gas estimation issues. See https://github.com/gakonst/ethers-rs/issues/825
+ethers = { features=["legacy"], git = "https://github.com/gakonst/ethers-rs", branch = "master" }
+ethers-core = { features=["legacy"], git = "https://github.com/gakonst/ethers-rs", branch = "master" }
+ethers-contract = { features=["legacy"], git = "https://github.com/gakonst/ethers-rs", branch = "master" }
+
 itertools = "0.10.1" # needed for jf-aap to compile
 ark-std = "0.3.0"
 serde_json = "1.0.67"

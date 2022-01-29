@@ -1,16 +1,21 @@
 // Copyright © 2021 Translucence Research, Inc. All rights reserved.
 
-use crate::routes::{
-    dispatch_url, dispatch_web_socket, CapeAPIError, RouteBinding, UrlSegmentType, UrlSegmentValue,
-    Wallet,
+use crate::{
+    cli::{cape_cli_main, Args, CapeCli},
+    routes::{
+        dispatch_url, dispatch_web_socket, CapeAPIError, RouteBinding, UrlSegmentType,
+        UrlSegmentValue, Wallet,
+    },
 };
 use async_std::{
     sync::{Arc, Mutex},
     task::{spawn, JoinHandle},
 };
+use cap_rust_sandbox::ledger::CapeLedger;
 use net::server;
 use std::collections::hash_map::HashMap;
 use std::path::{Path, PathBuf};
+use std::process::exit;
 use std::str::FromStr;
 use structopt::StructOpt;
 use tide::StatusCode;
@@ -307,36 +312,42 @@ fn init_server(
 async fn main() -> Result<(), std::io::Error> {
     tracing_subscriber::fmt().pretty().init();
 
-    // Initialize the web server.
-    //
-    // opt_web_path is the path to the web assets directory. If the path
-    // is empty, the default is constructed assuming Cargo is used to
-    // build the executable in the customary location.
-    //
-    // own_id is the identifier of this instance of the executable. The
-    // port the web server listens on is 60000, unless the
-    // PORT environment variable is set.
+    // // Initialize the web server.
+    // //
+    // // opt_web_path is the path to the web assets directory. If the path
+    // // is empty, the default is constructed assuming Cargo is used to
+    // // build the executable in the customary location.
+    // //
+    // // own_id is the identifier of this instance of the executable. The
+    // // port the web server listens on is 60000, unless the
+    // // PORT environment variable is set.
 
-    // Take the command line option for the web asset directory path
-    // provided it is not empty. Otherwise, construct the default from
-    // the executable path.
-    let opt_api_path = NodeOpt::from_args().api_path;
-    let opt_web_path = NodeOpt::from_args().web_path;
-    let web_path = if opt_web_path.is_empty() {
-        default_web_path()
-    } else {
-        PathBuf::from(opt_web_path)
-    };
-    let api_path = if opt_api_path.is_empty() {
-        default_api_path()
-    } else {
-        PathBuf::from(opt_api_path)
-    };
-    println!("Web path: {:?}", web_path);
+    // // Take the command line option for the web asset directory path
+    // // provided it is not empty. Otherwise, construct the default from
+    // // the executable path.
+    // let opt_api_path = NodeOpt::from_args().api_path;
+    // let opt_web_path = NodeOpt::from_args().web_path;
+    // let web_path = if opt_web_path.is_empty() {
+    //     default_web_path()
+    // } else {
+    //     PathBuf::from(opt_web_path)
+    // };
+    // let api_path = if opt_api_path.is_empty() {
+    //     default_api_path()
+    // } else {
+    //     PathBuf::from(opt_api_path)
+    // };
+    // println!("Web path: {:?}", web_path);
 
-    // Use something different than the default Spectrum port (60000 vs 50000).
-    let port = std::env::var("PORT").unwrap_or_else(|_| String::from("60000"));
-    init_server(api_path, web_path, port.parse().unwrap())?.await?;
+    // // Use something different than the default Spectrum port (60000 vs 50000).
+    // let port = std::env::var("PORT").unwrap_or_else(|_| String::from("60000"));
+    // init_server(api_path, web_path, port.parse().unwrap())?.await?;
+
+    // Initialize the wallet CLI.
+    if let Err(err) = cape_cli_main::<CapeLedger, CapeCli>(&Args::from_args()).await {
+        println!("{}", err);
+        exit(1);
+    }
 
     Ok(())
 }
@@ -345,7 +356,7 @@ async fn main() -> Result<(), std::io::Error> {
 mod tests {
     use super::*;
     use crate::{
-        cli::{cli_basic_info, cli_burn, create_wallet},
+        cli::{cli_burn, create_wallet},
         cli_client::cli_test,
     };
     use cap_rust_sandbox::state::{Erc20Code, EthereumAddr};
@@ -905,7 +916,6 @@ mod tests {
     fn cli_burn_test() {
         cli_test(|t| {
             create_wallet(t, 0)?;
-            cli_basic_info(t)?;
             cli_burn(t)?;
 
             Ok(())

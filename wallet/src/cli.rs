@@ -8,17 +8,14 @@
 use crate::{
     cli_client::CliClient,
     mocks::{MockCapeBackend, MockCapeNetwork},
-    wallet::{CapeWallet, CapeWalletBackend, CapeWalletExt},
+    wallet::{CapeWallet, CapeWalletExt},
 };
-use async_std::task::block_on;
-use async_trait::async_trait;
+use async_std::sync::Mutex;
 use cap_rust_sandbox::{ledger::CapeLedger, state::EthereumAddr};
-use fmt::{Display, Formatter};
-use futures::future::BoxFuture;
 use jf_aap::{
     keys::{AuditorKeyPair, AuditorPubKey, FreezerKeyPair, FreezerPubKey, UserKeyPair},
     proof::UniversalParam,
-    structs::{AssetCode, /* AssetDefinition,*/ AssetPolicy, ReceiverMemo, RecordCommitment},
+    structs::{AssetCode, ReceiverMemo, RecordCommitment},
     MerkleTree, TransactionVerifyingKey,
 };
 use key_set::{KeySet, VerifierKeySet};
@@ -30,26 +27,23 @@ use seahorse::{
     loader::{LoadMethod, Loader, LoaderMetadata, WalletLoader},
     reader::Reader,
     testing::MockLedger,
-    /* MintInfo, */ txn_builder::{TransactionReceipt, TransactionStatus},
-    /*AssetInfo, */ BincodeError, IoError, WalletError,
+    txn_builder::TransactionStatus,
+    WalletError,
 };
-use serde::Serialize;
-use snafu::ResultExt;
 use std::any::type_name;
 use std::collections::HashMap;
-use std::fmt;
 use std::fs::File;
-use std::io::{Read, Write};
-use std::sync::{Arc, Mutex};
-use structopt::StructOpt;
-use surf::Url;
-// use std::iter::once;
+use std::io::Read;
 use std::path::PathBuf;
 use std::str::FromStr;
-// use tagged_base64::TaggedBase64;
+use std::sync::Arc;
+use structopt::StructOpt;
+use surf::Url;
 use tempdir::TempDir;
 
-struct CapeCli;
+// TODO !keyao Change `unwrap()`s to better error handling.
+
+pub struct CapeCli;
 
 impl<'a> CLI<'a> for CapeCli {
     type Ledger = CapeLedger;
@@ -58,11 +52,14 @@ impl<'a> CLI<'a> for CapeCli {
 
     fn init_backend(
         univ_param: &'a UniversalParam,
+        _args: &'a Self::Args,
         loader: &mut impl WalletLoader<CapeLedger, Meta = LoaderMetadata>,
     ) -> Result<Self::Backend, WalletError<CapeLedger>> {
         let verif_crs = VerifierKeySet {
             mint: TransactionVerifyingKey::Mint(
-                jf_aap::proof::mint::preprocess(&*univ_param, CapeLedger::merkle_height())?.1,
+                jf_aap::proof::mint::preprocess(&*univ_param, CapeLedger::merkle_height())
+                    .unwrap()
+                    .1,
             ),
             xfr: KeySet::new(
                 vec![TransactionVerifyingKey::Transfer(
@@ -71,7 +68,8 @@ impl<'a> CLI<'a> for CapeCli {
                         3,
                         3,
                         CapeLedger::merkle_height(),
-                    )?
+                    )
+                    .unwrap()
                     .1,
                 )]
                 .into_iter(),
@@ -79,12 +77,9 @@ impl<'a> CLI<'a> for CapeCli {
             .unwrap(),
             freeze: KeySet::new(
                 vec![TransactionVerifyingKey::Freeze(
-                    jf_aap::proof::freeze::preprocess(
-                        &*univ_param,
-                        2,
-                        CapeLedger::merkle_height(),
-                    )?
-                    .1,
+                    jf_aap::proof::freeze::preprocess(&*univ_param, 2, CapeLedger::merkle_height())
+                        .unwrap()
+                        .1,
                 )]
                 .into_iter(),
             )
@@ -149,6 +144,19 @@ impl<
                 index: 0,
                 annotation: None,
             })
+        }
+    }
+}
+
+impl<'a, C: CLI<'a, Ledger = CapeLedger, Backend = MockCapeBackend<'a, LoaderMetadata>>>
+    CapeCliInput<'a, C> for KeyType
+{
+    fn parse_for_wallet(_wallet: &mut Wallet<'a>, s: &str) -> Option<Self> {
+        match s {
+            "audit" => Some(Self::Audit),
+            "freeze" => Some(Self::Freeze),
+            "spend" => Some(Self::Spend),
+            _ => None,
         }
     }
 }
@@ -242,36 +250,112 @@ fn init_commands<
     'a,
     C: CLI<'a, Ledger = CapeLedger, Backend = MockCapeBackend<'a, LoaderMetadata>>,
 >() -> Vec<Command<'a, C>> {
-    vec![command!(
-        burn,
-        "burn a new asset",
-        C,
-        |wallet, asset: ListItem<AssetCode>, from: UserAddress, to: EthereumAddr, amount: u64, fee: u64; wait: Option<bool>| {
-            match wallet
-                .burn(&from.0, to, &asset.item, amount, fee)
-                .await
-            {
-                Ok(receipt) => {
-                    if wait == Some(true) {
-                        match wallet.await_transaction(&receipt).await {
-                            Err(err) => {
-                                println!("Error waiting for transaction to complete: {}", err);
-                            }
-                            Ok(TransactionStatus::Retired) => {},
-                            _ => {
-                                println!("Transaction failed");
-                            }
-                        }
-                    } else {
-                        println!("Transaction {}", receipt);
-                    }
-                }
-                Err(err) => {
-                    println!("{}\nAssets were not burned.", err);
+    vec![
+        command!(
+            balance,
+            "print owned balances of asset",
+            C,
+            |wallet, asset: ListItem<AssetCode>| {
+                println!("Address Balance");
+                for pub_key in wallet.pub_keys().await {
+                    println!(
+                        "{} {}",
+                        UserAddress(pub_key.address()),
+                        wallet.balance(&pub_key.address(), &asset.item).await
+                    );
                 }
             }
-        }
-    )]
+        ),
+        command!(
+            load_key,
+            "load a key from a file",
+            C,
+            |wallet, key_type: KeyType, path: PathBuf; scan_from: Option<EventIndex>| {
+                let mut file = match File::open(path.clone()) {
+                    Ok(file) => file,
+                    Err(err) => {
+                        println!("Error opening file {:?}: {}", path, err);
+                        return;
+                    }
+                };
+                let mut bytes = Vec::new();
+                if let Err(err) = file.read_to_end(&mut bytes) {
+                    println!("Error reading file: {}", err);
+                    return;
+                }
+
+                match key_type {
+                    KeyType::Audit => match bincode::deserialize::<AuditorKeyPair>(&bytes) {
+                        Ok(key) => match wallet.add_audit_key(key.clone()).await {
+                            Ok(()) => println!("{}", key.pub_key()),
+                            Err(err) => println!("Error saving audit key: {}", err),
+                        },
+                        Err(err) => {
+                            println!("Error loading audit key: {}", err);
+                        }
+                    },
+                    KeyType::Freeze => match bincode::deserialize::<FreezerKeyPair>(&bytes) {
+                        Ok(key) => match wallet.add_freeze_key(key.clone()).await {
+                            Ok(()) => println!("{}", key.pub_key()),
+                            Err(err) => println!("Error saving freeze key: {}", err),
+                        },
+                        Err(err) => {
+                            println!("Error loading freeze key: {}", err);
+                        }
+                    },
+                    KeyType::Spend => match bincode::deserialize::<UserKeyPair>(&bytes) {
+                        Ok(key) => match wallet.add_user_key(
+                            key.clone(),
+                            scan_from.unwrap_or_default(),
+                        ).await {
+                            Ok(()) => {
+                                println!(
+                                    "Note: assets belonging to this key will become available after\
+                                     a scan of the ledger. This may take a long time. If you have\
+                                     the owner memo for a record you want to use immediately, use\
+                                     import_memo.");
+                                println!("{}", UserAddress(key.address()));
+                            }
+                            Err(err) => println!("Error saving spending key: {}", err),
+                        },
+                        Err(err) => {
+                            println!("Error loading spending key: {}", err);
+                        }
+                    },
+                };
+            }
+        ),
+        command!(
+            burn,
+            "burn a new asset",
+            C,
+            |wallet, asset: ListItem<AssetCode>, from: UserAddress, to: EthereumAddr, amount: u64, fee: u64; wait: Option<bool>| {
+                match wallet
+                    .burn(&from.0, to, &asset.item, amount, fee)
+                    .await
+                {
+                    Ok(receipt) => {
+                        if wait == Some(true) {
+                            match wallet.await_transaction(&receipt).await {
+                                Err(err) => {
+                                    println!("Error waiting for transaction to complete: {}", err);
+                                }
+                                Ok(TransactionStatus::Retired) => {},
+                                _ => {
+                                    println!("Transaction failed");
+                                }
+                            }
+                        } else {
+                            println!("Transaction {}", receipt);
+                        }
+                    }
+                    Err(err) => {
+                        println!("{}\nAssets were not burned.", err);
+                    }
+                }
+            }
+        ),
+    ]
 }
 
 #[derive(StructOpt)]
@@ -461,53 +545,6 @@ pub(crate) fn create_wallet(t: &mut CliClient, wallet: usize) -> Result<&mut Cli
         .output(format!("(?P<default_addr{}>ADDR~.*)", wallet))
 }
 
-pub(crate) fn cli_basic_info(t: &mut CliClient) -> Result<(), String> {
-    t
-        // `info`
-        .command(0, "info")?
-        .output("Addresses:")?
-        .output("(?P<addr1>ADDR~.*)")?
-        .output("Public keys:")?
-        .output("(?P<pubkey1>USERPUBKEY~.*)")?
-        // `address`
-        .command(0, "address")?
-        .output("$addr1")?
-        // `assets`
-        .command(0, "assets")?
-        .output("0. (?P<native>ASSETCODE~.*) \\(native\\)")?;
-
-    // add keys and check that they are reported
-    t.command(0, "gen_key audit")?
-        .output("(?P<audkey>AUDPUBKEY~.*)")?
-        .command(0, "gen_key freeze")?
-        .output("(?P<freezekey>FREEZEPUBKEY~.*)")?
-        .command(0, "gen_key spend")?
-        .output("(?P<addr2>ADDR~.*)")?
-        .command(0, "info")?
-        .output("Addresses:")?
-        .output("$addr1")?
-        .output("$addr2")?
-        .command(0, "keys")?
-        .output("Public keys:")?
-        .output("$pubkey1")?
-        .output("USERPUBKEY~.*")?
-        .output("Audit keys:")?
-        .output("$audkey")?
-        .output("Freeze keys:")?
-        .output("$freezekey")?;
-
-    // native asset info, specified two ways
-    for command in &["asset 0", "asset $native"] {
-        t.command(0, command)?
-            .output("Native $native")?
-            .output("Not auditable")?
-            .output("Not freezeable")?
-            .output("Not mintable")?;
-    }
-
-    Ok(())
-}
-
 pub(crate) fn cli_burn(t: &mut CliClient) -> Result<(), String> {
     let balance = wait_for_starting_balance(t)?;
     t
@@ -534,4 +571,18 @@ fn wait_for_native_balance(
 
 fn wait_for_starting_balance(t: &mut CliClient) -> Result<usize, String> {
     wait_for_native_balance(t, 0, "default_addr0")
+}
+
+pub async fn cape_cli_main<
+    'a,
+    L: 'static + Ledger,
+    C: CLI<'a, Ledger = CapeLedger, Backend = MockCapeBackend<'a, LoaderMetadata>>,
+>(
+    args: &'a C::Args,
+) -> Result<(), WalletError<CapeLedger>> {
+    if let Some(path) = args.key_gen_path() {
+        key_gen::<C>(path)
+    } else {
+        repl::<L, C>(args).await
+    }
 }

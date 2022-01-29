@@ -154,7 +154,7 @@ dependencies = [
  "arbitrary",
  "ark-std",
  "itertools 0.10.3",
- "jf-aap",
+ "jf-aap 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=eca7b7e85718c7770c24ad90dd34b8a07209a01b)",
  "rand_chacha 0.3.1",
  "serde",
  "zerok-macros",
@@ -1036,7 +1036,7 @@ dependencies = [
  "generic-array 0.14.5",
  "hex",
  "itertools 0.10.3",
- "jf-aap",
+ "jf-aap 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=eca7b7e85718c7770c24ad90dd34b8a07209a01b)",
  "jf-plonk",
  "jf-primitives",
  "jf-rescue",
@@ -1048,10 +1048,10 @@ dependencies = [
  "proptest 1.0.0",
  "rand 0.8.4",
  "rand_chacha 0.3.1",
- "reef",
+ "reef 0.1.0 (git+ssh://git@github.com/SpectrumXYZ/reef.git?rev=6e3e7f683d2f8c1c1da662301f8ca8c2863018cc)",
  "serde",
  "serde_json",
- "sha3",
+ "sha3 0.9.1",
  "snafu 0.7.0",
  "strum_macros",
  "tokio",
@@ -1065,7 +1065,7 @@ version = "0.1.0"
 dependencies = [
  "ethers 0.6.0 (git+https://github.com/gakonst/ethers-rs)",
  "itertools 0.10.3",
- "jf-aap",
+ "jf-aap 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=eca7b7e85718c7770c24ad90dd34b8a07209a01b)",
  "jf-rescue",
  "jf-utils",
  "rand 0.8.4",
@@ -1085,16 +1085,16 @@ dependencies = [
  "futures",
  "futures-util",
  "itertools 0.10.3",
- "jf-aap",
+ "jf-aap 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=eca7b7e85718c7770c24ad90dd34b8a07209a01b)",
  "jf-plonk",
  "jf-primitives",
  "jf-utils",
  "key-set",
  "lazy_static",
  "markdown",
- "net 0.1.0 (git+ssh://git@github.com/SpectrumXYZ/net.git)",
+ "net",
  "rand_chacha 0.3.1",
- "reef",
+ "reef 0.1.0 (git+ssh://git@github.com/SpectrumXYZ/reef.git?rev=6e3e7f683d2f8c1c1da662301f8ca8c2863018cc)",
  "regex",
  "seahorse",
  "serde",
@@ -1315,7 +1315,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "sha2 0.9.9",
- "sha3",
+ "sha3 0.9.1",
  "thiserror",
 ]
 
@@ -1342,7 +1342,7 @@ dependencies = [
  "generic-array 0.14.5",
  "hex",
  "serde",
- "sha3",
+ "sha3 0.9.1",
 ]
 
 [[package]]
@@ -1930,7 +1930,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2 0.9.9",
- "sha3",
+ "sha3 0.9.1",
  "thiserror",
  "uuid",
 ]
@@ -1944,7 +1944,7 @@ dependencies = [
  "hex",
  "serde",
  "serde_json",
- "sha3",
+ "sha3 0.9.1",
  "thiserror",
  "uint",
 ]
@@ -3139,7 +3139,48 @@ dependencies = [
  "serde_derive",
  "serde_json",
  "sha2 0.9.9",
- "sha3",
+ "sha3 0.9.1",
+ "structopt",
+ "thiserror",
+]
+
+[[package]]
+name = "jf-aap"
+version = "0.0.1"
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=fd1de050c214584a296a11f366846a53a316c4d4#fd1de050c214584a296a11f366846a53a316c4d4"
+dependencies = [
+ "anyhow",
+ "ark-bls12-377",
+ "ark-bls12-381",
+ "ark-bn254",
+ "ark-ec",
+ "ark-ed-on-bls12-377",
+ "ark-ed-on-bls12-381",
+ "ark-ed-on-bn254",
+ "ark-ff",
+ "ark-serialize",
+ "ark-std",
+ "bincode",
+ "commit",
+ "csv",
+ "derivative",
+ "displaydoc",
+ "hex-literal",
+ "itertools 0.10.3",
+ "jf-plonk",
+ "jf-primitives",
+ "jf-rescue",
+ "jf-utils",
+ "num_cpus",
+ "percentage",
+ "rand 0.8.4",
+ "rand_chacha 0.3.1",
+ "rayon",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "sha2 0.9.9",
+ "sha3 0.10.0",
  "structopt",
  "thiserror",
 ]
@@ -3171,7 +3212,7 @@ dependencies = [
  "rand_chacha 0.3.1",
  "rayon",
  "serde",
- "sha3",
+ "sha3 0.9.1",
  "thiserror",
 ]
 
@@ -3274,7 +3315,7 @@ dependencies = [
  "elliptic-curve",
  "sec1",
  "sha2 0.9.9",
- "sha3",
+ "sha3 0.9.1",
 ]
 
 [[package]]
@@ -3292,7 +3333,7 @@ dependencies = [
  "bincode",
  "commit",
  "itertools 0.10.3",
- "jf-aap",
+ "jf-aap 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=eca7b7e85718c7770c24ad90dd34b8a07209a01b)",
  "serde",
  "serde_with",
  "snafu 0.6.10",
@@ -3524,29 +3565,6 @@ dependencies = [
 [[package]]
 name = "net"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/net.git?rev=8d04d5578de00539bbaa218eaa1c12d02adef3ba#8d04d5578de00539bbaa218eaa1c12d02adef3ba"
-dependencies = [
- "ark-serialize",
- "ark-std",
- "bincode",
- "commit",
- "futures",
- "generic-array 0.14.5",
- "itertools 0.10.3",
- "jf-aap",
- "jf-utils",
- "serde",
- "serde_json",
- "snafu 0.6.10",
- "surf",
- "tagged-base64",
- "tide",
- "tracing",
-]
-
-[[package]]
-name = "net"
-version = "0.1.0"
 source = "git+ssh://git@github.com/SpectrumXYZ/net.git#8d04d5578de00539bbaa218eaa1c12d02adef3ba"
 dependencies = [
  "ark-serialize",
@@ -3556,7 +3574,7 @@ dependencies = [
  "futures",
  "generic-array 0.14.5",
  "itertools 0.10.3",
- "jf-aap",
+ "jf-aap 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=eca7b7e85718c7770c24ad90dd34b8a07209a01b)",
  "jf-utils",
  "serde",
  "serde_json",
@@ -4434,7 +4452,23 @@ dependencies = [
  "ark-serialize",
  "commit",
  "itertools 0.10.3",
- "jf-aap",
+ "jf-aap 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=eca7b7e85718c7770c24ad90dd34b8a07209a01b)",
+ "serde",
+ "snafu 0.6.10",
+ "strum_macros",
+]
+
+[[package]]
+name = "reef"
+version = "0.1.0"
+source = "git+ssh://git@github.com/SpectrumXYZ/reef.git#ba644231992f52f7fd8498ce029a85bd82c204a6"
+dependencies = [
+ "arbitrary",
+ "arbitrary-wrappers",
+ "ark-serialize",
+ "commit",
+ "itertools 0.10.3",
+ "jf-aap 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=fd1de050c214584a296a11f366846a53a316c4d4)",
  "serde",
  "snafu 0.6.10",
  "strum_macros",
@@ -4476,7 +4510,7 @@ dependencies = [
  "cap-rust-sandbox",
  "dirs",
  "ethers 0.6.0 (git+https://github.com/gakonst/ethers-rs?branch=master)",
- "jf-aap",
+ "jf-aap 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=eca7b7e85718c7770c24ad90dd34b8a07209a01b)",
  "jf-primitives",
  "key-set",
  "lazy_static",
@@ -4824,20 +4858,20 @@ dependencies = [
  "generic-array 0.14.5",
  "hmac 0.11.0",
  "itertools 0.10.3",
- "jf-aap",
+ "jf-aap 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=fd1de050c214584a296a11f366846a53a316c4d4)",
  "jf-utils",
  "key-set",
  "lazy_static",
  "mnemonic",
- "net 0.1.0 (git+ssh://git@github.com/SpectrumXYZ/net.git?rev=8d04d5578de00539bbaa218eaa1c12d02adef3ba)",
+ "net",
  "proptest 0.8.7",
  "rand_chacha 0.3.1",
- "reef",
+ "reef 0.1.0 (git+ssh://git@github.com/SpectrumXYZ/reef.git)",
  "rpassword",
  "rust-argon2",
  "rustyline",
  "serde",
- "sha3",
+ "sha3 0.9.1",
  "snafu 0.6.10",
  "strum",
  "strum_macros",
@@ -5051,6 +5085,16 @@ dependencies = [
  "digest 0.9.0",
  "keccak",
  "opaque-debug 0.3.0",
+]
+
+[[package]]
+name = "sha3"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "31f935e31cf406e8c0e96c2815a5516181b7004ae8c5f296293221e9b1e356bd"
+dependencies = [
+ "digest 0.10.1",
+ "keccak",
 ]
 
 [[package]]
@@ -5952,7 +5996,7 @@ dependencies = [
  "ark-serialize",
  "ark-std",
  "itertools 0.10.3",
- "jf-aap",
+ "jf-aap 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=eca7b7e85718c7770c24ad90dd34b8a07209a01b)",
  "rand_chacha 0.3.1",
 ]
 

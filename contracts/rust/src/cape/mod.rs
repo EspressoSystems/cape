@@ -1,5 +1,10 @@
 #![deny(warnings)]
-use crate::{state::CapeTransaction, types as sol};
+mod note_types;
+mod submit_block;
+mod wrapping;
+
+use crate::state::CapeTransaction;
+use crate::types as sol;
 use anyhow::{anyhow, bail, Result};
 use ark_serialize::*;
 use ethers::prelude::Address;
@@ -143,6 +148,50 @@ impl CapeBlock {
         })
     }
 
+    /// Collect the record commitments from the transaction outputs in the same order as the CAPE contract
+    pub fn get_list_of_input_record_commitments(self) -> Vec<RecordCommitment> {
+        let mut transfer_idx: usize = 0;
+        let mut mint_idx: usize = 0;
+        let mut freeze_idx: usize = 0;
+        let mut burn_idx: usize = 0;
+        let mut outputs_record_commitments = vec![];
+
+        for note_type in self.note_types {
+            match note_type {
+                NoteType::Transfer => {
+                    for rc in self.transfer_notes[transfer_idx].clone().output_commitments {
+                        outputs_record_commitments.push(rc);
+                        transfer_idx += 1;
+                    }
+                }
+                NoteType::Mint => {
+                    let note = self.mint_notes[mint_idx].clone();
+                    outputs_record_commitments.push(note.mint_comm);
+                    outputs_record_commitments.push(note.chg_comm);
+                    mint_idx += 1;
+                }
+                NoteType::Freeze => {
+                    for rc in self.freeze_notes[freeze_idx].clone().output_commitments {
+                        outputs_record_commitments.push(rc);
+                        freeze_idx += 1;
+                    }
+                }
+                NoteType::Burn => {
+                    for rc in self.burn_notes[burn_idx]
+                        .clone()
+                        .transfer_note
+                        .output_commitments
+                    {
+                        outputs_record_commitments.push(rc);
+                        burn_idx += 1;
+                    }
+                }
+            }
+        }
+
+        outputs_record_commitments
+    }
+
     pub fn from_cape_transactions(
         transactions: Vec<CapeTransaction>,
         miner: UserAddress,
@@ -270,51 +319,25 @@ impl From<CAPEConstructorArgs> for (u8, u64, Address) {
 mod tests {
     use super::*;
     use crate::assertion::Matcher;
+    use crate::deploy::deploy_cape_test;
     use crate::ethereum::{deploy, get_funded_deployer};
     use crate::ledger::CapeLedger;
-    use crate::state::{erc20_asset_description, Erc20Code, EthereumAddr};
     use crate::types::{
-        AssetCodeSol, GenericInto, InternalAssetCodeSol, MerkleRootSol, NullifierSol,
-        RecordCommitmentSol, TestCAPE, TestCapeTypes,
+        GenericInto, MerkleRootSol, NullifierSol, RecordCommitmentSol, TestCapeTypes,
     };
     use anyhow::Result;
     use ethers::prelude::{
         k256::ecdsa::SigningKey, Http, Provider, SignerMiddleware, Wallet, U256,
     };
     use jf_aap::keys::{UserKeyPair, UserPubKey};
-    use jf_aap::structs::{AssetCode, AssetCodeSeed, InternalAssetCode, RecordOpening};
+    use jf_aap::structs::RecordOpening;
     use jf_aap::utils::TxnsParams;
-    use rand::Rng;
     use reef::Ledger;
     use std::path::Path;
-
-    async fn deploy_cape_test() -> TestCAPE<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>> {
-        let client = get_funded_deployer().await.unwrap();
-        // deploy the PlonkVerifier
-        let verifier = deploy(
-            client.clone(),
-            Path::new("../abi/contracts/verifier/PlonkVerifier.sol/PlonkVerifier"),
-            (),
-        )
-        .await
-        .unwrap();
-
-        // deploy TestCAPE.sol
-        let contract = deploy(
-            client.clone(),
-            Path::new("../abi/contracts/mocks/TestCAPE.sol/TestCAPE"),
-            CAPEConstructorArgs::new(24, 10, verifier.address())
-                .generic_into::<(u8, u64, Address)>(),
-        )
-        .await
-        .unwrap();
-        TestCAPE::new(contract.address(), client)
-    }
 
     #[tokio::test]
     async fn test_batch_verify_validity_proof() -> Result<()> {
         let rng = &mut ark_std::test_rng();
-
         // Create a block with 3 transfer, 1 mint, 2 freeze
         let params = TxnsParams::generate_txns(rng, 3, 1, 2, CapeLedger::merkle_height());
         let miner = UserKeyPair::generate(rng);
@@ -369,12 +392,13 @@ mod tests {
         let num_transfer_txn = 1;
         let num_mint_txn = 1;
         let num_freeze_txn = 1;
+        let tree_height = CapeLedger::merkle_height();
         let params = TxnsParams::generate_txns(
             rng,
             num_transfer_txn,
             num_mint_txn,
             num_freeze_txn,
-            CapeLedger::merkle_height(),
+            tree_height,
         );
         let miner = UserPubKey::default();
 
@@ -678,7 +702,7 @@ mod tests {
     }
 
     // TODO integration test to check if check_transfer is hooked up correctly in
-    // main block validaton loop.
+    // main block validation loop.
 
     #[tokio::test]
     async fn test_derive_record_commitment() {
@@ -717,258 +741,12 @@ mod tests {
             .should_revert_with_message("Reveal map exceeds 12 bits")
     }
 
-    #[tokio::test]
-    async fn test_compute_max_commitments() {
-        let contract = deploy_cape_test().await;
-        let rng = &mut ark_std::test_rng();
-
-        for _run in 0..10 {
-            let mut num_comms = 0;
-
-            let burn_notes = (0..rng.gen_range(0..2))
-                .map(|_| {
-                    let mut note = sol::BurnNote::default();
-                    let n = rng.gen_range(0..10);
-                    note.transfer_note.output_commitments = [U256::from(0)].repeat(n);
-                    num_comms += n;
-                    note
-                })
-                .collect();
-
-            let transfer_notes = (0..rng.gen_range(0..2))
-                .map(|_| {
-                    let mut note = sol::TransferNote::default();
-                    let n = rng.gen_range(0..10);
-                    note.output_commitments = [U256::from(0)].repeat(n);
-                    num_comms += n;
-                    note
-                })
-                .collect();
-
-            let freeze_notes = (0..rng.gen_range(0..2))
-                .map(|_| {
-                    let mut note = sol::FreezeNote::default();
-                    let n = rng.gen_range(0..10);
-                    note.output_commitments = [U256::from(0)].repeat(n);
-                    num_comms += n;
-                    note
-                })
-                .collect();
-
-            let mint_notes = (0..rng.gen_range(0..2))
-                .map(|_| {
-                    num_comms += 2; // change and mint
-                    sol::MintNote::default()
-                })
-                .collect();
-
-            let cape_block = sol::CapeBlock {
-                transfer_notes,
-                mint_notes,
-                freeze_notes,
-                burn_notes,
-                note_types: vec![],
-                miner_addr: UserPubKey::default().address().into(),
-            };
-
-            let max_comms_sol = contract
-                .compute_max_commitments(cape_block)
-                .call()
-                .await
-                .unwrap();
-
-            assert_eq!(max_comms_sol, U256::from(num_comms));
-        }
-    }
-
-    #[tokio::test]
-    async fn test_erc20_description() -> Result<()> {
-        let contract = deploy_cape_test().await;
-        let sponsor = Address::random();
-        let asset_address = Address::random();
-        let asset_code = Erc20Code(EthereumAddr(asset_address.to_fixed_bytes()));
-        let description =
-            erc20_asset_description(&asset_code, &EthereumAddr(sponsor.to_fixed_bytes()));
-        let ret = contract
-            .compute_asset_description(asset_address, sponsor)
-            .call()
-            .await?;
-        assert_eq!(ret.to_vec(), description);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_check_foreign_asset_code() -> Result<()> {
-        let contract = deploy_cape_test().await;
-
-        // Fails for random record opening with random asset code.
-        let rng = &mut ark_std::test_rng();
-        let ro = RecordOpening::rand_for_test(rng);
-        contract
-            .check_foreign_asset_code(
-                ro.asset_def.code.generic_into::<sol::AssetCodeSol>().0,
-                Address::random(),
-            )
-            .call()
-            .await
-            .should_revert_with_message("Wrong foreign asset code");
-
-        let erc20_address = Address::random();
-        // This is the first account from the test mnemonic
-        // TODO define elsewhere to make it usable from other tests
-        let sponsor = "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266".parse::<Address>()?;
-        let erc20_code = Erc20Code(EthereumAddr(erc20_address.to_fixed_bytes()));
-
-        // Fails for domestic asset code.
-        let domestic_asset_code =
-            AssetCode::new_domestic(AssetCodeSeed::generate(rng), erc20_address.as_bytes());
-        contract
-            .check_foreign_asset_code(
-                domestic_asset_code.generic_into::<AssetCodeSol>().0,
-                erc20_address,
-            )
-            .from(sponsor)
-            .call()
-            .await
-            .should_revert_with_message("Wrong foreign asset code");
-
-        // Fails if txn sender address does not match sponsor in asset code.
-        let description_wrong_sponsor = erc20_asset_description(
-            &erc20_code,
-            &EthereumAddr(Address::random().to_fixed_bytes()),
-        );
-        let asset_code_wrong_sponsor = AssetCode::new_foreign(&description_wrong_sponsor);
-        contract
-            .check_foreign_asset_code(
-                asset_code_wrong_sponsor.generic_into::<AssetCodeSol>().0,
-                sponsor,
-            )
-            .from(sponsor)
-            .call()
-            .await
-            .should_revert_with_message("Wrong foreign asset code");
-
-        let description =
-            erc20_asset_description(&erc20_code, &EthereumAddr(sponsor.to_fixed_bytes()));
-        let asset_code = AssetCode::new_foreign(&description);
-
-        // Fails for random erc20 address.
-        contract
-            .check_foreign_asset_code(
-                asset_code.generic_into::<sol::AssetCodeSol>().0,
-                Address::random(),
-            )
-            .from(sponsor)
-            .call()
-            .await
-            .should_revert_with_message("Wrong foreign asset code");
-
-        // Passes for correctly derived asset code
-        contract
-            .check_foreign_asset_code(
-                asset_code.generic_into::<sol::AssetCodeSol>().0,
-                erc20_address,
-            )
-            .from(sponsor)
-            .call()
-            .await
-            .should_not_revert();
-
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_check_domestic_asset_code() -> Result<()> {
-        let contract = deploy_cape_test().await;
-
-        // Create a matching pair of codes
-        let rng = &mut ark_std::test_rng();
-        let description = b"aap_usdx";
-        let seed = AssetCodeSeed::generate(rng);
-        let internal_asset_code = InternalAssetCode::new(seed, description);
-        let asset_code = AssetCode::new_domestic(seed, description);
-
-        // Passes for matching asset codes
-        contract
-            .check_domestic_asset_code(
-                asset_code.generic_into::<AssetCodeSol>().0,
-                internal_asset_code.generic_into::<InternalAssetCodeSol>().0,
-            )
-            .call()
-            .await
-            .should_not_revert();
-
-        // Fails with non-matching description
-        contract
-            .check_domestic_asset_code(
-                AssetCode::new_domestic(seed, b"other description")
-                    .generic_into::<AssetCodeSol>()
-                    .0,
-                internal_asset_code.generic_into::<InternalAssetCodeSol>().0,
-            )
-            .call()
-            .await
-            .should_revert_with_message("Wrong domestic asset code");
-
-        // Fails for foreign asset code
-        contract
-            .check_domestic_asset_code(
-                AssetCode::new_foreign(description)
-                    .generic_into::<AssetCodeSol>()
-                    .0,
-                internal_asset_code.generic_into::<InternalAssetCodeSol>().0,
-            )
-            .call()
-            .await
-            .should_revert_with_message("Wrong domestic asset code");
-
-        // Fails if internal asset code doesn't match (different seed)
-        contract
-            .check_domestic_asset_code(
-                asset_code.generic_into::<AssetCodeSol>().0,
-                InternalAssetCode::new(AssetCodeSeed::generate(rng), description)
-                    .generic_into::<InternalAssetCodeSol>()
-                    .0,
-            )
-            .call()
-            .await
-            .should_revert_with_message("Wrong domestic asset code");
-
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_check_domestic_asset_code_in_submit_cape_block() -> Result<()> {
-        let contract = deploy_cape_test().await;
-        let rng = &mut ark_std::test_rng();
-        let params = TxnsParams::generate_txns(rng, 0, 1, 0, CapeLedger::merkle_height());
-
-        contract
-            .add_root(params.merkle_root.generic_into::<MerkleRootSol>().0)
-            .send()
-            .await?
-            .await?;
-
-        let mut block = CapeBlock::generate(params.txns, vec![], UserPubKey::default().address())?;
-
-        // Set a wrong internal asset code on the mint note
-        block.mint_notes[0].mint_internal_asset_code =
-            InternalAssetCode::new(AssetCodeSeed::generate(rng), b"description");
-
-        contract
-            .submit_cape_block(block.into(), vec![])
-            .call()
-            .await
-            .should_revert_with_message("Wrong domestic asset code");
-
-        Ok(())
-    }
-
     mod type_conversion {
         use super::*;
-        use crate::{ledger::CapeLedger, types::GenericInto};
+        use crate::types::{AssetCodeSol, GenericInto, InternalAssetCodeSol};
         use ark_bn254::{Bn254, Fr};
         use ark_std::UniformRand;
+        use jf_aap::structs::{AssetCodeSeed, InternalAssetCode};
         use jf_aap::{
             freeze::FreezeNote,
             mint::MintNote,
@@ -1043,6 +821,66 @@ mod tests {
                     .generic_into::<NodeValue>();
                 assert_eq!(root, res);
             }
+            Ok(())
+        }
+
+        #[tokio::test]
+        async fn test_check_domestic_asset_code() -> Result<()> {
+            let contract = deploy_cape_test().await;
+
+            // Create a matching pair of codes
+            let rng = &mut ark_std::test_rng();
+            let description = b"aap_usdx";
+            let seed = AssetCodeSeed::generate(rng);
+            let internal_asset_code = InternalAssetCode::new(seed, description);
+            let asset_code = AssetCode::new_domestic(seed, description);
+
+            // Passes for matching asset codes
+            contract
+                .check_domestic_asset_code(
+                    asset_code.generic_into::<AssetCodeSol>().0,
+                    internal_asset_code.generic_into::<InternalAssetCodeSol>().0,
+                )
+                .call()
+                .await
+                .should_not_revert();
+
+            // Fails with non-matching description
+            contract
+                .check_domestic_asset_code(
+                    AssetCode::new_domestic(seed, b"other description")
+                        .generic_into::<AssetCodeSol>()
+                        .0,
+                    internal_asset_code.generic_into::<InternalAssetCodeSol>().0,
+                )
+                .call()
+                .await
+                .should_revert_with_message("Wrong domestic asset code");
+
+            // Fails for foreign asset code
+            contract
+                .check_domestic_asset_code(
+                    AssetCode::new_foreign(description)
+                        .generic_into::<AssetCodeSol>()
+                        .0,
+                    internal_asset_code.generic_into::<InternalAssetCodeSol>().0,
+                )
+                .call()
+                .await
+                .should_revert_with_message("Wrong domestic asset code");
+
+            // Fails if internal asset code doesn't match (different seed)
+            contract
+                .check_domestic_asset_code(
+                    asset_code.generic_into::<AssetCodeSol>().0,
+                    InternalAssetCode::new(AssetCodeSeed::generate(rng), description)
+                        .generic_into::<InternalAssetCodeSol>()
+                        .0,
+                )
+                .call()
+                .await
+                .should_revert_with_message("Wrong domestic asset code");
+
             Ok(())
         }
 

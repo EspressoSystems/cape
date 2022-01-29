@@ -83,6 +83,15 @@ abigen!(
     TestVerifyingKeys,
     "../abi/contracts/mocks/TestVerifyingKeys.sol/TestVerifyingKeys/abi.json",
     event_derives(serde::Deserialize, serde::Serialize);
+
+    SimpleToken,
+    "../abi/contracts/SimpleToken.sol/SimpleToken/abi.json",
+    event_derives(serde::Deserialize, serde::Serialize);
+
+    TestQueue,
+    "../abi/contracts/mocks/TestQueue.sol/TestQueue/abi.json",
+    event_derives(serde::Deserialize, serde::Serialize);
+
 );
 
 impl From<ark_bn254::G1Affine> for G1Point {
@@ -228,7 +237,7 @@ impl From<jf_plonk::testing_apis::Challenges<Fr>> for Challenges {
     }
 }
 
-/// a helper trait to help with fully-qualified generic into synatx:
+/// a helper trait to help with fully-qualified generic into syntax:
 /// `x.generic_into::<DestType>();`
 /// This is particularly helpful in a chained `generic_into()` statements.
 pub trait GenericInto {
@@ -264,7 +273,7 @@ macro_rules! jf_conversion_for_u256_new_type {
                 let mut bytes = vec![0u8; 32];
                 v_sol.0.to_little_endian(&mut bytes);
                 let v: $jf_type = CanonicalDeserialize::deserialize(&bytes[..])
-                    .expect("Failed to deserialze U256.");
+                    .expect("Failed to deserialize U256.");
                 v
             }
         }

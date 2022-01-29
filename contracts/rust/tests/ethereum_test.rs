@@ -1,41 +1,25 @@
-use anyhow::Result;
-use cap_rust_sandbox::{ethereum::*, types::Greeter};
-use ethers::{core::k256::ecdsa::SigningKey, prelude::*};
-use std::path::Path;
+use cap_rust_sandbox::deploy::deploy_greeter_contract;
 
-async fn deploy_contract() -> Result<Greeter<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>>
-{
-    let client = get_funded_deployer().await.unwrap();
-    let contract = deploy(
-        client.clone(),
-        Path::new("../abi/contracts/Greeter.sol/Greeter"),
-        ("Initial Greeting".to_string(),),
-    )
-    .await
-    .unwrap();
-    Ok(Greeter::new(contract.address(), client))
+#[tokio::test]
+async fn test_basic_contract_deployment() {
+    let contract = deploy_greeter_contract().await.unwrap();
+    let res: String = contract.greet().call().await.unwrap().into();
+    assert_eq!(res, "Initial Greeting")
 }
 
 #[tokio::test]
-async fn test_basic_contract_deployment() -> Result<()> {
-    let contract = deploy_contract().await?;
-    assert_eq!(contract.greet().call().await?, "Initial Greeting");
-
-    Ok(())
-}
-
-#[tokio::test]
-async fn test_basic_contract_transaction() -> Result<()> {
-    let contract = deploy_contract().await?;
-    let greeting = String::from("Hi!");
-
+async fn test_basic_contract_transaction() {
+    let contract = deploy_greeter_contract().await.unwrap();
     let _receipt = contract
-        .method::<_, String>("setGreeting", greeting.clone())?
+        .set_greeting("Hi!".to_string())
+        .legacy()
         .send()
-        .await?
-        .confirmations(0)
-        .await?;
-    assert_eq!(contract.greet().call().await?, greeting);
+        .await
+        .unwrap()
+        .await
+        .unwrap()
+        .expect("Failed to get TX receipt");
 
-    Ok(())
+    let res: String = contract.greet().call().await.unwrap();
+    assert_eq!(res, "Hi!");
 }

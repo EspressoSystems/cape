@@ -133,10 +133,8 @@ fn parse_flattened_frontier(flattened_frontier: &[Fr254], uid: u64) -> MerkleFro
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::helpers::{convert_fr254_to_u256, convert_u256_to_bytes_le};
+    use crate::helpers::{compare_merkle_root_from_contract_and_jf_tree, convert_fr254_to_u256};
     use ark_ed_on_bn254::Fq as Fr254;
-    use ark_ff::BigInteger;
-    use ark_ff::PrimeField;
     use ark_std::UniformRand;
     use jf_primitives::merkle_tree::{MerkleTree, NodeValue};
 
@@ -152,8 +150,7 @@ mod tests {
 
         assert_eq!(
             should_be_equal,
-            (convert_u256_to_bytes_le(root_value_u256).as_slice()
-                == root_fr254.to_scalar().into_repr().to_bytes_le())
+            compare_merkle_root_from_contract_and_jf_tree(root_value_u256, root_fr254)
         );
     }
 

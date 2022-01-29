@@ -1,4 +1,4 @@
-//SPDX-License-Identifier: Unlicense
+//SPDX-License-Identifier: Unlicensed
 pragma solidity ^0.8.0;
 
 import "../CAPE.sol";
@@ -83,5 +83,14 @@ contract TestCAPE is CAPE {
         returns (bytes memory)
     {
         return _computeAssetDescription(erc20Address, sponsor);
+    }
+
+    // Functions to access the pending deposits queue
+    function getPendingDepositsAtIndex(uint256 index) public returns (uint256) {
+        return _queue[index];
+    }
+
+    function isPendingDepositsQueueEmpty() public returns (bool) {
+        return _isQueueEmpty();
     }
 }

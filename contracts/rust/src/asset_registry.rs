@@ -1,39 +1,13 @@
 #![cfg(test)]
-use std::path::Path;
-
 use anyhow::Result;
-use ethers::prelude::k256::ecdsa::SigningKey;
 use ethers::prelude::*;
 use jf_aap::structs::{AssetCode, AssetCodeSeed, AssetDefinition, AssetPolicy, RecordOpening};
 
 use crate::assertion::Matcher;
-use crate::cape::CAPEConstructorArgs;
-use crate::ethereum::{deploy, get_funded_client};
+use crate::deploy::deploy_cape_test;
+use crate::ethereum::get_funded_client;
 use crate::state::{erc20_asset_description, Erc20Code, EthereumAddr};
 use crate::types::{AssetCodeSol, GenericInto, TestCAPE};
-
-// TODO remove this duplicate after https://github.com/SpectrumXYZ/cape/pull/363 is merged
-async fn deploy_cape_test() -> TestCAPE<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>> {
-    let client = get_funded_client().await.unwrap();
-    // deploy the PlonkVerifier
-    let verifier = deploy(
-        client.clone(),
-        Path::new("../abi/contracts/verifier/PlonkVerifier.sol/PlonkVerifier"),
-        (),
-    )
-    .await
-    .unwrap();
-
-    // deploy TestCAPE.sol
-    let contract = deploy(
-        client.clone(),
-        Path::new("../abi/contracts/mocks/TestCAPE.sol/TestCAPE"),
-        CAPEConstructorArgs::new(24, 10, verifier.address()).generic_into::<(u8, u64, Address)>(),
-    )
-    .await
-    .unwrap();
-    TestCAPE::new(contract.address(), client)
-}
 
 #[tokio::test]
 async fn test_erc20_description() -> Result<()> {

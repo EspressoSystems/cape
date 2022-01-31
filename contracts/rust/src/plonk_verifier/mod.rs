@@ -7,7 +7,7 @@ use self::helpers::gen_plonk_proof_for_test;
 use crate::assertion::Matcher;
 use crate::types::GenericInto;
 use crate::{
-    ethereum::{deploy, get_funded_deployer},
+    ethereum::{deploy, get_funded_client},
     plonk_verifier::helpers::get_poly_evals,
     types as sol,
     types::{field_to_u256, TestPlonkVerifier},
@@ -34,7 +34,7 @@ use std::{convert::TryInto, path::Path};
 
 async fn deploy_contract(
 ) -> Result<TestPlonkVerifier<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>> {
-    let client = get_funded_deployer().await?;
+    let client = get_funded_client().await?;
     let contract = deploy(
         client.clone(),
         Path::new("../abi/contracts/mocks/TestPlonkVerifier.sol/TestPlonkVerifier"),
@@ -272,7 +272,7 @@ async fn test_batch_verify_opening_proofs() -> Result<()> {
             .collect();
 
         // reconnect to contract to avoid connection reset problem
-        let client = get_funded_deployer().await?;
+        let client = get_funded_client().await?;
         let contract = TestPlonkVerifier::new(contract.address(), client);
         assert!(
             contract
@@ -364,7 +364,7 @@ async fn test_challenge_gen() -> Result<()> {
     let ether_proof: sol::PlonkProof = rust_proof.into();
 
     // reconnect to contract to avoid connection reset problem
-    let client = get_funded_deployer().await?;
+    let client = get_funded_client().await?;
     let contract = TestPlonkVerifier::new(contract.address(), client);
 
     let ether_challenge: sol::Challenges = contract
@@ -454,7 +454,7 @@ async fn test_batch_verify_plonk_proofs() -> Result<()> {
             .collect();
 
         // reconnect to contract to avoid connection reset problem
-        let client = get_funded_deployer().await?;
+        let client = get_funded_client().await?;
         let contract = TestPlonkVerifier::new(contract.address(), client);
 
         assert!(

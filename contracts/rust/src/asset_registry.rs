@@ -8,13 +8,13 @@ use jf_aap::structs::{AssetCode, AssetCodeSeed, AssetDefinition, AssetPolicy, Re
 
 use crate::assertion::Matcher;
 use crate::cape::CAPEConstructorArgs;
-use crate::ethereum::{deploy, get_funded_deployer};
+use crate::ethereum::{deploy, get_funded_client};
 use crate::state::{erc20_asset_description, Erc20Code, EthereumAddr};
 use crate::types::{AssetCodeSol, GenericInto, TestCAPE};
 
 // TODO remove this duplicate after https://github.com/SpectrumXYZ/cape/pull/363 is merged
 async fn deploy_cape_test() -> TestCAPE<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>> {
-    let client = get_funded_deployer().await.unwrap();
+    let client = get_funded_client().await.unwrap();
     // deploy the PlonkVerifier
     let verifier = deploy(
         client.clone(),
@@ -139,7 +139,7 @@ async fn test_asset_registry() -> Result<()> {
 
     let erc20_address = Address::random();
 
-    let sponsor = get_funded_deployer().await?;
+    let sponsor = get_funded_client().await?;
     // Send transactions signed by the sponsor's wallet
     let contract = TestCAPE::new(contract.address(), sponsor.clone());
 

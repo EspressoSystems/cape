@@ -169,7 +169,7 @@ mod test {
     use async_std::sync::Mutex;
     use cap_rust_sandbox::{
         cape::CAPEConstructorArgs,
-        ethereum::{deploy, get_funded_deployer},
+        ethereum::{deploy, get_funded_client},
         ledger::CapeLedger,
         state::CapeTransaction,
         types,
@@ -212,7 +212,7 @@ mod test {
         rng: &mut ChaChaRng,
         faucet: UserPubKey,
     ) -> (TestCAPE<Middleware>, RecordOpening, MerkleTree) {
-        let client = get_funded_deployer().await.unwrap();
+        let client = get_funded_client().await.unwrap();
         let path = |contract| {
             [
                 &PathBuf::from(env!("CARGO_MANIFEST_DIR")),
@@ -368,7 +368,7 @@ mod test {
         // `set_initial_record_commitments` method, but we can at least check that our transaction
         // is submitted correctly.
         let contract = {
-            let deployer = get_funded_deployer().await.unwrap();
+            let deployer = get_funded_client().await.unwrap();
             let path = |contract| {
                 [
                     &PathBuf::from(env!("CARGO_MANIFEST_DIR")),

@@ -49,7 +49,7 @@ mod tests {
 
     async fn deploy_test_rescue() -> TestRescue<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>
     {
-        let client = ethereum::get_funded_deployer().await.unwrap();
+        let client = ethereum::get_funded_client().await.unwrap();
         let contract = ethereum::deploy(
             client.clone(),
             Path::new("../abi/contracts/mocks/TestRescue.sol/TestRescue"),

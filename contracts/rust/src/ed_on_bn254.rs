@@ -1,7 +1,7 @@
 #![cfg(test)]
 
 use crate::{
-    ethereum::{deploy, get_funded_deployer},
+    ethereum::{deploy, get_funded_client},
     types::{EdOnBN254Point, TestEdOnBN254},
 };
 use anyhow::Result;
@@ -16,7 +16,7 @@ use std::path::Path;
 
 async fn deploy_contract(
 ) -> Result<TestEdOnBN254<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>> {
-    let client = get_funded_deployer().await?;
+    let client = get_funded_client().await?;
 
     let contract = deploy(
         client.clone(),

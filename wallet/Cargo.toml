@@ -32,7 +32,7 @@ net = { git = "ssh://git@github.com/SpectrumXYZ/net.git" }
 rand_chacha = "0.3.1"
 regex = "1.5.4"
 reef = { git = "ssh://git@github.com/SpectrumXYZ/reef.git" }
-relayer = { path = "../relayer" }
+relayer = { path = "../relayer", features = ["testing"] }
 seahorse = { git = "ssh://git@github.com/SpectrumXYZ/seahorse.git", rev = "e3665f8731d1da3373827284e16bca98d839bbe8", features = ["testing"] }
 serde = { version = "1.0.123", features = ["derive", "rc"] }
 serde_derive = "1.0.118"

@@ -47,12 +47,14 @@ mod tests {
     use super::*;
     use async_std::sync::{Arc, Mutex};
     use cap_rust_sandbox::state::{Erc20Code, EthereumAddr};
-    use cape_wallet::routes::{BalanceInfo, CapeAPIError, PubKey, WalletSummary};
+    use cape_wallet::{
+        routes::{BalanceInfo, CapeAPIError, PubKey, WalletSummary},
+        testing::port,
+    };
     use jf_aap::{
         keys::UserKeyPair,
         structs::{AssetCode, AssetDefinition},
     };
-    use lazy_static::lazy_static;
     use net::{client, UserAddress};
     use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
     use seahorse::{hd::KeyTree, txn_builder::AssetInfo};
@@ -65,20 +67,6 @@ mod tests {
     use tagged_base64::TaggedBase64;
     use tempdir::TempDir;
     use tracing_test::traced_test;
-
-    lazy_static! {
-        static ref PORT: Arc<Mutex<u64>> = {
-            let port_offset = std::env::var("PORT").unwrap_or_else(|_| String::from("60000"));
-            Arc::new(Mutex::new(port_offset.parse().unwrap()))
-        };
-    }
-
-    async fn port() -> u64 {
-        let mut counter = PORT.lock().await;
-        let port = *counter;
-        *counter += 1;
-        port
-    }
 
     fn random_mnemonic(rng: &mut ChaChaRng) -> String {
         // TODO add an endpoint for generating random mnemonics

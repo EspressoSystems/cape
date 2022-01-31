@@ -440,10 +440,6 @@ impl CapeContractState {
                         .collect::<Vec<_>>();
 
                     let mut records_to_insert = vec![];
-                    // TODO: the workflow code puts these after the things
-                    // in the transactions -- which choice is correct?
-                    let wrapped_commitments = new_state.erc20_deposits.clone();
-                    records_to_insert.append(&mut new_state.erc20_deposits);
 
                     // past this point, if any validation error occurs the
                     // entire evm transaction rolls back, so we can mutate
@@ -634,6 +630,10 @@ impl CapeContractState {
                             }
                         })?;
                     }
+
+                    // Process the pending deposits
+                    let wrapped_commitments = new_state.erc20_deposits.clone();
+                    records_to_insert.append(&mut new_state.erc20_deposits);
 
                     // update the record tree
                     let (record_merkle_frontier, record_merkle_commitment) = {

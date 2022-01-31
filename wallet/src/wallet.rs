@@ -1,5 +1,10 @@
+use async_std::sync::Arc;
 use async_trait::async_trait;
 use cap_rust_sandbox::{ledger::*, state::*};
+use ethers::{
+    core::k256::ecdsa::SigningKey,
+    prelude::{Http, Provider, SignerMiddleware, Wallet as EthWallet},
+};
 use jf_aap::{
     keys::UserAddress,
     structs::{AssetCode, AssetDefinition, AssetPolicy, FreezeFlag, RecordOpening},
@@ -10,6 +15,7 @@ use seahorse::{
 };
 
 pub type CapeWalletError = WalletError<CapeLedger>;
+pub type EthMiddleware = SignerMiddleware<Provider<Http>, EthWallet<SigningKey>>;
 
 #[async_trait]
 pub trait CapeWalletBackend<'a>: WalletBackend<'a, CapeLedger> {
@@ -47,6 +53,8 @@ pub trait CapeWalletBackend<'a>: WalletBackend<'a, CapeLedger> {
         src_addr: EthereumAddr,
         ro: RecordOpening,
     ) -> Result<(), CapeWalletError>;
+
+    fn eth_client(&self) -> Result<Arc<EthMiddleware>, CapeWalletError>;
 }
 
 pub type CapeWallet<'a, Backend> = Wallet<'a, Backend, CapeLedger>;
@@ -82,6 +90,8 @@ pub trait CapeWalletExt<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> {
     ) -> Result<TransactionReceipt<CapeLedger>, CapeWalletError>;
 
     async fn approved_assets(&self) -> Vec<(AssetDefinition, Erc20Code)>;
+    async fn eth_client(&self) -> Result<Arc<EthMiddleware>, CapeWalletError>;
+    async fn eth_address(&self) -> Result<EthereumAddr, CapeWalletError>;
 }
 
 #[async_trait]
@@ -199,5 +209,13 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
 
     async fn approved_assets(&self) -> Vec<(AssetDefinition, Erc20Code)> {
         unimplemented!()
+    }
+
+    async fn eth_client(&self) -> Result<Arc<EthMiddleware>, CapeWalletError> {
+        self.lock().await.backend().eth_client()
+    }
+
+    async fn eth_address(&self) -> Result<EthereumAddr, CapeWalletError> {
+        Ok(self.eth_client().await?.address().into())
     }
 }

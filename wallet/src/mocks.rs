@@ -1,4 +1,4 @@
-use crate::wallet::{CapeWalletBackend, CapeWalletError};
+use crate::wallet::{CapeWalletBackend, CapeWalletError, EthMiddleware};
 use async_std::sync::{Mutex, MutexGuard};
 use async_trait::async_trait;
 use cap_rust_sandbox::{ledger::*, state::*, universal_param::UNIVERSAL_PARAM};
@@ -265,6 +265,13 @@ impl MockCapeNetwork {
         Ok(())
     }
 
+    pub fn get_wrapped_asset(&self, asset: &AssetDefinition) -> Result<Erc20Code, CapeWalletError> {
+        match self.contract.erc20_registrar.get(asset) {
+            Some((erc20_code, _)) => Ok(erc20_code.clone()),
+            None => Err(WalletError::<CapeLedger>::UndefinedAsset { asset: asset.code }),
+        }
+    }
+
     fn submit_operations(&mut self, ops: Vec<CapeOperation>) -> Result<(), CapeValidationError> {
         let (new_state, effects) = self.contract.submit_operations(ops)?;
         let mut events = vec![];
@@ -289,18 +296,14 @@ impl MockCapeNetwork {
 
     fn handle_event(&mut self, event: CapeEvent) {
         match event {
-            CapeEvent::BlockCommitted { wraps, txns } => {
-                let num_wraps = wraps.len();
-
-                // Wrap each wrap and transaction event into a CapeTransition, build a
-                // CapeBlock, and broadcast it to subscribers.
-                let wrap_block = wraps
+            CapeEvent::BlockCommitted { txns, wraps } => {
+                // Convert the transactions and wraps into CapeTransitions, and collect them all
+                // into a single block, in the order they were processed by the contract
+                // (transactions first, then wraps).
+                let block = txns
                     .into_iter()
-                    .enumerate()
-                    .map(|(i, comm)| {
-                        let uids = vec![self.records.num_leaves()];
-                        self.records.push(comm.to_field_element());
-
+                    .map(CapeTransition::Transaction)
+                    .chain(wraps.into_iter().map(|comm| {
                         // Look up the auxiliary information associated with this deposit which
                         // we saved when we processed the deposit event. This lookup cannot
                         // fail, because the contract only finalizes a Wrap operation after it
@@ -308,48 +311,33 @@ impl MockCapeNetwork {
                         // Erc20Deposited event.
                         let (erc20_code, src_addr, ro) =
                             self.pending_erc20_deposits.remove(&comm).unwrap();
-                        let wrap = CapeTransition::Wrap {
+                        CapeTransition::Wrap {
                             erc20_code,
                             src_addr,
                             ro,
-                        };
-                        self.txns.insert(
-                            (self.block_height, i as u64),
-                            CommittedTransaction {
-                                txn: wrap.clone(),
-                                uids,
-                                memos: None,
-                            },
-                        );
-                        wrap
-                    })
-                    .collect();
-                let mut txn_block = txns
-                    .into_iter()
-                    .enumerate()
-                    .map(|(i, txn)| {
-                        let mut uids = Vec::new();
-                        for comm in txn.commitments() {
-                            uids.push(self.records.num_leaves());
-                            self.records.push(comm.to_field_element());
                         }
-                        let txn = CapeTransition::Transaction(txn);
-                        self.txns.insert(
-                            (self.block_height, (num_wraps + i) as u64),
-                            CommittedTransaction {
-                                txn: txn.clone(),
-                                uids,
-                                memos: None,
-                            },
-                        );
-                        txn
-                    })
-                    .collect();
-                let mut block: Vec<CapeTransition> = wrap_block;
-                block.append(&mut txn_block);
-                let block = CapeBlock::new(block);
+                    }))
+                    .collect::<Vec<_>>();
+
+                // Add transactions and outputs to query service data structures.
+                for (i, txn) in block.iter().enumerate() {
+                    let mut uids = Vec::new();
+                    for comm in txn.output_commitments() {
+                        uids.push(self.records.num_leaves());
+                        self.records.push(comm.to_field_element());
+                    }
+                    self.txns.insert(
+                        (self.block_height, i as u64),
+                        CommittedTransaction {
+                            txn: txn.clone(),
+                            uids,
+                            memos: None,
+                        },
+                    );
+                }
+
                 self.generate_event(LedgerEvent::Commit {
-                    block,
+                    block: CapeBlock::new(block),
                     block_id: self.block_height,
                     state_comm: self.block_height + 1,
                 });
@@ -655,18 +643,7 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
         &self,
         asset: &AssetDefinition,
     ) -> Result<Erc20Code, WalletError<CapeLedger>> {
-        match self
-            .ledger
-            .lock()
-            .await
-            .network()
-            .contract
-            .erc20_registrar
-            .get(asset)
-        {
-            Some((erc20_code, _)) => Ok(erc20_code.clone()),
-            None => Err(WalletError::<CapeLedger>::UndefinedAsset { asset: asset.code }),
-        }
+        self.ledger.lock().await.network().get_wrapped_asset(asset)
     }
 
     async fn wrap_erc20(
@@ -682,6 +659,12 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
             .wrap_erc20(erc20_code, src_addr, ro)
             .map_err(cape_to_wallet_err)
     }
+
+    fn eth_client(&self) -> Result<Arc<EthMiddleware>, CapeWalletError> {
+        Err(CapeWalletError::Failed {
+            msg: String::from("eth_client is not implemented for MockCapeBackend"),
+        })
+    }
 }
 
 fn cape_to_wallet_err(err: CapeValidationError) -> WalletError<CapeLedger> {
@@ -692,9 +675,9 @@ fn cape_to_wallet_err(err: CapeValidationError) -> WalletError<CapeLedger> {
     }
 }
 
-struct MockCapeWalletLoader {
-    path: PathBuf,
-    key: KeyTree,
+pub struct MockCapeWalletLoader {
+    pub path: PathBuf,
+    pub key: KeyTree,
 }
 
 impl WalletLoader<CapeLedger> for MockCapeWalletLoader {

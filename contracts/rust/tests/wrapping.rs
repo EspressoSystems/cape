@@ -166,7 +166,6 @@ async fn call_and_check_deposit_erc20(
         contracts_info.erc20_token_address.to_fixed_bytes(),
     ));
 
-    // TODO the sponsor should be different from the erc20 tokens owner
     let sponsor = contracts_info.owner_of_erc20_tokens_client_address;
 
     let description = erc20_asset_description(&erc20_code, &EthereumAddr(sponsor.to_fixed_bytes()));

@@ -118,7 +118,6 @@ async fn check_pending_deposits_queue_at_index(
         .await?;
     let deposit_record_commitment = RecordCommitment::from(&ro);
     let expected_deposit_record_commitment_sol = deposit_record_commitment
-        .clone()
         .generic_into::<sol::RecordCommitmentSol>()
         .0;
     assert_eq!(
@@ -176,8 +175,9 @@ async fn call_and_check_deposit_erc20(
     let asset_def_sol = asset_def.clone().generic_into::<sol::AssetDefinition>();
 
     if register_asset {
+        println!("Sponsoring asset");
         contracts_info
-            .cape_contract
+            .cape_contract_for_erc20_owner
             .sponsor_cape_asset(contracts_info.erc20_token_address, asset_def_sol)
             .send()
             .await?
@@ -194,6 +194,7 @@ async fn call_and_check_deposit_erc20(
     );
 
     // We call the CAPE contract from the address that owns the ERC20 tokens
+    println!("Depositing tokens");
     contracts_info
         .cape_contract_for_erc20_owner
         .deposit_erc_20(
@@ -283,6 +284,7 @@ async fn integration_test_wrapping_erc20_tokens() -> Result<()> {
         .await?
         .await?;
 
+    println!("Submitting block");
     // Submit to the contract
     let receipt = cape_contract
         .submit_cape_block(cape_block.clone().into(), vec![])

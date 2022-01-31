@@ -21,7 +21,10 @@ where
 {
     fn should_not_revert(self) {
         if self.is_err() {
-            panic!("Tx should not revert but it reverted");
+            panic!(
+                "Tx should not revert but it reverted with \"{}\"",
+                self.unwrap_err().to_string()
+            );
         }
     }
 
@@ -34,7 +37,10 @@ where
 
     fn should_revert_with_message(self, message: &str) {
         if self.is_ok() {
-            panic!("Tx should revert but it did not revert");
+            panic!(
+                "Tx should revert with \"{}\" but it did not revert",
+                message
+            );
         }
 
         let error = self.unwrap_err().to_string();

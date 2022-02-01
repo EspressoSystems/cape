@@ -1,4 +1,3 @@
-/// This file contains integration tests for the CAPE contract.
 use anyhow::Result;
 use cap_rust_sandbox::cape::CapeBlock;
 use cap_rust_sandbox::deploy::{deploy_cape_test, deploy_erc20_token};
@@ -7,14 +6,11 @@ use cap_rust_sandbox::helpers::{
 };
 use cap_rust_sandbox::ledger::CapeLedger;
 use cap_rust_sandbox::state::{erc20_asset_description, Erc20Code, EthereumAddr};
+use cap_rust_sandbox::test_utils::ContractsInfo;
 use cap_rust_sandbox::types as sol;
-use cap_rust_sandbox::types::{
-    GenericInto, MerkleRootSol, RecordOpening as RecordOpeningSol, SimpleToken, TestCAPE,
-};
+use cap_rust_sandbox::types::{GenericInto, MerkleRootSol, RecordOpening as RecordOpeningSol};
 use ethers::abi::AbiDecode;
-use ethers::prelude::{
-    k256::ecdsa::SigningKey, Http, Provider, SignerMiddleware, Wallet, H160, U256,
-};
+use ethers::prelude::U256;
 use jf_aap::keys::UserPubKey;
 use jf_aap::structs::{
     AssetCode, AssetDefinition, AssetPolicy, FreezeFlag, RecordCommitment, RecordOpening,
@@ -22,8 +18,8 @@ use jf_aap::structs::{
 use jf_aap::utils::TxnsParams;
 use jf_aap::{MerkleTree, NodeValue};
 use reef::Ledger;
-use std::sync::Arc;
 
+// TODO move to test_utils?
 fn generate_cape_block_and_merkle_root(tree_height: u8) -> Result<(CapeBlock, NodeValue)> {
     let rng = &mut ark_std::test_rng();
     let num_transfer_txn = 1;
@@ -42,47 +38,6 @@ fn generate_cape_block_and_merkle_root(tree_height: u8) -> Result<(CapeBlock, No
 
     let cape_block = CapeBlock::generate(params.txns, vec![], miner.address())?;
     Ok((cape_block, root))
-}
-
-#[derive(Clone)]
-struct ContractsInfo {
-    cape_contract: TestCAPE<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>,
-    erc20_token_contract: SimpleToken<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>,
-    cape_contract_for_erc20_owner: TestCAPE<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>,
-    erc20_token_address: H160,
-    owner_of_erc20_tokens_client: SignerMiddleware<Provider<Http>, Wallet<SigningKey>>,
-    owner_of_erc20_tokens_client_address: H160,
-}
-
-// TODO try to parametrize the struct with the trait M:Middleware
-impl ContractsInfo {
-    pub async fn new(
-        cape_contract_ref: &TestCAPE<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>,
-        erc20_token_contract_ref: &SimpleToken<
-            SignerMiddleware<Provider<Http>, Wallet<SigningKey>>,
-        >,
-    ) -> Self {
-        let cape_contract = cape_contract_ref.clone();
-        let erc20_token_contract = erc20_token_contract_ref.clone();
-
-        let erc20_token_address = erc20_token_contract.address();
-        let owner_of_erc20_tokens_client = erc20_token_contract.client().clone();
-        let owner_of_erc20_tokens_client_address = owner_of_erc20_tokens_client.address();
-
-        let cape_contract_for_erc20_owner = TestCAPE::new(
-            cape_contract_ref.address(),
-            Arc::from(owner_of_erc20_tokens_client.clone()),
-        );
-
-        Self {
-            cape_contract,
-            erc20_token_contract,
-            cape_contract_for_erc20_owner,
-            erc20_token_address,
-            owner_of_erc20_tokens_client,
-            owner_of_erc20_tokens_client_address,
-        }
-    }
 }
 
 async fn check_pending_deposits_queue_at_index(
@@ -148,6 +103,7 @@ async fn call_and_check_deposit_erc20(
     );
 
     // Approve
+    // TODO add to ContractsInfo
     let contract_address = contracts_info.cape_contract.address();
 
     let amount_u256 = U256::from(deposited_amount);

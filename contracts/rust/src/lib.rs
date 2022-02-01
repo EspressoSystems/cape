@@ -17,6 +17,7 @@ mod queue;
 mod records_merkle_tree;
 mod root_store;
 pub mod state;
+pub mod test_utils;
 mod transcript;
 pub mod types;
 pub mod universal_param;

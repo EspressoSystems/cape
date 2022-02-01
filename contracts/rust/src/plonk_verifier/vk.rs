@@ -1,16 +1,12 @@
-use crate::{
-    ethereum::{deploy, get_funded_client},
-    types as sol,
-    types::TestVerifyingKeys,
-};
+use crate::deploy::deploy_test_verifying_keys_contract;
+use crate::ethereum::get_funded_client;
+use crate::{types as sol, types::TestVerifyingKeys};
 use anyhow::Result;
 use ark_std::{rand::Rng, test_rng};
-use ethers::core::k256::ecdsa::SigningKey;
 use ethers::prelude::*;
 use jf_aap::proof::{freeze, mint, transfer};
 use jf_aap::structs::NoteType;
 use jf_aap::testing_apis::universal_setup_for_test;
-use std::path::Path;
 
 const TREE_DEPTH: u8 = 24;
 const SUPPORTED_VKS: [(NoteType, u8, u8, u8); 3] = [
@@ -19,21 +15,9 @@ const SUPPORTED_VKS: [(NoteType, u8, u8, u8); 3] = [
     (NoteType::Freeze, 3, 3, TREE_DEPTH),
 ];
 
-async fn deploy_contract(
-) -> Result<TestVerifyingKeys<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>> {
-    let client = get_funded_client().await?;
-    let contract = deploy(
-        client.clone(),
-        Path::new("../abi/contracts/mocks/TestVerifyingKeys.sol/TestVerifyingKeys"),
-        (),
-    )
-    .await?;
-    Ok(TestVerifyingKeys::new(contract.address(), client))
-}
-
 #[tokio::test]
 async fn test_get_encoded_id() -> Result<()> {
-    let contract = deploy_contract().await?;
+    let contract = deploy_test_verifying_keys_contract().await;
     let rng = &mut test_rng();
 
     for _ in 0..5 {
@@ -59,7 +43,7 @@ async fn test_get_encoded_id() -> Result<()> {
 
 #[tokio::test]
 async fn test_get_vk_by_id() -> Result<()> {
-    let contract = deploy_contract().await?;
+    let contract = deploy_test_verifying_keys_contract().await;
     let rng = &mut test_rng();
 
     let max_degree = 2usize.pow(17);

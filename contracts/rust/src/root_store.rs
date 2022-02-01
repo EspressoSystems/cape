@@ -1,21 +1,12 @@
 #![cfg(test)]
 use crate::assertion::Matcher;
-use crate::ethereum::{deploy, get_funded_client};
-use crate::types::TestRootStore;
+use crate::deploy::deploy_test_root_store_contract;
 use anyhow::Result;
 use ethers::prelude::U256;
-use std::path::Path;
 
 #[tokio::test]
 async fn test_root_store() -> Result<()> {
-    let client = get_funded_client().await?;
-    let contract = deploy(
-        client.clone(),
-        Path::new("../abi/contracts/mocks/TestRootStore.sol/TestRootStore"),
-        (3u64,), /* num_roots */
-    )
-    .await?;
-    let contract = TestRootStore::new(contract.address(), client);
+    let contract = deploy_test_root_store_contract().await;
 
     let roots: Vec<U256> = (5..10).map(U256::from).collect();
 

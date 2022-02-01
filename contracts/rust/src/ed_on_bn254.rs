@@ -1,39 +1,20 @@
 #![cfg(test)]
 
-use crate::{
-    ethereum::{deploy, get_funded_client},
-    types::{EdOnBN254Point, TestEdOnBN254},
-};
+use crate::deploy::deploy_test_ed_on_bn_254_contract;
+use crate::types::EdOnBN254Point;
 use anyhow::Result;
 use ark_ec::AffineCurve;
 use ark_ed_on_bn254::EdwardsAffine;
 use ark_serialize::CanonicalSerialize;
 use ark_std::UniformRand;
 use ark_std::Zero;
-use ethers::core::k256::ecdsa::SigningKey;
-use ethers::prelude::*;
-use std::path::Path;
-
-async fn deploy_contract(
-) -> Result<TestEdOnBN254<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>> {
-    let client = get_funded_client().await?;
-
-    let contract = deploy(
-        client.clone(),
-        Path::new("../abi/contracts/mocks/TestEdOnBN254.sol/TestEdOnBN254"),
-        (),
-    )
-    .await?;
-
-    Ok(TestEdOnBN254::new(contract.address(), client))
-}
 
 #[tokio::test]
 async fn test_serialization() -> Result<()> {
     let rng = &mut ark_std::test_rng();
 
     // somehow deploying this contract returns an error
-    let contract = deploy_contract().await?;
+    let contract = deploy_test_ed_on_bn_254_contract().await;
     let mut rust_ser = Vec::new();
 
     // infinity

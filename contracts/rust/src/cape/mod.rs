@@ -320,20 +320,17 @@ mod tests {
     use super::*;
     use crate::assertion::Matcher;
     use crate::deploy::deploy_cape_test;
-    use crate::ethereum::{deploy, get_funded_client};
+    use crate::ethereum::get_funded_client;
     use crate::ledger::CapeLedger;
     use crate::types::{
         GenericInto, MerkleRootSol, NullifierSol, RecordCommitmentSol, TestCapeTypes,
     };
     use anyhow::Result;
-    use ethers::prelude::{
-        k256::ecdsa::SigningKey, Http, Provider, SignerMiddleware, Wallet, U256,
-    };
+    use ethers::prelude::U256;
     use jf_aap::keys::{UserKeyPair, UserPubKey};
     use jf_aap::structs::RecordOpening;
     use jf_aap::utils::TxnsParams;
     use reef::Ledger;
-    use std::path::Path;
 
     #[tokio::test]
     async fn test_batch_verify_validity_proof() -> Result<()> {
@@ -743,6 +740,7 @@ mod tests {
 
     mod type_conversion {
         use super::*;
+        use crate::deploy::deploy_test_cape_types_contract;
         use crate::types::{AssetCodeSol, GenericInto, InternalAssetCodeSol};
         use ark_bn254::{Bn254, Fr};
         use ark_std::UniformRand;
@@ -760,23 +758,10 @@ mod tests {
         use jf_plonk::proof_system::structs::Proof;
         use jf_primitives::elgamal;
 
-        async fn deploy_type_contract(
-        ) -> Result<TestCapeTypes<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>> {
-            let client = get_funded_client().await.unwrap();
-            let contract = deploy(
-                client.clone(),
-                Path::new("../abi/contracts/mocks/TestCapeTypes.sol/TestCapeTypes"),
-                (),
-            )
-            .await
-            .unwrap();
-            Ok(TestCapeTypes::new(contract.address(), client))
-        }
-
         #[tokio::test]
         async fn test_nullifier() -> Result<()> {
             let rng = &mut ark_std::test_rng();
-            let contract = deploy_type_contract().await?;
+            let contract = deploy_test_cape_types_contract().await;
             for _ in 0..5 {
                 let nf = Nullifier::random_for_test(rng);
                 let res = contract
@@ -793,7 +778,7 @@ mod tests {
         #[tokio::test]
         async fn test_record_commitment() -> Result<()> {
             let rng = &mut ark_std::test_rng();
-            let contract = deploy_type_contract().await?;
+            let contract = deploy_test_cape_types_contract().await;
             for _ in 0..5 {
                 let rc = RecordCommitment::from_field_element(BaseField::rand(rng));
                 let res = contract
@@ -810,7 +795,7 @@ mod tests {
         #[tokio::test]
         async fn test_merkle_root() -> Result<()> {
             let rng = &mut ark_std::test_rng();
-            let contract = deploy_type_contract().await?;
+            let contract = deploy_test_cape_types_contract().await;
             for _ in 0..5 {
                 let root = NodeValue::rand(rng);
                 let res = contract
@@ -887,7 +872,7 @@ mod tests {
         #[tokio::test]
         async fn test_asset_code() -> Result<()> {
             let rng = &mut ark_std::test_rng();
-            let contract = deploy_type_contract().await?;
+            let contract = deploy_test_cape_types_contract().await;
             for _ in 0..5 {
                 let (ac, _) = AssetCode::random(rng);
                 let res = contract
@@ -904,7 +889,7 @@ mod tests {
         #[tokio::test]
         async fn test_asset_policy_and_definition() -> Result<()> {
             let rng = &mut ark_std::test_rng();
-            let contract = deploy_type_contract().await?;
+            let contract = deploy_test_cape_types_contract().await;
             for _ in 0..5 {
                 // NOTE: `sol::AssetPolicy` is from abigen! on contract,
                 // it collides with `jf_aap::structs::AssetPolicy`
@@ -934,7 +919,7 @@ mod tests {
         #[tokio::test]
         async fn test_record_opening() -> Result<()> {
             let rng = &mut ark_std::test_rng();
-            let contract = deploy_type_contract().await?;
+            let contract = deploy_test_cape_types_contract().await;
             for _ in 0..5 {
                 // NOTE: `sol::RecordOpening` is from abigen! on contract,
                 // it collides with `jf_aap::structs::RecordOpening`
@@ -956,7 +941,7 @@ mod tests {
         #[tokio::test]
         async fn test_audit_memo() -> Result<()> {
             let rng = &mut ark_std::test_rng();
-            let contract = deploy_type_contract().await?;
+            let contract = deploy_test_cape_types_contract().await;
             for _ in 0..5 {
                 let keypair = elgamal::KeyPair::generate(rng);
                 let message = Fr::rand(rng);
@@ -989,7 +974,7 @@ mod tests {
                 CapeLedger::merkle_height(),
             );
 
-            let contract = deploy_type_contract().await?;
+            let contract = deploy_test_cape_types_contract().await;
             for txn in params.txns {
                 // reconnect with peer
                 let client = get_funded_client().await?;
@@ -1044,7 +1029,7 @@ mod tests {
 
         #[tokio::test]
         async fn test_note_type() -> Result<()> {
-            let contract = deploy_type_contract().await?;
+            let contract = deploy_test_cape_types_contract().await;
             let invalid = 10;
             assert_eq!(
                 contract

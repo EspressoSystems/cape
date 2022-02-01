@@ -290,7 +290,7 @@ impl CapeContract {
 
                 // to validate the burn transaction, we need to check if the second output
                 // of the transfer (while the first being fee change) is sent to dedicated
-                // "burn address/pubkey". Since the contract only have record commitments,
+                // "burn address/pubkey". Since the transaction only contains record commitments,
                 // we require the user to provide the record opening and check against it.
                 assert_eq!(
                     RecordCommitment::from(burned_ro),

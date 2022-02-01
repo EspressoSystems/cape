@@ -10,10 +10,13 @@ use ethers::prelude::Address;
 use jf_aap::structs::{AssetCode, AssetCodeSeed, RecordOpening};
 
 mod errors_when_calling_deposit_erc20 {
+    use std::sync::Arc;
+
     use super::*;
     use crate::deploy::{deploy_cape_test, deploy_erc20_token};
     use crate::state::{erc20_asset_description, Erc20Code, EthereumAddr};
     use crate::types as sol;
+    use crate::types::TestCAPE;
     use anyhow::Result;
     use ethers::prelude::U256;
     use jf_aap::keys::UserPubKey;
@@ -21,7 +24,6 @@ mod errors_when_calling_deposit_erc20 {
 
     enum WrongCallDepositErc20 {
         AssetTypeNotRegistered,
-        WrongAssetDefinition,
         SkipApproval,
     }
 
@@ -45,8 +47,7 @@ mod errors_when_calling_deposit_erc20 {
         let amount_u256 = U256::from(deposited_amount);
 
         match wrong_call {
-            WrongCallDepositErc20::AssetTypeNotRegistered
-            | WrongCallDepositErc20::WrongAssetDefinition => {
+            WrongCallDepositErc20::AssetTypeNotRegistered => {
                 erc20_token_contract
                     .approve(contract_address, amount_u256)
                     .send()
@@ -70,28 +71,24 @@ mod errors_when_calling_deposit_erc20 {
         let asset_def_sol = asset_def.clone().generic_into::<sol::AssetDefinition>();
 
         match wrong_call {
-            WrongCallDepositErc20::SkipApproval | WrongCallDepositErc20::WrongAssetDefinition => {
-                cape_contract
-                    .sponsor_cape_asset(erc20_address, asset_def_sol)
-                    .send()
-                    .await?
-                    .await?;
+            WrongCallDepositErc20::SkipApproval => {
+                TestCAPE::new(
+                    cape_contract.address(),
+                    Arc::new(owner_of_erc20_tokens_client.clone()),
+                )
+                .sponsor_cape_asset(erc20_address, asset_def_sol)
+                .send()
+                .await?
+                .await?;
             }
             WrongCallDepositErc20::AssetTypeNotRegistered => {}
         }
-
-        let asset_def_for_ro = match wrong_call {
-            WrongCallDepositErc20::SkipApproval | WrongCallDepositErc20::AssetTypeNotRegistered => {
-                asset_def
-            }
-            WrongCallDepositErc20::WrongAssetDefinition => AssetDefinition::rand_for_test(rng),
-        };
 
         // Build record opening
         let ro = RecordOpening::new(
             rng,
             deposited_amount,
-            asset_def_for_ro,
+            asset_def,
             UserPubKey::default(),
             FreezeFlag::Unfrozen,
         );
@@ -112,18 +109,9 @@ mod errors_when_calling_deposit_erc20 {
     }
 
     #[tokio::test]
-    async fn the_asset_code_is_incorrect() -> Result<()> {
-        call_deposit_erc20_with_error_helper(
-            "Wrong foreign asset code",
-            WrongCallDepositErc20::WrongAssetDefinition,
-        )
-        .await
-    }
-
-    #[tokio::test]
     async fn the_asset_type_is_not_registered() -> Result<()> {
         call_deposit_erc20_with_error_helper(
-            "asset definition not registered",
+            "Asset definition not registered",
             WrongCallDepositErc20::AssetTypeNotRegistered,
         )
         .await

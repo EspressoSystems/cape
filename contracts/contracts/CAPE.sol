@@ -41,7 +41,6 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue {
     using AccumulatingArray for AccumulatingArray.Data;
 
     bytes public constant CAPE_BURN_MAGIC_BYTES = "TRICAPE burn";
-    bytes13 public constant DOM_SEP_FOREIGN_ASSET = "FOREIGN_ASSET";
     bytes14 public constant DOM_SEP_DOMESTIC_ASSET = "DOMESTIC_ASSET";
     uint256 public constant AAP_NATIVE_ASSET_CODE = 1;
 
@@ -205,8 +204,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue {
     /// @param erc20Address address of the ERC20 token corresponding to the deposit.
     function depositErc20(RecordOpening memory ro, address erc20Address) public {
         ERC20 token = ERC20(erc20Address);
-        _checkForeignAssetCode(ro.assetDef.code, erc20Address);
-        require(isCapeAssetRegistered(ro.assetDef), "asset definition not registered");
+        require(isCapeAssetRegistered(ro.assetDef), "Asset definition not registered");
 
         // We skip the sanity checks mentioned in the rust specification as they are optional.
 
@@ -217,21 +215,6 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue {
         token.transferFrom(msg.sender, address(this), ro.amount);
         bytes memory roBytes = abi.encode(ro);
         emit Erc20TokensDeposited(roBytes, erc20Address, msg.sender);
-    }
-
-    /// @notice Checks if the asset definition code is correctly derived from the ERC20 address
-    ///        of the token and the address of the depositor.
-    /// @dev requires "view" to access msg.sender
-    function _checkForeignAssetCode(uint256 assetDefinitionCode, address erc20Address)
-        internal
-        view
-    {
-        bytes memory description = _computeAssetDescription(erc20Address, msg.sender);
-        bytes memory randomBytes = bytes.concat(
-            keccak256(bytes.concat(DOM_SEP_FOREIGN_ASSET, description))
-        );
-        uint256 derivedCode = BN254.fromLeBytesModOrder(randomBytes);
-        require(derivedCode == assetDefinitionCode, "Wrong foreign asset code");
     }
 
     /// @notice Checks if the asset definition code is correctly derived from the internal asset code.
@@ -249,17 +232,6 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue {
         );
         uint256 derivedCode = BN254.fromLeBytesModOrder(randomBytes);
         require(derivedCode == assetDefinitionCode, "Wrong domestic asset code");
-    }
-
-    // TODO consider inlining once asset description is finalized. Until then it's useful
-    // for testing if this computation matches the rust code.
-    function _computeAssetDescription(address erc20Address, address sponsor)
-        internal
-        pure
-        returns (bytes memory)
-    {
-        return
-            bytes.concat("TRICAPE ERC20", bytes20(erc20Address), "sponsored by", bytes20(sponsor));
     }
 
     /// @notice submit a new block to the CAPE contract. Transactions are validated and the blockchain state is updated. Moreover burn transactions trigger the unwrapping of cape asset records into erc20 tokens.

@@ -1,5 +1,5 @@
 use crate::{
-    ethereum::{deploy, get_funded_deployer},
+    ethereum::{deploy, get_funded_client},
     types as sol,
     types::TestVerifyingKeys,
 };
@@ -21,7 +21,7 @@ const SUPPORTED_VKS: [(NoteType, u8, u8, u8); 3] = [
 
 async fn deploy_contract(
 ) -> Result<TestVerifyingKeys<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>> {
-    let client = get_funded_deployer().await?;
+    let client = get_funded_client().await?;
     let contract = deploy(
         client.clone(),
         Path::new("../abi/contracts/mocks/TestVerifyingKeys.sol/TestVerifyingKeys"),
@@ -89,7 +89,7 @@ async fn test_get_vk_by_id() -> Result<()> {
         let vk: sol::VerifyingKey = vk.into();
 
         // reconnect to contract to avoid connection reset problem
-        let client = get_funded_deployer().await?;
+        let client = get_funded_client().await?;
         let contract = TestVerifyingKeys::new(contract.address(), client);
 
         let note_type_sol = match note_type {

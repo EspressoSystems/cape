@@ -2,7 +2,7 @@
 
 use crate::{
     cape::*,
-    ethereum::{deploy, get_funded_deployer},
+    ethereum::{deploy, get_funded_client},
     ledger::CapeLedger,
     state::{CapeContractState, CapeEthEffect, CapeEvent, CapeOperation, CapeTransaction},
     types::field_to_u256,
@@ -71,7 +71,7 @@ async fn test_2user_maybe_submit(should_submit: bool) -> Result<()> {
     let now = Instant::now();
 
     let contract = if should_submit {
-        let client = get_funded_deployer().await.unwrap();
+        let client = get_funded_client().await.unwrap();
 
         let verifier = deploy(
             client.clone(),

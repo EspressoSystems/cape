@@ -22,7 +22,7 @@ use ark_bn254::{g1::Parameters as G1, Bn254 as E, Fq, Fr, G1Affine, G1Projective
 use rand::Rng;
 
 async fn deploy() -> TestTranscript<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>> {
-    let client = ethereum::get_funded_deployer().await.unwrap();
+    let client = ethereum::get_funded_client().await.unwrap();
     let contract = ethereum::deploy(
         client.clone(),
         Path::new("../abi/contracts/mocks/TestTranscript.sol/TestTranscript"),

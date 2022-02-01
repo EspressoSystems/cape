@@ -20,8 +20,8 @@ use std::{
     time::Duration,
 };
 
-pub async fn get_funded_deployer(
-) -> Result<Arc<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>> {
+pub async fn get_funded_client() -> Result<Arc<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>>
+{
     let rpc_url = match env::var("RPC_URL") {
         Ok(val) => val,
         Err(_) => "http://localhost:8545".to_string(),

@@ -7,6 +7,8 @@ import "./libraries/EdOnBN254.sol";
 /* solhint-disable no-unused-vars */
 
 contract AssetRegistry {
+    bytes13 public constant DOM_SEP_FOREIGN_ASSET = "FOREIGN_ASSET";
+
     mapping(bytes32 => address) public assets;
 
     struct AssetDefinition {
@@ -49,7 +51,36 @@ contract AssetRegistry {
         //      the right interface)
         require(erc20Address != address(0), "Bad asset address");
         require(!isCapeAssetRegistered(newAsset), "Asset already registered");
+
+        _checkForeignAssetCode(newAsset.code, erc20Address);
+
         bytes32 key = keccak256(abi.encode(newAsset));
         assets[key] = erc20Address;
+    }
+
+    /// @notice Checks if the asset definition code is correctly derived from the ERC20 address
+    ///        of the token and the address of the depositor.
+    /// @dev requires "view" to access msg.sender
+    function _checkForeignAssetCode(uint256 assetDefinitionCode, address erc20Address)
+        internal
+        view
+    {
+        bytes memory description = _computeAssetDescription(erc20Address, msg.sender);
+        bytes memory randomBytes = bytes.concat(
+            keccak256(bytes.concat(DOM_SEP_FOREIGN_ASSET, description))
+        );
+        uint256 derivedCode = BN254.fromLeBytesModOrder(randomBytes);
+        require(derivedCode == assetDefinitionCode, "Wrong foreign asset code");
+    }
+
+    // TODO consider inlining once asset description is finalized. Until then it's useful
+    // for testing if this computation matches the rust code.
+    function _computeAssetDescription(address erc20Address, address sponsor)
+        internal
+        pure
+        returns (bytes memory)
+    {
+        return
+            bytes.concat("TRICAPE ERC20", bytes20(erc20Address), "sponsored by", bytes20(sponsor));
     }
 }

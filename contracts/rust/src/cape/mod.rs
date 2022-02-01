@@ -320,7 +320,7 @@ mod tests {
     use super::*;
     use crate::assertion::Matcher;
     use crate::deploy::deploy_cape_test;
-    use crate::ethereum::{deploy, get_funded_deployer};
+    use crate::ethereum::{deploy, get_funded_client};
     use crate::ledger::CapeLedger;
     use crate::types::{
         GenericInto, MerkleRootSol, NullifierSol, RecordCommitmentSol, TestCapeTypes,
@@ -762,7 +762,7 @@ mod tests {
 
         async fn deploy_type_contract(
         ) -> Result<TestCapeTypes<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>> {
-            let client = get_funded_deployer().await.unwrap();
+            let client = get_funded_client().await.unwrap();
             let contract = deploy(
                 client.clone(),
                 Path::new("../abi/contracts/mocks/TestCapeTypes.sol/TestCapeTypes"),
@@ -992,7 +992,7 @@ mod tests {
             let contract = deploy_type_contract().await?;
             for txn in params.txns {
                 // reconnect with peer
-                let client = get_funded_deployer().await?;
+                let client = get_funded_client().await?;
                 let contract = TestCapeTypes::new(contract.address(), client);
 
                 let proof = txn.validity_proof();

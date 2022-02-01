@@ -2,7 +2,7 @@
 use std::path::Path;
 
 use crate::{
-    ethereum::{deploy, get_funded_deployer},
+    ethereum::{deploy, get_funded_client},
     types::{field_to_u256, u256_to_field, EvalDomain, TestPolynomialEval},
 };
 use anyhow::Result;
@@ -17,7 +17,7 @@ use ethers::{core::k256::ecdsa::SigningKey, prelude::U256};
 
 async fn deploy_contract(
 ) -> Result<TestPolynomialEval<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>> {
-    let client = get_funded_deployer().await?;
+    let client = get_funded_client().await?;
     let contract = deploy(
         client.clone(),
         Path::new("../abi/contracts/mocks/TestPolynomialEval.sol/TestPolynomialEval"),

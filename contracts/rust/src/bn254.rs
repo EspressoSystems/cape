@@ -2,7 +2,7 @@
 
 use crate::{
     assertion::Matcher,
-    ethereum::{deploy, get_funded_deployer},
+    ethereum::{deploy, get_funded_client},
     types::{field_to_u256, u256_to_field, G1Point, G2Point, TestBN254},
 };
 use anyhow::Result;
@@ -23,7 +23,7 @@ use std::path::Path;
 
 async fn deploy_contract() -> Result<TestBN254<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>>
 {
-    let client = get_funded_deployer().await.unwrap();
+    let client = get_funded_client().await.unwrap();
     let contract = deploy(
         client.clone(),
         Path::new("../abi/contracts/mocks/TestBN254.sol/TestBN254"),

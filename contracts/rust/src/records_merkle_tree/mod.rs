@@ -48,7 +48,7 @@ pub(crate) async fn get_contract_records_merkle_tree(
 ) -> TestRecordsMerkleTree<
     SignerMiddleware<Provider<Http>, Wallet<ethers::core::k256::ecdsa::SigningKey>>,
 > {
-    let client = ethereum::get_funded_deployer().await.unwrap();
+    let client = ethereum::get_funded_client().await.unwrap();
     let contract = ethereum::deploy(
         client.clone(),
         Path::new("../abi/contracts/mocks/TestRecordsMerkleTree.sol/TestRecordsMerkleTree"),

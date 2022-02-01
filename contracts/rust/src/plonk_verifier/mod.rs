@@ -5,9 +5,10 @@ mod vk;
 
 use self::helpers::gen_plonk_proof_for_test;
 use crate::assertion::Matcher;
+use crate::deploy::deploy_test_plonk_verifier_contract;
 use crate::types::GenericInto;
 use crate::{
-    ethereum::{deploy, get_funded_client},
+    ethereum::get_funded_client,
     plonk_verifier::helpers::get_poly_evals,
     types as sol,
     types::{field_to_u256, TestPlonkVerifier},
@@ -30,19 +31,7 @@ use jf_plonk::{
 };
 use jf_utils::field_switching;
 use rand::prelude::SliceRandom;
-use std::{convert::TryInto, path::Path};
-
-async fn deploy_contract(
-) -> Result<TestPlonkVerifier<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>> {
-    let client = get_funded_client().await?;
-    let contract = deploy(
-        client.clone(),
-        Path::new("../abi/contracts/mocks/TestPlonkVerifier.sol/TestPlonkVerifier"),
-        (),
-    )
-    .await?;
-    Ok(TestPlonkVerifier::new(contract.address(), client))
-}
+use std::convert::TryInto;
 
 // contains tests for interim functions
 #[tokio::test]
@@ -91,7 +80,7 @@ async fn test_prepare_pcs_info() -> Result<()> {
 
     // delay the contract deployment to avoid connection reset problem caused by
     // waiting for CRS loading.
-    let contract = deploy_contract().await?;
+    let contract = deploy_test_plonk_verifier_contract().await;
     // compute the constant term of the linearization polynomial
     let lin_poly_constant = verifier.compute_lin_poly_constant_term(
         &challenges,
@@ -249,7 +238,7 @@ async fn test_prepare_pcs_info() -> Result<()> {
 
 #[tokio::test]
 async fn test_batch_verify_opening_proofs() -> Result<()> {
-    let contract = deploy_contract().await?;
+    let contract = deploy_test_plonk_verifier_contract().await;
 
     for i in 1..4 {
         let pcs_infos: Vec<PcsInfo<Bn254>> = gen_plonk_proof_for_test(i)?
@@ -298,7 +287,7 @@ async fn test_challenge_gen() -> Result<()> {
     // null challenge
     // =================
     let mut rng = test_rng();
-    let contract: TestPlonkVerifier<_> = deploy_contract().await?;
+    let contract: TestPlonkVerifier<_> = deploy_test_plonk_verifier_contract().await;
     let extra_message = b"extra message";
 
     let proof_fr_elements: Vec<Fr> = (0..36).map(|_| Fr::rand(&mut rng)).collect();
@@ -385,7 +374,7 @@ async fn test_challenge_gen() -> Result<()> {
 
 #[tokio::test]
 async fn test_batch_verify_plonk_proofs() -> Result<()> {
-    let contract = deploy_contract().await?;
+    let contract = deploy_test_plonk_verifier_contract().await;
     let rng = &mut test_rng();
 
     for num_proof in 1..5 {
@@ -539,7 +528,7 @@ async fn test_proof_and_pub_inputs_validation() -> Result<()> {
     .collect();
     let bad_scalar_choices = vec![U256::MAX, U256::MAX - 1, U256::MAX - 100, U256::MAX - 1000];
 
-    let contract = deploy_contract().await?;
+    let contract = deploy_test_plonk_verifier_contract().await;
 
     // good path
     assert!(

@@ -167,6 +167,8 @@ async fn main() -> std::io::Result<()> {
 mod test {
     use super::*;
     use async_std::sync::Mutex;
+    use cap_rust_sandbox::deploy::deploy_cape_test;
+    use cap_rust_sandbox::test_utils::{contract_abi_path, create_faucet};
     use cap_rust_sandbox::{
         cape::CAPEConstructorArgs,
         ethereum::{deploy, get_funded_client},
@@ -189,9 +191,8 @@ mod test {
     };
     use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
     use reef::traits::Ledger;
-    use std::path::{Path, PathBuf};
     use surf::Url;
-    use types::{field_to_u256, TestCAPE};
+    use types::TestCAPE;
 
     lazy_static! {
         static ref PORT: Arc<Mutex<u64>> = {
@@ -208,63 +209,21 @@ mod test {
         port
     }
 
-    async fn deploy_test_contract(
-        rng: &mut ChaChaRng,
-        faucet: UserPubKey,
-    ) -> (TestCAPE<Middleware>, RecordOpening, MerkleTree) {
-        let client = get_funded_client().await.unwrap();
-        let path = |contract| {
-            [
-                &PathBuf::from(env!("CARGO_MANIFEST_DIR")),
-                Path::new("../contracts/abi/contracts"),
-                Path::new(contract),
-            ]
-            .iter()
-            .collect::<PathBuf>()
-        };
-        let verifier = deploy(
-            client.clone(),
-            &path("verifier/PlonkVerifier.sol/PlonkVerifier"),
-            (),
-        )
-        .await
-        .unwrap();
-        let address = deploy(
-            client.clone(),
-            &path("mocks/TestCAPE.sol/TestCAPE"),
-            CAPEConstructorArgs::new(
-                CapeLedger::merkle_height(),
-                CapeLedger::record_root_history() as u64,
-                verifier.address(),
-            )
-            .generic_into::<(u8, u64, Address)>(),
-        )
-        .await
-        .unwrap()
-        .address();
-
-        let faucet_rec = RecordOpening::new(
-            rng,
-            u64::MAX / 2,
-            AssetDefinition::native(),
-            faucet,
-            FreezeFlag::Unfrozen,
-        );
-        let faucet_comm = RecordCommitment::from(&faucet_rec);
-        let contract = TestCAPE::new(address, client);
-        contract
-            .set_initial_record_commitments(vec![field_to_u256(faucet_comm.to_field_element())])
-            .send()
-            .await
-            .unwrap()
-            .await
-            .unwrap();
-        assert_eq!(contract.get_num_leaves().call().await.unwrap(), 1.into());
+    async fn deploy_test_contract_with_faucet(
+    ) -> (TestCAPE<Middleware>, UserKeyPair, RecordOpening, MerkleTree) {
+        let cape_contract = deploy_cape_test().await;
+        let (faucet_key_pair, faucet_record_opening) = create_faucet(&cape_contract).await;
 
         let mut records = MerkleTree::new(CapeLedger::merkle_height()).unwrap();
+        let faucet_comm = RecordCommitment::from(&faucet_record_opening);
         records.push(faucet_comm.to_field_element());
 
-        (contract, faucet_rec, records)
+        (
+            cape_contract,
+            faucet_key_pair,
+            faucet_record_opening,
+            records,
+        )
     }
 
     fn generate_transfer(
@@ -306,11 +265,9 @@ mod test {
     #[async_std::test]
     async fn test_relay() {
         let mut rng = ChaChaRng::from_seed([42; 32]);
-        let faucet = UserKeyPair::generate(&mut rng);
         let user = UserKeyPair::generate(&mut rng);
 
-        let (contract, faucet_rec, records) =
-            deploy_test_contract(&mut rng, faucet.pub_key()).await;
+        let (contract, faucet, faucet_rec, records) = deploy_test_contract_with_faucet().await;
         let transaction =
             generate_transfer(&mut rng, &faucet, faucet_rec, user.pub_key(), &records);
 
@@ -341,11 +298,9 @@ mod test {
     #[async_std::test]
     async fn test_submit() {
         let mut rng = ChaChaRng::from_seed([42; 32]);
-        let faucet = UserKeyPair::generate(&mut rng);
         let user = UserKeyPair::generate(&mut rng);
 
-        let (contract, faucet_rec, records) =
-            deploy_test_contract(&mut rng, faucet.pub_key()).await;
+        let (contract, faucet, faucet_rec, records) = deploy_test_contract_with_faucet().await;
         let transaction =
             generate_transfer(&mut rng, &faucet, faucet_rec, user.pub_key(), &records);
 
@@ -369,25 +324,17 @@ mod test {
         // is submitted correctly.
         let contract = {
             let deployer = get_funded_client().await.unwrap();
-            let path = |contract| {
-                [
-                    &PathBuf::from(env!("CARGO_MANIFEST_DIR")),
-                    Path::new("../contracts/abi/contracts"),
-                    Path::new(contract),
-                ]
-                .iter()
-                .collect::<PathBuf>()
-            };
+
             let verifier = deploy(
                 deployer.clone(),
-                &path("verifier/PlonkVerifier.sol/PlonkVerifier"),
+                &contract_abi_path("verifier/PlonkVerifier.sol/PlonkVerifier"),
                 (),
             )
             .await
             .unwrap();
             let address = deploy(
                 deployer.clone(),
-                &path("CAPE.sol/CAPE"),
+                &contract_abi_path("CAPE.sol/CAPE"),
                 CAPEConstructorArgs::new(
                     CapeLedger::merkle_height(),
                     CapeLedger::record_root_history() as u64,

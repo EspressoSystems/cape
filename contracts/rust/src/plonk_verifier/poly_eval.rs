@@ -1,10 +1,6 @@
 #![cfg(test)]
-use std::path::Path;
-
-use crate::{
-    ethereum::{deploy, get_funded_client},
-    types::{field_to_u256, u256_to_field, EvalDomain, TestPolynomialEval},
-};
+use crate::deploy::deploy_test_polynomial_eval_contract;
+use crate::types::{field_to_u256, u256_to_field, EvalDomain};
 use anyhow::Result;
 use ark_bn254::Fr;
 use ark_ff::Field;
@@ -12,25 +8,12 @@ use ark_poly::{EvaluationDomain, Radix2EvaluationDomain};
 use ark_std::One;
 use ark_std::Zero;
 use ark_std::{test_rng, UniformRand};
-use ethers::prelude::{Http, Provider, SignerMiddleware, Wallet};
-use ethers::{core::k256::ecdsa::SigningKey, prelude::U256};
-
-async fn deploy_contract(
-) -> Result<TestPolynomialEval<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>> {
-    let client = get_funded_client().await?;
-    let contract = deploy(
-        client.clone(),
-        Path::new("../abi/contracts/mocks/TestPolynomialEval.sol/TestPolynomialEval"),
-        (),
-    )
-    .await?;
-    Ok(TestPolynomialEval::new(contract.address(), client))
-}
+use ethers::prelude::U256;
 
 #[tokio::test]
 async fn test_vanishing_poly() -> Result<()> {
     let mut rng = test_rng();
-    let contract = deploy_contract().await?;
+    let contract = deploy_test_polynomial_eval_contract().await;
 
     for log_domain_size in 15..=17 {
         // test case: 1 edge case of evaluate at zero, and 1 random case
@@ -58,7 +41,7 @@ async fn test_vanishing_poly() -> Result<()> {
 #[tokio::test]
 async fn test_evaluate_lagrange_one() -> Result<()> {
     let mut rng = test_rng();
-    let contract = deploy_contract().await?;
+    let contract = deploy_test_polynomial_eval_contract().await;
 
     for log_domain_size in 15..=17 {
         let test_zeta = vec![Fr::zero(), Fr::rand(&mut rng)];
@@ -95,7 +78,7 @@ async fn test_evaluate_lagrange_one() -> Result<()> {
 #[tokio::test]
 async fn test_evaluate_pi_poly() -> Result<()> {
     let mut rng = test_rng();
-    let contract = deploy_contract().await?;
+    let contract = deploy_test_polynomial_eval_contract().await;
 
     for pi_length in 0..5 {
         let rust_pub_input: Vec<Fr> = (0..pi_length).map(|_| Fr::rand(&mut rng)).collect();

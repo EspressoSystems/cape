@@ -1,15 +1,15 @@
 #![deny(warnings)]
 
+use crate::deploy::deploy_cape_test;
 use crate::{
     cape::*,
-    ethereum::{deploy, get_funded_client},
     ledger::CapeLedger,
     state::{CapeContractState, CapeEthEffect, CapeEvent, CapeOperation, CapeTransaction},
     types::field_to_u256,
-    types::{GenericInto, NullifierSol, TestCAPE},
+    types::{GenericInto, NullifierSol},
 };
 use anyhow::Result;
-use ethers::prelude::{Address, U256};
+use ethers::prelude::U256;
 use jf_aap::keys::{UserKeyPair, UserPubKey};
 use jf_aap::structs::{AssetDefinition, FreezeFlag, RecordCommitment, RecordOpening};
 use jf_aap::testing_apis::universal_setup_for_test;
@@ -25,7 +25,6 @@ use key_set::{KeySet, ProverKeySet, VerifierKeySet};
 use rand::SeedableRng;
 use rand_chacha::ChaChaRng;
 use reef::traits::Ledger as _;
-use std::path::Path;
 use std::time::Instant;
 
 async fn test_2user_maybe_submit(should_submit: bool) -> Result<()> {
@@ -71,32 +70,7 @@ async fn test_2user_maybe_submit(should_submit: bool) -> Result<()> {
     let now = Instant::now();
 
     let contract = if should_submit {
-        let client = get_funded_client().await.unwrap();
-
-        let verifier = deploy(
-            client.clone(),
-            Path::new("../abi/contracts/verifier/PlonkVerifier.sol/PlonkVerifier"),
-            (),
-        )
-        .await
-        .unwrap();
-
-        let contract_address: Address = deploy(
-            client.clone(),
-            // TODO using mock contract to be able to manually add root
-            Path::new("../abi/contracts/mocks/TestCAPE.sol/TestCAPE"),
-            CAPEConstructorArgs::new(
-                CapeLedger::merkle_height(),
-                CapeContractState::RECORD_ROOT_HISTORY_SIZE as u64,
-                verifier.address(),
-            )
-            .generic_into::<(u8, u64, Address)>(),
-        )
-        .await
-        .unwrap()
-        .address();
-
-        Some(TestCAPE::new(contract_address, client))
+        Some(deploy_cape_test().await)
     } else {
         None
     };

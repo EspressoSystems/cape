@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 import "hardhat/console.sol";
+import "../libraries/Utils.sol";
 import {BN254} from "../libraries/BN254.sol";
 import {IPlonkVerifier} from "../interfaces/IPlonkVerifier.sol";
 
@@ -20,7 +21,7 @@ library Transcript {
     }
 
     function appendFieldElement(TranscriptData memory self, uint256 fieldElement) internal pure {
-        appendMessage(self, abi.encodePacked(BN254.reverseEndianness(fieldElement)));
+        appendMessage(self, abi.encodePacked(Utils.reverseEndianness(fieldElement)));
     }
 
     function appendGroupElement(TranscriptData memory self, BN254.G1Point memory comm)
@@ -83,14 +84,14 @@ library Transcript {
         // Fr field size in bits
         appendMessage(
             self,
-            BytesLib.slice(abi.encodePacked(BN254.reverseEndianness(sizeInBits)), 0, 8)
+            BytesLib.slice(abi.encodePacked(Utils.reverseEndianness(sizeInBits)), 0, 8)
         );
 
         // domain size
         appendMessage(
             self,
             BytesLib.slice(
-                abi.encodePacked(BN254.reverseEndianness(verifyingKey.domainSize)),
+                abi.encodePacked(Utils.reverseEndianness(verifyingKey.domainSize)),
                 0,
                 8
             )
@@ -99,7 +100,7 @@ library Transcript {
         // number of inputs
         appendMessage(
             self,
-            BytesLib.slice(abi.encodePacked(BN254.reverseEndianness(verifyingKey.numInputs)), 0, 8)
+            BytesLib.slice(abi.encodePacked(Utils.reverseEndianness(verifyingKey.numInputs)), 0, 8)
         );
 
         // =====================

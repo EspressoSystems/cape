@@ -22,8 +22,8 @@ contract TestCAPE is CAPE {
         }
     }
 
-    function insertNullifier(uint256 nullifier) public {
-        return _insertNullifier(nullifier);
+    function publish(uint256 nullifier) public {
+        return _publish(nullifier);
     }
 
     function checkTransfer(TransferNote memory note) public pure {

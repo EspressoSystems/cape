@@ -154,49 +154,21 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue {
         return res;
     }
 
-    /// Insert a nullifier into the set of nullifiers.
-    /// @dev Reverts if nullifier is already in nullifier set.
-    function _insertNullifier(uint256 nullifier) internal {
-        // This check is relied upon to prevent double spending of nullifiers
-        // within the same note.
-        require(!nullifiers[nullifier], "Nullifier already published");
-        nullifiers[nullifier] = true;
-    }
-
-    /// Check if a nullifier array contains previously published nullifiers.
-    /// @dev Does not check if the array contains duplicates.
-    function _containsPublished(uint256[] memory newNullifiers) internal view returns (bool) {
-        for (uint256 j = 0; j < newNullifiers.length; j++) {
-            if (nullifiers[newNullifiers[j]]) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /// Publish an array of nullifiers if none of them have been published before
+    /// Publish an array of nullifiers
     /// TODO the text after @ return does not show in docs, only the return type shows.
-    /// @return `true` if the nullifiers were published, `false` if one or more nullifiers were published before.
-    /// @dev Will revert if not all nullifiers can be published due to duplicates among them.
+    /// @dev Requires all nullifiers to be unique and unpublished.
     /// @dev A block creator must not submit notes with duplicate nullifiers.
-    function _publish(uint256[] memory newNullifiers) internal returns (bool) {
-        if (!_containsPublished(newNullifiers)) {
-            for (uint256 j = 0; j < newNullifiers.length; j++) {
-                _insertNullifier(newNullifiers[j]);
-            }
-            return true;
+    function _publish(uint256[] memory newNullifiers) internal {
+        for (uint256 j = 0; j < newNullifiers.length; j++) {
+            _publish(newNullifiers[j]);
         }
-        return false;
     }
 
     /// Publish a nullifier if it hasn't been published before
-    /// @return `true` if the nullifier was published, `false` if it wasn't
-    function _publish(uint256 nullifier) internal returns (bool) {
-        if (nullifiers[nullifier]) {
-            return false;
-        }
-        _insertNullifier(nullifier);
-        return true;
+    /// @dev reverts if the nullifier is already published
+    function _publish(uint256 nullifier) internal {
+        require(!nullifiers[nullifier], "Nullifier already published");
+        nullifiers[nullifier] = true;
     }
 
     /// @notice allows to wrap some erc20 tokens into some CAPE asset defined in the record opening
@@ -238,122 +210,92 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue {
     /// @param newBlock block to be processed by the CAPE contract.
     /// @param burnedRos record opening of the second outputs of the burn transactions. The information contained in these records opening allow the contract to transfer the erc20 tokens.
     function submitCapeBlock(CapeBlock memory newBlock, RecordOpening[] memory burnedRos) public {
-        // Preserve the ordering of the (sub) arrays of notes.
-        uint256 transferIdx = 0;
-        uint256 mintIdx = 0;
-        uint256 freezeIdx = 0;
-        uint256 burnIdx = 0;
-
         uint256 maxSizeCommsArray = _computeMaxCommitments(newBlock) + _getQueueSize();
         AccumulatingArray.Data memory comms = AccumulatingArray.create(maxSizeCommsArray);
 
         uint256 numNotes = newBlock.noteTypes.length;
-
-        for (uint256 i = 0; i < numNotes; i++) {
-            NoteType noteType = newBlock.noteTypes[i];
-
-            if (noteType == NoteType.TRANSFER) {
-                TransferNote memory note = newBlock.transferNotes[transferIdx];
-                _checkContainsRoot(note.auxInfo.merkleRoot);
-                _checkTransfer(note);
-                // NOTE: expiry must be checked before publishing the nullifiers
-                require(!_isExpired(note), "Expired note");
-                require(_publish(note.inputNullifiers), "Duplicated nullifiers");
-
-                comms.add(note.outputCommitments);
-                transferIdx += 1;
-            } else if (noteType == NoteType.MINT) {
-                MintNote memory note = newBlock.mintNotes[mintIdx];
-                _checkContainsRoot(note.auxInfo.merkleRoot);
-                require(_publish(note.inputNullifier), "Duplicated nullifiers");
-                comms.add(note.mintComm);
-                comms.add(note.chgComm);
-                _checkDomesticAssetCode(note.mintAssetDef.code, note.mintInternalAssetCode);
-                mintIdx += 1;
-            } else if (noteType == NoteType.FREEZE) {
-                FreezeNote memory note = newBlock.freezeNotes[freezeIdx];
-                _checkContainsRoot(note.auxInfo.merkleRoot);
-
-                require(_publish(note.inputNullifiers), "Duplicated nullifiers");
-                comms.add(note.outputCommitments);
-
-                freezeIdx += 1;
-            } else if (noteType == NoteType.BURN) {
-                BurnNote memory note = newBlock.burnNotes[burnIdx];
-                TransferNote memory transfer = note.transferNote;
-                _checkContainsRoot(transfer.auxInfo.merkleRoot);
-                _checkBurn(note);
-
-                require(_publish(transfer.inputNullifiers), "Dupl. nullifier(s)");
-                // TODO do we need a special logic for how to handle outputs record commitments with BURN notes
-                comms.add(transfer.outputCommitments);
-
-                // TODO handle withdrawal (better done at end if call is external
-                //      or have other reentrancy protection)
-
-                burnIdx += 1;
-            }
-        }
 
         // Batch verify plonk proofs
         IPlonkVerifier.VerifyingKey[] memory vks = new IPlonkVerifier.VerifyingKey[](numNotes);
         uint256[][] memory publicInputs = new uint256[][](numNotes);
         IPlonkVerifier.PlonkProof[] memory proofs = new IPlonkVerifier.PlonkProof[](numNotes);
         bytes[] memory extraMsgs = new bytes[](numNotes);
-        transferIdx = 0;
-        mintIdx = 0;
-        freezeIdx = 0;
-        burnIdx = 0;
-        uint256 proofIdx = 0;
+
+        // Preserve the ordering of the (sub) arrays of notes.
+        uint256 transferIdx = 0;
+        uint256 mintIdx = 0;
+        uint256 freezeIdx = 0;
+        uint256 burnIdx = 0;
 
         for (uint256 i = 0; i < numNotes; i++) {
-            if (newBlock.noteTypes[i] == NoteType.TRANSFER) {
+            NoteType noteType = newBlock.noteTypes[i];
+
+            if (noteType == NoteType.TRANSFER) {
                 TransferNote memory note = newBlock.transferNotes[transferIdx];
-                transferIdx++;
-                (
-                    vks[proofIdx],
-                    publicInputs[proofIdx],
-                    proofs[proofIdx],
-                    extraMsgs[proofIdx]
-                ) = _prepareForProofVerification(note);
-                proofIdx++;
-            } else if (newBlock.noteTypes[i] == NoteType.MINT) {
+                transferIdx += 1;
+
+                _checkContainsRoot(note.auxInfo.merkleRoot);
+                _checkTransfer(note);
+                require(!_isExpired(note), "Expired note");
+
+                _publish(note.inputNullifiers);
+
+                comms.add(note.outputCommitments);
+
+                (vks[i], publicInputs[i], proofs[i], extraMsgs[i]) = _prepareForProofVerification(
+                    note
+                );
+            } else if (noteType == NoteType.MINT) {
                 MintNote memory note = newBlock.mintNotes[mintIdx];
-                mintIdx++;
+                mintIdx += 1;
 
-                (
-                    vks[proofIdx],
-                    publicInputs[proofIdx],
-                    proofs[proofIdx],
-                    extraMsgs[proofIdx]
-                ) = _prepareForProofVerification(note);
-                proofIdx++;
-            } else if (newBlock.noteTypes[i] == NoteType.FREEZE) {
+                _checkContainsRoot(note.auxInfo.merkleRoot);
+                _checkDomesticAssetCode(note.mintAssetDef.code, note.mintInternalAssetCode);
+
+                _publish(note.inputNullifier);
+
+                comms.add(note.mintComm);
+                comms.add(note.chgComm);
+
+                (vks[i], publicInputs[i], proofs[i], extraMsgs[i]) = _prepareForProofVerification(
+                    note
+                );
+            } else if (noteType == NoteType.FREEZE) {
                 FreezeNote memory note = newBlock.freezeNotes[freezeIdx];
-                freezeIdx++;
+                freezeIdx += 1;
 
-                (
-                    vks[proofIdx],
-                    publicInputs[proofIdx],
-                    proofs[proofIdx],
-                    extraMsgs[proofIdx]
-                ) = _prepareForProofVerification(note);
-                proofIdx++;
-            } else if (newBlock.noteTypes[i] == NoteType.BURN) {
+                _checkContainsRoot(note.auxInfo.merkleRoot);
+
+                _publish(note.inputNullifiers);
+
+                comms.add(note.outputCommitments);
+
+                (vks[i], publicInputs[i], proofs[i], extraMsgs[i]) = _prepareForProofVerification(
+                    note
+                );
+            } else if (noteType == NoteType.BURN) {
                 BurnNote memory note = newBlock.burnNotes[burnIdx];
-                burnIdx++;
+                burnIdx += 1;
 
-                (
-                    vks[proofIdx],
-                    publicInputs[proofIdx],
-                    proofs[proofIdx],
-                    extraMsgs[proofIdx]
-                ) = _prepareForProofVerification(note);
-                proofIdx++;
+                _checkContainsRoot(note.transferNote.auxInfo.merkleRoot);
+                _checkBurn(note);
+
+                _publish(note.transferNote.inputNullifiers);
+
+                // TODO do we need a special logic for how to handle outputs record commitments with BURN notes
+                comms.add(note.transferNote.outputCommitments);
+
+                (vks[i], publicInputs[i], proofs[i], extraMsgs[i]) = _prepareForProofVerification(
+                    note
+                );
+
+                // TODO handle withdrawal (better done at end if call is external
+                //      or have other reentrancy protection)
             } else {
                 revert("Cape: unreachable!");
             }
         }
+
         // Skip the batch plonk verification if the block is empty
         if (numNotes > 0) {
             require(

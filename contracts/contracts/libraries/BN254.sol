@@ -11,6 +11,8 @@
 
 pragma solidity ^0.8.0;
 
+import "./Utils.sol";
+
 /// @notice Barreto-Naehrig curve over a 254 bit prime field
 library BN254 {
     // use notation from https://datatracker.ietf.org/doc/draft-irtf-cfrg-pairing-friendly-curves/
@@ -295,12 +297,12 @@ library BN254 {
             mask = 0x8000000000000000000000000000000000000000000000000000000000000000;
         }
 
-        return abi.encodePacked(reverseEndianness(point.x | mask));
+        return abi.encodePacked(Utils.reverseEndianness(point.x | mask));
     }
 
     function g1Deserialize(bytes32 input) internal view returns (G1Point memory point) {
         uint256 mask = 0x4000000000000000000000000000000000000000000000000000000000000000;
-        uint256 x = reverseEndianness(uint256(input));
+        uint256 x = Utils.reverseEndianness(uint256(input));
         uint256 y;
         bool isQuadraticResidue;
         bool isYPositive;
@@ -368,32 +370,5 @@ library BN254 {
         e = mulmod(a, a, p);
 
         isQuadraticResidue = (e == x);
-    }
-
-    function reverseEndianness(uint256 input) internal pure returns (uint256 v) {
-        v = input;
-
-        // swap bytes
-        v =
-            ((v & 0xFF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00) >> 8) |
-            ((v & 0x00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF) << 8);
-
-        // swap 2-byte long pairs
-        v =
-            ((v & 0xFFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000) >> 16) |
-            ((v & 0x0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF) << 16);
-
-        // swap 4-byte long pairs
-        v =
-            ((v & 0xFFFFFFFF00000000FFFFFFFF00000000FFFFFFFF00000000FFFFFFFF00000000) >> 32) |
-            ((v & 0x00000000FFFFFFFF00000000FFFFFFFF00000000FFFFFFFF00000000FFFFFFFF) << 32);
-
-        // swap 8-byte long pairs
-        v =
-            ((v & 0xFFFFFFFFFFFFFFFF0000000000000000FFFFFFFFFFFFFFFF0000000000000000) >> 64) |
-            ((v & 0x0000000000000000FFFFFFFFFFFFFFFF0000000000000000FFFFFFFFFFFFFFFF) << 64);
-
-        // swap 16-byte long pairs
-        v = (v >> 128) | (v << 128);
     }
 }

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {BN254} from "../libraries/BN254.sol";
+import "../libraries/Utils.sol";
 
 /// @notice Edward curve on BN254.
 /// This library only implements a serialization function that is consistend with
@@ -41,6 +41,6 @@ library EdOnBN254 {
             mask = 0x8000000000000000000000000000000000000000000000000000000000000000;
         }
 
-        return abi.encodePacked(BN254.reverseEndianness(point.x | mask));
+        return abi.encodePacked(Utils.reverseEndianness(point.x | mask));
     }
 }

@@ -198,7 +198,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue {
             keccak256(
                 bytes.concat(
                     DOM_SEP_DOMESTIC_ASSET,
-                    bytes32(BN254.reverseEndianness(internalAssetCode))
+                    bytes32(Utils.reverseEndianness(internalAssetCode))
                 )
             )
         );

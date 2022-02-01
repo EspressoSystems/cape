@@ -70,7 +70,7 @@
             pythonEnv
           ];
 
-          stableToolchain = pkgs.rust-bin.stable."1.56.0".minimal.override {
+          stableToolchain = pkgs.rust-bin.stable."1.56.1".minimal.override {
             extensions = [ "rustfmt" "clippy" "llvm-tools-preview" "rust-src" ];
           };
           rustDeps = with pkgs; [

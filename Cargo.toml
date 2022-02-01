@@ -6,9 +6,3 @@ members = [
     "relayer",
     "wallet",
 ]
-
-# Commit after the pinned one below breaks ethers-rs compiliation.
-# NOTE: the git url needs to be different to patch, hence the double slash
-# See https://github.com/rust-lang/cargo/issues/5478#issuecomment-522719793
-[patch."https://github.com/hyperledger-labs/solang"]
-solang-parser = { git = "https://github.com/hyperledger-labs//solang", rev = "0ea95870125a7ac16f191e5d14cb5ed9e861b833" }

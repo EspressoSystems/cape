@@ -146,9 +146,6 @@ These scripts will
 2. Run the tests.
 3. Shut down the node (if it was started in 1.)
 
-Note that running `js` tests against the `hardhat node` may take several
-minutes.
-
 The port of the node can be changed with `RPC_PORT`. For example,
 
     env RPC_PORT=8877 cape-test-geth
@@ -293,6 +290,18 @@ To watch the rust files and compile on changes
     cargo watch
 
 The command (`check` by default) can be changed with `-x` (for example `cargo watch -x test`).
+
+### Using nightly rust
+
+Certain features require a nightly compiler, to get a dev shell with nightly compiler use
+
+    nix develop .#nightly
+
+This requires nix version >= 2.4.
+
+#### Checking for unused dependencies
+
+    nix develop .#nightly --command cargo udeps
 
 ## Linting & Formatting
 

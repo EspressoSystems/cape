@@ -364,7 +364,6 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue {
     function _checkBurn(BurnNote memory note) internal view {
         bytes memory extra = note.transferNote.auxInfo.extraProofBoundData;
         require(_containsBurnPrefix(extra), "Bad burn tag");
-        require(_containsBurnDestination(extra), "Bad burn destination");
         require(_containsBurnRecord(note), "Bad record commitment");
     }
 
@@ -373,17 +372,6 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue {
             return false;
         }
         return BytesLib.equal(BytesLib.slice(extraProofBoundData, 0, 12), CAPE_BURN_MAGIC_BYTES);
-    }
-
-    function _containsBurnDestination(bytes memory extraProofBoundData)
-        internal
-        view
-        returns (bool)
-    {
-        if (extraProofBoundData.length < 32) {
-            return false;
-        }
-        return BytesLib.toAddress(extraProofBoundData, 12) == address(0);
     }
 
     function _containsBurnRecord(BurnNote memory note) internal view returns (bool) {

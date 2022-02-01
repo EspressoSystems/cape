@@ -42,10 +42,6 @@ contract TestCAPE is CAPE {
         return _containsBurnPrefix(extraProofBoundData);
     }
 
-    function containsBurnDestination(bytes memory extraProofBoundData) public view returns (bool) {
-        return _containsBurnDestination(extraProofBoundData);
-    }
-
     function containsBurnRecord(BurnNote memory note) public view returns (bool) {
         return _containsBurnRecord(note);
     }

@@ -50,43 +50,6 @@ async fn test_contains_burn_prefix() {
 }
 
 #[tokio::test]
-async fn test_contains_burn_destination() {
-    let contract = deploy_cape_test().await;
-
-    for (input, expected) in [
-        (
-            // ok, zero address from byte 12 to 32
-            "ffffffffffffffffffffffff0000000000000000000000000000000000000000",
-            true,
-        ),
-        (
-            // ok, with more data
-            "ffffffffffffffffffffffff0000000000000000000000000000000000000000ff",
-            true,
-        ),
-        (
-            // wrong address
-            "ffffffffffffffffffffffff0000000000000000000000000000000000000001",
-            false,
-        ),
-        (
-            // address too short
-            "ffffffffffffffffffffffff00000000000000000000000000000000000000",
-            false,
-        ),
-    ] {
-        assert_eq!(
-            contract
-                .contains_burn_destination(hex::decode(input).unwrap().into())
-                .call()
-                .await
-                .unwrap(),
-            expected
-        )
-    }
-}
-
-#[tokio::test]
 async fn test_contains_burn_record() {
     let contract = deploy_cape_test().await;
 
@@ -117,21 +80,6 @@ async fn test_check_burn_bad_prefix() {
 
     let call = contract.check_burn(note).call().await;
     call.should_revert_with_message("Bad burn tag");
-}
-
-#[tokio::test]
-async fn test_check_burn_bad_destination() {
-    let contract = deploy_cape_test().await;
-    let mut note = sol::BurnNote::default();
-    let extra = [
-        DOM_SEP_CAPE_BURN.to_vec(),
-        hex::decode("000000000000000000000000000000000000000f").unwrap(),
-    ]
-    .concat();
-    note.transfer_note.aux_info.extra_proof_bound_data = extra.into();
-
-    let call = contract.check_burn(note).call().await;
-    call.should_revert_with_message("Bad burn destination");
 }
 
 #[tokio::test]

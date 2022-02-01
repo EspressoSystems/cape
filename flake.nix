@@ -126,7 +126,8 @@
             SOLCX_BINARY_PATH = "${mySolc}/bin";
             SOLC_VERSION = mySolc.version;
             SOLC_PATH = "${mySolc}/bin/solc";
-            SOLC_OPTIMIZER_RUNS = "1000000";
+            # TODO: increase this when contract size limit is not a problem
+            SOLC_OPTIMIZER_RUNS = "20";
 
             shellHook = ''
               echo "Ensuring node dependencies are installed"

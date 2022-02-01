@@ -3,6 +3,7 @@ import "@nomiclabs/hardhat-waffle";
 import "@typechain/hardhat";
 import "hardhat-deploy";
 import "hardhat-gas-reporter";
+import "hardhat-contract-sizer";
 import { TASK_COMPILE_SOLIDITY_GET_SOLC_BUILD } from "hardhat/builtin-tasks/task-names";
 import { HardhatUserConfig, subtask, task } from "hardhat/config";
 

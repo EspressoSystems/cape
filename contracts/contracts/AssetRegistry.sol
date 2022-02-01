@@ -1,22 +1,15 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import "./libraries/EdOnBN254.sol";
+
 // TODO Remove once functions are implemented
 /* solhint-disable no-unused-vars */
 
 contract AssetRegistry {
-    mapping(bytes32 => address) public assets;
+    bytes13 public constant DOM_SEP_FOREIGN_ASSET = "FOREIGN_ASSET";
 
-    // TODO Types can't be shared between contracts unless we put them in a library
-    // or they are defined in a contract we inherit from. The EdOnBn254Point
-    // does not really belong into this contract. It works fine the way it is
-    // now because on only this contract and CAPE need it. If we also need it in
-    // another contract and we can consider putting this type into a solidity
-    // library.
-    struct EdOnBn254Point {
-        uint256 x;
-        uint256 y;
-    }
+    mapping(bytes32 => address) public assets;
 
     struct AssetDefinition {
         uint256 code;
@@ -24,9 +17,9 @@ contract AssetRegistry {
     }
 
     struct AssetPolicy {
-        EdOnBn254Point auditorPk;
-        EdOnBn254Point credPk;
-        EdOnBn254Point freezerPk;
+        EdOnBN254.EdOnBN254Point auditorPk;
+        EdOnBN254.EdOnBN254Point credPk;
+        EdOnBN254.EdOnBN254Point freezerPk;
         uint256 revealMap;
         uint64 revealThreshold;
     }
@@ -53,12 +46,41 @@ contract AssetRegistry {
     /// @param newAsset asset type to be registered in the contract.
     /// @dev will revert if asset is already registered
     function sponsorCapeAsset(address erc20Address, AssetDefinition memory newAsset) public {
-        // TODO check if real token (figure out if this is nececssary/useful:
+        // TODO check if real token (figure out if this is necessary/useful):
         //      the contract could still do whatever it wants even if it has
         //      the right interface)
         require(erc20Address != address(0), "Bad asset address");
         require(!isCapeAssetRegistered(newAsset), "Asset already registered");
+
+        _checkForeignAssetCode(newAsset.code, erc20Address);
+
         bytes32 key = keccak256(abi.encode(newAsset));
         assets[key] = erc20Address;
+    }
+
+    /// @notice Checks if the asset definition code is correctly derived from the ERC20 address
+    ///        of the token and the address of the depositor.
+    /// @dev requires "view" to access msg.sender
+    function _checkForeignAssetCode(uint256 assetDefinitionCode, address erc20Address)
+        internal
+        view
+    {
+        bytes memory description = _computeAssetDescription(erc20Address, msg.sender);
+        bytes memory randomBytes = bytes.concat(
+            keccak256(bytes.concat(DOM_SEP_FOREIGN_ASSET, description))
+        );
+        uint256 derivedCode = BN254.fromLeBytesModOrder(randomBytes);
+        require(derivedCode == assetDefinitionCode, "Wrong foreign asset code");
+    }
+
+    // TODO consider inlining once asset description is finalized. Until then it's useful
+    // for testing if this computation matches the rust code.
+    function _computeAssetDescription(address erc20Address, address sponsor)
+        internal
+        pure
+        returns (bytes memory)
+    {
+        return
+            bytes.concat("TRICAPE ERC20", bytes20(erc20Address), "sponsored by", bytes20(sponsor));
     }
 }

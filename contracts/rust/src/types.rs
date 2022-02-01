@@ -1,5 +1,8 @@
-use ark_bn254::Bn254;
+use ark_bn254::Fr;
+use ark_bn254::{Bn254, Fq};
 use ark_ff::{to_bytes, PrimeField, Zero};
+use ark_poly::EvaluationDomain;
+use ark_poly::Radix2EvaluationDomain;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ethers::prelude::*;
 use jf_aap::{
@@ -29,6 +32,10 @@ abigen!(
     "../abi/contracts/mocks/TestBN254.sol/TestBN254/abi.json",
     event_derives(serde::Deserialize, serde::Serialize);
 
+    TestEdOnBN254,
+    "../abi/contracts/mocks/TestEdOnBN254.sol/TestEdOnBN254/abi.json",
+    event_derives(serde::Deserialize, serde::Serialize);
+
     TestRecordsMerkleTree,
     "../abi/contracts/mocks/TestRecordsMerkleTree.sol/TestRecordsMerkleTree/abi.json",
     event_derives(serde::Deserialize, serde::Serialize);
@@ -43,6 +50,14 @@ abigen!(
 
     TestTranscript,
     "../abi/contracts/mocks/TestTranscript.sol/TestTranscript/abi.json",
+    event_derives(serde::Deserialize, serde::Serialize);
+
+    TestPlonkVerifier,
+    "../abi/contracts/mocks/TestPlonkVerifier.sol/TestPlonkVerifier/abi.json",
+    event_derives(serde::Deserialize, serde::Serialize);
+
+    TestPolynomialEval,
+    "../abi/contracts/mocks/TestPolynomialEval.sol/TestPolynomialEval/abi.json",
     event_derives(serde::Deserialize, serde::Serialize);
 
     CAPE,
@@ -64,6 +79,19 @@ abigen!(
     Greeter,
     "../abi/contracts/Greeter.sol/Greeter/abi.json",
     event_derives(serde::Deserialize, serde::Serialize);
+
+    TestVerifyingKeys,
+    "../abi/contracts/mocks/TestVerifyingKeys.sol/TestVerifyingKeys/abi.json",
+    event_derives(serde::Deserialize, serde::Serialize);
+
+    SimpleToken,
+    "../abi/contracts/SimpleToken.sol/SimpleToken/abi.json",
+    event_derives(serde::Deserialize, serde::Serialize);
+
+    TestQueue,
+    "../abi/contracts/mocks/TestQueue.sol/TestQueue/abi.json",
+    event_derives(serde::Deserialize, serde::Serialize);
+
 );
 
 impl From<ark_bn254::G1Affine> for G1Point {
@@ -78,6 +106,24 @@ impl From<ark_bn254::G1Affine> for G1Point {
             Self {
                 x: U256::from_little_endian(&to_bytes!(p.x).unwrap()[..]),
                 y: U256::from_little_endian(&to_bytes!(p.y).unwrap()[..]),
+            }
+        }
+    }
+}
+
+impl From<(ark_bn254::Fq, ark_bn254::Fq)> for G1Point {
+    fn from(p: (ark_bn254::Fq, ark_bn254::Fq)) -> Self {
+        let zero = ark_bn254::G1Affine::zero();
+        if p.0 == zero.x && p.1 == zero.y {
+            // Solidity repr of infinity/zero
+            Self {
+                x: U256::from(0),
+                y: U256::from(0),
+            }
+        } else {
+            Self {
+                x: U256::from_little_endian(&to_bytes!(p.0).unwrap()[..]),
+                y: U256::from_little_endian(&to_bytes!(p.1).unwrap()[..]),
             }
         }
     }
@@ -120,16 +166,78 @@ pub fn u256_to_field<F: PrimeField>(v: U256) -> F {
     F::from_le_bytes_mod_order(&bytes)
 }
 
-impl From<ark_ed_on_bn254::EdwardsAffine> for EdOnBn254Point {
+impl From<ark_ed_on_bn254::EdwardsAffine> for EdOnBN254Point {
     fn from(p: ark_ed_on_bn254::EdwardsAffine) -> Self {
-        Self {
-            x: U256::from_little_endian(&to_bytes!(p.x).unwrap()[..]),
-            y: U256::from_little_endian(&to_bytes!(p.y).unwrap()[..]),
+        if p.is_zero() {
+            // Solidity precompile have a different affine repr for Point of Infinity
+            Self {
+                x: U256::from(0),
+                y: U256::from(0),
+            }
+        } else {
+            Self {
+                x: U256::from_little_endian(&to_bytes!(p.x).unwrap()[..]),
+                y: U256::from_little_endian(&to_bytes!(p.y).unwrap()[..]),
+            }
         }
     }
 }
 
-/// a helper trait to help with fully-qualified generic into synatx:
+impl From<Radix2EvaluationDomain<Fr>> for EvalDomain {
+    fn from(domain: Radix2EvaluationDomain<Fr>) -> Self {
+        Self {
+            log_size: domain.log_size_of_group.into(),
+            size: domain.size.into(),
+            size_inv: field_to_u256(domain.size_inv),
+            group_gen: field_to_u256(domain.group_gen),
+            group_gen_inv: field_to_u256(domain.group_gen_inv),
+        }
+    }
+}
+
+impl From<EvalDomain> for Radix2EvaluationDomain<Fr> {
+    fn from(domain: EvalDomain) -> Self {
+        let res = Radix2EvaluationDomain::<Fr>::new(domain.size.try_into().unwrap()).unwrap();
+        assert!(res.group_gen == u256_to_field::<Fr>(domain.group_gen));
+        assert!(res.group_gen_inv == u256_to_field::<Fr>(domain.group_gen_inv));
+        assert!(res.size_inv == u256_to_field::<Fr>(domain.size_inv));
+        res
+    }
+}
+
+impl From<Challenges> for jf_plonk::testing_apis::Challenges<Fr> {
+    fn from(chal_sol: Challenges) -> Self {
+        Self {
+            tau: Fr::zero(), // not used
+            alpha: u256_to_field(chal_sol.alpha),
+            beta: u256_to_field(chal_sol.beta),
+            gamma: u256_to_field(chal_sol.gamma),
+            zeta: u256_to_field(chal_sol.zeta),
+            v: u256_to_field(chal_sol.v),
+            u: u256_to_field(chal_sol.u),
+        }
+    }
+}
+
+impl From<jf_plonk::testing_apis::Challenges<Fr>> for Challenges {
+    fn from(chal: jf_plonk::testing_apis::Challenges<Fr>) -> Self {
+        let alpha2 = chal.alpha * chal.alpha;
+        let alpha3 = chal.alpha * alpha2;
+
+        Self {
+            alpha: field_to_u256(chal.alpha),
+            alpha_2: field_to_u256(alpha2),
+            alpha_3: field_to_u256(alpha3),
+            beta: field_to_u256(chal.beta),
+            gamma: field_to_u256(chal.gamma),
+            zeta: field_to_u256(chal.zeta),
+            v: field_to_u256(chal.v),
+            u: field_to_u256(chal.u),
+        }
+    }
+}
+
+/// a helper trait to help with fully-qualified generic into syntax:
 /// `x.generic_into::<DestType>();`
 /// This is particularly helpful in a chained `generic_into()` statements.
 pub trait GenericInto {
@@ -165,7 +273,7 @@ macro_rules! jf_conversion_for_u256_new_type {
                 let mut bytes = vec![0u8; 32];
                 v_sol.0.to_little_endian(&mut bytes);
                 let v: $jf_type = CanonicalDeserialize::deserialize(&bytes[..])
-                    .expect("Failed to deserialze U256.");
+                    .expect("Failed to deserialize U256.");
                 v
             }
         }
@@ -192,22 +300,22 @@ jf_conversion_for_u256_new_type!(BlindFactorSol, BlindFactor);
 
 macro_rules! jf_conversion_for_ed_on_bn254_new_type {
     ($jf_type:ident) => {
-        impl From<EdOnBn254Point> for $jf_type {
-            fn from(p: EdOnBn254Point) -> Self {
+        impl From<EdOnBN254Point> for $jf_type {
+            fn from(p: EdOnBN254Point) -> Self {
                 let x: ark_bn254::Fr = u256_to_field(p.x);
                 let y: ark_bn254::Fr = u256_to_field(p.y);
                 let mut bytes = vec![];
                 (x, y)
                     .serialize(&mut bytes)
-                    .expect("Failed to serialize EdOnBn254Point into bytes.");
+                    .expect("Failed to serialize EdOnBN254Point into bytes.");
                 assert_eq!(bytes.len(), 64); // 32 bytes for each coordinate
                 let pk: $jf_type = CanonicalDeserialize::deserialize_uncompressed(&bytes[..])
-                    .expect("Fail to deserialize EdOnBn254Point bytes into Jellyfish types.");
+                    .expect("Fail to deserialize EdOnBN254Point bytes into Jellyfish types.");
                 pk
             }
         }
 
-        impl From<$jf_type> for EdOnBn254Point {
+        impl From<$jf_type> for EdOnBN254Point {
             fn from(pk: $jf_type) -> Self {
                 let mut bytes = vec![];
                 CanonicalSerialize::serialize_uncompressed(&pk, &mut bytes).unwrap();
@@ -319,7 +427,7 @@ impl From<RecordOpening> for jf_aap::structs::RecordOpening {
 impl From<jf_aap::structs::AuditMemo> for AuditMemo {
     fn from(memo: jf_aap::structs::AuditMemo) -> Self {
         let scalars = memo.internal().clone().to_scalars();
-        let ephemeral_key = EdOnBn254Point {
+        let ephemeral_key = EdOnBN254Point {
             x: field_to_u256(scalars[0]),
             y: field_to_u256(scalars[1]),
         };
@@ -662,12 +770,81 @@ impl From<FreezeNote> for jf_aap::freeze::FreezeNote {
     }
 }
 
-// TODO: add conversion when https://github.com/SpectrumXYZ/jellyfish/issues/54 is resolved
-// impl From<jf_aap::VerifyingKey> for VerifyingKey {
-//     fn from(vk: jf_aap::VerifyingKey) -> Self {
+impl From<jf_aap::VerifyingKey> for VerifyingKey {
+    fn from(vk: jf_aap::VerifyingKey) -> Self {
+        // scalars are organized as
+        // - domain size, 1 element
+        // - number of inputs, 1 element
+        // - sigmas, 10 elements
+        // - selectors, 26 elements
+        // - k, 5 elements
+        // - g, h, bete_h, 10 elements
+        let scalars: Vec<Fq> = vk.into();
+        assert_eq!(scalars.len(), 53, "cannot parse vk from rust to solidity");
 
-//     }
-// }
+        let mut scalars = scalars.iter();
+        let domain_size = *scalars.next().unwrap();
+        let num_inputs = *scalars.next().unwrap();
+
+        let mut sigmas: Vec<G1Point> = vec![];
+        for _ in 0..5 {
+            let p = (*scalars.next().unwrap(), *scalars.next().unwrap());
+            sigmas.push(p.into());
+        }
+
+        let mut selectors: Vec<G1Point> = vec![];
+        for _ in 0..13 {
+            let p = (*scalars.next().unwrap(), *scalars.next().unwrap());
+            selectors.push(p.into());
+        }
+
+        Self {
+            domain_size: field_to_u256(domain_size),
+            num_inputs: field_to_u256(num_inputs),
+            sigma_0: sigmas[0].clone(),
+            sigma_1: sigmas[1].clone(),
+            sigma_2: sigmas[2].clone(),
+            sigma_3: sigmas[3].clone(),
+            sigma_4: sigmas[4].clone(),
+            // The order of selectors: q_lc, q_mul, q_hash, q_o, q_c, q_ecc
+            q_1: selectors[0].clone(),
+            q_2: selectors[1].clone(),
+            q_3: selectors[2].clone(),
+            q_4: selectors[3].clone(),
+            q_m12: selectors[4].clone(),
+            q_m34: selectors[5].clone(),
+            q_h1: selectors[6].clone(),
+            q_h2: selectors[7].clone(),
+            q_h3: selectors[8].clone(),
+            q_h4: selectors[9].clone(),
+            q_o: selectors[10].clone(),
+            q_c: selectors[11].clone(),
+            q_ecc: selectors[12].clone(),
+        }
+    }
+}
+
+// TODO: remove this when PcsInfo visibility was changed back to private
+impl From<jf_plonk::testing_apis::PcsInfo<Bn254>> for PcsInfo {
+    fn from(info: jf_plonk::testing_apis::PcsInfo<Bn254>) -> Self {
+        let mut comm_scalars = vec![];
+        let mut comm_bases = vec![];
+        for (&base, &scalar) in info.comm_scalars_and_bases.base_scalar_map.iter() {
+            comm_scalars.push(field_to_u256(scalar));
+            comm_bases.push(base.into());
+        }
+        Self {
+            u: field_to_u256(info.u),
+            eval_point: field_to_u256(info.eval_point),
+            next_eval_point: field_to_u256(info.next_eval_point),
+            eval: field_to_u256(info.eval),
+            comm_scalars,
+            comm_bases,
+            opening_proof: info.opening_proof.0.into(),
+            shifted_opening_proof: info.shifted_opening_proof.0.into(),
+        }
+    }
+}
 
 #[cfg(test)]
 mod test {
@@ -751,7 +928,7 @@ mod test {
 
         // check ed_on_bn254 point conversion
         let p4 = EdwardsAffine::prime_subgroup_generator();
-        let p4_sol: EdOnBn254Point = p4.into();
+        let p4_sol: EdOnBN254Point = p4.into();
         assert_eq!(
             p4_sol.x,
             U256::from_str_radix(

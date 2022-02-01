@@ -23,16 +23,16 @@ contract RecordsMerkleTree {
 
     uint256 internal _rootValue;
     uint64 internal _numLeaves;
-    uint8 internal _height;
+    uint8 internal _merkleTreeHeight;
 
     mapping(uint256 => uint256) internal _flattenedFrontier;
 
     /// Instantiate a records merkle tree with its height
-    /// @param height height of the merkle tree
-    constructor(uint8 height) {
+    /// @param merkleTreeHeight height of the merkle tree
+    constructor(uint8 merkleTreeHeight) {
         _rootValue = 0;
         _numLeaves = 0;
-        _height = height;
+        _merkleTreeHeight = merkleTreeHeight;
     }
 
     function _isTerminal(Node memory node) private pure returns (bool) {
@@ -99,7 +99,7 @@ contract RecordsMerkleTree {
         uint64 cursorFrontier = 3;
 
         // Build the tree expect the root node
-        while (cursor < 3 * _height + 1) {
+        while (cursor < 3 * _merkleTreeHeight + 1) {
             nodes[cursor] = _createHoleNode(cursor, Position(localPosition));
 
             // Create the siblings of the "hole node". These siblings have no children
@@ -160,7 +160,7 @@ contract RecordsMerkleTree {
         returns (uint64, uint64)
     {
         uint64 localPos;
-        uint64 divisor = uint64(3**(_height - branchIndex - 1));
+        uint64 divisor = uint64(3**(_merkleTreeHeight - branchIndex - 1));
 
         localPos = absolutePos / divisor;
         absolutePos = absolutePos % divisor;
@@ -180,7 +180,7 @@ contract RecordsMerkleTree {
         uint64 maxIndex,
         uint256 element
     ) private returns (uint64) {
-        require(_numLeaves < 3**_height, "The tree is full.");
+        require(_numLeaves < 3**_merkleTreeHeight, "The tree is full.");
 
         // Get the position of the leaf from the smart contract state
         uint64 leafPos = _numLeaves;
@@ -212,7 +212,7 @@ contract RecordsMerkleTree {
             branchIndex -= 1;
         }
 
-        while (branchIndex < _height - 1) {
+        while (branchIndex < _merkleTreeHeight - 1) {
             nodes[newNodeIndex] = Node(0, 0, 0, 0);
             _updateChildNode(nodes[previousNodeIndex], newNodeIndex, Position(localPos));
 
@@ -240,14 +240,14 @@ contract RecordsMerkleTree {
 
     /// Updates the hash of the frontier based on the current tree structure.
     function _storeFrontier(Node[] memory nodes, uint64 rootIndex) private {
-        uint64 frontierSize = 2 * _height + 1;
+        uint64 frontierSize = 2 * _merkleTreeHeight + 1;
 
         /// Collect the values from the root to the leaf but in reverse order
         uint64 currentNodeIndex = rootIndex;
         uint64 firstSiblingIndex = 0;
         uint64 secondSiblingIndex = 0;
         // Go down until the leaf
-        for (uint256 i = 0; i < _height; i++) {
+        for (uint256 i = 0; i < _merkleTreeHeight; i++) {
             // Pick the non-empty node that is most right
             Node memory currentNode = nodes[currentNodeIndex];
             if (!_isNull(nodes[currentNode.right])) {
@@ -281,7 +281,7 @@ contract RecordsMerkleTree {
         // The total number of nodes is bounded by 3*height+1 + 3*N*height = 3*(N+1)*height + 1
         // where N is the number of new records
         uint256 numElements = elements.length;
-        Node[] memory nodes = new Node[](3 * (numElements + 1) * _height + 2);
+        Node[] memory nodes = new Node[](3 * (numElements + 1) * _merkleTreeHeight + 2);
 
         /// Insert the new elements ///
 

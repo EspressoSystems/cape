@@ -11,18 +11,31 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     args: [],
     log: true,
   });
+  let verifyingKeys = await deploy("VerifyingKeys", {
+    from: deployer,
+    args: [],
+    log: true,
+  });
 
-  const treeDepth = 26;
+  let plonkVerifierContract = await deploy("PlonkVerifier", {
+    from: deployer,
+    args: [],
+    log: true,
+  });
+
+  const treeDepth = 24;
   const nRoots = 10;
 
   await deploy("CAPE", {
     from: deployer,
-    args: [treeDepth, nRoots],
+    args: [treeDepth, nRoots, plonkVerifierContract.address],
     log: true,
     libraries: {
       RescueLib: rescueLib.address,
+      VerifyingKeys: verifyingKeys.address,
     },
   });
 };
+
 export default func;
 func.tags = ["CAPE"];

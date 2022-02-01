@@ -1,5 +1,6 @@
 //! This crate describes the workflow and interfaces of a CAPE contract deployed on Ethereum.
 
+use cap_rust_sandbox::state::{is_erc20_asset_def_valid, Erc20Code, EthereumAddr};
 use ethers::prelude::*;
 use jf_aap::keys::UserPubKey;
 use jf_aap::structs::{AssetDefinition, FreezeFlag, Nullifier, RecordCommitment, RecordOpening};
@@ -188,13 +189,25 @@ impl CapeContract {
     }
 
     /// Create a new asset type for an ERC20 and register it to the contract.
-    pub fn sponsor_cape_asset(&mut self, erc20_addr: Address, new_asset: AssetDefinition) {
+    pub fn sponsor_cape_asset(
+        &mut self,
+        erc20_addr: Address,
+        sponsor: Address,
+        new_asset: AssetDefinition,
+    ) {
         assert!(
             !self.is_cape_asset_registered(&new_asset),
             "this CAPE asset is already registered"
         );
         // check correct ERC20 address.
         let _ = Erc20Contract::at(erc20_addr);
+
+        // Check for valid foreign asset definition to ensure asset cannot be minted.
+        assert!(is_erc20_asset_def_valid(
+            &new_asset,
+            &Erc20Code(EthereumAddr(erc20_addr.to_fixed_bytes())),
+            &EthereumAddr(sponsor.to_fixed_bytes())
+        ));
 
         self.wrapped_erc20_registrar.insert(new_asset, erc20_addr);
     }
@@ -277,7 +290,7 @@ impl CapeContract {
 
                 // to validate the burn transaction, we need to check if the second output
                 // of the transfer (while the first being fee change) is sent to dedicated
-                // "burn address/pubkey". Since the contract only have record commitments,
+                // "burn address/pubkey". Since the transaction only contains record commitments,
                 // we require the user to provide the record opening and check against it.
                 assert_eq!(
                     RecordCommitment::from(burned_ro),
@@ -393,9 +406,10 @@ mod test {
         let mut cape_contract = CapeContract::mock();
         // 1. sponsor: design  the CAPE asset type (off-chain).
         let asset_def = usdc_cape_asset_def();
+        let sponsor = Address::random();
 
         // 2. sponsor: register the asset (on-L1-chain).
-        cape_contract.sponsor_cape_asset(usdc_address(), asset_def.clone());
+        cape_contract.sponsor_cape_asset(usdc_address(), sponsor, asset_def);
     }
 
     #[test]

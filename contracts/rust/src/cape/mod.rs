@@ -1,5 +1,10 @@
 #![deny(warnings)]
-use crate::{state::CapeTransaction, types as sol};
+mod note_types;
+mod submit_block;
+mod wrapping;
+
+use crate::state::CapeTransaction;
+use crate::types as sol;
 use anyhow::{anyhow, bail, Result};
 use ark_serialize::*;
 use ethers::prelude::Address;
@@ -143,6 +148,50 @@ impl CapeBlock {
         })
     }
 
+    /// Collect the record commitments from the transaction outputs in the same order as the CAPE contract
+    pub fn get_list_of_input_record_commitments(self) -> Vec<RecordCommitment> {
+        let mut transfer_idx: usize = 0;
+        let mut mint_idx: usize = 0;
+        let mut freeze_idx: usize = 0;
+        let mut burn_idx: usize = 0;
+        let mut outputs_record_commitments = vec![];
+
+        for note_type in self.note_types {
+            match note_type {
+                NoteType::Transfer => {
+                    for rc in self.transfer_notes[transfer_idx].clone().output_commitments {
+                        outputs_record_commitments.push(rc);
+                        transfer_idx += 1;
+                    }
+                }
+                NoteType::Mint => {
+                    let note = self.mint_notes[mint_idx].clone();
+                    outputs_record_commitments.push(note.mint_comm);
+                    outputs_record_commitments.push(note.chg_comm);
+                    mint_idx += 1;
+                }
+                NoteType::Freeze => {
+                    for rc in self.freeze_notes[freeze_idx].clone().output_commitments {
+                        outputs_record_commitments.push(rc);
+                        freeze_idx += 1;
+                    }
+                }
+                NoteType::Burn => {
+                    for rc in self.burn_notes[burn_idx]
+                        .clone()
+                        .transfer_note
+                        .output_commitments
+                    {
+                        outputs_record_commitments.push(rc);
+                        burn_idx += 1;
+                    }
+                }
+            }
+        }
+
+        outputs_record_commitments
+    }
+
     pub fn from_cape_transactions(
         transactions: Vec<CapeTransaction>,
         miner: UserAddress,
@@ -243,69 +292,84 @@ impl From<TransactionNote> for NoteType {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub(crate) struct CAPEConstructorArgs {
+pub struct CAPEConstructorArgs {
     height: u8,
     n_roots: u64,
+    verifier_addr: Address,
 }
 
 #[allow(dead_code)]
 impl CAPEConstructorArgs {
-    pub(crate) fn new(height: u8, n_roots: u64) -> Self {
-        Self { height, n_roots }
+    pub fn new(height: u8, n_roots: u64, verifier_addr: Address) -> Self {
+        Self {
+            height,
+            n_roots,
+            verifier_addr,
+        }
     }
 }
 
-impl From<CAPEConstructorArgs> for (u8, u64) {
-    fn from(args: CAPEConstructorArgs) -> (u8, u64) {
-        (args.height, args.n_roots)
+impl From<CAPEConstructorArgs> for (u8, u64, Address) {
+    fn from(args: CAPEConstructorArgs) -> (u8, u64, Address) {
+        (args.height, args.n_roots, args.verifier_addr)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::state::{erc20_asset_description, Erc20Code, EthereumAddr};
-    use ethers::prelude::{
-        k256::ecdsa::SigningKey, Http, Provider, SignerMiddleware, Wallet, U256,
-    };
-    use jf_aap::structs::{AssetCode, AssetCodeSeed, InternalAssetCode, RecordOpening};
-    use rand::Rng;
-
     use crate::assertion::Matcher;
-    use crate::ethereum::{deploy, get_funded_deployer};
+    use crate::deploy::deploy_cape_test;
+    use crate::ethereum::get_funded_client;
+    use crate::ledger::CapeLedger;
     use crate::types::{
-        AssetCodeSol, GenericInto, InternalAssetCodeSol, MerkleRootSol, NullifierSol,
-        RecordCommitmentSol, TestCAPE, TestCapeTypes,
+        GenericInto, MerkleRootSol, NullifierSol, RecordCommitmentSol, TestCapeTypes,
     };
     use anyhow::Result;
-    use jf_aap::keys::UserPubKey;
+    use ethers::prelude::U256;
+    use jf_aap::keys::{UserKeyPair, UserPubKey};
+    use jf_aap::structs::RecordOpening;
     use jf_aap::utils::TxnsParams;
-    use std::path::Path;
+    use reef::Ledger;
 
-    async fn deploy_cape_test() -> TestCAPE<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>> {
-        let client = get_funded_deployer().await.unwrap();
-        let call = deploy(
-            client.clone(),
-            Path::new("../abi/contracts/mocks/TestCAPE.sol/TestCAPE"),
-            CAPEConstructorArgs::new(5, 2).generic_into::<(u8, u64)>(),
-        )
-        .await;
-        let contract = call.unwrap();
-        TestCAPE::new(contract.address(), client)
+    #[tokio::test]
+    async fn test_batch_verify_validity_proof() -> Result<()> {
+        let rng = &mut ark_std::test_rng();
+        // Create a block with 3 transfer, 1 mint, 2 freeze
+        let params = TxnsParams::generate_txns(rng, 3, 1, 2, CapeLedger::merkle_height());
+        let miner = UserKeyPair::generate(rng);
+
+        // simulate initial contract state to contain those record to be consumed
+        let contract = deploy_cape_test().await;
+        for txn in params.txns.iter() {
+            contract
+                .add_root(txn.merkle_root().generic_into::<MerkleRootSol>().0)
+                .send()
+                .await?
+                .await?;
+        }
+
+        // submit the block during which validity proofs would be verified in batch
+        let cape_block = CapeBlock::generate(params.txns, vec![], miner.address())?;
+        contract
+            .submit_cape_block(cape_block.into(), vec![])
+            .send()
+            .await?
+            .await?;
+        Ok(())
     }
 
     #[tokio::test]
     async fn test_submit_empty_block_to_cape_contract() -> Result<()> {
-        let contract = deploy_cape_test().await;
-
         // Create an empty block transactions
         let rng = &mut ark_std::test_rng();
-        let params = TxnsParams::generate_txns(rng, 0, 0, 0);
+        let params = TxnsParams::generate_txns(rng, 0, 0, 0, CapeLedger::merkle_height());
         let miner = UserPubKey::default();
 
         let cape_block = CapeBlock::generate(params.txns, vec![], miner.address())?;
 
         // Submitting an empty block does not yield a reject from the contract
+        let contract = deploy_cape_test().await;
         contract
             .submit_cape_block(cape_block.into(), vec![])
             .send()
@@ -313,21 +377,26 @@ mod tests {
             .await?;
 
         // The height is incremented anyways.
-        assert_eq!(contract.height().call().await?, 1u64);
+        assert_eq!(contract.block_height().call().await?, 1u64);
 
         Ok(())
     }
 
     #[tokio::test]
     async fn test_submit_block_to_cape_contract() -> Result<()> {
-        let contract = deploy_cape_test().await;
-
         // Create three transactions
         let rng = &mut ark_std::test_rng();
         let num_transfer_txn = 1;
         let num_mint_txn = 1;
         let num_freeze_txn = 1;
-        let params = TxnsParams::generate_txns(rng, num_transfer_txn, num_mint_txn, num_freeze_txn);
+        let tree_height = CapeLedger::merkle_height();
+        let params = TxnsParams::generate_txns(
+            rng,
+            num_transfer_txn,
+            num_mint_txn,
+            num_freeze_txn,
+            tree_height,
+        );
         let miner = UserPubKey::default();
 
         let nf = params.txns[0].nullifiers()[0];
@@ -337,6 +406,7 @@ mod tests {
         let cape_block = CapeBlock::generate(params.txns, vec![], miner.address())?;
 
         // Check that some nullifier is not yet inserted
+        let contract = deploy_cape_test().await;
         assert!(
             !contract
                 .nullifiers(nf.generic_into::<NullifierSol>().0)
@@ -370,17 +440,17 @@ mod tests {
 
     #[tokio::test]
     async fn test_block_height() -> Result<()> {
-        let contract = deploy_cape_test().await;
-        assert_eq!(contract.height().call().await?, 0u64);
-
         let rng = &mut ark_std::test_rng();
-        let params = TxnsParams::generate_txns(rng, 1, 0, 0);
+        let params = TxnsParams::generate_txns(rng, 1, 0, 0, CapeLedger::merkle_height());
         let miner = UserPubKey::default();
 
         let root = params.txns[0].merkle_root();
         let cape_block = CapeBlock::generate(params.txns, vec![], miner.address())?;
 
         // TODO should not require to manually submit the root here
+        let contract = deploy_cape_test().await;
+        assert_eq!(contract.block_height().call().await?, 0u64);
+
         contract
             .add_root(root.generic_into::<MerkleRootSol>().0)
             .send()
@@ -392,23 +462,21 @@ mod tests {
             .send()
             .await?
             .await?;
+        assert_eq!(contract.block_height().call().await?, 1u64);
 
-        assert_eq!(contract.height().call().await?, 1u64);
         Ok(())
     }
 
     #[tokio::test]
     async fn test_event_block_committed() -> Result<()> {
-        let contract = deploy_cape_test().await;
-
         let rng = &mut ark_std::test_rng();
-        let params = TxnsParams::generate_txns(rng, 1, 0, 0);
+        let params = TxnsParams::generate_txns(rng, 1, 0, 0, CapeLedger::merkle_height());
         let miner = UserPubKey::default();
 
         let root = params.txns[0].merkle_root();
         let cape_block = CapeBlock::generate(params.txns, vec![], miner.address())?;
 
-        // TODO should not require to manually submit the root here
+        let contract = deploy_cape_test().await;
         contract
             .add_root(root.generic_into::<MerkleRootSol>().0)
             .send()
@@ -427,11 +495,8 @@ mod tests {
             .query()
             .await?;
         assert_eq!(logs[0].height, 1);
-        assert_eq!(logs[0].included_notes, vec![true]);
         Ok(())
     }
-
-    // TODO add a test to check if includedNotes is computed correctly
 
     #[test]
     fn test_note_types() {
@@ -576,16 +641,14 @@ mod tests {
     // main block validaton loop.
 
     #[tokio::test]
-    async fn test_check_transfer_expired_note_removed() -> Result<()> {
-        let contract = deploy_cape_test().await;
-
+    async fn test_check_transfer_expired_note_triggers_an_error() -> Result<()> {
         let rng = &mut ark_std::test_rng();
-        let params = TxnsParams::generate_txns(rng, 1, 0, 0);
+        let params = TxnsParams::generate_txns(rng, 1, 0, 0, CapeLedger::merkle_height());
         let miner = UserPubKey::default();
 
         let tx = params.txns[0].clone();
         let root = tx.merkle_root();
-        let nf = tx.nullifiers()[0];
+
         let cape_block = CapeBlock::generate(params.txns, vec![], miner.address())?;
         let valid_until = match tx {
             TransactionNote::Transfer(note) => note.aux_info.valid_until,
@@ -594,29 +657,22 @@ mod tests {
         };
 
         // Set the height to expire note
+        let contract = deploy_cape_test().await;
         contract.set_height(valid_until + 1).send().await?.await?;
+
         contract
             .add_root(root.generic_into::<MerkleRootSol>().0)
             .send()
             .await?
             .await?;
 
-        contract
+        let call = contract
             .submit_cape_block(cape_block.into(), vec![])
-            .send()
-            .await?
-            .await?;
+            .call()
+            .await;
 
-        // Verify nullifier *not* spent
-        assert!(
-            !contract
-                .nullifiers(nf.generic_into::<NullifierSol>().0)
-                .call()
-                .await?
-        );
+        call.should_revert_with_message("Expired note");
 
-        // Check that the height increased by one
-        assert_eq!(contract.height().call().await?, valid_until + 2);
         Ok(())
     }
 
@@ -643,7 +699,7 @@ mod tests {
     }
 
     // TODO integration test to check if check_transfer is hooked up correctly in
-    // main block validaton loop.
+    // main block validation loop.
 
     #[tokio::test]
     async fn test_derive_record_commitment() {
@@ -682,258 +738,13 @@ mod tests {
             .should_revert_with_message("Reveal map exceeds 12 bits")
     }
 
-    #[tokio::test]
-    async fn test_compute_max_commitments() {
-        let contract = deploy_cape_test().await;
-        let rng = &mut ark_std::test_rng();
-
-        for _run in 0..10 {
-            let mut num_comms = 0;
-
-            let burn_notes = (0..rng.gen_range(0..2))
-                .map(|_| {
-                    let mut note = sol::BurnNote::default();
-                    let n = rng.gen_range(0..10);
-                    note.transfer_note.output_commitments = [U256::from(0)].repeat(n);
-                    num_comms += n;
-                    note
-                })
-                .collect();
-
-            let transfer_notes = (0..rng.gen_range(0..2))
-                .map(|_| {
-                    let mut note = sol::TransferNote::default();
-                    let n = rng.gen_range(0..10);
-                    note.output_commitments = [U256::from(0)].repeat(n);
-                    num_comms += n;
-                    note
-                })
-                .collect();
-
-            let freeze_notes = (0..rng.gen_range(0..2))
-                .map(|_| {
-                    let mut note = sol::FreezeNote::default();
-                    let n = rng.gen_range(0..10);
-                    note.output_commitments = [U256::from(0)].repeat(n);
-                    num_comms += n;
-                    note
-                })
-                .collect();
-
-            let mint_notes = (0..rng.gen_range(0..2))
-                .map(|_| {
-                    num_comms += 2; // change and mint
-                    sol::MintNote::default()
-                })
-                .collect();
-
-            let cape_block = sol::CapeBlock {
-                transfer_notes,
-                mint_notes,
-                freeze_notes,
-                burn_notes,
-                note_types: vec![],
-                miner_addr: UserPubKey::default().address().into(),
-            };
-
-            let max_comms_sol = contract
-                .compute_max_commitments(cape_block)
-                .call()
-                .await
-                .unwrap();
-
-            assert_eq!(max_comms_sol, U256::from(num_comms));
-        }
-    }
-
-    #[tokio::test]
-    async fn test_erc20_description() -> Result<()> {
-        let contract = deploy_cape_test().await;
-        let sponsor = Address::random();
-        let asset_address = Address::random();
-        let asset_code = Erc20Code(EthereumAddr(asset_address.to_fixed_bytes()));
-        let description =
-            erc20_asset_description(&asset_code, &EthereumAddr(sponsor.to_fixed_bytes()));
-        let ret = contract
-            .compute_asset_description(asset_address, sponsor)
-            .call()
-            .await?;
-        assert_eq!(ret.to_vec(), description);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_check_foreign_asset_code() -> Result<()> {
-        let contract = deploy_cape_test().await;
-
-        // Fails for random record opening with random asset code.
-        let rng = &mut ark_std::test_rng();
-        let ro = RecordOpening::rand_for_test(rng);
-        contract
-            .check_foreign_asset_code(
-                ro.asset_def.code.generic_into::<sol::AssetCodeSol>().0,
-                Address::random(),
-            )
-            .call()
-            .await
-            .should_revert_with_message("Wrong foreign asset code");
-
-        let erc20_address = Address::random();
-        // This is the first account from the test mnemonic
-        // TODO define elsewhere to make it usable from other tests
-        let sponsor = "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266".parse::<Address>()?;
-        let erc20_code = Erc20Code(EthereumAddr(erc20_address.to_fixed_bytes()));
-
-        // Fails for domestic asset code.
-        let domestic_asset_code =
-            AssetCode::new_domestic(AssetCodeSeed::generate(rng), erc20_address.as_bytes());
-        contract
-            .check_foreign_asset_code(
-                domestic_asset_code.generic_into::<AssetCodeSol>().0,
-                erc20_address,
-            )
-            .from(sponsor)
-            .call()
-            .await
-            .should_revert_with_message("Wrong foreign asset code");
-
-        // Fails if txn sender address does not match sponsor in asset code.
-        let description_wrong_sponsor = erc20_asset_description(
-            &erc20_code,
-            &EthereumAddr(Address::random().to_fixed_bytes()),
-        );
-        let asset_code_wrong_sponsor = AssetCode::new_foreign(&description_wrong_sponsor);
-        contract
-            .check_foreign_asset_code(
-                asset_code_wrong_sponsor.generic_into::<AssetCodeSol>().0,
-                sponsor,
-            )
-            .from(sponsor)
-            .call()
-            .await
-            .should_revert_with_message("Wrong foreign asset code");
-
-        let description =
-            erc20_asset_description(&erc20_code, &EthereumAddr(sponsor.to_fixed_bytes()));
-        let asset_code = AssetCode::new_foreign(&description);
-
-        // Fails for random erc20 address.
-        contract
-            .check_foreign_asset_code(
-                asset_code.generic_into::<sol::AssetCodeSol>().0,
-                Address::random(),
-            )
-            .from(sponsor)
-            .call()
-            .await
-            .should_revert_with_message("Wrong foreign asset code");
-
-        // Passes for correctly derived asset code
-        contract
-            .check_foreign_asset_code(
-                asset_code.generic_into::<sol::AssetCodeSol>().0,
-                erc20_address,
-            )
-            .from(sponsor)
-            .call()
-            .await
-            .should_not_revert();
-
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_check_domestic_asset_code() -> Result<()> {
-        let contract = deploy_cape_test().await;
-
-        // Create a matching pair of codes
-        let rng = &mut ark_std::test_rng();
-        let description = b"aap_usdx";
-        let seed = AssetCodeSeed::generate(rng);
-        let internal_asset_code = InternalAssetCode::new(seed, description);
-        let asset_code = AssetCode::new_domestic(seed, description);
-
-        // Passes for matching asset codes
-        contract
-            .check_domestic_asset_code(
-                asset_code.generic_into::<AssetCodeSol>().0,
-                internal_asset_code.generic_into::<InternalAssetCodeSol>().0,
-            )
-            .call()
-            .await
-            .should_not_revert();
-
-        // Fails with non-matching description
-        contract
-            .check_domestic_asset_code(
-                AssetCode::new_domestic(seed, b"other description")
-                    .generic_into::<AssetCodeSol>()
-                    .0,
-                internal_asset_code.generic_into::<InternalAssetCodeSol>().0,
-            )
-            .call()
-            .await
-            .should_revert_with_message("Wrong domestic asset code");
-
-        // Fails for foreign asset code
-        contract
-            .check_domestic_asset_code(
-                AssetCode::new_foreign(description)
-                    .generic_into::<AssetCodeSol>()
-                    .0,
-                internal_asset_code.generic_into::<InternalAssetCodeSol>().0,
-            )
-            .call()
-            .await
-            .should_revert_with_message("Wrong domestic asset code");
-
-        // Fails if internal asset code doesn't match (different seed)
-        contract
-            .check_domestic_asset_code(
-                asset_code.generic_into::<AssetCodeSol>().0,
-                InternalAssetCode::new(AssetCodeSeed::generate(rng), description)
-                    .generic_into::<InternalAssetCodeSol>()
-                    .0,
-            )
-            .call()
-            .await
-            .should_revert_with_message("Wrong domestic asset code");
-
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_check_domestic_asset_code_in_submit_cape_block() -> Result<()> {
-        let contract = deploy_cape_test().await;
-        let rng = &mut ark_std::test_rng();
-        let params = TxnsParams::generate_txns(rng, 0, 1, 0);
-
-        contract
-            .add_root(params.merkle_root.generic_into::<MerkleRootSol>().0)
-            .send()
-            .await?
-            .await?;
-
-        let mut block = CapeBlock::generate(params.txns, vec![], UserPubKey::default().address())?;
-
-        // Set a wrong internal asset code on the mint note
-        block.mint_notes[0].mint_internal_asset_code =
-            InternalAssetCode::new(AssetCodeSeed::generate(rng), b"description");
-
-        contract
-            .submit_cape_block(block.into(), vec![])
-            .call()
-            .await
-            .should_revert_with_message("Wrong domestic asset code");
-
-        Ok(())
-    }
-
     mod type_conversion {
         use super::*;
-        use crate::types::GenericInto;
+        use crate::deploy::deploy_test_cape_types_contract;
+        use crate::types::{AssetCodeSol, GenericInto, InternalAssetCodeSol};
         use ark_bn254::{Bn254, Fr};
         use ark_std::UniformRand;
+        use jf_aap::structs::{AssetCodeSeed, InternalAssetCode};
         use jf_aap::{
             freeze::FreezeNote,
             mint::MintNote,
@@ -947,23 +758,10 @@ mod tests {
         use jf_plonk::proof_system::structs::Proof;
         use jf_primitives::elgamal;
 
-        async fn deploy_type_contract(
-        ) -> Result<TestCapeTypes<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>> {
-            let client = get_funded_deployer().await.unwrap();
-            let contract = deploy(
-                client.clone(),
-                Path::new("../abi/contracts/mocks/TestCapeTypes.sol/TestCapeTypes"),
-                (),
-            )
-            .await
-            .unwrap();
-            Ok(TestCapeTypes::new(contract.address(), client))
-        }
-
         #[tokio::test]
         async fn test_nullifier() -> Result<()> {
             let rng = &mut ark_std::test_rng();
-            let contract = deploy_type_contract().await?;
+            let contract = deploy_test_cape_types_contract().await;
             for _ in 0..5 {
                 let nf = Nullifier::random_for_test(rng);
                 let res = contract
@@ -980,7 +778,7 @@ mod tests {
         #[tokio::test]
         async fn test_record_commitment() -> Result<()> {
             let rng = &mut ark_std::test_rng();
-            let contract = deploy_type_contract().await?;
+            let contract = deploy_test_cape_types_contract().await;
             for _ in 0..5 {
                 let rc = RecordCommitment::from_field_element(BaseField::rand(rng));
                 let res = contract
@@ -997,7 +795,7 @@ mod tests {
         #[tokio::test]
         async fn test_merkle_root() -> Result<()> {
             let rng = &mut ark_std::test_rng();
-            let contract = deploy_type_contract().await?;
+            let contract = deploy_test_cape_types_contract().await;
             for _ in 0..5 {
                 let root = NodeValue::rand(rng);
                 let res = contract
@@ -1012,9 +810,69 @@ mod tests {
         }
 
         #[tokio::test]
+        async fn test_check_domestic_asset_code() -> Result<()> {
+            let contract = deploy_cape_test().await;
+
+            // Create a matching pair of codes
+            let rng = &mut ark_std::test_rng();
+            let description = b"aap_usdx";
+            let seed = AssetCodeSeed::generate(rng);
+            let internal_asset_code = InternalAssetCode::new(seed, description);
+            let asset_code = AssetCode::new_domestic(seed, description);
+
+            // Passes for matching asset codes
+            contract
+                .check_domestic_asset_code(
+                    asset_code.generic_into::<AssetCodeSol>().0,
+                    internal_asset_code.generic_into::<InternalAssetCodeSol>().0,
+                )
+                .call()
+                .await
+                .should_not_revert();
+
+            // Fails with non-matching description
+            contract
+                .check_domestic_asset_code(
+                    AssetCode::new_domestic(seed, b"other description")
+                        .generic_into::<AssetCodeSol>()
+                        .0,
+                    internal_asset_code.generic_into::<InternalAssetCodeSol>().0,
+                )
+                .call()
+                .await
+                .should_revert_with_message("Wrong domestic asset code");
+
+            // Fails for foreign asset code
+            contract
+                .check_domestic_asset_code(
+                    AssetCode::new_foreign(description)
+                        .generic_into::<AssetCodeSol>()
+                        .0,
+                    internal_asset_code.generic_into::<InternalAssetCodeSol>().0,
+                )
+                .call()
+                .await
+                .should_revert_with_message("Wrong domestic asset code");
+
+            // Fails if internal asset code doesn't match (different seed)
+            contract
+                .check_domestic_asset_code(
+                    asset_code.generic_into::<AssetCodeSol>().0,
+                    InternalAssetCode::new(AssetCodeSeed::generate(rng), description)
+                        .generic_into::<InternalAssetCodeSol>()
+                        .0,
+                )
+                .call()
+                .await
+                .should_revert_with_message("Wrong domestic asset code");
+
+            Ok(())
+        }
+
+        #[tokio::test]
         async fn test_asset_code() -> Result<()> {
             let rng = &mut ark_std::test_rng();
-            let contract = deploy_type_contract().await?;
+            let contract = deploy_test_cape_types_contract().await;
             for _ in 0..5 {
                 let (ac, _) = AssetCode::random(rng);
                 let res = contract
@@ -1031,7 +889,7 @@ mod tests {
         #[tokio::test]
         async fn test_asset_policy_and_definition() -> Result<()> {
             let rng = &mut ark_std::test_rng();
-            let contract = deploy_type_contract().await?;
+            let contract = deploy_test_cape_types_contract().await;
             for _ in 0..5 {
                 // NOTE: `sol::AssetPolicy` is from abigen! on contract,
                 // it collides with `jf_aap::structs::AssetPolicy`
@@ -1061,7 +919,7 @@ mod tests {
         #[tokio::test]
         async fn test_record_opening() -> Result<()> {
             let rng = &mut ark_std::test_rng();
-            let contract = deploy_type_contract().await?;
+            let contract = deploy_test_cape_types_contract().await;
             for _ in 0..5 {
                 // NOTE: `sol::RecordOpening` is from abigen! on contract,
                 // it collides with `jf_aap::structs::RecordOpening`
@@ -1083,7 +941,7 @@ mod tests {
         #[tokio::test]
         async fn test_audit_memo() -> Result<()> {
             let rng = &mut ark_std::test_rng();
-            let contract = deploy_type_contract().await?;
+            let contract = deploy_test_cape_types_contract().await;
             for _ in 0..5 {
                 let keypair = elgamal::KeyPair::generate(rng);
                 let message = Fr::rand(rng);
@@ -1105,14 +963,23 @@ mod tests {
         #[tokio::test]
         async fn test_plonk_proof_and_txn_notes() -> Result<()> {
             let rng = &mut ark_std::test_rng();
-            let contract = deploy_type_contract().await?;
             let num_transfer_txn = 1;
             let num_mint_txn = 1;
             let num_freeze_txn = 1;
-            let params =
-                TxnsParams::generate_txns(rng, num_transfer_txn, num_mint_txn, num_freeze_txn);
+            let params = TxnsParams::generate_txns(
+                rng,
+                num_transfer_txn,
+                num_mint_txn,
+                num_freeze_txn,
+                CapeLedger::merkle_height(),
+            );
 
+            let contract = deploy_test_cape_types_contract().await;
             for txn in params.txns {
+                // reconnect with peer
+                let client = get_funded_client().await?;
+                let contract = TestCapeTypes::new(contract.address(), client);
+
                 let proof = txn.validity_proof();
                 assert_eq!(
                     proof.clone(),
@@ -1162,7 +1029,7 @@ mod tests {
 
         #[tokio::test]
         async fn test_note_type() -> Result<()> {
-            let contract = deploy_type_contract().await?;
+            let contract = deploy_test_cape_types_contract().await;
             let invalid = 10;
             assert_eq!(
                 contract

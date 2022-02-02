@@ -1,7 +1,6 @@
 // Copyright © 2021 Translucence Research, Inc. All rights reserved.
 
-use crate::routes::check_api;
-use crate::WebState;
+use crate::{routes::check_api, web_client::WebState};
 use std::fs::read_to_string;
 use std::path::Path;
 

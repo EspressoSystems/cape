@@ -3,7 +3,7 @@
 use crate::{
     mocks::{MockCapeBackend, MockCapeNetwork},
     wallet::CapeWalletExt,
-    WebState,
+    web_client::WebState,
 };
 use async_std::sync::{Arc, Mutex};
 use cap_rust_sandbox::{

@@ -5,13 +5,13 @@
 // allows the user to enter commands for a wallet interactively.
 //
 
-use crate::{
-    cli_client::CliClient,
+extern crate cape_wallet;
+use async_std::sync::Mutex;
+use cap_rust_sandbox::{ledger::CapeLedger, state::EthereumAddr};
+use cape_wallet::{
     mocks::{MockCapeBackend, MockCapeNetwork},
     wallet::{CapeWallet, CapeWalletExt},
 };
-use async_std::sync::Mutex;
-use cap_rust_sandbox::{ledger::CapeLedger, state::EthereumAddr};
 use jf_aap::{
     keys::{AuditorKeyPair, AuditorPubKey, FreezerKeyPair, FreezerPubKey, UserKeyPair},
     proof::UniversalParam,
@@ -35,13 +35,12 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
+use std::process::exit;
 use std::str::FromStr;
 use std::sync::Arc;
 use structopt::StructOpt;
 use surf::Url;
 use tempdir::TempDir;
-
-// TODO !keyao Change `unwrap()`s to better error handling.
 
 pub struct CapeCli;
 
@@ -517,63 +516,7 @@ async fn repl<
     Ok(())
 }
 
-//
-// For testing
-//
-
-pub(crate) fn create_wallet(t: &mut CliClient, wallet: usize) -> Result<&mut CliClient, String> {
-    let key_path = t.wallet_key_path(wallet)?;
-    let key_path = key_path.as_os_str().to_str().ok_or_else(|| {
-        format!(
-            "failed to convert key path {:?} for wallet {} to string",
-            key_path, wallet
-        )
-    })?;
-    t.open_with_args(wallet, ["--password"])?
-        .output("Create password:")?
-        .command(wallet, "test_password")?
-        .output("Retype password:")?
-        // Try typing the incorrect password, to check the error handling
-        .command(wallet, "wrong_password")?
-        .output("Passwords do not match.")?
-        .output("Create password:")?
-        .command(wallet, "test_password")?
-        .output("Retype password:")?
-        .command(wallet, "test_password")?
-        .output("connecting...")?
-        .command(wallet, format!("load_key spend {}", key_path))?
-        .output(format!("(?P<default_addr{}>ADDR~.*)", wallet))
-}
-
-pub(crate) fn cli_burn(t: &mut CliClient) -> Result<(), String> {
-    let balance = wait_for_starting_balance(t)?;
-    t
-        // Get the balance of both wallets.
-        .command(0, "burn 0")?
-        .output(format!("$default_addr0 {}", balance))?;
-    Ok(())
-}
-
-fn wait_for_native_balance(
-    t: &mut CliClient,
-    wallet: usize,
-    account: &str,
-) -> Result<usize, String> {
-    loop {
-        t.command(wallet, "balance 0")?
-            .output(format!("${} (?P<balance>\\d+)", account))?;
-        let balance = t.var("balance").unwrap().parse().unwrap();
-        if balance > 0 {
-            break Ok(balance);
-        }
-    }
-}
-
-fn wait_for_starting_balance(t: &mut CliClient) -> Result<usize, String> {
-    wait_for_native_balance(t, 0, "default_addr0")
-}
-
-pub async fn cape_cli_main<
+async fn cape_cli_main<
     'a,
     L: 'static + Ledger,
     C: CLI<'a, Ledger = CapeLedger, Backend = MockCapeBackend<'a, LoaderMetadata>>,
@@ -584,5 +527,60 @@ pub async fn cape_cli_main<
         key_gen::<C>(path)
     } else {
         repl::<L, C>(args).await
+    }
+}
+
+#[async_std::main]
+async fn main() -> Result<(), std::io::Error> {
+    tracing_subscriber::fmt().pretty().init();
+
+    // Initialize the wallet CLI.
+    if let Err(err) = cape_cli_main::<CapeLedger, CapeCli>(&Args::from_args()).await {
+        println!("{}", err);
+        exit(1);
+    }
+
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use cape_wallet::cli_client::CliClient;
+
+    fn create_wallet(t: &mut CliClient, wallet: usize) -> Result<&mut CliClient, String> {
+        let key_path = t.wallet_key_path(wallet)?;
+        let key_path = key_path.as_os_str().to_str().ok_or_else(|| {
+            format!(
+                "failed to convert key path {:?} for wallet {} to string",
+                key_path, wallet
+            )
+        })?;
+        t.open_with_args(wallet, ["--password"])?
+            .output("Create password:")?
+            .command(wallet, "test_password")?
+            .output("Retype password:")?
+            .command(wallet, "test_password")?
+            .output("connecting...")?
+            .command(wallet, format!("load_key spend {}", key_path))?
+            .output(format!("(?P<default_addr{}>ADDR~.*)", wallet))
+    }
+
+    fn cli_burn(t: &mut CliClient) -> Result<(), String> {
+        // Set a hard-coded Ethereum address for testing.
+        let erc20_addr = EthereumAddr([1u8; 20]);
+        t.command(0, format!("burn 0 $default_addr0 {} 10 1", erc20_addr))?
+            .output(format!("TransactionError: InsufficientBalance"))?;
+        Ok(())
+    }
+
+    #[test]
+    fn cli_burn_test() {
+        cape_wallet::cli_client::cli_test(|t| {
+            create_wallet(t, 0)?;
+            cli_burn(t)?;
+
+            Ok(())
+        });
     }
 }

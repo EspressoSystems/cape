@@ -5,6 +5,9 @@
 // allows the user to enter commands for a wallet interactively.
 //
 
+// TODO !keyao Merge duplicate CLI code among Cape, Spectrum and Seahorse.
+// Issue: https://github.com/SpectrumXYZ/cape/issues/429.
+
 extern crate cape_wallet;
 use async_std::sync::Mutex;
 use cap_rust_sandbox::{ledger::CapeLedger, state::EthereumAddr};
@@ -39,7 +42,6 @@ use std::process::exit;
 use std::str::FromStr;
 use std::sync::Arc;
 use structopt::StructOpt;
-use surf::Url;
 use tempdir::TempDir;
 
 pub struct CapeCli;
@@ -326,7 +328,7 @@ fn init_commands<
         ),
         command!(
             burn,
-            "burn a new asset",
+            "burn an asset",
             C,
             |wallet, asset: ListItem<AssetCode>, from: UserAddress, to: EthereumAddr, amount: u64, fee: u64; wait: Option<bool>| {
                 match wallet
@@ -400,9 +402,6 @@ pub struct Args {
     /// Instead of prompting the user for input with a line editor, the prompt will be printed,
     /// followed by a newline, and the input will be read without an editor.
     pub non_interactive: bool,
-
-    /// URL of a server for interacting with the ledger
-    pub server: Option<Url>,
 }
 
 impl CLIArgs for Args {
@@ -566,19 +565,23 @@ mod tests {
             .output(format!("(?P<default_addr{}>ADDR~.*)", wallet))
     }
 
-    fn cli_burn(t: &mut CliClient) -> Result<(), String> {
+    fn cli_burn_insufficient_balance(t: &mut CliClient) -> Result<(), String> {
         // Set a hard-coded Ethereum address for testing.
         let erc20_addr = EthereumAddr([1u8; 20]);
+
+        // Should output an error of insufficent balance.
         t.command(0, format!("burn 0 $default_addr0 {} 10 1", erc20_addr))?
             .output(format!("TransactionError: InsufficientBalance"))?;
         Ok(())
     }
 
+    // The CAPE CLI currently doesn't support sponsor and wrap transactions, so a
+    // burn transaction is expected to fail.
     #[test]
-    fn cli_burn_test() {
+    fn test_cli_burn_insufficient_balance() {
         cape_wallet::cli_client::cli_test(|t| {
             create_wallet(t, 0)?;
-            cli_burn(t)?;
+            cli_burn_insufficient_balance(t)?;
 
             Ok(())
         });

@@ -1,6 +1,6 @@
 // Copyright © 2021 Translucence Research, Inc. All rights reserved.
 
-use cape_wallet::web_client::{default_api_path, default_web_path, init_server, NodeOpt};
+use cape_wallet::web::{default_api_path, default_web_path, init_server, NodeOpt};
 use std::path::PathBuf;
 use structopt::StructOpt;
 

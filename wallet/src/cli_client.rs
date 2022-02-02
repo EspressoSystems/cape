@@ -1,3 +1,6 @@
+// TODO !keyao Merge duplicate CLI code among Cape, Spectrum and Seahorse.
+// Issue: https://github.com/SpectrumXYZ/cape/issues/429.
+
 #![allow(dead_code)]
 
 use escargot::CargoBuild;
@@ -27,11 +30,9 @@ pub fn cli_test(test: impl Fn(&mut CliClient) -> Result<(), String>) {
 }
 
 pub struct CliClient {
-    // validators: Vec<Validator>,
     wallets: Vec<Wallet>,
     variables: HashMap<String, String>,
     prev_output: Vec<String>,
-    server_port: u64,
     _tmp_dir: TempDir,
 }
 
@@ -43,18 +44,10 @@ impl CliClient {
         key_path.push("primary_key");
         Wallet::key_gen(&key_path)?;
 
-        // Each validator gets two ports: one for its PhaseLock node and one for the web sever.
-        let mut ports = [(0, 0); 6];
-        for p in &mut ports {
-            *p = (get_port(), get_port());
-        }
-
         let mut state = Self {
             wallets: Default::default(),
             variables: Default::default(),
             prev_output: Default::default(),
-            // validators: Self::start_validators(tmp_dir.path(), &key_path, &ports)?,
-            server_port: ports[0].1,
             _tmp_dir: tmp_dir,
         };
         state.load(Some(key_path))?;
@@ -158,10 +151,7 @@ impl CliClient {
     }
 
     fn load(&mut self, key_path: Option<PathBuf>) -> Result<&mut Self, String> {
-        self.wallets.push(Wallet::new(
-            format!("http://localhost:{}", self.server_port),
-            key_path,
-        )?);
+        self.wallets.push(Wallet::new(key_path)?);
         Ok(self)
     }
 
@@ -200,7 +190,6 @@ pub struct Wallet {
     process: Option<OpenWallet>,
     key_path: PathBuf,
     storage: TempDir,
-    server: String,
 }
 
 impl Wallet {
@@ -210,10 +199,6 @@ impl Wallet {
 
     pub fn storage(&self) -> PathBuf {
         PathBuf::from(self.storage.path())
-    }
-
-    pub fn server(&self) -> String {
-        self.server.clone()
     }
 
     fn key_gen(key_path: &Path) -> Result<(), String> {
@@ -232,7 +217,7 @@ impl Wallet {
         Ok(())
     }
 
-    fn new(server: String, key_path: Option<PathBuf>) -> Result<Self, String> {
+    fn new(key_path: Option<PathBuf>) -> Result<Self, String> {
         let storage = TempDir::new("test_wallet").map_err(err)?;
         let key_path = match key_path {
             Some(path) => path,
@@ -247,7 +232,6 @@ impl Wallet {
             process: None,
             key_path,
             storage,
-            server,
         })
     }
 
@@ -271,7 +255,6 @@ impl Wallet {
             ])
             .arg("--non-interactive")
             .args(args)
-            .arg(&self.server)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .spawn()

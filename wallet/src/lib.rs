@@ -3,7 +3,7 @@ pub mod disco;
 pub mod mocks;
 pub mod routes;
 pub mod wallet;
-pub mod web_client;
+pub mod web;
 
 #[cfg(test)]
 mod tests {

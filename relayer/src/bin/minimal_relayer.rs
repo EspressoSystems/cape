@@ -1,6 +1,5 @@
 use async_std::task;
-use builders::ContractCall;
-use cap_rust_sandbox::{cape::CapeBlock, state::CapeTransaction, types, types::CAPE};
+use cap_rust_sandbox::{cape::CapeBlock, state::CapeTransaction, types::CAPE};
 use coins_bip39::English;
 use ethers::{core::k256::ecdsa::SigningKey, prelude::*};
 use jf_aap::keys::UserPubKey;
@@ -12,27 +11,6 @@ use structopt::StructOpt;
 use tide::StatusCode;
 
 type Middleware = SignerMiddleware<Provider<Http>, Wallet<SigningKey>>;
-
-#[derive(Clone, Debug)]
-enum Contract {
-    Real(CAPE<Middleware>),
-    #[cfg(test)]
-    Test(types::TestCAPE<Middleware>),
-}
-
-impl Contract {
-    fn submit_cape_block(
-        &self,
-        block: types::CapeBlock,
-        burned_ros: Vec<types::RecordOpening>,
-    ) -> ContractCall<Middleware, ()> {
-        match self {
-            Self::Real(contract) => contract.submit_cape_block(block, burned_ros),
-            #[cfg(test)]
-            Self::Test(contract) => contract.submit_cape_block(block, burned_ros),
-        }
-    }
-}
 
 #[derive(Clone, Debug, Snafu, Serialize, Deserialize)]
 pub enum RelayerError {
@@ -73,7 +51,7 @@ fn server_error<E: Into<RelayerError>>(err: E) -> tide::Error {
 
 #[derive(Clone)]
 pub struct WebState {
-    contract: Contract,
+    contract: CAPE<Middleware>,
 }
 
 async fn submit_endpoint(mut req: tide::Request<WebState>) -> Result<tide::Response, tide::Error> {
@@ -91,7 +69,7 @@ async fn submit_endpoint(mut req: tide::Request<WebState>) -> Result<tide::Respo
 const DEFAULT_RELAYER_PORT: u16 = 50077u16;
 
 fn init_web_server(
-    contract: Contract,
+    contract: CAPE<Middleware>,
     port: String,
 ) -> task::JoinHandle<Result<(), std::io::Error>> {
     let mut web_server = tide::with_state(WebState { contract });
@@ -104,7 +82,7 @@ fn init_web_server(
 }
 
 async fn relay(
-    contract: &Contract,
+    contract: &CAPE<Middleware>,
     transaction: CapeTransaction,
 ) -> Result<TransactionReceipt, RelayerError> {
     let miner = UserPubKey::default();
@@ -160,7 +138,7 @@ async fn main() -> std::io::Result<()> {
 
     // Start serving CAPE transaction submissions.
     let port = std::env::var("PORT").unwrap_or_else(|_| DEFAULT_RELAYER_PORT.to_string());
-    init_web_server(Contract::Real(contract), port).await
+    init_web_server(contract, port).await
 }
 
 #[cfg(test)]
@@ -174,8 +152,7 @@ mod test {
         ethereum::{deploy, get_funded_client},
         ledger::CapeLedger,
         state::CapeTransaction,
-        types,
-        types::{GenericInto, CAPE},
+        types::{GenericInto, TestCAPE, CAPE},
     };
     use jf_aap::{
         keys::UserKeyPair,
@@ -192,7 +169,6 @@ mod test {
     use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
     use reef::traits::Ledger;
     use surf::Url;
-    use types::TestCAPE;
 
     lazy_static! {
         static ref PORT: Arc<Mutex<u64>> = {
@@ -224,6 +200,10 @@ mod test {
             faucet_record_opening,
             records,
         )
+    }
+
+    fn upcast_test_cape_to_cape(test_cape: TestCAPE<Middleware>) -> CAPE<Middleware> {
+        CAPE::new(test_cape.address(), Arc::new(test_cape.client().clone()))
     }
 
     fn generate_transfer(
@@ -273,14 +253,17 @@ mod test {
 
         // Submit a transaction and verify that the 2 output commitments get added to the contract's
         // records Merkle tree.
-        relay(&Contract::Test(contract.clone()), transaction.clone())
-            .await
-            .unwrap();
+        relay(
+            &upcast_test_cape_to_cape(contract.clone()),
+            transaction.clone(),
+        )
+        .await
+        .unwrap();
         assert_eq!(contract.get_num_leaves().call().await.unwrap(), 3.into());
 
         // Submit an invalid transaction (e.g.the same one again) and check that the contract's
         // records Merkle tree is not modified.
-        match relay(&Contract::Test(contract.clone()), transaction).await {
+        match relay(&upcast_test_cape_to_cape(contract.clone()), transaction).await {
             Err(RelayerError::Submission { .. }) => {}
             res => panic!("expected submission error, got {:?}", res),
         }
@@ -305,7 +288,7 @@ mod test {
             generate_transfer(&mut rng, &faucet, faucet_rec, user.pub_key(), &records);
 
         let port = get_port().await;
-        init_web_server(Contract::Test(contract.clone()), port.to_string());
+        init_web_server(upcast_test_cape_to_cape(contract.clone()), port.to_string());
         let client = get_client(port);
         let mut res = client
             .post("/submit")
@@ -348,7 +331,7 @@ mod test {
             CAPE::new(address, deployer)
         };
         let port = get_port().await;
-        init_web_server(Contract::Real(contract), port.to_string());
+        init_web_server(contract, port.to_string());
         let client = get_client(port);
         match RelayerError::from_client_error(
             client

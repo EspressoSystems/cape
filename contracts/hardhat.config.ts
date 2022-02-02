@@ -4,7 +4,10 @@ import "@typechain/hardhat";
 import "hardhat-deploy";
 import "hardhat-gas-reporter";
 import "hardhat-contract-sizer";
-import { TASK_COMPILE_SOLIDITY_GET_SOLC_BUILD } from "hardhat/builtin-tasks/task-names";
+import {
+  TASK_NODE_SERVER_CREATED,
+  TASK_COMPILE_SOLIDITY_GET_SOLC_BUILD,
+} from "hardhat/builtin-tasks/task-names";
 import { HardhatUserConfig, subtask, task } from "hardhat/config";
 
 // This is a sample Hardhat task. To learn how to create your own go to
@@ -15,6 +18,11 @@ task("accounts", "Prints the list of accounts", async (_taskArgs, hre) => {
   for (const account of accounts) {
     console.log(account.address);
   }
+});
+
+task(TASK_NODE_SERVER_CREATED, async (taskArgs: any) => {
+  // Increase from 5 seconds to 5 minutes to prevent tests with longer pauses from failing.
+  taskArgs.server._httpServer.keepAliveTimeout = 5 * 60 * 1000;
 });
 
 // Use the compiler downloaded with nix if the version matches

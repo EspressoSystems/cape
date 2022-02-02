@@ -9,6 +9,7 @@ pub mod cape;
 mod cape_e2e_tests;
 pub mod deploy;
 mod ed_on_bn254;
+mod eqs_test;
 pub mod ethereum;
 pub mod helpers;
 pub mod ledger;

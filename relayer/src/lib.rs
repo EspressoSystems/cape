@@ -282,8 +282,7 @@ mod test {
             .send()
             .await
             .unwrap();
-        let receipt = response_body::<TransactionReceipt>(&mut res).await.unwrap();
-        assert_eq!(receipt.transaction_index, 0.into());
+        response_body::<TransactionReceipt>(&mut res).await.unwrap();
         assert_eq!(contract.get_num_leaves().call().await.unwrap(), 3.into());
 
         // Test with the non-mock CAPE contract. We can't generate any valid transactions for this

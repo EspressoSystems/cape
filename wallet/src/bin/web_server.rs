@@ -45,7 +45,6 @@ async fn main() -> Result<(), std::io::Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use async_std::sync::{Arc, Mutex};
     use cap_rust_sandbox::state::{Erc20Code, EthereumAddr};
     use cape_wallet::{
         routes::{BalanceInfo, CapeAPIError, PubKey, WalletSummary},

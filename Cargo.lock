@@ -1098,7 +1098,10 @@ dependencies = [
  "bincode",
  "cap-rust-sandbox",
  "escargot",
+<<<<<<< HEAD
  "ethers 0.6.0 (git+https://github.com/gakonst/ethers-rs?branch=master)",
+=======
+>>>>>>> 6de9d6c (Implement CAPE CLI to support burn and move wallet modules (#425))
  "futures",
  "futures-util",
  "itertools 0.10.3",
@@ -1114,7 +1117,10 @@ dependencies = [
  "rand_chacha 0.3.1",
  "reef",
  "regex",
+<<<<<<< HEAD
  "relayer",
+=======
+>>>>>>> 6de9d6c (Implement CAPE CLI to support burn and move wallet modules (#425))
  "seahorse",
  "serde",
  "serde_derive",
@@ -4875,7 +4881,15 @@ dependencies = [
 [[package]]
 name = "seahorse"
 version = "0.1.0"
+<<<<<<< HEAD
 source = "git+ssh://git@github.com/SpectrumXYZ/seahorse.git?rev=96951980e1ad947181a4663bd4d343d3bd2ef867#96951980e1ad947181a4663bd4d343d3bd2ef867"
+=======
+<<<<<<< HEAD
+source = "git+ssh://git@github.com/SpectrumXYZ/seahorse.git?rev=0420e2047cb498df029de253e5eb541ed1cbdeb5#0420e2047cb498df029de253e5eb541ed1cbdeb5"
+=======
+source = "git+ssh://git@github.com/SpectrumXYZ/seahorse.git?rev=e3665f8731d1da3373827284e16bca98d839bbe8#e3665f8731d1da3373827284e16bca98d839bbe8"
+>>>>>>> 6de9d6c (Implement CAPE CLI to support burn and move wallet modules (#425))
+>>>>>>> 4baee54 (Implement CAPE CLI to support burn and move wallet modules (#425))
 dependencies = [
  "arbitrary",
  "arbitrary-wrappers",

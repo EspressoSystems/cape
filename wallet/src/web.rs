@@ -75,8 +75,14 @@ pub struct WebState {
     pub(crate) web_path: PathBuf,
     pub(crate) api: toml::Value,
     pub(crate) wallet: Arc<Mutex<Option<Wallet>>>,
+<<<<<<< HEAD
     pub(crate) rng: Arc<Mutex<ChaChaRng>>,
+<<<<<<< HEAD
     pub(crate) faucet_key_pair: UserKeyPair,
+=======
+=======
+>>>>>>> 6de9d6c (Implement CAPE CLI to support burn and move wallet modules (#425))
+>>>>>>> 4baee54 (Implement CAPE CLI to support burn and move wallet modules (#425))
 }
 
 async fn form_demonstration(req: tide::Request<WebState>) -> Result<tide::Body, tide::Error> {
@@ -220,6 +226,7 @@ async fn entry_page(req: tide::Request<WebState>) -> Result<tide::Response, tide
     }
 }
 
+<<<<<<< HEAD
 #[cfg(any(test, feature = "testing"))]
 async fn populatefortest(req: tide::Request<WebState>) -> Result<tide::Response, tide::Error> {
     use crate::{
@@ -280,6 +287,8 @@ async fn populatefortest(req: tide::Request<WebState>) -> Result<tide::Response,
     server::response(&req, ())
 }
 
+=======
+>>>>>>> 6de9d6c (Implement CAPE CLI to support burn and move wallet modules (#425))
 async fn handle_web_socket(
     req: tide::Request<WebState>,
     wsc: WebSocketConnection,
@@ -300,7 +309,14 @@ fn add_form_demonstration(web_server: &mut tide::Server<WebState>) {
 }
 
 pub fn init_server(
+<<<<<<< HEAD
     mut rng: ChaChaRng,
+=======
+<<<<<<< HEAD
+    rng: ChaChaRng,
+=======
+>>>>>>> 6de9d6c (Implement CAPE CLI to support burn and move wallet modules (#425))
+>>>>>>> 4baee54 (Implement CAPE CLI to support burn and move wallet modules (#425))
     api_path: PathBuf,
     web_path: PathBuf,
     port: u64,
@@ -311,8 +327,14 @@ pub fn init_server(
         web_path: web_path.clone(),
         api: api.clone(),
         wallet: Arc::new(Mutex::new(None)),
+<<<<<<< HEAD
         rng: Arc::new(Mutex::new(rng)),
+<<<<<<< HEAD
         faucet_key_pair,
+=======
+=======
+>>>>>>> 6de9d6c (Implement CAPE CLI to support burn and move wallet modules (#425))
+>>>>>>> 4baee54 (Implement CAPE CLI to support burn and move wallet modules (#425))
     });
     web_server
         .with(server::trace)
@@ -359,9 +381,12 @@ pub fn init_server(
         });
     }
 
+<<<<<<< HEAD
     #[cfg(any(test, feature = "testing"))]
     web_server.at("populatefortest").get(populatefortest);
 
+=======
+>>>>>>> 6de9d6c (Implement CAPE CLI to support burn and move wallet modules (#425))
     let addr = format!("0.0.0.0:{}", port);
     Ok(spawn(web_server.listen(addr)))
 }

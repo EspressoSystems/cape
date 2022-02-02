@@ -23,7 +23,7 @@ where
         if self.is_err() {
             panic!(
                 "Tx should not revert but it reverted with \"{}\"",
-                self.unwrap_err().to_string()
+                self.unwrap_err()
             );
         }
     }

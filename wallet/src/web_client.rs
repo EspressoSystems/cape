@@ -48,12 +48,12 @@ fn project_path() -> PathBuf {
 /// can be derived from the executable name.
 ///
 /// For example, if the executable path is
-/// ```
-///    ~/tri/systems/system/examples/multi_machine/target/release/multi_machine
+/// ```text
+/// ~/tri/systems/system/examples/multi_machine/target/release/multi_machine
 /// ```
 /// then the asset path is
-/// ```
-///    ~/tri/systems/system/examples/multi_machine/public/
+/// ```text
+/// ~/tri/systems/system/examples/multi_machine/public/
 /// ```
 pub fn default_web_path() -> PathBuf {
     const ASSET_DIR: &str = "public";

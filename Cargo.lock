@@ -1081,6 +1081,7 @@ dependencies = [
  "async-trait",
  "bincode",
  "cap-rust-sandbox",
+ "escargot",
  "futures",
  "futures-util",
  "itertools 0.10.3",
@@ -1094,6 +1095,7 @@ dependencies = [
  "net",
  "rand_chacha 0.3.1",
  "reef",
+ "regex",
  "seahorse",
  "serde",
  "serde_derive",
@@ -1908,6 +1910,18 @@ checksum = "64f18991e7bf11e7ffee451b5318b5c1a73c52d0d0ada6e5a3017c8c1ced6a21"
 dependencies = [
  "libc",
  "str-buf",
+]
+
+[[package]]
+name = "escargot"
+version = "0.5.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f5584ba17d7ab26a8a7284f13e5bd196294dd2f2d79773cff29b9e9edef601a6"
+dependencies = [
+ "log",
+ "once_cell",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -4822,7 +4836,7 @@ dependencies = [
 [[package]]
 name = "seahorse"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/seahorse.git#e3665f8731d1da3373827284e16bca98d839bbe8"
+source = "git+ssh://git@github.com/SpectrumXYZ/seahorse.git?rev=e3665f8731d1da3373827284e16bca98d839bbe8#e3665f8731d1da3373827284e16bca98d839bbe8"
 dependencies = [
  "arbitrary",
  "arbitrary-wrappers",

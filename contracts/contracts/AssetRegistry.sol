@@ -1,6 +1,7 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import "./libraries/BN254.sol";
 import "./libraries/EdOnBN254.sol";
 
 // TODO Remove once functions are implemented

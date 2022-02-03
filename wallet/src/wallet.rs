@@ -23,7 +23,7 @@ pub trait CapeWalletBackend<'a>: WalletBackend<'a, CapeLedger> {
     ///
     /// There may only be one ERC20 token registered for each CAPE asset. If `asset` has already
     /// been used to register an ERC20 token, this function must fail.
-    async fn register_wrapped_asset(
+    async fn register_erc20_asset(
         &mut self,
         asset: &AssetDefinition,
         erc20_code: Erc20Code,
@@ -40,7 +40,7 @@ pub trait CapeWalletBackend<'a>: WalletBackend<'a, CapeLedger> {
     ///
     /// The amount to wrap is determined by the `amount` field of `ro`. The CAPE asset type
     /// (`ro.asset_def`) must be registered as a CAPE wrapper for `erc20_code` (see
-    /// `register_wrapped_asset`). The linked Ethereum wallet with `src_addr` must own at least
+    /// `register_erc20_asset`). The linked Ethereum wallet with `src_addr` must own at least
     /// `ro.amount` of `erc20_code`.
     ///
     /// The new CAPE balance will not be reflected until the wrap is finalized, the next time a
@@ -116,7 +116,7 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
 
         state
             .backend_mut()
-            .register_wrapped_asset(&asset, erc20_code, sponsor_addr)
+            .register_erc20_asset(&asset, erc20_code, sponsor_addr)
             .await?;
 
         Ok(asset)

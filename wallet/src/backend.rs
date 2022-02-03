@@ -245,7 +245,7 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
 impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
     for CapeBackend<'a, Meta>
 {
-    async fn register_wrapped_asset(
+    async fn register_erc20_asset(
         &mut self,
         asset: &AssetDefinition,
         erc20_code: Erc20Code,

@@ -6,7 +6,7 @@ use cap_rust_sandbox::helpers::{
 };
 use cap_rust_sandbox::ledger::CapeLedger;
 use cap_rust_sandbox::state::{erc20_asset_description, Erc20Code, EthereumAddr};
-use cap_rust_sandbox::test_utils::ContractsInfo;
+use cap_rust_sandbox::test_utils::{check_erc20_token_balance, ContractsInfo};
 use cap_rust_sandbox::types as sol;
 use cap_rust_sandbox::types::{GenericInto, MerkleRootSol, RecordOpening as RecordOpeningSol};
 use ethers::abi::AbiDecode;
@@ -16,29 +16,8 @@ use jf_aap::structs::{
     AssetCode, AssetDefinition, AssetPolicy, FreezeFlag, RecordCommitment, RecordOpening,
 };
 use jf_aap::utils::TxnsParams;
-use jf_aap::{MerkleTree, NodeValue};
+use jf_aap::MerkleTree;
 use reef::Ledger;
-
-// TODO move to test_utils?
-fn generate_cape_block_and_merkle_root(tree_height: u8) -> Result<(CapeBlock, NodeValue)> {
-    let rng = &mut ark_std::test_rng();
-    let num_transfer_txn = 1;
-    let num_mint_txn = 1;
-    let num_freeze_txn = 1;
-    let params = TxnsParams::generate_txns(
-        rng,
-        num_transfer_txn,
-        num_mint_txn,
-        num_freeze_txn,
-        tree_height,
-    );
-    let miner = UserPubKey::default();
-
-    let root = params.txns[0].merkle_root();
-
-    let cape_block = CapeBlock::generate(params.txns, vec![], miner.address())?;
-    Ok((cape_block, root))
-}
 
 async fn check_pending_deposits_queue_at_index(
     queue_index: usize,
@@ -91,19 +70,14 @@ async fn call_and_check_deposit_erc20(
     expected_contract_balance_after_call: u64,
     contracts_info: ContractsInfo,
 ) -> Result<RecordOpening> {
-    let balance_caller = contracts_info
-        .erc20_token_contract
-        .balance_of(contracts_info.owner_of_erc20_tokens_client_address)
-        .call()
-        .await?;
-
-    assert_eq!(
-        balance_caller,
-        U256::from_dec_str(expected_owner_balance_before_call)?
-    );
+    check_erc20_token_balance(
+        &contracts_info.erc20_token_contract,
+        contracts_info.owner_of_erc20_tokens_client_address,
+        U256::from_dec_str(expected_owner_balance_before_call)?,
+    )
+    .await;
 
     // Approve
-    // TODO add to ContractsInfo
     let contract_address = contracts_info.cape_contract.address();
 
     let amount_u256 = U256::from(deposited_amount);
@@ -161,25 +135,19 @@ async fn call_and_check_deposit_erc20(
         .await?;
 
     // Check the money has been transferred
-    let balance_owner_erc20 = contracts_info
-        .erc20_token_contract
-        .balance_of(contracts_info.owner_of_erc20_tokens_client_address)
-        .call()
-        .await?;
-    assert_eq!(
-        balance_owner_erc20,
-        U256::from_dec_str(expected_owner_balance_after_call)?
-    );
+    check_erc20_token_balance(
+        &contracts_info.erc20_token_contract,
+        contracts_info.owner_of_erc20_tokens_client_address,
+        U256::from_dec_str(expected_owner_balance_after_call)?,
+    )
+    .await;
 
-    let balance_contract_erc20 = contracts_info
-        .erc20_token_contract
-        .balance_of(contract_address)
-        .call()
-        .await?;
-    assert_eq!(
-        balance_contract_erc20,
-        U256::from(expected_contract_balance_after_call)
-    );
+    check_erc20_token_balance(
+        &contracts_info.erc20_token_contract,
+        contract_address,
+        U256::from(expected_contract_balance_after_call),
+    )
+    .await;
 
     Ok(ro)
 }
@@ -189,13 +157,26 @@ async fn integration_test_wrapping_erc20_tokens() -> Result<()> {
     // Create a block containing three transactions
     // Note: we build the block at the beginning of this function because it is time consuming and
     // triggers some timeout with the ethereum client if done after deploying the contracts.
-    let (cape_block, root) =
-        generate_cape_block_and_merkle_root(CapeLedger::merkle_height()).unwrap();
+    let rng = &mut ark_std::test_rng();
+    let num_transfer_txn = 1;
+    let num_mint_txn = 1;
+    let num_freeze_txn = 1;
+    let params = TxnsParams::generate_txns(
+        rng,
+        num_transfer_txn,
+        num_mint_txn,
+        num_freeze_txn,
+        CapeLedger::merkle_height(),
+    );
+    let miner = UserPubKey::default();
+    let root = params.txns[0].merkle_root();
+
+    let cape_block = CapeBlock::generate(params.txns, vec![], miner.address())?;
 
     // Deploy CAPE contract
     let cape_contract = deploy_cape_test().await;
 
-    // Deploy ERC20 token contract. The caller of this method receives 1000 * 10**18 tokens
+    // Deploy ERC20 token contract. The client deploying the erc20 token contract receives 1000 * 10**18 tokens
     let erc20_token_contract = deploy_erc20_token().await;
 
     let contracts_info = ContractsInfo::new(&cape_contract, &erc20_token_contract).await;
@@ -242,7 +223,7 @@ async fn integration_test_wrapping_erc20_tokens() -> Result<()> {
     println!("Submitting block");
     // Submit to the contract
     let receipt = cape_contract
-        .submit_cape_block(cape_block.clone().into(), vec![])
+        .submit_cape_block(cape_block.clone().into())
         .gas(U256::from(10_000_000))
         .send()
         .await?

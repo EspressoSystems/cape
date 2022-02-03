@@ -82,7 +82,7 @@ mod tests {
                 contract
                     .lock()
                     .await
-                    .submit_cape_block(cape_block.into(), vec![])
+                    .submit_cape_block(cape_block.into())
                     .send()
                     .await
                     .unwrap()

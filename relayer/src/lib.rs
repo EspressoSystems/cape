@@ -68,16 +68,13 @@ async fn relay(
     transaction: CapeTransaction,
 ) -> Result<TransactionReceipt, Error> {
     let miner = UserPubKey::default();
-    let burned_ros = match &transaction {
-        CapeTransaction::Burn { ro, .. } => vec![(**ro).clone().into()],
-        _ => vec![],
-    };
+
     let cape_block = CapeBlock::from_cape_transactions(vec![transaction], miner.address())
         .map_err(|err| Error::BadBlock {
             msg: err.to_string(),
         })?;
     contract
-        .submit_cape_block(cape_block.into(), burned_ros)
+        .submit_cape_block(cape_block.into())
         .send()
         .await
         .map_err(|err| Error::Submission { msg: err.to_string() })?

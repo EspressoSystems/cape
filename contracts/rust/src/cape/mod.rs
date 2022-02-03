@@ -352,7 +352,7 @@ mod tests {
         // submit the block during which validity proofs would be verified in batch
         let cape_block = CapeBlock::generate(params.txns, vec![], miner.address())?;
         contract
-            .submit_cape_block(cape_block.into(), vec![])
+            .submit_cape_block(cape_block.into())
             .send()
             .await?
             .await?;
@@ -371,7 +371,7 @@ mod tests {
         // Submitting an empty block does not yield a reject from the contract
         let contract = deploy_cape_test().await;
         contract
-            .submit_cape_block(cape_block.into(), vec![])
+            .submit_cape_block(cape_block.into())
             .send()
             .await?
             .await?;
@@ -423,7 +423,7 @@ mod tests {
 
         // Submit to the contract
         contract
-            .submit_cape_block(cape_block.into(), vec![])
+            .submit_cape_block(cape_block.into())
             .send()
             .await?
             .await?;
@@ -458,7 +458,7 @@ mod tests {
             .await?;
 
         contract
-            .submit_cape_block(cape_block.into(), vec![])
+            .submit_cape_block(cape_block.into())
             .send()
             .await?
             .await?;
@@ -484,7 +484,7 @@ mod tests {
             .await?;
 
         contract
-            .submit_cape_block(cape_block.into(), vec![])
+            .submit_cape_block(cape_block.into())
             .send()
             .await?
             .await?;

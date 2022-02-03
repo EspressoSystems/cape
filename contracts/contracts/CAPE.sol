@@ -41,6 +41,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue {
     using AccumulatingArray for AccumulatingArray.Data;
 
     bytes public constant CAPE_BURN_MAGIC_BYTES = "TRICAPE burn";
+    uint256 public constant CAPE_BURN_MAGIC_BYTES_SIZE = 12;
     bytes14 public constant DOM_SEP_DOMESTIC_ASSET = "DOMESTIC_ASSET";
     uint256 public constant AAP_NATIVE_ASSET_CODE = 1;
 
@@ -208,8 +209,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue {
 
     /// @notice submit a new block to the CAPE contract. Transactions are validated and the blockchain state is updated. Moreover burn transactions trigger the unwrapping of cape asset records into erc20 tokens.
     /// @param newBlock block to be processed by the CAPE contract.
-    /// @param burnedRos record opening of the second outputs of the burn transactions. The information contained in these records opening allow the contract to transfer the erc20 tokens.
-    function submitCapeBlock(CapeBlock memory newBlock, RecordOpening[] memory burnedRos) public {
+    function submitCapeBlock(CapeBlock memory newBlock) public {
         uint256 maxSizeCommsArray = _computeMaxCommitments(newBlock) + _getQueueSize();
         AccumulatingArray.Data memory comms = AccumulatingArray.create(maxSizeCommsArray);
 
@@ -275,22 +275,25 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue {
                 );
             } else if (noteType == NoteType.BURN) {
                 BurnNote memory note = newBlock.burnNotes[burnIdx];
-                burnIdx += 1;
-
                 _checkContainsRoot(note.transferNote.auxInfo.merkleRoot);
                 _checkBurn(note);
-
                 _publish(note.transferNote.inputNullifiers);
 
-                // TODO do we need a special logic for how to handle outputs record commitments with BURN notes
-                comms.add(note.transferNote.outputCommitments);
+                // Insert all the output commitments to the records merkle tree except from the second one (corresponding to the burned output)
+                for (uint256 i = 0; i < note.transferNote.outputCommitments.length; i++) {
+                    if (i != 1) {
+                        comms.add(note.transferNote.outputCommitments[i]);
+                    }
+                }
 
                 (vks[i], publicInputs[i], proofs[i], extraMsgs[i]) = _prepareForProofVerification(
                     note
                 );
 
-                // TODO handle withdrawal (better done at end if call is external
-                //      or have other reentrancy protection)
+                // Send the tokens
+                _handleWithdrawal(note);
+
+                burnIdx += 1;
             } else {
                 revert("Cape: unreachable!");
             }
@@ -308,7 +311,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue {
         // There are some pending deposits to process
         uint256 numPendingDeposits = _getQueueSize();
 
-        // See See https://github.com/SpectrumXYZ/cape/issues/400 for why we check that the queue has at most MAX_QUEUE_SIZE elements
+        // See https://github.com/SpectrumXYZ/cape/issues/400 for why we check that the queue has at most MAX_QUEUE_SIZE elements
         if ((numPendingDeposits > 0) && (numPendingDeposits < MAX_QUEUE_SIZE)) {
             for (uint256 i = 0; i < numPendingDeposits; i++) {
                 uint256 rc = _getQueueElem(i);
@@ -329,8 +332,16 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue {
         emit BlockCommitted(blockHeight);
     }
 
-    function _handleWithdrawal() internal {
-        // TODO
+    function _handleWithdrawal(BurnNote memory note) internal {
+        address ercTokenAddress = _lookup(note.recordOpening.assetDef);
+        ERC20 token = ERC20(ercTokenAddress);
+
+        // Extract recipient address
+        address recipientAddress = BytesLib.toAddress(
+            note.transferNote.auxInfo.extraProofBoundData,
+            CAPE_BURN_MAGIC_BYTES_SIZE
+        );
+        token.transfer(recipientAddress, note.recordOpening.amount);
     }
 
     /// @dev Compute an upper bound on the number of records to be inserted
@@ -368,10 +379,14 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue {
     }
 
     function _containsBurnPrefix(bytes memory extraProofBoundData) internal pure returns (bool) {
-        if (extraProofBoundData.length < 12) {
+        if (extraProofBoundData.length < CAPE_BURN_MAGIC_BYTES_SIZE) {
             return false;
         }
-        return BytesLib.equal(BytesLib.slice(extraProofBoundData, 0, 12), CAPE_BURN_MAGIC_BYTES);
+        return
+            BytesLib.equal(
+                BytesLib.slice(extraProofBoundData, 0, CAPE_BURN_MAGIC_BYTES_SIZE),
+                CAPE_BURN_MAGIC_BYTES
+            );
     }
 
     function _containsBurnRecord(BurnNote memory note) internal view returns (bool) {

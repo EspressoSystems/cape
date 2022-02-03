@@ -2,7 +2,7 @@
 use ethers::{abi::Detokenize, prelude::*};
 use std::fmt::Debug;
 
-pub(crate) trait Matcher {
+pub trait Matcher {
     fn should_not_revert(self);
     fn should_revert(self);
     fn should_revert_with_message(self, message: &str);

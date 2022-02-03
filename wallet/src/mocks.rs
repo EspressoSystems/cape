@@ -1,4 +1,4 @@
-use crate::wallet::{CapeWalletBackend, CapeWalletError};
+use crate::wallet::{CapeWalletBackend, CapeWalletError, EthMiddleware};
 use async_std::sync::{Mutex, MutexGuard};
 use async_trait::async_trait;
 use cap_rust_sandbox::{ledger::*, state::*, universal_param::UNIVERSAL_PARAM};
@@ -137,6 +137,141 @@ impl MockCapeNetwork {
         }])
     }
 
+    pub fn create_wallet<'a>(
+        &self,
+        univ_param: &'a UniversalParam,
+    ) -> Result<WalletState<'a, CapeLedger>, CapeWalletError> {
+        // Construct proving keys of the same arities as the verifier keys from the validator.
+        let proving_keys = Arc::new(ProverKeySet {
+            mint: jf_aap::proof::mint::preprocess(univ_param, CAPE_MERKLE_HEIGHT)
+                .map_err(|source| CapeWalletError::CryptoError { source })?
+                .0,
+            freeze: self
+                .contract
+                .verif_crs
+                .freeze
+                .iter()
+                .map(|k| {
+                    Ok::<FreezeProvingKey, WalletError<CapeLedger>>(
+                        jf_aap::proof::freeze::preprocess(
+                            univ_param,
+                            k.num_inputs(),
+                            CAPE_MERKLE_HEIGHT,
+                        )
+                        .map_err(|source| CapeWalletError::CryptoError { source })?
+                        .0,
+                    )
+                })
+                .collect::<Result<_, _>>()?,
+            xfr: self
+                .contract
+                .verif_crs
+                .xfr
+                .iter()
+                .map(|k| {
+                    Ok::<TransferProvingKey, WalletError<CapeLedger>>(
+                        jf_aap::proof::transfer::preprocess(
+                            univ_param,
+                            k.num_inputs(),
+                            k.num_outputs(),
+                            CAPE_MERKLE_HEIGHT,
+                        )
+                        .map_err(|source| CapeWalletError::CryptoError { source })?
+                        .0,
+                    )
+                })
+                .collect::<Result<_, _>>()?,
+        });
+
+        // `records` should be _almost_ completely sparse. However, even a fully pruned Merkle tree
+        // contains the last leaf appended, but as a new wallet, we don't care about _any_ of the
+        // leaves, so make a note to forget the last one once more leaves have been appended.
+        let record_mt = self.records.clone();
+        let merkle_leaf_to_forget = if record_mt.num_leaves() > 0 {
+            Some(record_mt.num_leaves() - 1)
+        } else {
+            None
+        };
+
+        Ok(WalletState {
+            proving_keys,
+            txn_state: TransactionState {
+                validator: CapeTruster::new(self.block_height, record_mt.num_leaves()),
+                now: Default::default(),
+                nullifiers: Default::default(),
+                // Completely sparse nullifier set
+                record_mt,
+                records: RecordDatabase::default(),
+                merkle_leaf_to_forget,
+
+                transactions: Default::default(),
+            },
+            key_scans: Default::default(),
+            key_state: KeyStreamState {
+                auditor: 0,
+                freezer: 0,
+                user: 1,
+            },
+            auditable_assets: Default::default(),
+            audit_keys: Default::default(),
+            freeze_keys: Default::default(),
+            user_keys: Default::default(),
+            defined_assets: Default::default(),
+        })
+    }
+
+    pub fn subscribe(
+        &mut self,
+        from: EventIndex,
+        to: Option<EventIndex>,
+    ) -> Pin<Box<dyn Stream<Item = (LedgerEvent<CapeLedger>, EventSource)> + Send>> {
+        Box::pin(futures::stream::select(
+            self.query_service_events.subscribe(from, to),
+            self.memo_events.subscribe(from, to),
+        ))
+    }
+
+    pub fn get_public_key(&self, address: &UserAddress) -> Result<UserPubKey, CapeWalletError> {
+        Ok(self
+            .address_map
+            .get(address)
+            .ok_or(CapeWalletError::Failed {
+                msg: String::from("invalid user address"),
+            })?
+            .clone())
+    }
+
+    pub fn nullifier_spent(&self, nullifier: Nullifier) -> bool {
+        self.contract.nullifiers.contains(&nullifier)
+    }
+
+    pub fn get_transaction(
+        &self,
+        block_id: u64,
+        txn_id: u64,
+    ) -> Result<CapeTransition, CapeWalletError> {
+        Ok(self
+            .txns
+            .get(&(block_id, txn_id))
+            .ok_or(CapeWalletError::Failed {
+                msg: String::from("invalid transaction ID"),
+            })?
+            .txn
+            .clone())
+    }
+
+    pub fn register_user_key(&mut self, pub_key: &UserPubKey) -> Result<(), CapeWalletError> {
+        self.address_map.insert(pub_key.address(), pub_key.clone());
+        Ok(())
+    }
+
+    pub fn get_wrapped_asset(&self, asset: &AssetDefinition) -> Result<Erc20Code, CapeWalletError> {
+        match self.contract.erc20_registrar.get(asset) {
+            Some((erc20_code, _)) => Ok(erc20_code.clone()),
+            None => Err(WalletError::<CapeLedger>::UndefinedAsset { asset: asset.code }),
+        }
+    }
+
     fn submit_operations(&mut self, ops: Vec<CapeOperation>) -> Result<(), CapeValidationError> {
         let (new_state, effects) = self.contract.submit_operations(ops)?;
         let mut events = vec![];
@@ -161,18 +296,14 @@ impl MockCapeNetwork {
 
     fn handle_event(&mut self, event: CapeEvent) {
         match event {
-            CapeEvent::BlockCommitted { wraps, txns } => {
-                let num_wraps = wraps.len();
-
-                // Wrap each wrap and transaction event into a CapeTransition, build a
-                // CapeBlock, and broadcast it to subscribers.
-                let wrap_block = wraps
+            CapeEvent::BlockCommitted { txns, wraps } => {
+                // Convert the transactions and wraps into CapeTransitions, and collect them all
+                // into a single block, in the order they were processed by the contract
+                // (transactions first, then wraps).
+                let block = txns
                     .into_iter()
-                    .enumerate()
-                    .map(|(i, comm)| {
-                        let uids = vec![self.records.num_leaves()];
-                        self.records.push(comm.to_field_element());
-
+                    .map(CapeTransition::Transaction)
+                    .chain(wraps.into_iter().map(|comm| {
                         // Look up the auxiliary information associated with this deposit which
                         // we saved when we processed the deposit event. This lookup cannot
                         // fail, because the contract only finalizes a Wrap operation after it
@@ -180,48 +311,33 @@ impl MockCapeNetwork {
                         // Erc20Deposited event.
                         let (erc20_code, src_addr, ro) =
                             self.pending_erc20_deposits.remove(&comm).unwrap();
-                        let wrap = CapeTransition::Wrap {
+                        CapeTransition::Wrap {
                             erc20_code,
                             src_addr,
                             ro,
-                        };
-                        self.txns.insert(
-                            (self.block_height, i as u64),
-                            CommittedTransaction {
-                                txn: wrap.clone(),
-                                uids,
-                                memos: None,
-                            },
-                        );
-                        wrap
-                    })
-                    .collect();
-                let mut txn_block = txns
-                    .into_iter()
-                    .enumerate()
-                    .map(|(i, txn)| {
-                        let mut uids = Vec::new();
-                        for comm in txn.commitments() {
-                            uids.push(self.records.num_leaves());
-                            self.records.push(comm.to_field_element());
                         }
-                        let txn = CapeTransition::Transaction(txn);
-                        self.txns.insert(
-                            (self.block_height, (num_wraps + i) as u64),
-                            CommittedTransaction {
-                                txn: txn.clone(),
-                                uids,
-                                memos: None,
-                            },
-                        );
-                        txn
-                    })
-                    .collect();
-                let mut block: Vec<CapeTransition> = wrap_block;
-                block.append(&mut txn_block);
-                let block = CapeBlock::new(block);
+                    }))
+                    .collect::<Vec<_>>();
+
+                // Add transactions and outputs to query service data structures.
+                for (i, txn) in block.iter().enumerate() {
+                    let mut uids = Vec::new();
+                    for comm in txn.output_commitments() {
+                        uids.push(self.records.num_leaves());
+                        self.records.push(comm.to_field_element());
+                    }
+                    self.txns.insert(
+                        (self.block_height, i as u64),
+                        CommittedTransaction {
+                            txn: txn.clone(),
+                            uids,
+                            memos: None,
+                        },
+                    );
+                }
+
                 self.generate_event(LedgerEvent::Commit {
-                    block,
+                    block: CapeBlock::new(block),
                     block_id: self.block_height,
                     state_comm: self.block_height + 1,
                 });
@@ -362,7 +478,7 @@ impl<'a> MockNetwork<'a, CapeLedger> for MockCapeNetwork {
     }
 }
 
-type MockCapeLedger<'a> =
+pub type MockCapeLedger<'a> =
     MockLedger<'a, CapeLedger, MockCapeNetwork, AtomicWalletStorage<'a, CapeLedger, ()>>;
 
 pub struct MockCapeBackend<'a, Meta: Serialize + DeserializeOwned> {
@@ -416,117 +532,26 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
     }
 
     async fn create(&mut self) -> Result<WalletState<'a, CapeLedger>, WalletError<CapeLedger>> {
-        // Construct proving keys of the same arities as the verifier keys from the validator.
         let univ_param = &*UNIVERSAL_PARAM;
-        let mut ledger = self.ledger.lock().await;
-        let network = ledger.network();
-        let proving_keys = Arc::new(ProverKeySet {
-            mint: jf_aap::proof::mint::preprocess(univ_param, CAPE_MERKLE_HEIGHT)
-                .map_err(|source| CapeWalletError::CryptoError { source })?
-                .0,
-            freeze: network
-                .contract
-                .verif_crs
-                .freeze
-                .iter()
-                .map(|k| {
-                    Ok::<FreezeProvingKey, WalletError<CapeLedger>>(
-                        jf_aap::proof::freeze::preprocess(
-                            univ_param,
-                            k.num_inputs(),
-                            CAPE_MERKLE_HEIGHT,
-                        )
-                        .map_err(|source| CapeWalletError::CryptoError { source })?
-                        .0,
-                    )
-                })
-                .collect::<Result<_, _>>()?,
-            xfr: network
-                .contract
-                .verif_crs
-                .xfr
-                .iter()
-                .map(|k| {
-                    Ok::<TransferProvingKey, WalletError<CapeLedger>>(
-                        jf_aap::proof::transfer::preprocess(
-                            univ_param,
-                            k.num_inputs(),
-                            k.num_outputs(),
-                            CAPE_MERKLE_HEIGHT,
-                        )
-                        .map_err(|source| CapeWalletError::CryptoError { source })?
-                        .0,
-                    )
-                })
-                .collect::<Result<_, _>>()?,
-        });
-
-        // `records` should be _almost_ completely sparse. However, even a fully pruned Merkle tree
-        // contains the last leaf appended, but as a new wallet, we don't care about _any_ of the
-        // leaves, so make a note to forget the last one once more leaves have been appended.
-        let record_mt = network.records.clone();
-        let merkle_leaf_to_forget = if record_mt.num_leaves() > 0 {
-            Some(record_mt.num_leaves() - 1)
-        } else {
-            None
-        };
-
-        let state = WalletState {
-            proving_keys,
-            txn_state: TransactionState {
-                validator: CapeTruster::new(network.block_height, record_mt.num_leaves()),
-                now: Default::default(),
-                nullifiers: Default::default(),
-                // Completely sparse nullifier set
-                record_mt,
-                records: RecordDatabase::default(),
-                merkle_leaf_to_forget,
-
-                transactions: Default::default(),
-            },
-            key_scans: Default::default(),
-            key_state: KeyStreamState {
-                auditor: 0,
-                freezer: 0,
-                user: 1,
-            },
-            auditable_assets: Default::default(),
-            audit_keys: Default::default(),
-            freeze_keys: Default::default(),
-            user_keys: Default::default(),
-            defined_assets: Default::default(),
-        };
-
-        drop(ledger);
+        let state = self
+            .ledger
+            .lock()
+            .await
+            .network()
+            .create_wallet(univ_param)?;
         self.storage().await.create(&state).await?;
-
         Ok(state)
     }
 
     async fn subscribe(&self, from: EventIndex, to: Option<EventIndex>) -> Self::EventStream {
-        let mut ledger = self.ledger.lock().await;
-        let network = ledger.network();
-        Box::pin(futures::stream::select(
-            network.query_service_events.subscribe(from, to),
-            network.memo_events.subscribe(from, to),
-        ))
+        self.ledger.lock().await.network().subscribe(from, to)
     }
 
     async fn get_public_key(
         &self,
         address: &UserAddress,
     ) -> Result<UserPubKey, WalletError<CapeLedger>> {
-        Ok(self
-            .ledger
-            .lock()
-            .await
-            .network()
-            .address_map
-            .get(address)
-            .ok_or(CapeWalletError::Failed {
-                msg: String::from("invalid user address"),
-            })?
-            .clone())
+        self.ledger.lock().await.network().get_public_key(address)
     }
 
     async fn register_user_key(
@@ -537,9 +562,7 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
             .lock()
             .await
             .network()
-            .address_map
-            .insert(pub_key.address(), pub_key.clone());
-        Ok(())
+            .register_user_key(pub_key)
     }
 
     async fn get_nullifier_proof(
@@ -557,9 +580,7 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
                     .lock()
                     .await
                     .network()
-                    .contract
-                    .nullifiers
-                    .contains(&nullifier);
+                    .nullifier_spent(nullifier);
                 nullifiers.insert(nullifier, ret);
                 Ok((ret, ()))
             }
@@ -571,16 +592,11 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
         block_id: u64,
         txn_id: u64,
     ) -> Result<CapeTransition, WalletError<CapeLedger>> {
-        let mut ledger = self.ledger.lock().await;
-        Ok(ledger
+        self.ledger
+            .lock()
+            .await
             .network()
-            .txns
-            .get(&(block_id, txn_id))
-            .ok_or(CapeWalletError::Failed {
-                msg: String::from("invalid transaction ID"),
-            })?
-            .txn
-            .clone())
+            .get_transaction(block_id, txn_id)
     }
 
     fn key_stream(&self) -> KeyTree {
@@ -609,7 +625,7 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
 impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
     for MockCapeBackend<'a, Meta>
 {
-    async fn register_wrapped_asset(
+    async fn register_erc20_asset(
         &mut self,
         asset: &AssetDefinition,
         erc20_code: Erc20Code,
@@ -627,18 +643,7 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
         &self,
         asset: &AssetDefinition,
     ) -> Result<Erc20Code, WalletError<CapeLedger>> {
-        match self
-            .ledger
-            .lock()
-            .await
-            .network()
-            .contract
-            .erc20_registrar
-            .get(asset)
-        {
-            Some((erc20_code, _)) => Ok(erc20_code.clone()),
-            None => Err(WalletError::<CapeLedger>::UndefinedAsset { asset: asset.code }),
-        }
+        self.ledger.lock().await.network().get_wrapped_asset(asset)
     }
 
     async fn wrap_erc20(
@@ -654,6 +659,12 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
             .wrap_erc20(erc20_code, src_addr, ro)
             .map_err(cape_to_wallet_err)
     }
+
+    fn eth_client(&self) -> Result<Arc<EthMiddleware>, CapeWalletError> {
+        Err(CapeWalletError::Failed {
+            msg: String::from("eth_client is not implemented for MockCapeBackend"),
+        })
+    }
 }
 
 fn cape_to_wallet_err(err: CapeValidationError) -> WalletError<CapeLedger> {
@@ -664,9 +675,9 @@ fn cape_to_wallet_err(err: CapeValidationError) -> WalletError<CapeLedger> {
     }
 }
 
-struct MockCapeWalletLoader {
-    path: PathBuf,
-    key: KeyTree,
+pub struct MockCapeWalletLoader {
+    pub path: PathBuf,
+    pub key: KeyTree,
 }
 
 impl WalletLoader<CapeLedger> for MockCapeWalletLoader {

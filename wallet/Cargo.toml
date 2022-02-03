@@ -15,6 +15,7 @@ async-trait = "0.1.51"
 bincode = "1.3.3"
 cap-rust-sandbox = { path = "../contracts/rust" }
 escargot = "0.5.2"
+ethers = { git = "https://github.com/gakonst/ethers-rs", branch = "master" }
 futures = "0.3.0"
 futures-util = "0.3.8"
 itertools = "0.10.1"
@@ -31,6 +32,7 @@ net = { git = "ssh://git@github.com/SpectrumXYZ/net.git" }
 rand_chacha = "0.3.1"
 regex = "1.5.4"
 reef = { git = "ssh://git@github.com/SpectrumXYZ/reef.git" }
+relayer = { path = "../relayer", features = ["testing"] }
 seahorse = { git = "ssh://git@github.com/SpectrumXYZ/seahorse.git", rev = "e3665f8731d1da3373827284e16bca98d839bbe8", features = ["testing"] }
 serde = { version = "1.0.123", features = ["derive", "rc"] }
 serde_derive = "1.0.118"
@@ -40,7 +42,7 @@ snafu = { version = "0.7", features = ["backtraces"] }
 structopt = { version = "0.3", features = ["paw"] }
 strum = "0.20"
 strum_macros = "0.20.1"
-surf = "2.3.1"
+surf = "2.3.2"
 tagged-base64 = { git = "ssh://git@github.com/SpectrumXYZ/tagged-base64.git", branch = "main" }
 tempdir = "0.3.7"
 tide = "0.16.0"
@@ -53,6 +55,5 @@ tracing-subscriber = "0.2.19"
 universal-param = { git = "ssh://git@github.com/SpectrumXYZ/universal-param.git" }
 
 [dev-dependencies]
-surf = "2.3.2"
 tempdir = "0.3.7"
 tracing-test = "0.2.1"

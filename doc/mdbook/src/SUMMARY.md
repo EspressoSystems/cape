@@ -34,5 +34,4 @@
 - [Transcript](./verifier/Transcript.md)
 
 - [Ancillary Material](./ANCILLARY.md)
-  - [DummyCAPE](./DummyCAPE.md)
   - [Greeter](./Greeter.md)

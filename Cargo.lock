@@ -1099,9 +1099,13 @@ dependencies = [
  "cap-rust-sandbox",
  "escargot",
 <<<<<<< HEAD
+<<<<<<< HEAD
  "ethers 0.6.0 (git+https://github.com/gakonst/ethers-rs?branch=master)",
 =======
 >>>>>>> 6de9d6c (Implement CAPE CLI to support burn and move wallet modules (#425))
+=======
+ "ethers 0.6.0 (git+https://github.com/gakonst/ethers-rs?branch=master)",
+>>>>>>> 361c406 (Integrate wallet with minimal relayer and smart contract (#414))
  "futures",
  "futures-util",
  "itertools 0.10.3",
@@ -1118,9 +1122,13 @@ dependencies = [
  "reef",
  "regex",
 <<<<<<< HEAD
+<<<<<<< HEAD
  "relayer",
 =======
 >>>>>>> 6de9d6c (Implement CAPE CLI to support burn and move wallet modules (#425))
+=======
+ "relayer",
+>>>>>>> 361c406 (Integrate wallet with minimal relayer and smart contract (#414))
  "seahorse",
  "serde",
  "serde_derive",

@@ -131,12 +131,11 @@ async fn test_check_transfer_expired_note_triggers_an_error() -> Result<()> {
         .await?
         .await?;
 
-    let call = contract
-        .submit_cape_block(cape_block.into(), vec![])
+    contract
+        .submit_cape_block(cape_block.into())
         .call()
-        .await;
-
-    call.should_revert_with_message("Expired note");
+        .await
+        .should_revert_with_message("Expired note");
 
     Ok(())
 }

@@ -12,7 +12,7 @@ mod constants;
 mod erc20;
 mod merkle_tree;
 mod relayer;
-use crate::constants::{burn_pub_key, MERKLE_ROOT_QUEUE_CAP};
+use crate::constants::MERKLE_ROOT_QUEUE_CAP;
 use crate::erc20::Erc20Contract;
 use crate::merkle_tree::RecordMerkleTree;
 
@@ -288,15 +288,13 @@ impl CapeContract {
                     Address::from(proof_bounded_address)
                 };
 
-                // to validate the burn transaction, we need to check if the second output
-                // of the transfer (while the first being fee change) is sent to dedicated
-                // "burn address/pubkey". Since the transaction only contains record commitments,
+                // Since the transaction only contains record commitments,
                 // we require the user to provide the record opening and check against it.
                 assert_eq!(
                     RecordCommitment::from(burned_ro),
                     burn_txn.output_commitments()[1]
                 );
-                assert_eq!(burned_ro.pub_key, burn_pub_key());
+
                 let erc20_addr = self
                     .wrapped_erc20_registrar
                     .get(&burned_ro.asset_def)
@@ -310,7 +308,15 @@ impl CapeContract {
                 for &nf in burn_txn.nullifiers().iter() {
                     self.nullifiers.insert(nf);
                 }
-                rc_to_be_inserted.extend_from_slice(&burn_txn.output_commitments());
+
+                // We insert all the output commitments except the second one that corresponds to the burned output.
+                // That way we ensure that this burned output cannot be spent
+                const POS_BURNED_RC: usize = 1;
+                for (i, rc) in burn_txn.output_commitments().iter().enumerate() {
+                    if i != POS_BURNED_RC {
+                        rc_to_be_inserted.push(*rc);
+                    }
+                }
             } else {
                 panic!("burn txn should be of TransferNote type");
             }

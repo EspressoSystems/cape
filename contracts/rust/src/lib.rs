@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate num_derive;
 
-mod assertion;
+pub mod assertion;
 mod asset_registry;
 mod bn254;
 pub mod cape;

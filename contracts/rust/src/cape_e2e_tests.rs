@@ -218,7 +218,7 @@ async fn test_2user_maybe_submit(should_submit: bool) -> Result<()> {
             CapeBlock::from_cape_transactions(vec![txn1_cape.clone()], miner.address())?;
         // Submit to the contract
         contract
-            .submit_cape_block(cape_block.into(), vec![])
+            .submit_cape_block(cape_block.into())
             .send()
             .await?
             .await?;

@@ -112,28 +112,12 @@ fn parse_flattened_frontier(flattened_frontier: &[Fr254], uid: u64) -> MerkleFro
 mod tests {
     use super::*;
     use crate::deploy::deploy_test_records_merkle_tree_contract;
-    use crate::helpers::{compare_merkle_root_from_contract_and_jf_tree, convert_fr254_to_u256};
-    use crate::types::TestRecordsMerkleTree;
+    use crate::helpers::convert_fr254_to_u256;
+    use crate::test_utils::compare_roots_records_merkle_tree_contract;
     use ark_ed_on_bn254::Fq as Fr254;
     use ark_std::UniformRand;
-    use ethers::prelude::{Http, Provider, SignerMiddleware, Wallet, U256};
+    use ethers::prelude::U256;
     use jf_primitives::merkle_tree::{MerkleTree, NodeValue};
-
-    async fn compare_roots(
-        mt: &MerkleTree<Fr254>,
-        contract: &TestRecordsMerkleTree<
-            SignerMiddleware<Provider<Http>, Wallet<ethers::core::k256::ecdsa::SigningKey>>,
-        >,
-        should_be_equal: bool,
-    ) {
-        let root_fr254 = mt.commitment().root_value;
-        let root_value_u256 = contract.get_root_value().call().await.unwrap();
-
-        assert_eq!(
-            should_be_equal,
-            compare_merkle_root_from_contract_and_jf_tree(root_value_u256, root_fr254)
-        );
-    }
 
     #[test]
     fn test_jellyfish_records_merkle_tree() {
@@ -245,7 +229,7 @@ mod tests {
         let mut mt = MerkleTree::<Fr254>::new(height).unwrap();
 
         // At beginning (no leaf inserted) both roots are the same.
-        compare_roots(&mt, &contract, true).await;
+        compare_roots_records_merkle_tree_contract(&mt, &contract, true).await;
 
         // We insert the first set of leaves
         let elems_u256 = insert_elements_into_jellyfish_mt(&mut mt, n_leaves_before);
@@ -258,7 +242,7 @@ mod tests {
             .await
             .unwrap();
 
-        compare_roots(&mt, &contract, true).await;
+        compare_roots_records_merkle_tree_contract(&mt, &contract, true).await;
 
         // We insert the second set of leaves
         let elems_u256 = insert_elements_into_jellyfish_mt(&mut mt, n_leaves_after);
@@ -271,7 +255,7 @@ mod tests {
             .await
             .unwrap();
 
-        compare_roots(&mt, &contract, true).await;
+        compare_roots_records_merkle_tree_contract(&mt, &contract, true).await;
     }
 
     #[tokio::test]

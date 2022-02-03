@@ -91,7 +91,7 @@ async fn test_submit_empty_block_to_cape_contract() -> Result<()> {
 
     // Submitting an empty block does not yield a reject from the contract
     contract
-        .submit_cape_block(cape_block.into(), vec![])
+        .submit_cape_block(cape_block.into())
         .send()
         .await?
         .await?;
@@ -143,7 +143,7 @@ async fn test_submit_block_to_cape_contract() -> Result<()> {
 
     // Submit to the contract
     contract
-        .submit_cape_block(cape_block.into(), vec![])
+        .submit_cape_block(cape_block.into())
         .send()
         .await?
         .await?;
@@ -178,7 +178,7 @@ async fn test_block_height() -> Result<()> {
         .await?;
 
     contract
-        .submit_cape_block(cape_block.into(), vec![])
+        .submit_cape_block(cape_block.into())
         .send()
         .await?
         .await?;
@@ -206,7 +206,7 @@ async fn test_event_block_committed() -> Result<()> {
         .await?;
 
     contract
-        .submit_cape_block(cape_block.into(), vec![])
+        .submit_cape_block(cape_block.into())
         .send()
         .await?
         .await?;
@@ -240,7 +240,7 @@ async fn test_check_domestic_asset_code_in_submit_cape_block() -> Result<()> {
         InternalAssetCode::new(AssetCodeSeed::generate(rng), b"description");
 
     contract
-        .submit_cape_block(block.into(), vec![])
+        .submit_cape_block(block.into())
         .call()
         .await
         .should_revert_with_message("Wrong domestic asset code");

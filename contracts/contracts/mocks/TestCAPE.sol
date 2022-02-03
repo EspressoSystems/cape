@@ -1,10 +1,14 @@
-//SPDX-License-Identifier: Unlicense
+//SPDX-License-Identifier: Unlicensed
 pragma solidity ^0.8.0;
 
 import "../CAPE.sol";
 
 contract TestCAPE is CAPE {
-    constructor(uint8 height, uint64 nRoots) CAPE(height, nRoots) {}
+    constructor(
+        uint8 merkleTreeHeight,
+        uint64 nRoots,
+        address verifierAddr
+    ) CAPE(merkleTreeHeight, nRoots, verifierAddr) {}
 
     function getNumLeaves() public view returns (uint256) {
         return _numLeaves;
@@ -18,8 +22,8 @@ contract TestCAPE is CAPE {
         }
     }
 
-    function insertNullifier(uint256 nullifier) public {
-        return _insertNullifier(nullifier);
+    function publish(uint256 nullifier) public {
+        return _publish(nullifier);
     }
 
     function checkTransfer(TransferNote memory note) public pure {
@@ -38,10 +42,6 @@ contract TestCAPE is CAPE {
         return _containsBurnPrefix(extraProofBoundData);
     }
 
-    function containsBurnDestination(bytes memory extraProofBoundData) public view returns (bool) {
-        return _containsBurnDestination(extraProofBoundData);
-    }
-
     function containsBurnRecord(BurnNote memory note) public view returns (bool) {
         return _containsBurnRecord(note);
     }
@@ -55,15 +55,22 @@ contract TestCAPE is CAPE {
     }
 
     function setHeight(uint64 newHeight) public {
-        height = newHeight;
+        blockHeight = newHeight;
     }
 
     function computeMaxCommitments(CapeBlock memory newBlock) public pure returns (uint256) {
         return _computeMaxCommitments(newBlock);
     }
 
-    function checkAssetCode(RecordOpening memory ro, address erc20Address) public view {
-        _checkAssetCode(ro, erc20Address);
+    function checkForeignAssetCode(uint256 assetDefinitionCode, address erc20Address) public view {
+        _checkForeignAssetCode(assetDefinitionCode, erc20Address);
+    }
+
+    function checkDomesticAssetCode(uint256 assetDefinitionCode, uint256 internalAssetCode)
+        public
+        view
+    {
+        _checkDomesticAssetCode(assetDefinitionCode, internalAssetCode);
     }
 
     function computeAssetDescription(address erc20Address, address sponsor)
@@ -72,5 +79,14 @@ contract TestCAPE is CAPE {
         returns (bytes memory)
     {
         return _computeAssetDescription(erc20Address, sponsor);
+    }
+
+    // Functions to access the pending deposits queue
+    function getPendingDepositsAtIndex(uint256 index) public returns (uint256) {
+        return _queue[index];
+    }
+
+    function isPendingDepositsQueueEmpty() public returns (bool) {
+        return _isQueueEmpty();
     }
 }

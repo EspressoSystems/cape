@@ -27,7 +27,7 @@ else
 fi
 
 echo "Running rust tests against geth backend"
-env RPC_URL=http://localhost:$RPC_PORT cargo test --release
+env RPC_URL=http://localhost:$RPC_PORT cargo test --release -- -Zunstable-options --report-time
 
 echo "Running js tests against geth backend"
 env RPC_PORT=$RPC_PORT hardhat test

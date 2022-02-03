@@ -1,4 +1,5 @@
 #![cfg_attr(debug_assertions, allow(dead_code))]
+use crate::test_utils::contract_abi_path;
 use anyhow::Result;
 use async_recursion::async_recursion;
 use ethers::{
@@ -14,16 +15,18 @@ use ethers::{
 
 use std::{convert::TryFrom, env, fs, path::Path, sync::Arc, time::Duration};
 
-pub async fn get_funded_deployer(
-) -> Result<Arc<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>> {
+pub fn get_provider() -> Provider<Http> {
     let rpc_url = match env::var("RPC_URL") {
-        Ok(val) => val,
+        Ok(url) => url,
         Err(_) => "http://localhost:8545".to_string(),
     };
 
-    let mut provider =
-        Provider::<Http>::try_from(rpc_url.clone()).expect("could not instantiate HTTP Provider");
+    Provider::<Http>::try_from(rpc_url).expect("could not instantiate HTTP Provider")
+}
 
+pub async fn get_funded_client() -> Result<Arc<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>>
+{
+    let mut provider = get_provider();
     let chain_id = provider.get_chainid().await.unwrap().as_u64();
 
     // If MNEMONIC is set, try to use it to create a wallet,
@@ -80,11 +83,11 @@ async fn link_unlinked_libraries<M: 'static + Middleware>(
     {
         // Connect to linked library if env var with address is set
         // otherwise, deploy the library.
-        let lib_address = match env::var("RESCUE_LIB_ADDRESS") {
+        let rescue_lib_address = match env::var("RESCUE_LIB_ADDRESS") {
             Ok(val) => val.parse::<Address>()?,
             Err(_) => deploy(
                 client.clone(),
-                Path::new("../abi/contracts/libraries/RescueLib.sol/RescueLib"),
+                &contract_abi_path("libraries/RescueLib.sol/RescueLib"),
                 (),
             )
             .await?
@@ -94,10 +97,34 @@ async fn link_unlinked_libraries<M: 'static + Middleware>(
             .link(
                 "contracts/libraries/RescueLib.sol",
                 "RescueLib",
-                lib_address,
+                rescue_lib_address,
             )
             .resolve();
-    };
+    }
+
+    if bytecode
+        .contains_fully_qualified_placeholder("contracts/libraries/VerifyingKeys.sol:VerifyingKeys")
+    {
+        // Connect to linked library if env var with address is set
+        // otherwise, deploy the library.
+        let verifying_keys_lib_address = match env::var("VERIFYING_KEYS_LIB_ADDRESS") {
+            Ok(val) => val.parse::<Address>()?,
+            Err(_) => deploy(
+                client.clone(),
+                &contract_abi_path("libraries/VerifyingKeys.sol/VerifyingKeys"),
+                (),
+            )
+            .await?
+            .address(),
+        };
+        bytecode
+            .link(
+                "contracts/libraries/VerifyingKeys.sol",
+                "VerifyingKeys",
+                verifying_keys_lib_address,
+            )
+            .resolve();
+    }
 
     Ok(())
 }
@@ -114,8 +141,8 @@ pub async fn deploy<M: 'static + Middleware, T: Tokenize>(
 
     // TODO remove client clones, pass reference instead?
     link_unlinked_libraries(&mut bytecode, client.clone()).await?;
-
     let factory = ContractFactory::new(abi.clone(), bytecode.into_bytes().unwrap(), client.clone());
+
     let contract = factory
         .deploy(constructor_args)?
         .legacy() // XXX This is required!

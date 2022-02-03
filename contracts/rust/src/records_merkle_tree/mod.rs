@@ -1,17 +1,11 @@
 mod rescue;
-
-use crate::ethereum;
-use crate::types::TestRecordsMerkleTree;
 use ark_ed_on_bn254::Fq as Fr254;
-use ethers::prelude::*;
 use jf_primitives::merkle_tree::{
     MerkleFrontier, MerkleLeaf, MerkleLeafProof, MerklePath, MerklePathNode, NodePos, NodeValue,
 };
 use jf_rescue::Permutation;
 use jf_rescue::RescueParameter;
-
 use std::convert::TryFrom;
-use std::path::Path;
 
 // TODO make this function public in Jellyfish?
 /// Hash function used to compute an internal node value
@@ -42,22 +36,6 @@ pub(crate) fn compute_hash_leaf(leaf_value: Fr254, uid: u64) -> Fr254 {
     .to_scalar()
 }
 
-#[allow(dead_code)]
-pub(crate) async fn get_contract_records_merkle_tree(
-    height: u8,
-) -> TestRecordsMerkleTree<
-    SignerMiddleware<Provider<Http>, Wallet<ethers::core::k256::ecdsa::SigningKey>>,
-> {
-    let client = ethereum::get_funded_deployer().await.unwrap();
-    let contract = ethereum::deploy(
-        client.clone(),
-        Path::new("../abi/contracts/mocks/TestRecordsMerkleTree.sol/TestRecordsMerkleTree"),
-        height,
-    )
-    .await
-    .unwrap();
-    TestRecordsMerkleTree::new(contract.address(), client)
-}
 /// Takes a frontier from a Merkle tree and returns
 /// [leaf,s_{0,first},s_{0,second},pos_0,
 /// s_{1,first},s_{1,second},pos_1,
@@ -133,29 +111,13 @@ fn parse_flattened_frontier(flattened_frontier: &[Fr254], uid: u64) -> MerkleFro
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::helpers::{convert_fr254_to_u256, convert_u256_to_bytes_le};
+    use crate::deploy::deploy_test_records_merkle_tree_contract;
+    use crate::helpers::convert_fr254_to_u256;
+    use crate::test_utils::compare_roots_records_merkle_tree_contract;
     use ark_ed_on_bn254::Fq as Fr254;
-    use ark_ff::BigInteger;
-    use ark_ff::PrimeField;
     use ark_std::UniformRand;
+    use ethers::prelude::U256;
     use jf_primitives::merkle_tree::{MerkleTree, NodeValue};
-
-    async fn compare_roots(
-        mt: &MerkleTree<Fr254>,
-        contract: &TestRecordsMerkleTree<
-            SignerMiddleware<Provider<Http>, Wallet<ethers::core::k256::ecdsa::SigningKey>>,
-        >,
-        should_be_equal: bool,
-    ) {
-        let root_fr254 = mt.commitment().root_value;
-        let root_value_u256 = contract.get_root_value().call().await.unwrap();
-
-        assert_eq!(
-            should_be_equal,
-            (convert_u256_to_bytes_le(root_value_u256).as_slice()
-                == root_fr254.to_scalar().into_repr().to_bytes_le())
-        );
-    }
 
     #[test]
     fn test_jellyfish_records_merkle_tree() {
@@ -263,11 +225,11 @@ mod tests {
     ) {
         // Check that we can insert values in the Merkle tree
 
-        let contract = get_contract_records_merkle_tree(height).await;
+        let contract = deploy_test_records_merkle_tree_contract(height).await;
         let mut mt = MerkleTree::<Fr254>::new(height).unwrap();
 
         // At beginning (no leaf inserted) both roots are the same.
-        compare_roots(&mt, &contract, true).await;
+        compare_roots_records_merkle_tree_contract(&mt, &contract, true).await;
 
         // We insert the first set of leaves
         let elems_u256 = insert_elements_into_jellyfish_mt(&mut mt, n_leaves_before);
@@ -280,7 +242,7 @@ mod tests {
             .await
             .unwrap();
 
-        compare_roots(&mt, &contract, true).await;
+        compare_roots_records_merkle_tree_contract(&mt, &contract, true).await;
 
         // We insert the second set of leaves
         let elems_u256 = insert_elements_into_jellyfish_mt(&mut mt, n_leaves_after);
@@ -293,7 +255,7 @@ mod tests {
             .await
             .unwrap();
 
-        compare_roots(&mt, &contract, true).await;
+        compare_roots_records_merkle_tree_contract(&mt, &contract, true).await;
     }
 
     #[tokio::test]

@@ -1,8 +1,16 @@
 // Copyright © 2021 Translucence Research, Inc. All rights reserved.
 
-use crate::WebState;
+use crate::{
+    mocks::{MockCapeBackend, MockCapeNetwork},
+    wallet::CapeWalletExt,
+    web::WebState,
+};
 use async_std::sync::{Arc, Mutex};
-use cap_rust_sandbox::universal_param::UNIVERSAL_PARAM;
+use cap_rust_sandbox::{
+    ledger::CapeLedger,
+    state::{Erc20Code, EthereumAddr},
+    universal_param::UNIVERSAL_PARAM,
+};
 use futures::{prelude::*, stream::iter};
 use jf_aap::{
     keys::{AuditorPubKey, FreezerPubKey, UserPubKey},
@@ -14,6 +22,7 @@ use net::{server::response, TaggedBlob, UserAddress};
 use reef::traits::Ledger;
 use seahorse::{
     loader::{Loader, LoaderMetadata},
+    testing::MockLedger,
     txn_builder::AssetInfo,
     WalletBackend, WalletError, WalletStorage,
 };
@@ -28,14 +37,6 @@ use strum_macros::{AsRefStr, EnumIter, EnumString};
 use tagged_base64::TaggedBase64;
 use tide::StatusCode;
 use tide_websockets::WebSocketConnection;
-use zerok_lib::{
-    cape_ledger::CapeLedger,
-    cape_state::{Erc20Code, EthereumAddr},
-    wallet::{
-        cape::CapeWalletExt,
-        testing::mocks::{MockCapeBackend, MockCapeNetwork, MockLedger},
-    },
-};
 
 #[derive(Debug, Snafu, Serialize, Deserialize)]
 #[snafu(module(error))]

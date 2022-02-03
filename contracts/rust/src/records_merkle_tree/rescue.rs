@@ -1,16 +1,12 @@
 #[cfg(test)]
 mod tests {
-
-    use crate::ethereum;
+    use crate::deploy::deploy_test_rescue;
     use crate::helpers::{convert_fr254_to_u256, convert_u256_to_bytes_le};
-    use crate::types::TestRescue;
     use ark_ed_on_bn254::Fq as Fr254;
     use ark_ff::{BigInteger, PrimeField, UniformRand, Zero};
-    use ethers::prelude::k256::ecdsa::SigningKey;
     use ethers::prelude::*;
     use jf_rescue::Permutation;
     use std::default::Default;
-    use std::path::Path;
 
     // From jellyfish rescue/src/lib.rs
     // hash output on vector [0, 0, 0, 0]
@@ -45,19 +41,6 @@ mod tests {
         ];
         let real_output = rescue.sponge_no_padding(&input, 3).unwrap();
         assert_eq!(real_output, expected);
-    }
-
-    async fn deploy_test_rescue() -> TestRescue<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>
-    {
-        let client = ethereum::get_funded_deployer().await.unwrap();
-        let contract = ethereum::deploy(
-            client.clone(),
-            Path::new("../abi/contracts/mocks/TestRescue.sol/TestRescue"),
-            (),
-        )
-        .await
-        .unwrap();
-        TestRescue::new(contract.address(), client)
     }
 
     #[tokio::test]

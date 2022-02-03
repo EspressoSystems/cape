@@ -17,7 +17,7 @@ contract TestCapeTypes {
         return root;
     }
 
-    function checkAssetCode(uint256 code) public pure returns (uint256) {
+    function checkForeignAssetCode(uint256 code) public pure returns (uint256) {
         return code;
     }
 
@@ -63,14 +63,6 @@ contract TestCapeTypes {
 
     function checkNoteType(CAPE.NoteType t) public pure returns (CAPE.NoteType) {
         return t;
-    }
-
-    function checkEdOnBn254Point(CAPE.EdOnBn254Point memory p)
-        public
-        pure
-        returns (CAPE.EdOnBn254Point memory)
-    {
-        return p;
     }
 
     function checkMintNote(CAPE.MintNote memory note) public pure returns (CAPE.MintNote memory) {

@@ -3,10 +3,7 @@ const { ethers } = require("hardhat");
 
 describe("Rescue benchmarks", function () {
   describe("Gas spent for computing the Rescue function", function () {
-    for (const [contractName, gas] of [
-      ["TestRescue", 90363],
-      ["TestRescueNonOptimized", 620060],
-    ]) {
+    for (const contractName of ["TestRescue", "TestRescueNonOptimized"]) {
       it(`checks gas usage of ${contractName}.hash`, async function () {
         const libraries = {};
         if (contractName == "TestRescue") {
@@ -32,7 +29,7 @@ describe("Rescue benchmarks", function () {
 
         let rescueOnly = rescueGasUsed - doNothingGasUsed;
 
-        expect(rescueOnly).to.be.equal(gas);
+        console.log("Rescue gas of ", contractName, ": ", rescueOnly);
       });
     }
   });

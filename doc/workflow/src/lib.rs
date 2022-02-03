@@ -1,5 +1,6 @@
 //! This crate describes the workflow and interfaces of a CAPE contract deployed on Ethereum.
 
+use cap_rust_sandbox::state::{is_erc20_asset_def_valid, Erc20Code, EthereumAddr};
 use ethers::prelude::*;
 use jf_aap::keys::UserPubKey;
 use jf_aap::structs::{AssetDefinition, FreezeFlag, Nullifier, RecordCommitment, RecordOpening};
@@ -11,7 +12,7 @@ mod constants;
 mod erc20;
 mod merkle_tree;
 mod relayer;
-use crate::constants::{burn_pub_key, MERKLE_ROOT_QUEUE_CAP};
+use crate::constants::MERKLE_ROOT_QUEUE_CAP;
 use crate::erc20::Erc20Contract;
 use crate::merkle_tree::RecordMerkleTree;
 
@@ -188,13 +189,25 @@ impl CapeContract {
     }
 
     /// Create a new asset type for an ERC20 and register it to the contract.
-    pub fn sponsor_cape_asset(&mut self, erc20_addr: Address, new_asset: AssetDefinition) {
+    pub fn sponsor_cape_asset(
+        &mut self,
+        erc20_addr: Address,
+        sponsor: Address,
+        new_asset: AssetDefinition,
+    ) {
         assert!(
             !self.is_cape_asset_registered(&new_asset),
             "this CAPE asset is already registered"
         );
         // check correct ERC20 address.
         let _ = Erc20Contract::at(erc20_addr);
+
+        // Check for valid foreign asset definition to ensure asset cannot be minted.
+        assert!(is_erc20_asset_def_valid(
+            &new_asset,
+            &Erc20Code(EthereumAddr(erc20_addr.to_fixed_bytes())),
+            &EthereumAddr(sponsor.to_fixed_bytes())
+        ));
 
         self.wrapped_erc20_registrar.insert(new_asset, erc20_addr);
     }
@@ -275,15 +288,13 @@ impl CapeContract {
                     Address::from(proof_bounded_address)
                 };
 
-                // to validate the burn transaction, we need to check if the second output
-                // of the transfer (while the first being fee change) is sent to dedicated
-                // "burn address/pubkey". Since the contract only have record commitments,
+                // Since the transaction only contains record commitments,
                 // we require the user to provide the record opening and check against it.
                 assert_eq!(
                     RecordCommitment::from(burned_ro),
                     burn_txn.output_commitments()[1]
                 );
-                assert_eq!(burned_ro.pub_key, burn_pub_key());
+
                 let erc20_addr = self
                     .wrapped_erc20_registrar
                     .get(&burned_ro.asset_def)
@@ -297,7 +308,15 @@ impl CapeContract {
                 for &nf in burn_txn.nullifiers().iter() {
                     self.nullifiers.insert(nf);
                 }
-                rc_to_be_inserted.extend_from_slice(&burn_txn.output_commitments());
+
+                // We insert all the output commitments except the second one that corresponds to the burned output.
+                // That way we ensure that this burned output cannot be spent
+                const POS_BURNED_RC: usize = 1;
+                for (i, rc) in burn_txn.output_commitments().iter().enumerate() {
+                    if i != POS_BURNED_RC {
+                        rc_to_be_inserted.push(*rc);
+                    }
+                }
             } else {
                 panic!("burn txn should be of TransferNote type");
             }
@@ -393,9 +412,10 @@ mod test {
         let mut cape_contract = CapeContract::mock();
         // 1. sponsor: design  the CAPE asset type (off-chain).
         let asset_def = usdc_cape_asset_def();
+        let sponsor = Address::random();
 
         // 2. sponsor: register the asset (on-L1-chain).
-        cape_contract.sponsor_cape_asset(usdc_address(), asset_def.clone());
+        cape_contract.sponsor_cape_asset(usdc_address(), sponsor, asset_def);
     }
 
     #[test]

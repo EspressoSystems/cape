@@ -7,15 +7,24 @@ edition = "2018"
 doctest = false
 
 [dependencies]
-jf-plonk = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git" }
+commit = { git = "ssh://git@github.com/SpectrumXYZ/commit.git", rev = "f48cd52c59755eade0605111826eef3df6abdcf8" }
+jf-plonk = { features=["std", "test_apis"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git" }
 jf-primitives = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git" }
-jf-aap = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", rev = "eca7b7e85718c7770c24ad90dd34b8a07209a01b" }
+jf-aap = { features=["std"], path = "/Users/keyao/Code/jellyfish-apps/aap" }
 jf-rescue = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git" }
 jf-utils = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git" }
-reef = { git = "ssh://git@github.com/SpectrumXYZ/reef.git", rev = "6e3e7f683d2f8c1c1da662301f8ca8c2863018cc" }
+key-set = { git = "ssh://git@github.com/SpectrumXYZ/key-set.git" }
+reef = { path = "/Users/keyao/Code/reef" }
 universal-param = { git = "ssh://git@github.com/SpectrumXYZ/universal-param.git" }
-zerok_lib = { git = "ssh://git@github.com/SpectrumXYZ/spectrum.git", rev = "a1af8c87e5f5546b60dbd455dffa20ff211629c8", features = ["mocks"] }
-ethers = { git = "https://github.com/gakonst/ethers-rs", branch = "master" }
+zerok-macros = { git = "ssh://git@github.com/SpectrumXYZ/zerok-macros.git" }
+arbitrary = { version="1.0", features=["derive"] }
+arbitrary-wrappers = { git = "ssh://git@github.com/SpectrumXYZ/arbitrary-wrappers.git" }
+
+# We need the legacy feature in order to avoid gas estimation issues. See https://github.com/gakonst/ethers-rs/issues/825
+ethers = { features=["legacy"], git = "https://github.com/gakonst/ethers-rs", branch = "master" }
+ethers-core = { features=["legacy"], git = "https://github.com/gakonst/ethers-rs", branch = "master" }
+ethers-contract = { features=["legacy"], git = "https://github.com/gakonst/ethers-rs", branch = "master" }
+
 itertools = "0.10.1" # needed for jf-aap to compile
 ark-std = "0.3.0"
 serde_json = "1.0.67"
@@ -24,6 +33,7 @@ ark-serialize = "0.3.0"
 ark-ff = "0.3.0"
 ark-ec = "0.3.0"
 ark-ed-on-bn254 = { version = "0.3.0", default-features = false }
+ark-poly = "0.3.0"
 hex = "0.4.3"
 lazy_static = "1.4.0"
 tokio = { version = "1.5", features = ["macros", "rt-multi-thread"] }
@@ -41,8 +51,9 @@ async-trait = "0.1.51"
 futures = "0.3.16"
 strum_macros = "0.20.1"
 async-recursion = "1.0.0"
+snafu = { version = "0.7", features = ["backtraces"] }
 
-# copied from jellyfish
+# copied from jellyfish-apps
 [dependencies.ark-poly-commit]
 git = "https://github.com/arkworks-rs/poly-commit/"
 rev = "cafc05e39692bbc5c383990063ad851f0b94a553"

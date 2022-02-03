@@ -6,6 +6,8 @@ on:
 
 env:
   RUST_TEST_THREADS: 4
+  # TODO: remove this or increase this when contract size limit is not a problem
+  SOLC_OPTIMIZER_RUNS: 20
 
 jobs:
   build:
@@ -13,15 +15,14 @@ jobs:
     container:
       image: ghcr.io/spectrumxyz/nix:main
       credentials:
-         username: ancient123
-         password: ${{ secrets.ORG_GITHUB_PAT }}
+        username: ancient123
+        password: ${{ secrets.ORG_GITHUB_PAT }}
       volumes:
         - github_nix_251:/nix
     steps:
       - uses: styfle/cancel-workflow-action@0.9.1
         name: Cancel Outdated Builds
         with:
-          all_but_latest: true
           access_token: ${{ github.token }}
 
       - name: Install Tools

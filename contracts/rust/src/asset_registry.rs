@@ -1,52 +1,66 @@
 #![cfg(test)]
-use std::path::Path;
-
 use anyhow::Result;
 use ethers::prelude::Address;
+use jf_aap::structs::{AssetCode, AssetDefinition, AssetPolicy};
 
 use crate::assertion::Matcher;
-use crate::ethereum::{deploy, get_funded_deployer};
-use crate::types::{self as sol, AssetRegistry};
+use crate::deploy::deploy_test_asset_registry_contract;
+use crate::ethereum::get_funded_client;
+use crate::state::{erc20_asset_description, Erc20Code, EthereumAddr};
+use crate::types::TestCAPE;
 
 #[tokio::test]
 async fn test_asset_registry() -> Result<()> {
-    let client = get_funded_deployer().await?;
-    let contract = deploy(
-        client.clone(),
-        Path::new("../abi/contracts/AssetRegistry.sol/AssetRegistry"),
-        (),
-    )
-    .await?;
-    let contract = AssetRegistry::new(contract.address(), client);
+    let contract = deploy_test_asset_registry_contract().await;
+    let erc20_address = Address::random();
 
-    let address = Address::random();
-    let asset_def = sol::AssetDefinition::default();
+    let sponsor = get_funded_client().await?;
+    // Send transactions signed by the sponsor's wallet
+    let contract = TestCAPE::new(contract.address(), sponsor.clone());
+
+    let erc20_code = Erc20Code(EthereumAddr(erc20_address.to_fixed_bytes()));
+
+    let description = erc20_asset_description(
+        &erc20_code,
+        &EthereumAddr(sponsor.address().to_fixed_bytes()),
+    );
+    let asset_code = AssetCode::new_foreign(&description);
+    let asset_def = AssetDefinition::new(asset_code, AssetPolicy::default())?;
 
     // Fails for default/zero address
     contract
-        .sponsor_cape_asset(Address::zero(), asset_def.clone())
+        .sponsor_cape_asset(Address::zero(), asset_def.clone().into())
+        .from(sponsor.address())
         .call()
         .await
         .should_revert_with_message("Bad asset address");
 
     // Unknown asset is not registered
     let registered = contract
-        .is_cape_asset_registered(asset_def.clone())
+        .is_cape_asset_registered(asset_def.clone().into())
+        .from(sponsor.address())
+        .call()
+        .await?;
+    assert!(!registered);
+
+    // Cannot register as wrong sponsor
+    contract
+        .sponsor_cape_asset(erc20_address, asset_def.clone().into())
+        .from(Address::random())
         .call()
         .await
-        .unwrap();
-    assert!(!registered);
+        .should_revert_with_message("Wrong foreign asset code");
 
     // Register the asset
     contract
-        .sponsor_cape_asset(address, asset_def.clone())
+        .sponsor_cape_asset(erc20_address, asset_def.clone().into())
         .send()
         .await?
         .await?;
 
     // Asset is now registered
     let registered = contract
-        .is_cape_asset_registered(asset_def.clone())
+        .is_cape_asset_registered(asset_def.clone().into())
         .call()
         .await
         .unwrap();
@@ -55,7 +69,8 @@ async fn test_asset_registry() -> Result<()> {
 
     // Asset cannot be registered again
     contract
-        .sponsor_cape_asset(address, asset_def.clone())
+        .sponsor_cape_asset(erc20_address, asset_def.clone().into())
+        .from(sponsor.address())
         .call()
         .await
         .should_revert_with_message("Asset already registered");

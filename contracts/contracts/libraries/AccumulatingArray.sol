@@ -41,4 +41,8 @@ library AccumulatingArray {
         }
         return out;
     }
+
+    function isEmpty(Data memory self) internal pure returns (bool) {
+        return (self.index == 0);
+    }
 }

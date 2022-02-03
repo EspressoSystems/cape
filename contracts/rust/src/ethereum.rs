@@ -15,16 +15,18 @@ use ethers::{
 
 use std::{convert::TryFrom, env, fs, path::Path, sync::Arc, time::Duration};
 
-pub async fn get_funded_client() -> Result<Arc<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>>
-{
+pub fn get_provider() -> Provider<Http> {
     let rpc_url = match env::var("RPC_URL") {
-        Ok(val) => val,
+        Ok(url) => url,
         Err(_) => "http://localhost:8545".to_string(),
     };
 
-    let mut provider =
-        Provider::<Http>::try_from(rpc_url.clone()).expect("could not instantiate HTTP Provider");
+    Provider::<Http>::try_from(rpc_url).expect("could not instantiate HTTP Provider")
+}
 
+pub async fn get_funded_client() -> Result<Arc<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>>
+{
+    let mut provider = get_provider();
     let chain_id = provider.get_chainid().await.unwrap().as_u64();
 
     // If MNEMONIC is set, try to use it to create a wallet,

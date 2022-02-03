@@ -1,4 +1,5 @@
 #![deny(warnings)]
+mod events;
 mod note_types;
 mod submit_block;
 mod wrapping;

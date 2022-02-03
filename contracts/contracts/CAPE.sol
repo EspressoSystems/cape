@@ -275,8 +275,11 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue {
                 );
             } else if (noteType == NoteType.BURN) {
                 BurnNote memory note = newBlock.burnNotes[burnIdx];
+                burnIdx += 1;
+
                 _checkContainsRoot(note.transferNote.auxInfo.merkleRoot);
                 _checkBurn(note);
+
                 _publish(note.transferNote.inputNullifiers);
 
                 // Insert all the output commitments to the records merkle tree except from the second one (corresponding to the burned output)
@@ -292,8 +295,6 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue {
 
                 // Send the tokens
                 _handleWithdrawal(note);
-
-                burnIdx += 1;
             } else {
                 revert("Cape: unreachable!");
             }

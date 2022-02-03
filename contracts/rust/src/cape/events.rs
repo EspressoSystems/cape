@@ -15,7 +15,6 @@ mod tests {
     #[tokio::test]
     async fn test_fetch_cape_block_from_event() -> Result<()> {
         let contract = deploy_cape_test().await;
-        // Create three transactions
         let rng = &mut ark_std::test_rng();
         let params = TxnsParams::generate_txns(rng, 1, 0, 0, CapeLedger::merkle_height());
         let miner = UserPubKey::default();

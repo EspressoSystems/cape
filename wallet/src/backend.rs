@@ -345,7 +345,7 @@ mod test {
         // blockchain, as well as a mock EQS which will track the blockchain in parallel, since we
         // don't yet have a real EQS.
         let relayer_port = port().await;
-        let (contract_address, sender_key, sender_rec, records) =
+        let (contract, sender_key, sender_rec, records) =
             start_minimal_relayer_for_test(relayer_port).await;
         let relayer_url = Url::parse(&format!("http://localhost:{}", relayer_port)).unwrap();
         let sender_memo = ReceiverMemo::from_ro(rng, &sender_rec, &[]).unwrap();
@@ -401,7 +401,7 @@ mod test {
         // either.
         let mock_eqs = Arc::new(Mutex::new(mock_eqs));
 
-        (sender_key, relayer_url, contract_address, mock_eqs)
+        (sender_key, relayer_url, contract.address(), mock_eqs)
     }
 
     #[async_std::test]

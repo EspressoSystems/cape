@@ -113,6 +113,7 @@ pub mod testing {
         MerkleTree,
     };
     use reef::Ledger;
+    use std::time::Duration;
 
     pub async fn deploy_test_contract_with_faucet(
     ) -> (TestCAPE<Middleware>, UserKeyPair, RecordOpening, MerkleTree) {
@@ -133,14 +134,32 @@ pub mod testing {
         CAPE::new(test_cape.address(), Arc::new(test_cape.client().clone()))
     }
 
+    const RELAYER_STARTUP_RETRIES: usize = 5;
+
+    pub async fn wait_for_server(port: u64) {
+        // Wait for the server to come up and start serving.
+        let mut backoff = Duration::from_millis(100);
+        for _ in 0..RELAYER_STARTUP_RETRIES {
+            if surf::connect(format!("http://localhost:{}", port))
+                .send()
+                .await
+                .is_ok()
+            {
+                return;
+            }
+            backoff *= 2;
+        }
+        panic!("Minimal relayer did not start in {:?}", backoff);
+    }
+
     /// Start a relayer running a TestCAPE contract,
     pub async fn start_minimal_relayer_for_test(
         port: u64,
-    ) -> (Address, UserKeyPair, RecordOpening, MerkleTree) {
+    ) -> (TestCAPE<Middleware>, UserKeyPair, RecordOpening, MerkleTree) {
         let (contract, faucet, faucet_rec, records) = deploy_test_contract_with_faucet().await;
-        let address = contract.address();
-        init_web_server(upcast_test_cape_to_cape(contract), port.to_string());
-        (address, faucet, faucet_rec, records)
+        init_web_server(upcast_test_cape_to_cape(contract.clone()), port.to_string());
+        wait_for_server(port).await;
+        (contract, faucet, faucet_rec, records)
     }
 }
 
@@ -171,7 +190,10 @@ mod test {
     use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
     use reef::traits::Ledger;
     use surf::Url;
-    use testing::{deploy_test_contract_with_faucet, upcast_test_cape_to_cape};
+    use testing::{
+        deploy_test_contract_with_faucet, start_minimal_relayer_for_test, upcast_test_cape_to_cape,
+        wait_for_server,
+    };
 
     lazy_static! {
         static ref PORT: Arc<Mutex<u64>> = {
@@ -261,18 +283,15 @@ mod test {
     }
 
     #[async_std::test]
-    #[ignore]
     async fn test_submit() {
         let mut rng = ChaChaRng::from_seed([42; 32]);
         let user = UserKeyPair::generate(&mut rng);
 
-        let (contract, faucet, faucet_rec, records) = deploy_test_contract_with_faucet().await;
+        let port = get_port().await;
+        let (contract, faucet, faucet_rec, records) = start_minimal_relayer_for_test(port).await;
+        let client = get_client(port);
         let transaction =
             generate_transfer(&mut rng, &faucet, faucet_rec, user.pub_key(), &records);
-
-        let port = get_port().await;
-        init_web_server(upcast_test_cape_to_cape(contract.clone()), port.to_string());
-        let client = get_client(port);
         let mut res = client
             .post("/submit")
             .body_json(&transaction)
@@ -313,6 +332,7 @@ mod test {
         };
         let port = get_port().await;
         init_web_server(contract, port.to_string());
+        wait_for_server(port).await;
         let client = get_client(port);
         match Error::from_client_error(
             client

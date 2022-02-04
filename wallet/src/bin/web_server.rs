@@ -62,6 +62,7 @@ mod tests {
     use std::convert::TryInto;
     use std::fmt::Debug;
     use std::iter::once;
+    use std::time::Duration;
     use surf::Url;
     use tagged_base64::TaggedBase64;
     use tempdir::TempDir;
@@ -87,6 +88,7 @@ mod tests {
             // ends. This is probably not so bad, since each test's server task should be idle once
             // the test is over, and anyways I don't see a good way around it.
             init_server(default_api_path(), default_web_path(), port).unwrap();
+            Self::wait(port).await;
 
             let client: surf::Client = surf::Config::new()
                 .set_base_url(Url::parse(&format!("http://localhost:{}", port)).unwrap())
@@ -121,6 +123,24 @@ mod tests {
                     .as_bytes(),
             )
             .unwrap()
+        }
+
+        async fn wait(port: u64) {
+            let mut backoff = Duration::from_millis(100);
+            for _ in 0..5 {
+                // Use a one-off request, rather than going through the client, because we want to
+                // skip the middleware, which can cause connect() to return an Err() even if the
+                // request reaches the server successfully.
+                if surf::connect(format!("http://localhost:{}", port))
+                    .send()
+                    .await
+                    .is_ok()
+                {
+                    return;
+                }
+                backoff *= 2;
+            }
+            panic!("Wallet server did not start in {:?}", backoff);
         }
     }
 

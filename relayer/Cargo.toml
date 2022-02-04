@@ -27,6 +27,7 @@ serde_derive = "1.0.118"
 serde_json = "1.0.61"
 snafu = { version = "0.7", features = ["backtraces"] }
 structopt = { version = "0.3" }
+surf = { version = "2.3.2", optional = true }
 tide = "0.16.0"
 tide-websockets = "0.4.0"
 toml = "0.5"
@@ -37,4 +38,4 @@ tracing-subscriber = "0.3"
 surf = "2.3.2"
 
 [features]
-testing = []
+testing = ["surf"]

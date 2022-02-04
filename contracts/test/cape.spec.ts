@@ -1,19 +1,6 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 
-/*
-TODO: fix import issue
-
-Generating typings for: 27 artifacts in dir: typechain-types for target: ethers-v5
-Successfully generated 47 typings!
-Compilation finished successfully
-An unexpected error occurred:
-
-contracts/test/cape.spec.ts(3,26): error TS2307: Cannot find module '../typechain-types' or its corresponding type declarations.
-
-import { TestCAPE } from "../typechain-types";
-*/
-
 describe("CAPE", function () {
   describe("Handling of nullifiers", async function () {
     let cape: any;

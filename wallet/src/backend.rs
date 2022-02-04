@@ -405,6 +405,7 @@ mod test {
     }
 
     #[async_std::test]
+    #[ignore]
     async fn test_transfer() {
         let mut rng = ChaChaRng::from_seed([1u8; 32]);
         let universal_param = universal_setup_for_test(2usize.pow(16), &mut rng).unwrap();
@@ -730,34 +731,33 @@ mod test {
         );
 
         // Finally, withdraw the wrapped tokens back into the ERC20 token type.
-        // TODO uncomment when withdrawal is implemented in CAPE.sol.
-        // let receipt = sponsor
-        //     .burn(
-        //         &sponsor_key.address(),
-        //         sponsor_eth_addr.clone().into(),
-        //         &cape_asset.code,
-        //         100,
-        //         1,
-        //     )
-        //     .await
-        //     .unwrap();
-        // assert_eq!(
-        //     sponsor.await_transaction(&receipt).await.unwrap(),
-        //     TransactionStatus::Retired
-        // );
-        // assert_eq!(
-        //     sponsor
-        //         .balance(&sponsor_key.address(), &cape_asset.code)
-        //         .await,
-        //     0
-        // );
-        // assert_eq!(
-        //     erc20_contract
-        //         .balance_of(sponsor_eth_addr.into())
-        //         .call()
-        //         .await
-        //         .unwrap(),
-        //     100.into()
-        // );
+        let receipt = sponsor
+            .burn(
+                &sponsor_key.address(),
+                sponsor_eth_addr.clone().into(),
+                &cape_asset.code,
+                100,
+                1,
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            sponsor.await_transaction(&receipt).await.unwrap(),
+            TransactionStatus::Retired
+        );
+        assert_eq!(
+            sponsor
+                .balance(&sponsor_key.address(), &cape_asset.code)
+                .await,
+            0
+        );
+        assert_eq!(
+            erc20_contract
+                .balance_of(sponsor_eth_addr.into())
+                .call()
+                .await
+                .unwrap(),
+            100.into()
+        );
     }
 }

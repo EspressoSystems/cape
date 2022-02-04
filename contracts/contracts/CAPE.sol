@@ -24,19 +24,10 @@ import "./RecordsMerkleTree.sol";
 import "./RootStore.sol";
 import "./Queue.sol";
 
-// TODO Remove once functions are implemented
-/* solhint-disable no-unused-vars */
-
 contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue {
     mapping(uint256 => bool) public nullifiers;
     uint64 public blockHeight;
     IPlonkVerifier private _verifier;
-
-    // In order to avoid the contract running out of gas if the queue is too large
-    // we set the maximum number of pending deposits record commitments to process
-    // when a new block is submitted. This is a temporary solution.
-    // See https://github.com/SpectrumXYZ/cape/issues/400
-    uint64 public constant MAX_QUEUE_SIZE = 10;
 
     using AccumulatingArray for AccumulatingArray.Data;
 
@@ -45,7 +36,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue {
     bytes14 public constant DOM_SEP_DOMESTIC_ASSET = "DOMESTIC_ASSET";
     uint256 public constant AAP_NATIVE_ASSET_CODE = 1;
 
-    event BlockCommitted(uint64 indexed height);
+    event BlockCommitted(uint64 indexed height, uint256[] depositCommitments);
     event Erc20TokensDeposited(bytes roBytes, address erc20TokenAddress, address from);
 
     struct AuditMemo {
@@ -156,7 +147,6 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue {
     }
 
     /// Publish an array of nullifiers
-    /// TODO the text after @ return does not show in docs, only the return type shows.
     /// @dev Requires all nullifiers to be unique and unpublished.
     /// @dev A block creator must not submit notes with duplicate nullifiers.
     function _publish(uint256[] memory newNullifiers) internal {
@@ -180,10 +170,8 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue {
         require(isCapeAssetRegistered(ro.assetDef), "Asset definition not registered");
 
         // We skip the sanity checks mentioned in the rust specification as they are optional.
-
         uint256 recordCommitment = _deriveRecordCommitment(ro);
         _pushToQueue(recordCommitment);
-        bytes32 assetDefHash = keccak256(abi.encode(ro.assetDef));
 
         token.transferFrom(msg.sender, address(this), ro.amount);
         bytes memory roBytes = abi.encode(ro);
@@ -311,11 +299,13 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue {
         // Process the pending deposits obtained after calling `depositErc20`
         // There are some pending deposits to process
         uint256 numPendingDeposits = _getQueueSize();
+        uint256[] memory depositComms = new uint256[](numPendingDeposits);
 
         // See https://github.com/SpectrumXYZ/cape/issues/400 for why we check that the queue has at most MAX_QUEUE_SIZE elements
-        if ((numPendingDeposits > 0) && (numPendingDeposits < MAX_QUEUE_SIZE)) {
+        if (numPendingDeposits > 0) {
             for (uint256 i = 0; i < numPendingDeposits; i++) {
                 uint256 rc = _getQueueElem(i);
+                depositComms[i] = rc;
                 comms.add(rc);
             }
             // Empty the queue now the record commitments are ready to be inserted
@@ -330,7 +320,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue {
 
         // In all cases (the block is empty or not), the height is incremented.
         blockHeight += 1;
-        emit BlockCommitted(blockHeight);
+        emit BlockCommitted(blockHeight, depositComms);
     }
 
     function _handleWithdrawal(BurnNote memory note) internal {
@@ -362,7 +352,6 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue {
     }
 
     function _checkTransfer(TransferNote memory note) internal pure {
-        // TODO consider moving _checkContainsRoot into _check[NoteType] functions
         require(
             !_containsBurnPrefix(note.auxInfo.extraProofBoundData),
             "Burn prefix in transfer note"
@@ -428,7 +417,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue {
         return RescueLib.commit(inputs);
     }
 
-    // an overloadded function (one for each note type) to prepare all inputs necessary
+    // An overloaded function (one for each note type) to prepare all inputs necessary
     // for batch verification of the plonk proof
     function _prepareForProofVerification(TransferNote memory note)
         internal

@@ -323,12 +323,10 @@ mod tests {
     use crate::deploy::deploy_cape_test;
     use crate::ethereum::get_funded_client;
     use crate::ledger::CapeLedger;
-    use crate::types::{
-        GenericInto, MerkleRootSol, NullifierSol, RecordCommitmentSol, TestCapeTypes,
-    };
+    use crate::types::{GenericInto, MerkleRootSol, RecordCommitmentSol, TestCapeTypes};
     use anyhow::Result;
     use ethers::prelude::U256;
-    use jf_aap::keys::{UserKeyPair, UserPubKey};
+    use jf_aap::keys::UserKeyPair;
     use jf_aap::structs::RecordOpening;
     use jf_aap::utils::TxnsParams;
     use reef::Ledger;
@@ -357,145 +355,6 @@ mod tests {
             .send()
             .await?
             .await?;
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_submit_empty_block_to_cape_contract() -> Result<()> {
-        // Create an empty block transactions
-        let rng = &mut ark_std::test_rng();
-        let params = TxnsParams::generate_txns(rng, 0, 0, 0, CapeLedger::merkle_height());
-        let miner = UserPubKey::default();
-
-        let cape_block = CapeBlock::generate(params.txns, vec![], miner.address())?;
-
-        // Submitting an empty block does not yield a reject from the contract
-        let contract = deploy_cape_test().await;
-        contract
-            .submit_cape_block(cape_block.into())
-            .send()
-            .await?
-            .await?;
-
-        // The height is incremented anyways.
-        assert_eq!(contract.block_height().call().await?, 1u64);
-
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_submit_block_to_cape_contract() -> Result<()> {
-        // Create three transactions
-        let rng = &mut ark_std::test_rng();
-        let num_transfer_txn = 1;
-        let num_mint_txn = 1;
-        let num_freeze_txn = 1;
-        let tree_height = CapeLedger::merkle_height();
-        let params = TxnsParams::generate_txns(
-            rng,
-            num_transfer_txn,
-            num_mint_txn,
-            num_freeze_txn,
-            tree_height,
-        );
-        let miner = UserPubKey::default();
-
-        let nf = params.txns[0].nullifiers()[0];
-        let root = params.txns[0].merkle_root();
-
-        // temporarily no burn txn yet.
-        let cape_block = CapeBlock::generate(params.txns, vec![], miner.address())?;
-
-        // Check that some nullifier is not yet inserted
-        let contract = deploy_cape_test().await;
-        assert!(
-            !contract
-                .nullifiers(nf.generic_into::<NullifierSol>().0)
-                .call()
-                .await?
-        );
-
-        // TODO should not require to manually submit the root here
-        contract
-            .add_root(root.generic_into::<MerkleRootSol>().0)
-            .send()
-            .await?
-            .await?;
-
-        // Submit to the contract
-        contract
-            .submit_cape_block(cape_block.into())
-            .send()
-            .await?
-            .await?;
-
-        // Check that now the nullifier has been inserted
-        assert!(
-            contract
-                .nullifiers(nf.generic_into::<NullifierSol>().0)
-                .call()
-                .await?
-        );
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_block_height() -> Result<()> {
-        let rng = &mut ark_std::test_rng();
-        let params = TxnsParams::generate_txns(rng, 1, 0, 0, CapeLedger::merkle_height());
-        let miner = UserPubKey::default();
-
-        let root = params.txns[0].merkle_root();
-        let cape_block = CapeBlock::generate(params.txns, vec![], miner.address())?;
-
-        // TODO should not require to manually submit the root here
-        let contract = deploy_cape_test().await;
-        assert_eq!(contract.block_height().call().await?, 0u64);
-
-        contract
-            .add_root(root.generic_into::<MerkleRootSol>().0)
-            .send()
-            .await?
-            .await?;
-
-        contract
-            .submit_cape_block(cape_block.into())
-            .send()
-            .await?
-            .await?;
-        assert_eq!(contract.block_height().call().await?, 1u64);
-
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_event_block_committed() -> Result<()> {
-        let rng = &mut ark_std::test_rng();
-        let params = TxnsParams::generate_txns(rng, 1, 0, 0, CapeLedger::merkle_height());
-        let miner = UserPubKey::default();
-
-        let root = params.txns[0].merkle_root();
-        let cape_block = CapeBlock::generate(params.txns, vec![], miner.address())?;
-
-        let contract = deploy_cape_test().await;
-        contract
-            .add_root(root.generic_into::<MerkleRootSol>().0)
-            .send()
-            .await?
-            .await?;
-
-        contract
-            .submit_cape_block(cape_block.into())
-            .send()
-            .await?
-            .await?;
-
-        let logs = contract
-            .block_committed_filter()
-            .from_block(0u64)
-            .query()
-            .await?;
-        assert_eq!(logs[0].height, 1);
         Ok(())
     }
 

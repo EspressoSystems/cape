@@ -13,18 +13,6 @@ use jf_aap::utils::TxnsParams;
 use jf_aap::TransactionNote;
 use reef::Ledger;
 
-// TODO add a test to check if includedNotes is computed correctly
-
-#[test]
-fn test_note_types() {
-    // TODO
-    // let rng = ark_std::test_rng();
-    // assert_eq!(get_note_type(TransferNote::rand_for_test(&rng)), 0u8);
-    // assert_eq!(get_note_type(FreezeNote::rand_for_test(&rng)), 1u8);
-    // assert_eq!(get_note_type(MintNote::rand_for_test(&rng)), 2u8);
-    // assert_eq!(get_note_type(create_test_burn_note(&rng)), 3u8);
-}
-
 #[tokio::test]
 async fn test_contains_burn_prefix() {
     let contract = deploy_cape_test().await;
@@ -101,9 +89,6 @@ async fn test_check_burn_bad_record_commitment() {
 }
 
 // TODO Add test for check_burn that passes
-
-// TODO integration test to check if check_burn is hooked up correctly in
-// main block validation loop.
 
 #[tokio::test]
 async fn test_check_transfer_expired_note_triggers_an_error() -> Result<()> {

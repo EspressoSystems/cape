@@ -124,6 +124,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "slow-tests")]
     #[async_std::test]
     #[traced_test]
     async fn test_newwallet() {
@@ -157,6 +158,7 @@ mod tests {
             .expect_err("newwallet succeeded when a wallet already existed");
     }
 
+    #[cfg(feature = "slow-tests")]
     #[async_std::test]
     #[traced_test]
     async fn test_openwallet() {
@@ -204,6 +206,7 @@ mod tests {
             .expect_err("openwallet succeeded with an invalid path");
     }
 
+    #[cfg(feature = "slow-tests")]
     #[async_std::test]
     #[traced_test]
     async fn test_closewallet() {

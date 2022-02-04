@@ -25,6 +25,7 @@ mod errors_when_calling_deposit_erc20 {
     enum WrongCallDepositErc20 {
         AssetTypeNotRegistered,
         SkipApproval,
+        PendingDepositsQueueIsFull,
     }
 
     async fn call_deposit_erc20_with_error_helper(
@@ -47,7 +48,8 @@ mod errors_when_calling_deposit_erc20 {
         let amount_u256 = U256::from(deposited_amount);
 
         match wrong_call {
-            WrongCallDepositErc20::AssetTypeNotRegistered => {
+            WrongCallDepositErc20::AssetTypeNotRegistered
+            | WrongCallDepositErc20::PendingDepositsQueueIsFull => {
                 erc20_token_contract
                     .approve(contract_address, amount_u256)
                     .send()
@@ -71,7 +73,8 @@ mod errors_when_calling_deposit_erc20 {
         let asset_def_sol = asset_def.clone().generic_into::<sol::AssetDefinition>();
 
         match wrong_call {
-            WrongCallDepositErc20::SkipApproval => {
+            WrongCallDepositErc20::SkipApproval
+            | WrongCallDepositErc20::PendingDepositsQueueIsFull => {
                 TestCAPE::new(
                     cape_contract.address(),
                     Arc::new(owner_of_erc20_tokens_client.clone()),
@@ -82,6 +85,18 @@ mod errors_when_calling_deposit_erc20 {
                 .await?;
             }
             WrongCallDepositErc20::AssetTypeNotRegistered => {}
+        }
+
+        match wrong_call {
+            WrongCallDepositErc20::PendingDepositsQueueIsFull => {
+                cape_contract
+                    .fill_up_pending_deposits_queue()
+                    .send()
+                    .await?
+                    .await?;
+            }
+            WrongCallDepositErc20::AssetTypeNotRegistered | WrongCallDepositErc20::SkipApproval => {
+            }
         }
 
         // Build record opening
@@ -103,7 +118,7 @@ mod errors_when_calling_deposit_erc20 {
             .call()
             .await;
 
-        call.should_revert_with_message(&expected_error_message);
+        call.should_revert_with_message(expected_error_message);
 
         Ok(())
     }
@@ -122,6 +137,15 @@ mod errors_when_calling_deposit_erc20 {
         call_deposit_erc20_with_error_helper(
             "ERC20: transfer amount exceeds allowance",
             WrongCallDepositErc20::SkipApproval,
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn the_erc20_tok() -> Result<()> {
+        call_deposit_erc20_with_error_helper(
+            "Pending deposits queue is full",
+            WrongCallDepositErc20::PendingDepositsQueueIsFull,
         )
         .await
     }
@@ -160,7 +184,6 @@ async fn test_check_foreign_asset_code() -> Result<()> {
 
     let erc20_address = Address::random();
     // This is the first account from the test mnemonic
-    // TODO define elsewhere to make it usable from other tests
     let sponsor = "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266".parse::<Address>()?;
     let erc20_code = Erc20Code(EthereumAddr(erc20_address.to_fixed_bytes()));
 

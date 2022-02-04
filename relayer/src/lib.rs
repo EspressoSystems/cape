@@ -261,6 +261,7 @@ mod test {
     }
 
     #[async_std::test]
+    #[ignore]
     async fn test_submit() {
         let mut rng = ChaChaRng::from_seed([42; 32]);
         let user = UserKeyPair::generate(&mut rng);

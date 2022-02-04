@@ -1,21 +1,46 @@
 # Summary
 
 - [Introduction](./INTRODUCTION.md)
+
+# Contracts
+
 - [CAPE](./CAPE.md)
+- [AssetRegistry](./AssetRegistry.md)
+- [Curve](./Curve.md)
 - [NullifiersStore](./NullifiersStore.md)
 - [ReadCAPTx](./ReadCAPTx.md)
 - [RecordsMerkleTree](./RecordsMerkleTree.md)
+- [Rescue](./Rescue.md)
+- [RescueNonOptimized](./RescueNonOptimized.md)
+- [RootStore](./RootStore.md)
 - [SimpleToken](./SimpleToken.md)
+- [TestBN254](./TestBN254.md)
+- [TestCAPE](./TestCAPE.md)
+- [TestRecordsMerkleTree](./TestRecordsMerkleTree.md)
+- [TestRescue](./TestRescue.md)
+- [TestRescueNonOptimized](./TestRescueNonOptimized.md)
 - [Wrapper](./Wrapper.md)
+- [IPlonkVerifier](./interfaces/IPlonkVerifier.md)
+- [AccumulatingArray](./libraries/AccumulatingArray.md)
+- [BN254](./libraries/BN254.md)
+- [RescueLib](./libraries/RescueLib.md)
+- [TestAccumulatingArray](./mocks/TestAccumulatingArray.md)
+- [TestBN254](./mocks/TestBN254.md)
+- [TestCAPE](./mocks/TestCAPE.md)
+- [TestCapeTypes](./mocks/TestCapeTypes.md)
+- [TestRecordsMerkleTree](./mocks/TestRecordsMerkleTree.md)
+- [TestRescue](./mocks/TestRescue.md)
+- [TestRescueNonOptimized](./mocks/TestRescueNonOptimized.md)
+- [TestRootStore](./mocks/TestRootStore.md)
+- [TestTranscript](./mocks/TestTranscript.md)
+- [PlonkVerifier](./verifier/PlonkVerifier.md)
+- [Transcript](./verifier/Transcript.md)
+
+# Security
+
+- [DoS on Relayer via malicious ERC20 token contract](./MaliciousERC20TokenContract.md)
+
+# Misc
+
 - [Ancillary Material](./ANCILLARY.md)
-  - [AccumulatingArray](./libraries/AccumulatingArray.md)
-  - [BN254](./libraries/BN254.md)
-  - [DummyCAPE](./DummyCAPE.md)
   - [Greeter](./Greeter.md)
-  - [RescueNonOptimized](./RescueNonOptimized.md)
-  - [Rescue](./Rescue.md)
-  - [TestBN254](./TestBN254.md)
-  - [TestCAPE](./TestCAPE.md)
-  - [TestRecordsMerkleTree](./TestRecordsMerkleTree.md)
-  - [TestRescueNonOptimized](./TestRescueNonOptimized.md)
-  - [TestRescue](./TestRescue.md)

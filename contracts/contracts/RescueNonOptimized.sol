@@ -215,7 +215,6 @@ contract RescueNonOptimized {
     {
         uint256[_STATE_SIZE] memory newState = [uint256(0), 0, 0, 0];
 
-        // TODO remove loop to save gas?
         // Matrix multiplication
         for (uint256 i = 0; i < _STATE_SIZE; i++) {
             uint256 sum = uint256(0);
@@ -235,9 +234,11 @@ contract RescueNonOptimized {
     // Recall that the scheduled key is precomputed in our case
     // @param input input for the permutation
     // @return permutation output
-    function _perm(
-        uint256[_STATE_SIZE] memory input // TODO this should be made private/internal
-    ) internal view returns (uint256[_STATE_SIZE] memory) {
+    function _perm(uint256[_STATE_SIZE] memory input)
+        internal
+        view
+        returns (uint256[_STATE_SIZE] memory)
+    {
         uint256[_STATE_SIZE] memory key0 = [
             _SCHEDULED_KEY[0],
             _SCHEDULED_KEY[1],
@@ -251,13 +252,11 @@ contract RescueNonOptimized {
         // Main loop
         for (uint256 i = 1; i < 2 * _N_ROUNDS + 1; i++) {
             if ((i - 1) % 2 == 0) {
-                // TODO avoid code duplication?
                 S[0] = expMod(S[0], _ALPHA_INV, _PRIME);
                 S[1] = expMod(S[1], _ALPHA_INV, _PRIME);
                 S[2] = expMod(S[2], _ALPHA_INV, _PRIME);
                 S[3] = expMod(S[3], _ALPHA_INV, _PRIME);
             } else {
-                // TODO avoid code duplication?
                 S[0] = expMod(S[0], _ALPHA, _PRIME);
                 S[1] = expMod(S[1], _ALPHA, _PRIME);
                 S[2] = expMod(S[2], _ALPHA, _PRIME);

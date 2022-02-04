@@ -7,10 +7,11 @@ use cap_rust_sandbox::helpers::{
 use cap_rust_sandbox::ledger::CapeLedger;
 use cap_rust_sandbox::state::{erc20_asset_description, Erc20Code, EthereumAddr};
 use cap_rust_sandbox::test_utils::{check_erc20_token_balance, ContractsInfo};
-use cap_rust_sandbox::types as sol;
+use cap_rust_sandbox::types::{self as sol, RecordCommitmentSol};
 use cap_rust_sandbox::types::{GenericInto, MerkleRootSol, RecordOpening as RecordOpeningSol};
 use ethers::abi::AbiDecode;
 use ethers::prelude::U256;
+use itertools::Itertools;
 use jf_aap::keys::UserPubKey;
 use jf_aap::structs::{
     AssetCode, AssetDefinition, AssetPolicy, FreezeFlag, RecordCommitment, RecordOpening,
@@ -265,6 +266,24 @@ async fn integration_test_wrapping_erc20_tokens() -> Result<()> {
         .await?;
 
     assert!(is_queue_empty);
+
+    // Check the record commitments for the deposits were emitted
+    let logs = cape_contract
+        .block_committed_filter()
+        .from_block(0u64)
+        .query()
+        .await?;
+
+    assert_eq!(
+        logs[0]
+            .deposit_commitments
+            .iter()
+            .map(|&rc| rc
+                .generic_into::<RecordCommitmentSol>()
+                .generic_into::<RecordCommitment>())
+            .collect_vec(),
+        vec![rc1, rc2]
+    );
 
     Ok(())
 }

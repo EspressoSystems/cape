@@ -14,7 +14,7 @@ jf-aap = { features = ["test_apis"], git = "ssh://git@github.com/SpectrumXYZ/jel
 jf-rescue = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git" }
 jf-utils = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git" }
 key-set = { git = "ssh://git@github.com/SpectrumXYZ/key-set.git", rev = "1cc35513c0f24c1d58d55ef699038fd647590555" }
-reef = { git = "ssh://git@github.com/SpectrumXYZ/reef.git", branch = "keyao-change-dep" }
+reef = { git = "ssh://git@github.com/SpectrumXYZ/reef.git", rev = "859f50ef6181dc81adb20d041e98ec75700cac94" }
 universal-param = { git = "ssh://git@github.com/SpectrumXYZ/universal-param.git" }
 zerok-macros = { git = "ssh://git@github.com/SpectrumXYZ/zerok-macros.git" }
 arbitrary = { version="1.0", features=["derive"] }

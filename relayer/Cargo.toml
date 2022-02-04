@@ -21,7 +21,7 @@ key-set = { git = "ssh://git@github.com/SpectrumXYZ/key-set.git", rev = "1cc3551
 lazy_static = "1.4.0"
 net = { git = "ssh://git@github.com/SpectrumXYZ/net.git" }
 rand_chacha = { version = "0.3.1", features = ["serde1"] }
-reef = { git = "ssh://git@github.com/SpectrumXYZ/reef.git", branch = "keyao-change-dep" }
+reef = { git = "ssh://git@github.com/SpectrumXYZ/reef.git", rev = "859f50ef6181dc81adb20d041e98ec75700cac94" }
 serde = { version = "1.0.123", features = ["derive", "rc"] }
 serde_derive = "1.0.118"
 serde_json = "1.0.61"

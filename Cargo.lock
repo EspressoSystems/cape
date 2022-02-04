@@ -4482,7 +4482,7 @@ dependencies = [
 [[package]]
 name = "reef"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/reef.git?branch=keyao-change-dep#b2988b7c7e325df39d7551b72fba70ead9a5a517"
+source = "git+ssh://git@github.com/SpectrumXYZ/reef.git?rev=859f50ef6181dc81adb20d041e98ec75700cac94#859f50ef6181dc81adb20d041e98ec75700cac94"
 dependencies = [
  "arbitrary",
  "arbitrary-wrappers",
@@ -4890,7 +4890,7 @@ dependencies = [
 [[package]]
 name = "seahorse"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/seahorse.git?branch=keyao-jf-dep#4ccd47beb2b88e3c4ca48bb0d734927c3165d608"
+source = "git+ssh://git@github.com/SpectrumXYZ/seahorse.git?rev=63f12c7fa896f5a61a63b6ad1115a97c2987edb4#63f12c7fa896f5a61a63b6ad1115a97c2987edb4"
 dependencies = [
  "arbitrary",
  "arbitrary-wrappers",

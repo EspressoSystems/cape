@@ -782,7 +782,9 @@ mod cape_wallet_tests {
     use seahorse::txn_builder::TransactionError;
     use std::time::Instant;
 
+    #[cfg(feature = "slow-tests")]
     use testing::generic_wallet_tests;
+    #[cfg(feature = "slow-tests")]
     seahorse::instantiate_generic_wallet_tests!(CapeTest);
 
     #[async_std::test]

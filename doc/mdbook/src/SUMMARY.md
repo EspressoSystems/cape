@@ -1,6 +1,9 @@
 # Summary
 
 - [Introduction](./INTRODUCTION.md)
+
+# Contracts
+
 - [CAPE](./CAPE.md)
 - [AssetRegistry](./AssetRegistry.md)
 - [Curve](./Curve.md)
@@ -32,6 +35,12 @@
 - [TestTranscript](./mocks/TestTranscript.md)
 - [PlonkVerifier](./verifier/PlonkVerifier.md)
 - [Transcript](./verifier/Transcript.md)
+
+# Security
+
+- [DoS on Relayer via malicious ERC20 token contract](./MaliciousERC20TokenContract.md)
+
+# Misc
 
 - [Ancillary Material](./ANCILLARY.md)
   - [Greeter](./Greeter.md)

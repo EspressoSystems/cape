@@ -405,6 +405,7 @@ mod test {
     }
 
     #[async_std::test]
+    #[flaky_test::flaky_test]
     async fn test_transfer() {
         let mut rng = ChaChaRng::from_seed([1u8; 32]);
         let universal_param = universal_setup_for_test(2usize.pow(16), &mut rng).unwrap();

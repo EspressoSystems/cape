@@ -72,25 +72,6 @@ const config: HardhatUserConfig = {
       url: `http://localhost:${process.env.RPC_PORT || 8545}`,
       timeout: 120000, // when running against hardhat, some tests are very slow
     },
-    arbitrum: {
-      url: `https://rinkeby.arbitrum.io/rpc`,
-      gasPrice: 1_000_000_000,
-      accounts: { mnemonic: process.env.RINKEBY_MNEMONIC },
-    },
-    // Network config from
-    // https://github.com/OffchainLabs/arbitrum/blob/b89d2d626f7e78f3c24624ba23c2fd8d2bad42ac/packages/arb-bridge-eth/hardhat.config.ts#L337-L349
-    arbitrum_dev: {
-      url: "http://127.0.0.1:8547",
-      // url: 'https://kovan3.arbitrum.io/rpc',
-      gas: 999999999999999,
-      accounts: {
-        mnemonic: "jar deny prosper gasp flush glass core corn alarm treat leg smart",
-        path: "m/44'/60'/0'/0",
-        initialIndex: 0,
-        count: 10,
-      },
-      timeout: 100000,
-    },
   },
   solidity: {
     version: process.env.SOLC_VERSION ? process.env.SOLC_VERSION : "0.8.0",

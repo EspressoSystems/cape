@@ -17,7 +17,6 @@
   - [Testing against hardhat node](#testing-against-hardhat-node)
     - [Separate hardhat node](#separate-hardhat-node)
     - [Hardhat node integrated in test command](#hardhat-node-integrated-in-test-command)
-  - [Running scripts](#running-scripts)
   - [Deployment](#deployment)
     - [Linking to deployed contracts](#linking-to-deployed-contracts)
   - [Precompiled solidity binaries](#precompiled-solidity-binaries)
@@ -28,23 +27,16 @@
   - [Updating dependencies](#updating-dependencies)
   - [Alternative nix installation methods](#alternative-nix-installation-methods)
     - [Nix on debian/ubuntu](#nix-on-debianubuntu)
-      - [Installation](#installation)
-      - [Uninstallation](#uninstallation)
   - [Git hooks](#git-hooks)
   - [Ethereum key management](#ethereum-key-management)
   - [Python tools](#python-tools)
-- [Benchmarks](#benchmarks)
-- [Local network](#local-network)
 - [Rinkeby](#rinkeby)
 - [Goerli](#goerli)
-- [Arbitrum on Rinkeby](#arbitrum-on-rinkeby)
-- [CAP on Arbitrum (a.k.a CAPA)](#cap-on-arbitrum-aka-capa)
-- [Running local arb-dev-node (not officially supported!)](#running-local-arb-dev-node-not-officially-supported)
 - [Gas Reporter](#gas-reporter)
 - [CI](#ci)
   - [Nightly CI builds](#nightly-ci-builds)
 - [Documentation](#documentation)
-  - [Ethereum Asset (Un)Wrapping Workflow](#ethereum-asset-unwrapping-workflow)
+  - [CAPE Contract specification](#cape-contract-specification)
 
 <!-- markdown-toc end -->
 
@@ -401,59 +393,6 @@ To run an end-to-end test against rinkeby
 - Similar to Rinkeby section (replace RINKEBY with GOERLI) and use `--network goerli`.
 - Faucets: [Simple](https://goerli-faucet.slock.it),
   [Social](https://faucet.goerli.mudit.blog/).
-
-# Arbitrum on Rinkeby
-
-To run the benchmarks against Arbitrum Rinkeby follow these steps:
-
-- Install [Metamask](https://metamask.io/) in your browser and copy the mnemonic.
-- Set the RINKEBY_MNEMONIC in the .env file. Note: this variable may be looked up in the environment so restart your nix shell for the updated env var to be accurate when read.
-- Switch metamask to the rinkeby network.
-- Get some Rinkeby coins at the [MyCrypto faucet](https://app.mycrypto.com/faucet). You can also use the official [Rinkeby faucet](https://faucet.rinkeby.io) which is less stable but where you can get more coins at once.
-- Go to the [Arbitrum bridge](https://bridge.arbitrum.io/) and deposit your
-  Rinkeby coins. Leave a bit for the ethereum gas fees. Wait a few minutes until
-  your account is funded.
-- Run the following command
-
-```
-> hardhat --network arbitrum run contracts/scripts/benchmarks.js
-```
-
-You can check the deployment and transactions on Arbitrum for the contract
-at https://testnet.arbiscan.io/address/0x2FB18F4b4519a5fc792cb6508C6505675BA659E9.
-
-# CAP on Arbitrum (a.k.a CAPA)
-
-Clone the arbitrum submodule (https://github.com/SpectrumXYZ/arbitrum fork)
-
-    git submodule update --init --recursive
-    cd contracts/arbitrum
-    nix-shell
-
-# Running local arb-dev-node (not officially supported!)
-
-Install dependencies
-
-    pip install -r requirements-dev.txt
-    yarn
-    yarn install:validator
-
-Build and run `arb-dev-node` and keep it running
-
-    cd packages/arb-rpc-node/cmd/arb-dev-node
-    go run arb-dev-node.go
-
-Run scripts
-
-    hardhat --network arbitrum_dev run contracts/scripts/benchmarks.js
-
-We are investigating why some of these transactions revert.
-
-Run tests
-
-    hardhat --network arbitrum_dev contracts/test/test-dummy-cape-contract.js
-
-at the moment this will fail due to gas mismatch.
 
 # Gas Reporter
 

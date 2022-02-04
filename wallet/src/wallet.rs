@@ -68,6 +68,7 @@ pub trait CapeWalletExt<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> {
         aap_asset_policy: AssetPolicy,
     ) -> Result<AssetDefinition, CapeWalletError>;
 
+    // We may return a `WrapReceipt`, i.e., a record commitment to track wraps, once it's defined.
     async fn wrap(
         &mut self,
         src_addr: EthereumAddr,
@@ -75,7 +76,7 @@ pub trait CapeWalletExt<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> {
         // than one AAP asset for a given ERC20 token. We need the user to disambiguate (probably
         // using a list of approved (AAP, ERC20) pairs provided by the query service).
         aap_asset: AssetDefinition,
-        owner: UserAddress,
+        dst_addr: UserAddress,
         amount: u64,
     ) -> Result<(), CapeWalletError>;
 
@@ -126,13 +127,13 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
         &mut self,
         src_addr: EthereumAddr,
         aap_asset: AssetDefinition,
-        owner: UserAddress,
+        dst_addr: UserAddress,
         amount: u64,
     ) -> Result<(), CapeWalletError> {
         let mut state = self.lock().await;
 
         let erc20_code = state.backend().get_wrapped_erc20_code(&aap_asset).await?;
-        let pub_key = state.backend().get_public_key(&owner).await?;
+        let pub_key = state.backend().get_public_key(&dst_addr).await?;
 
         let ro = RecordOpening::new(
             state.rng(),

@@ -13,12 +13,12 @@ use cap_rust_sandbox::{
 };
 use futures::{prelude::*, stream::iter};
 use jf_aap::{
-    keys::{AuditorPubKey, FreezerPubKey, UserAddress, UserPubKey},
+    keys::{AuditorPubKey, FreezerPubKey, UserPubKey},
     structs::{AssetCode, AssetDefinition, AssetPolicy},
     MerkleTree, TransactionVerifyingKey,
 };
 use key_set::{KeySet, VerifierKeySet};
-use net::{server::response, TaggedBlob};
+use net::{server::response, TaggedBlob, UserAddress};
 use reef::traits::Ledger;
 use seahorse::{
     loader::{Loader, LoaderMetadata},
@@ -450,7 +450,7 @@ async fn getinfo(wallet: &mut Option<Wallet>) -> Result<WalletSummary, tide::Err
             .pub_keys()
             .await
             .into_iter()
-            .map(|pub_key| pub_key.address())
+            .map(|pub_key| pub_key.address().into())
             .collect(),
         spend_keys: wallet.pub_keys().await,
         audit_keys: wallet.auditor_pub_keys().await,
@@ -465,7 +465,7 @@ async fn getaddress(wallet: &mut Option<Wallet>) -> Result<Vec<UserAddress>, tid
         .pub_keys()
         .await
         .into_iter()
-        .map(|pub_key| pub_key.address())
+        .map(|pub_key| pub_key.address().into())
         .collect())
 }
 
@@ -509,7 +509,7 @@ async fn getbalance(
     };
 
     let one_balance =
-        |address: UserAddress, asset| async move { wallet.balance(&address, &asset).await };
+        |address: UserAddress, asset| async move { wallet.balance(&address.into(), &asset).await };
     let account_balances = |address: UserAddress| async move {
         iter(known_assets(wallet).await.into_keys())
             .then(|asset| {
@@ -522,7 +522,7 @@ async fn getbalance(
     let all_balances = || async {
         iter(wallet.pub_keys().await)
             .then(|key| async move {
-                let address = key.address();
+                let address = UserAddress::from(key.address());
                 (address.clone(), account_balances(address).await)
             })
             .collect()
@@ -618,7 +618,11 @@ async fn wrap(
 ) -> Result<(), tide::Error> {
     let wallet = require_wallet(wallet)?;
 
-    let owner = bindings.get(":owner").unwrap().value.to::<UserAddress>()?;
+    let destination = bindings
+        .get(":destination")
+        .unwrap()
+        .value
+        .to::<UserAddress>()?;
     let eth_address = bindings
         .get(":eth_address")
         .unwrap()
@@ -631,7 +635,9 @@ async fn wrap(
         .to::<AssetDefinition>()?;
     let amount = bindings.get(":amount").unwrap().value.as_u64()?;
 
-    Ok(wallet.wrap(eth_address, asset, owner, amount).await?)
+    Ok(wallet
+        .wrap(eth_address, asset, destination.into(), amount)
+        .await?)
 }
 
 pub async fn dispatch_url(

@@ -99,7 +99,7 @@ Get the addresses, public keys, and asset types for the current wallet.
 [route.newkey]
 PATH = ["newkey/send", "newkey/trace", "newkey/freeze"]
 DOC = """
-Generate and return a key of the given type to be used to create (sponsor or define) assets.
+Generate and return a key of the given type.
 """
 
 [route.importkey]
@@ -123,13 +123,13 @@ Transfer amount units of the given asset from the sender to the recipient. Retur
 """
 
 [route.wrap]
-PATH = ["wrap/owner/:owner/ethaddress/:eth_address/amount/:amount/asset/:asset"]
-":owner" = "TaggedBase64"
+PATH = ["wrap/destination/:destination/ethaddress/:eth_address/amount/:amount/asset/:asset"]
+":destination" = "TaggedBase64"
 ":eth_address" = "TaggedBase64"
 ":amount" = "Integer"
 ":asset" = "TaggedBase64"
 DOC = """
-Wrap amount units of the given asset from the Ethereum address to the owner address. Returns a serialized receipt which can be used to track the transaction through the validation process.
+Wrap amount units of the given asset from the Ethereum address to the destination.
 """
 
 [route.unwrap]

@@ -51,10 +51,10 @@ mod tests {
         testing::port,
     };
     use jf_aap::{
-        keys::{UserAddress, UserKeyPair},
+        keys::UserKeyPair,
         structs::{AssetCode, AssetDefinition},
     };
-    use net::client;
+    use net::{client, UserAddress};
     use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
     use seahorse::{hd::KeyTree, txn_builder::AssetInfo};
     use serde::de::DeserializeOwned;
@@ -620,30 +620,30 @@ mod tests {
         server.get::<PubKey>("newkey/send").await.unwrap();
         let info = server.get::<WalletSummary>("getinfo").await.unwrap();
         let spend_key = &info.spend_keys[0];
-        let owner_addr = spend_key.address();
+        let destination: UserAddress = spend_key.address().into();
 
-        // wrap should fail if any of the owner address, Ethereum address, and asset is invalid.
-        let invalid_owner_addr = UserAddress::from(UserKeyPair::generate(&mut rng).address());
+        // wrap should fail if any of the destination, Ethereum address, and asset is invalid.
+        let invalid_destination = UserAddress::from(UserKeyPair::generate(&mut rng).address());
         let invalid_eth_addr = Erc20Code(EthereumAddr([0u8; 20]));
         let invalid_asset = AssetDefinition::dummy();
         server
             .get::<()>(&format!(
-                "wrap/owner/{}/ethaddress/{}/amount/{}/asset/{}",
-                invalid_owner_addr, sponsor_addr, 10, sponsored_asset
+                "wrap/destination/{}/ethaddress/{}/amount/{}/asset/{}",
+                invalid_destination, sponsor_addr, 10, sponsored_asset
             ))
             .await
             .expect_err("wrap succeeded with an invalid owner address");
         server
             .get::<()>(&format!(
-                "wrap/owner/{}/ethaddress/{}/amount/{}/asset/{}",
-                owner_addr, invalid_eth_addr, 10, sponsored_asset
+                "wrap/destination/{}/ethaddress/{}/amount/{}/asset/{}",
+                destination, invalid_eth_addr, 10, sponsored_asset
             ))
             .await
             .expect_err("wrap succeeded with an invalid Ethereum addreee");
         server
             .get::<()>(&format!(
-                "wrap/owner/{}/ethaddress/{}/amount/{}/asset/{}",
-                owner_addr, sponsor_addr, 10, invalid_asset
+                "wrap/destination/{}/ethaddress/{}/amount/{}/asset/{}",
+                destination, sponsor_addr, 10, invalid_asset
             ))
             .await
             .expect_err("wrap succeeded with an invalid asset");
@@ -651,8 +651,8 @@ mod tests {
         // wrap should succeed with the correct information.
         server
             .get::<()>(&format!(
-                "wrap/owner/{}/ethaddress/{}/amount/{}/asset/{}",
-                owner_addr, sponsor_addr, 10, sponsored_asset
+                "wrap/destination/{}/ethaddress/{}/amount/{}/asset/{}",
+                destination, sponsor_addr, 10, sponsored_asset
             ))
             .await
             .unwrap();

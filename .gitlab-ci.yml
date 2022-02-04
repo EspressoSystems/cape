@@ -23,7 +23,6 @@ test:
     - docker
   script:
     - nix-shell --run "prepend-timestamps cape-test-geth"
-    # - nix-shell --run cape-test-brownie # TODO not working at the moment
   cache:
     key: cape-test
     paths:

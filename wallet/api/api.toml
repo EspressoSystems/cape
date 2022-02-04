@@ -99,7 +99,7 @@ Get the addresses, public keys, and asset types for the current wallet.
 [route.newkey]
 PATH = ["newkey/send", "newkey/trace", "newkey/freeze"]
 DOC = """
-Generate and return a key of the given type to be used to define assets.
+Generate and return a key of the given type to be used to create (sponsor or define) assets.
 """
 
 [route.importkey]
@@ -227,16 +227,6 @@ PATH = ["mint/asset/:asset/amount/:amount/sendkey/:send_key/freezekey/:freeze_ke
 ":trace_key" = "TaggedBase64"
 DOC = """
 Mint amount units of a given asset code controlled by the current wallet. Reports the asset code associated with the given keys. Keys are generated with *newkey*.
-"""
-
-# TODO !corbett This is also called sponsor, but that seems harder to understand than 'deposit' or 'wrap'.
-[route.deposit]
-PATH = ["deposit/asset/:asset/erc20/:erc20/amount/:amount"]
-":asset" = "TaggedBase64"
-":erc20" = "TaggedBase64"
-":amount" = "Integer"
-DOC = """
-Deposit (wrap) ERC-20 into CAPE.
 """
 
 [route.freeze]

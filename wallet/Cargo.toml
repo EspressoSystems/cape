@@ -19,8 +19,8 @@ ethers = { git = "https://github.com/gakonst/ethers-rs", branch = "master" }
 futures = "0.3.0"
 futures-util = "0.3.8"
 itertools = "0.10.1"
-jf-aap = { features=["std"], path = "/Users/keyao/Code/jellyfish-apps/aap" }
-key-set = { git = "ssh://git@github.com/SpectrumXYZ/key-set.git" }
+jf-aap = { features = ["test_apis"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", rev = "8c32d8df3faf511e54ad89fa51627837ebcd8f20" }
+key-set = { git = "ssh://git@github.com/SpectrumXYZ/key-set.git", rev = "1cc35513c0f24c1d58d55ef699038fd647590555" }
 lazy_static = "1.4.0"
 jf-plonk = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git" }
 jf-primitives = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git"}
@@ -30,9 +30,9 @@ markdown = "0.3"
 net = { git = "ssh://git@github.com/SpectrumXYZ/net.git" }
 rand_chacha = "0.3.1"
 regex = "1.5.4"
-reef = { path = "/Users/keyao/Code/reef" }
+reef = { git = "ssh://git@github.com/SpectrumXYZ/reef.git", branch = "keyao-change-dep" }
 relayer = { path = "../relayer", features = ["testing"] }
-seahorse = { path = "/Users/keyao/Code/seahorse", features = ["testing"] }
+seahorse = { git = "ssh://git@github.com/SpectrumXYZ/seahorse.git", branch = "keyao-jf-dep", features = ["testing"] }
 serde = { version = "1.0.123", features = ["derive", "rc"] }
 serde_derive = "1.0.118"
 serde_json = "1.0.61"

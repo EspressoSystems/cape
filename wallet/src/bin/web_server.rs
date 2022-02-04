@@ -51,10 +51,10 @@ mod tests {
         testing::port,
     };
     use jf_aap::{
-        keys::UserKeyPair,
+        keys::{UserAddress, UserKeyPair},
         structs::{AssetCode, AssetDefinition},
     };
-    use net::{client, UserAddress};
+    use net::client;
     use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
     use seahorse::{hd::KeyTree, txn_builder::AssetInfo};
     use serde::de::DeserializeOwned;
@@ -586,5 +586,75 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(defined_asset.policy_ref().reveal_threshold(), 0);
+    }
+
+    #[async_std::test]
+    #[traced_test]
+    async fn test_wrap() {
+        // Set parameters for sponsor and wrap.
+        let erc20_code = Erc20Code(EthereumAddr([1u8; 20]));
+        let sponsor_addr = EthereumAddr([2u8; 20]);
+
+        // Open a wallet.
+        let server = TestServer::new().await;
+        let mut rng = ChaChaRng::from_seed([42u8; 32]);
+        server
+            .get::<()>(&format!(
+                "newwallet/{}/path/{}",
+                random_mnemonic(&mut rng),
+                server.path()
+            ))
+            .await
+            .unwrap();
+
+        // Sponsor an asset.
+        let sponsored_asset = server
+            .get::<AssetDefinition>(&format!(
+                "newasset/erc20/{}/issuer/{}",
+                erc20_code, sponsor_addr
+            ))
+            .await
+            .unwrap();
+
+        // Create an address to receive the wrapped asset.
+        server.get::<PubKey>("newkey/send").await.unwrap();
+        let info = server.get::<WalletSummary>("getinfo").await.unwrap();
+        let spend_key = &info.spend_keys[0];
+        let owner_addr = spend_key.address();
+
+        // wrap should fail if any of the owner address, Ethereum address, and asset is invalid.
+        let invalid_owner_addr = UserAddress::from(UserKeyPair::generate(&mut rng).address());
+        let invalid_eth_addr = Erc20Code(EthereumAddr([0u8; 20]));
+        let invalid_asset = AssetDefinition::dummy();
+        server
+            .get::<()>(&format!(
+                "wrap/owner/{}/ethaddress/{}/amount/{}/asset/{}",
+                invalid_owner_addr, sponsor_addr, 10, sponsored_asset
+            ))
+            .await
+            .expect_err("wrap succeeded with an invalid owner address");
+        server
+            .get::<()>(&format!(
+                "wrap/owner/{}/ethaddress/{}/amount/{}/asset/{}",
+                owner_addr, invalid_eth_addr, 10, sponsored_asset
+            ))
+            .await
+            .expect_err("wrap succeeded with an invalid Ethereum addreee");
+        server
+            .get::<()>(&format!(
+                "wrap/owner/{}/ethaddress/{}/amount/{}/asset/{}",
+                owner_addr, sponsor_addr, 10, invalid_asset
+            ))
+            .await
+            .expect_err("wrap succeeded with an invalid asset");
+
+        // wrap should succeed with the correct information.
+        server
+            .get::<()>(&format!(
+                "wrap/owner/{}/ethaddress/{}/amount/{}/asset/{}",
+                owner_addr, sponsor_addr, 10, sponsored_asset
+            ))
+            .await
+            .unwrap();
     }
 }

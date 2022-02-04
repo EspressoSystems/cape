@@ -13,12 +13,12 @@ use cap_rust_sandbox::{
 };
 use futures::{prelude::*, stream::iter};
 use jf_aap::{
-    keys::{AuditorPubKey, FreezerPubKey, UserPubKey},
+    keys::{AuditorPubKey, FreezerPubKey, UserAddress, UserPubKey},
     structs::{AssetCode, AssetDefinition, AssetPolicy},
     MerkleTree, TransactionVerifyingKey,
 };
 use key_set::{KeySet, VerifierKeySet};
-use net::{server::response, TaggedBlob, UserAddress};
+use net::{server::response, TaggedBlob};
 use reef::traits::Ledger;
 use seahorse::{
     loader::{Loader, LoaderMetadata},
@@ -213,7 +213,6 @@ pub struct RouteBinding {
 #[derive(AsRefStr, Copy, Clone, Debug, EnumIter, EnumString)]
 pub enum ApiRouteKey {
     closewallet,
-    deposit,
     freeze,
     getaddress,
     getbalance,
@@ -451,7 +450,7 @@ async fn getinfo(wallet: &mut Option<Wallet>) -> Result<WalletSummary, tide::Err
             .pub_keys()
             .await
             .into_iter()
-            .map(|pub_key| pub_key.address().into())
+            .map(|pub_key| pub_key.address())
             .collect(),
         spend_keys: wallet.pub_keys().await,
         audit_keys: wallet.auditor_pub_keys().await,
@@ -466,7 +465,7 @@ async fn getaddress(wallet: &mut Option<Wallet>) -> Result<Vec<UserAddress>, tid
         .pub_keys()
         .await
         .into_iter()
-        .map(|pub_key| pub_key.address().into())
+        .map(|pub_key| pub_key.address())
         .collect())
 }
 
@@ -510,7 +509,7 @@ async fn getbalance(
     };
 
     let one_balance =
-        |address: UserAddress, asset| async move { wallet.balance(&address.into(), &asset).await };
+        |address: UserAddress, asset| async move { wallet.balance(&address, &asset).await };
     let account_balances = |address: UserAddress| async move {
         iter(known_assets(wallet).await.into_keys())
             .then(|asset| {
@@ -523,7 +522,7 @@ async fn getbalance(
     let all_balances = || async {
         iter(wallet.pub_keys().await)
             .then(|key| async move {
-                let address = UserAddress::from(key.address());
+                let address = key.address();
                 (address.clone(), account_balances(address).await)
             })
             .collect()
@@ -645,7 +644,6 @@ pub async fn dispatch_url(
     let key = ApiRouteKey::from_str(segments.0).expect("Unknown route");
     match key {
         ApiRouteKey::closewallet => response(&req, closewallet(wallet).await?),
-        ApiRouteKey::deposit => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::freeze => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::getaddress => response(&req, getaddress(wallet).await?),
         ApiRouteKey::getbalance => response(&req, getbalance(bindings, wallet).await?),

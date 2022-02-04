@@ -89,4 +89,12 @@ contract TestCAPE is CAPE {
     function isPendingDepositsQueueEmpty() public returns (bool) {
         return _isQueueEmpty();
     }
+
+    function fillUpPendingDepositsQueue() public {
+        bool isQueueFull = (_getQueueSize() == MAX_QUEUE_SIZE);
+        while (!isQueueFull) {
+            _pushToQueue(0);
+            isQueueFull = (_getQueueSize() == MAX_QUEUE_SIZE);
+        }
+    }
 }

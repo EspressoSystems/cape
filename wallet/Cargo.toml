@@ -28,6 +28,7 @@ jf-utils = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish
 
 markdown = "0.3"
 net = { git = "ssh://git@github.com/SpectrumXYZ/net.git" }
+rand = "0.8.4"
 rand_chacha = "0.3.1"
 regex = "1.5.4"
 reef = { git = "ssh://git@github.com/SpectrumXYZ/reef.git" }
@@ -52,6 +53,7 @@ tracing-distributed = "0.3.1"
 tracing-futures = "0.2"
 tracing-subscriber = "0.2.19"
 universal-param = { git = "ssh://git@github.com/SpectrumXYZ/universal-param.git" }
+surf = "2.3.2"
 
 [dev-dependencies]
 tempdir = "0.3.7"

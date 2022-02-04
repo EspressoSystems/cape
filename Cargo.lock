@@ -1110,6 +1110,7 @@ dependencies = [
  "lazy_static",
  "markdown",
  "net",
+ "rand 0.8.4",
  "rand_chacha 0.3.1",
  "reef",
  "regex",

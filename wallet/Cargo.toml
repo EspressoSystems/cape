@@ -57,3 +57,6 @@ universal-param = { git = "ssh://git@github.com/SpectrumXYZ/universal-param.git"
 [dev-dependencies]
 tempdir = "0.3.7"
 tracing-test = "0.2.1"
+
+[features]
+slow-tests = []

@@ -103,7 +103,7 @@ mod errors_when_calling_deposit_erc20 {
             .call()
             .await;
 
-        call.should_revert_with_message(&expected_error_message);
+        call.should_revert_with_message(expected_error_message);
 
         Ok(())
     }

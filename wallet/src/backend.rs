@@ -332,7 +332,7 @@ mod test {
     use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
     use reef::Ledger;
     use relayer::testing::start_minimal_relayer_for_test;
-    use seahorse::txn_builder::TransactionStatus;
+    use seahorse::testing::await_transaction;
     use std::path::PathBuf;
     use std::time::Duration;
     use tempdir::TempDir;
@@ -405,7 +405,6 @@ mod test {
     }
 
     #[async_std::test]
-    #[ignore]
     async fn test_transfer() {
         let mut rng = ChaChaRng::from_seed([1u8; 32]);
         let universal_param = universal_setup_for_test(2usize.pow(16), &mut rng).unwrap();
@@ -468,14 +467,7 @@ mod test {
             )
             .await
             .unwrap();
-        assert_eq!(
-            sender.await_transaction(&receipt).await.unwrap(),
-            TransactionStatus::Retired
-        );
-        assert_eq!(
-            receiver.await_transaction(&receipt).await.unwrap(),
-            TransactionStatus::Retired
-        );
+        await_transaction(&receipt, &sender, &[&receiver]).await;
         assert_eq!(
             sender
                 .balance(&sender_key.address(), &AssetCode::native())
@@ -500,14 +492,7 @@ mod test {
             )
             .await
             .unwrap();
-        assert_eq!(
-            sender.await_transaction(&receipt).await.unwrap(),
-            TransactionStatus::Retired
-        );
-        assert_eq!(
-            receiver.await_transaction(&receipt).await.unwrap(),
-            TransactionStatus::Retired
-        );
+        await_transaction(&receipt, &receiver, &[&sender]).await;
         assert_eq!(
             sender
                 .balance(&sender_key.address(), &AssetCode::native())
@@ -670,14 +655,7 @@ mod test {
             )
             .await
             .unwrap();
-        assert_eq!(
-            wrapper.await_transaction(&receipt).await.unwrap(),
-            TransactionStatus::Retired
-        );
-        assert_eq!(
-            sponsor.await_transaction(&receipt).await.unwrap(),
-            TransactionStatus::Retired
-        );
+        await_transaction(&receipt, &wrapper, &[&sponsor]).await;
         assert_eq!(
             wrapper
                 .balance(&wrapper_key.address(), &AssetCode::native())
@@ -709,14 +687,7 @@ mod test {
             )
             .await
             .unwrap();
-        assert_eq!(
-            wrapper.await_transaction(&receipt).await.unwrap(),
-            TransactionStatus::Retired
-        );
-        assert_eq!(
-            sponsor.await_transaction(&receipt).await.unwrap(),
-            TransactionStatus::Retired
-        );
+        await_transaction(&receipt, &wrapper, &[&sponsor]).await;
         assert_eq!(
             wrapper
                 .balance(&wrapper_key.address(), &cape_asset.code)
@@ -741,10 +712,7 @@ mod test {
             )
             .await
             .unwrap();
-        assert_eq!(
-            sponsor.await_transaction(&receipt).await.unwrap(),
-            TransactionStatus::Retired
-        );
+        await_transaction(&receipt, &sponsor, &[]).await;
         assert_eq!(
             sponsor
                 .balance(&sponsor_key.address(), &cape_asset.code)

@@ -22,6 +22,8 @@ contract AssetRegistry {
         uint64 revealThreshold;
     }
 
+    /// @dev fetch the ERC20 token address corresponding to some asset definition
+    /// @param assetDefinition asset definition
     function _lookup(AssetDefinition memory assetDefinition) internal view returns (address) {
         bytes32 key = keccak256(abi.encode(assetDefinition));
         return assets[key];
@@ -57,8 +59,10 @@ contract AssetRegistry {
     }
 
     /// @notice Checks if the asset definition code is correctly derived from the ERC20 address
-    ///        of the token and the address of the depositor.
+    ///        of the token and the address of the sponsor.
     /// @dev requires "view" to access msg.sender
+    /// @param assetDefinitionCode code of asset definition
+    /// @param erc20Address erc20 address bound to the asset definition
     function _checkForeignAssetCode(uint256 assetDefinitionCode, address erc20Address)
         internal
         view
@@ -71,6 +75,9 @@ contract AssetRegistry {
         require(derivedCode == assetDefinitionCode, "Wrong foreign asset code");
     }
 
+    /// @dev compute the asset description from the address of the erc20 token and the address of the sponsor
+    /// @param erc20Address address of the erc20 token
+    /// @param sponsor address of the sponsor
     function _computeAssetDescription(address erc20Address, address sponsor)
         internal
         pure

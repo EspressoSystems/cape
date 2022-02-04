@@ -27,7 +27,7 @@ contract RecordsMerkleTree {
 
     mapping(uint256 => uint256) internal _flattenedFrontier;
 
-    /// Instantiate a records merkle tree with its height
+    /// @dev Instantiate a records merkle tree with its height
     /// @param merkleTreeHeight height of the merkle tree
     constructor(uint8 merkleTreeHeight) {
         _rootValue = 0;
@@ -35,19 +35,31 @@ contract RecordsMerkleTree {
         _merkleTreeHeight = merkleTreeHeight;
     }
 
+    /// @dev Check if a node is terminal
+    /// @param node node
+    /// @return true if the node is terminal, false otherwise
     function _isTerminal(Node memory node) private pure returns (bool) {
         return (node.left == 0) && (node.middle == 0) && (node.right == 0);
     }
 
+    /// @dev check if a node has some children
+    /// @param node node
+    /// @return true if the node has some children, false otherwise
     function _hasChildren(Node memory node) private pure returns (bool) {
         return !_isTerminal(node);
     }
 
+    /// @dev check if a node is NULL
+    /// @param node node
+    /// @return true if the node is NULL, false otherwise
     function _isNull(Node memory node) private pure returns (bool) {
         return (node.val == 0 && _isTerminal(node));
     }
 
-    // Create the new "hole node" that points to the children already inserted in the array
+    /// @dev Create the new "hole node" that points to the children already inserted in the array
+    /// @param cursor index of the node in the array of nodes
+    /// @param posSibling position of the sibling i.e. (LEFT, MIDDLE or RIGHT)
+    /// @return the new created node
     function _createHoleNode(uint64 cursor, Position posSibling)
         private
         pure
@@ -70,6 +82,9 @@ contract RecordsMerkleTree {
         return node;
     }
 
+    /// @dev creates a tree structure from a frontier
+    /// @param nodes list of nodes to be filled / updated
+    /// @return cursor to the root node of the create tree
     function _buildTreeFromFrontier(Node[] memory nodes) internal view returns (uint64) {
         // Tree is empty
         if (_numLeaves == 0) {
@@ -119,6 +134,11 @@ contract RecordsMerkleTree {
         return cursor;
     }
 
+    /// @dev helper function to compute the index of the next node when going "down" in the tree
+    /// @param nodes list of nodes of teh tree
+    /// @param nodeIndex index of the node where we start from
+    /// @param pos position for going "down", i.e. LEFT, MIDDLE or RIGHT.
+    /// @return the index of the next node
     function _nextNodeIndex(
         Node[] memory nodes,
         uint64 nodeIndex,
@@ -137,8 +157,10 @@ contract RecordsMerkleTree {
         return res;
     }
 
-    // Update the child of a node based on the position (which child to select)
-    // and an index to the new child.
+    /// @dev Update the child of a node based on the position (which child to select) and an index to the new child.
+    /// @param node node for which we want to update the child
+    /// @param newChildIndex index of the new child
+    /// @param pos position of the child node relative to the node (i.e. LEFT, MIDDLE or RIGHT)
     function _updateChildNode(
         Node memory node,
         uint64 newChildIndex,
@@ -238,7 +260,9 @@ contract RecordsMerkleTree {
         return newNodeIndex;
     }
 
-    /// Updates the hash of the frontier based on the current tree structure.
+    /// @dev Store the frontier
+    /// @param nodes list of node of the tree
+    /// @param rootIndex index of the root node
     function _storeFrontier(Node[] memory nodes, uint64 rootIndex) private {
         uint64 frontierSize = 2 * _merkleTreeHeight + 1;
 
@@ -275,7 +299,7 @@ contract RecordsMerkleTree {
         _flattenedFrontier[0] = nodes[currentNodeIndex].val;
     }
 
-    /// Updates the state of the record merkle tree by inserting new elements
+    /// @dev Update the state of the record merkle tree by inserting new elements
     /// @param elements list of elements to be appended to the current merkle tree described by the frontier.
     function _updateRecordsMerkleTree(uint256[] memory elements) internal {
         // The total number of nodes is bounded by 3*height+1 + 3*N*height = 3*(N+1)*height + 1
@@ -303,7 +327,7 @@ contract RecordsMerkleTree {
         return _rootValue;
     }
 
-    /// Updates the tree by hashing the children of each node.
+    /// @dev Update the tree by hashing the children of each node.
     /// @param nodes tree structure. Note that the nodes are updated by this function.
     /// @param rootNodePos index of the root node in the list of nodes.
     /// @return the value obtained at the root.

@@ -29,12 +29,6 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue {
     uint64 public blockHeight;
     IPlonkVerifier private _verifier;
 
-    // In order to avoid the contract running out of gas if the queue is too large
-    // we set the maximum number of pending deposits record commitments to process
-    // when a new block is submitted. This is a temporary solution.
-    // See https://github.com/SpectrumXYZ/cape/issues/400
-    uint64 public constant MAX_QUEUE_SIZE = 10;
-
     using AccumulatingArray for AccumulatingArray.Data;
 
     bytes public constant CAPE_BURN_MAGIC_BYTES = "TRICAPE burn";
@@ -308,7 +302,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue {
         uint256[] memory depositComms = new uint256[](numPendingDeposits);
 
         // See https://github.com/SpectrumXYZ/cape/issues/400 for why we check that the queue has at most MAX_QUEUE_SIZE elements
-        if ((numPendingDeposits > 0) && (numPendingDeposits < MAX_QUEUE_SIZE)) {
+        if (numPendingDeposits > 0) {
             for (uint256 i = 0; i < numPendingDeposits; i++) {
                 uint256 rc = _getQueueElem(i);
                 depositComms[i] = rc;

@@ -1,3 +1,5 @@
+# DoS Attack on Relayer via malicious ERC20 token contract 
+
 In this section we analyze a possible DoS attack on a relayer made possible by a malicious ERC20 Token.
 The attack works as follows:
 

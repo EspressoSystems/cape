@@ -9,9 +9,8 @@ pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
 
-// Learn more about the ERC20 implementation
-// on OpenZeppelin docs: https://docs.openzeppelin.com/contracts/4.x/erc20
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 import "./libraries/AccumulatingArray.sol";
@@ -24,7 +23,7 @@ import "./RecordsMerkleTree.sol";
 import "./RootStore.sol";
 import "./Queue.sol";
 
-contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue {
+contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue, ReentrancyGuard {
     mapping(uint256 => bool) public nullifiers;
     uint64 public blockHeight;
     IPlonkVerifier private _verifier;
@@ -165,7 +164,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue {
     /// @notice allows to wrap some erc20 tokens into some CAPE asset defined in the record opening
     /// @param ro record opening that will be inserted in the records merkle tree once the deposit is validated.
     /// @param erc20Address address of the ERC20 token corresponding to the deposit.
-    function depositErc20(RecordOpening memory ro, address erc20Address) public {
+    function depositErc20(RecordOpening memory ro, address erc20Address) public nonReentrant {
         ERC20 token = ERC20(erc20Address);
         require(isCapeAssetRegistered(ro.assetDef), "Asset definition not registered");
 
@@ -197,7 +196,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue {
 
     /// @notice submit a new block to the CAPE contract. Transactions are validated and the blockchain state is updated. Moreover burn transactions trigger the unwrapping of cape asset records into erc20 tokens.
     /// @param newBlock block to be processed by the CAPE contract.
-    function submitCapeBlock(CapeBlock memory newBlock) public {
+    function submitCapeBlock(CapeBlock memory newBlock) public nonReentrant {
         uint256 maxSizeCommsArray = _computeMaxCommitments(newBlock) + _getQueueSize();
         AccumulatingArray.Data memory comms = AccumulatingArray.create(maxSizeCommsArray);
 

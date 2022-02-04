@@ -129,7 +129,7 @@ PATH = ["wrap/owner/:owner/ethaddress/:eth_address/amount/:amount/asset/:asset"]
 ":amount" = "Integer"
 ":asset" = "TaggedBase64"
 DOC = """
-Wrap amount units of the given asset from the eth address to the owner address. Returns a serialized receipt which can be used to track the transaction through the validation process.
+Wrap amount units of the given asset from the Ethereum address to the owner address. Returns a serialized receipt which can be used to track the transaction through the validation process.
 """
 
 [route.unwrap]

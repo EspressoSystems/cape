@@ -160,7 +160,6 @@ async fn test_check_foreign_asset_code() -> Result<()> {
 
     let erc20_address = Address::random();
     // This is the first account from the test mnemonic
-    // TODO define elsewhere to make it usable from other tests
     let sponsor = "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266".parse::<Address>()?;
     let erc20_code = Erc20Code(EthereumAddr(erc20_address.to_fixed_bytes()));
 

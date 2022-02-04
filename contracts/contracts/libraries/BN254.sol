@@ -240,7 +240,7 @@ library BN254 {
     }
 
     function fromLeBytesModOrder(bytes memory leBytes) internal pure returns (uint256 ret) {
-        // TODO: Can likely be gas optimized by copying the first 31 bytes directly.
+        // TODO (optimization): Can likely be gas optimized by copying the first 31 bytes directly.
         for (uint256 i = 0; i < leBytes.length; i++) {
             ret = mulmod(ret, 256, R_MOD);
             ret = addmod(ret, uint256(uint8(leBytes[leBytes.length - 1 - i])), R_MOD);
@@ -348,7 +348,7 @@ library BN254 {
         // a = x^((p+1)/4)
         assembly {
             // credit: Aztec
-            // FIXME: gas cost
+            // FIXME (Optimization): gas cost
             let mPtr := mload(0x40)
             mstore(mPtr, 0x20)
             mstore(add(mPtr, 0x20), 0x20)

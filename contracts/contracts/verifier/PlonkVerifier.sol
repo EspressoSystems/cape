@@ -825,7 +825,4 @@ contract PlonkVerifier is IPlonkVerifier {
         scalars[19] = tmp2;
         bases[19] = proof.split4;
     }
-
-    // TODO: remove the next line
-    /* solhint-disable */
 }

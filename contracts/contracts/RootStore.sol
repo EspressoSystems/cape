@@ -29,7 +29,7 @@ contract RootStore {
     }
 
     function _containsRoot(uint256 root) internal view returns (bool) {
-        // TODO evaluate gas cost of this loop based search vs mapping-assisted search
+        // TODO (optimization) evaluate gas cost of this loop based search vs mapping-assisted search
         for (uint256 i = 0; i < _roots.length; i++) {
             if (_roots[i] == root) {
                 return true;

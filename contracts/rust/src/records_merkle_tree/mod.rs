@@ -7,7 +7,6 @@ use jf_rescue::Permutation;
 use jf_rescue::RescueParameter;
 use std::convert::TryFrom;
 
-// TODO make this function public in Jellyfish?
 /// Hash function used to compute an internal node value
 /// * `a` - first input value (e.g.: left child value)
 /// * `b` - second input value (e.g.: middle child value)

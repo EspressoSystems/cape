@@ -211,12 +211,6 @@ It's also possible to run the hardhat node and tests in one command
 - The `console.log` statements are shown in in the terminal.
 - Failing `require` statements are shown in human readable form in the terminal.
 
-## Running scripts
-
-Run a script that connects to the local network (on port 8545)
-
-    hardhat run scripts/benchmark.js --network localhost
-
 ## Deployment
 
 The CAPE contract can be deployed with
@@ -404,7 +398,7 @@ node and connect to that instead.
 
 Optionally start a hardhat node in a separate terminal
 
-    hardhat node
+    hardhat --network hardhat node
 
 Run an interactive console
 
@@ -422,45 +416,12 @@ To run the python tests in [./test](./test) run
 This will start a hardhat node and run the tests against it. If there is already
 a node running on `host:port` brownie will try to connect to that instead.
 
-# Benchmarks
-
-The smart contract `DummyVerifier.sol` simulates the most expensive (in gas) operations of an CAP verifier.
-
-Our "implementation" of the Rescue permutation function is less performant than [Starkware's one](https://etherscan.io/address/0x7B6fc6b18A20823c3d3663E58AB2Af8D780D0AFe#code) .
-We provide here the gas and usd cost for one CAP transaction.
-
-# Local network
-
-```
-> hardhat run scripts/benchmarks.js
-**** NO Merkle tree update****
-verify_empty:  51892.42857142857 gas  ------ 39.205975204000005 USD
-verify:  375636 gas  ------ 283.802013264 USD
-batch_verify:  318932.85714285716 gas  ------ 240.96142796 USD
-
-
-**** Merkle tree update (Starkware)****
-verify_empty:  51895.857142857145 gas  ------ 39.208565572000005 USD
-verify:  2562065.285714286 gas  ------ 1935.7018129240003 USD
-batch_verify:  2504806 gas  ------ 1892.4410483440001 USD
-
-
-**** Merkle tree update (NO Starkware)****
-verify_empty:  51894.142857142855 gas  ------ 39.207270388 USD
-verify:  2816589.5714285714 gas  ------ 2128.001019364 USD
-batch_verify:  2759316.285714286 gas  ------ 2084.7296774480005 USD
-```
-
 # Rinkeby
 
 - Set the RINKEBY_URL in the .env file. A project can be created at
   https://infura.io/dashboard/ethereum.
 - Set the RINKEBY_MNEMONIC in the .env file.
 - Run the following command
-
-```
-> hardhat --network rinkeby run contracts/scripts/benchmarks.js
-```
 
 To run the hardhat tests against rinkeby
 
@@ -569,6 +530,6 @@ To generate the documentation run
 
 and observe the CLI output.
 
-## Ethereum Asset (Un)Wrapping Workflow
+## CAPE Contract specification
 
-Documentation about wrapping and unwrapping ERC20 tokens into and out of CAPE is described in `./doc/workflow/lib.rs::test`.
+A specification of the CAPE smart contract logic written in Rust can be found at `./doc/workflow/lib.rs`.

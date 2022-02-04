@@ -268,9 +268,6 @@ pub struct CapeLedgerState {
     pub record_merkle_frontier: MerkleFrontier,
     // A list of recent record Merkle root hashes for validating slightly-out- of date transactions.
     pub past_record_merkle_roots: CapeRecordMerkleHistory,
-    // TODO: should we include these?
-    // pub prev_state: Option<StateCommitment>,
-    // pub prev_block: BlockCommitment,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

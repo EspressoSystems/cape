@@ -24,9 +24,6 @@ import "./RecordsMerkleTree.sol";
 import "./RootStore.sol";
 import "./Queue.sol";
 
-// TODO Remove once functions are implemented
-/* solhint-disable no-unused-vars */
-
 contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue {
     mapping(uint256 => bool) public nullifiers;
     uint64 public blockHeight;
@@ -156,7 +153,6 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue {
     }
 
     /// Publish an array of nullifiers
-    /// TODO the text after @ return does not show in docs, only the return type shows.
     /// @dev Requires all nullifiers to be unique and unpublished.
     /// @dev A block creator must not submit notes with duplicate nullifiers.
     function _publish(uint256[] memory newNullifiers) internal {
@@ -180,10 +176,8 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue {
         require(isCapeAssetRegistered(ro.assetDef), "Asset definition not registered");
 
         // We skip the sanity checks mentioned in the rust specification as they are optional.
-
         uint256 recordCommitment = _deriveRecordCommitment(ro);
         _pushToQueue(recordCommitment);
-        bytes32 assetDefHash = keccak256(abi.encode(ro.assetDef));
 
         token.transferFrom(msg.sender, address(this), ro.amount);
         bytes memory roBytes = abi.encode(ro);
@@ -364,7 +358,6 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue {
     }
 
     function _checkTransfer(TransferNote memory note) internal pure {
-        // TODO consider moving _checkContainsRoot into _check[NoteType] functions
         require(
             !_containsBurnPrefix(note.auxInfo.extraProofBoundData),
             "Burn prefix in transfer note"
@@ -430,7 +423,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue {
         return RescueLib.commit(inputs);
     }
 
-    // an overloadded function (one for each note type) to prepare all inputs necessary
+    // An overloaded function (one for each note type) to prepare all inputs necessary
     // for batch verification of the plonk proof
     function _prepareForProofVerification(TransferNote memory note)
         internal

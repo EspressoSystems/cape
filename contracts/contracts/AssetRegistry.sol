@@ -4,9 +4,6 @@ pragma solidity ^0.8.0;
 import "./libraries/BN254.sol";
 import "./libraries/EdOnBN254.sol";
 
-// TODO Remove once functions are implemented
-/* solhint-disable no-unused-vars */
-
 contract AssetRegistry {
     bytes13 public constant DOM_SEP_FOREIGN_ASSET = "FOREIGN_ASSET";
 
@@ -74,8 +71,6 @@ contract AssetRegistry {
         require(derivedCode == assetDefinitionCode, "Wrong foreign asset code");
     }
 
-    // TODO consider inlining once asset description is finalized. Until then it's useful
-    // for testing if this computation matches the rust code.
     function _computeAssetDescription(address erc20Address, address sponsor)
         internal
         pure

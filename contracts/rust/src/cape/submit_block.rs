@@ -134,7 +134,6 @@ async fn test_submit_block_to_cape_contract() -> Result<()> {
             .await?
     );
 
-    // TODO should not require to manually submit the root here
     contract
         .add_root(root.generic_into::<MerkleRootSol>().0)
         .send()
@@ -170,7 +169,6 @@ async fn test_block_height() -> Result<()> {
     let root = params.txns[0].merkle_root();
     let cape_block = CapeBlock::generate(params.txns, vec![], miner.address())?;
 
-    // TODO should not require to manually submit the root here
     contract
         .add_root(root.generic_into::<MerkleRootSol>().0)
         .send()
@@ -198,7 +196,6 @@ async fn test_event_block_committed() -> Result<()> {
     let root = params.txns[0].merkle_root();
     let cape_block = CapeBlock::generate(params.txns, vec![], miner.address())?;
 
-    // TODO should not require to manually submit the root here
     contract
         .add_root(root.generic_into::<MerkleRootSol>().0)
         .send()

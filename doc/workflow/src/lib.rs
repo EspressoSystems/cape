@@ -2,10 +2,11 @@
 
 use cap_rust_sandbox::state::{is_erc20_asset_def_valid, Erc20Code, EthereumAddr};
 use ethers::prelude::*;
+use itertools::Itertools;
 use jf_aap::keys::UserPubKey;
 use jf_aap::structs::{AssetDefinition, FreezeFlag, Nullifier, RecordCommitment, RecordOpening};
 use jf_aap::TransactionNote::Transfer;
-use jf_aap::{MerkleCommitment, MerkleFrontier, NodeValue, TransactionNote};
+use jf_aap::{txn_batch_verify, MerkleCommitment, MerkleFrontier, NodeValue, TransactionNote};
 use std::collections::{HashMap, HashSet, LinkedList};
 
 mod constants;
@@ -28,12 +29,6 @@ pub struct CapeBlock {
     pub(crate) txns: Vec<TransactionNote>,
     // fee_blind: BlindFactor,
     pub(crate) miner: UserPubKey,
-}
-
-// TODO missing Plonk verifying keys
-fn batch_plonk_proofs_verification(_txn: &[TransactionNote]) -> bool {
-    // TODO
-    true
 }
 
 const CAPE_BURN_PREFIX_BYTES: &str = "TRICAPE burn";
@@ -105,7 +100,17 @@ impl CapeBlock {
         let mut all_txns = filtered_block.txns.clone();
         all_txns.extend(filtered_block.burn_txns.clone());
         // If the verification fails return an empty list of transactions and burned record openings
-        if !batch_plonk_proofs_verification(all_txns.as_slice()) {
+
+        let recent_merkle_roots_vec = recent_merkle_roots.iter().copied().collect_vec();
+
+        if txn_batch_verify(
+            all_txns.as_slice(),
+            recent_merkle_roots_vec.as_slice(),
+            height,
+            &[],
+        )
+        .is_ok()
+        {
             (
                 CapeBlock {
                     burn_txns: vec![],
@@ -145,7 +150,6 @@ pub struct CapeContract {
     nullifiers: HashSet<Nullifier>,
     // latest block height
     height: u64,
-    // TODO: should we further hash MerkleCommitment and only store a bytes32 in contract?
     // latest record merkle tree commitment (including merkle root, tree height and num of leaves)
     merkle_commitment: MerkleCommitment,
     // The merkle frontier is stored locally

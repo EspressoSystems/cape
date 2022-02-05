@@ -13,12 +13,12 @@ jf-primitives = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jell
 jf-cap = { features = ["test_apis"], git = "ssh://git@github.com/SpectrumXYZ/cap.git", rev = "cba0b2fc682606b0a118b320d41f718c525b4192" }
 jf-rescue = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git" }
 jf-utils = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git" }
-key-set = { git = "ssh://git@github.com/SpectrumXYZ/key-set.git" }
-reef = { git = "ssh://git@github.com/SpectrumXYZ/reef.git" }
+key-set = { git = "ssh://git@github.com/SpectrumXYZ/key-set.git", rev = "1cc35513c0f24c1d58d55ef699038fd647590555" }
+reef = { git = "ssh://git@github.com/SpectrumXYZ/reef.git", rev = "859f50ef6181dc81adb20d041e98ec75700cac94" }
 universal-param = { git = "ssh://git@github.com/SpectrumXYZ/universal-param.git" }
 zerok-macros = { git = "ssh://git@github.com/SpectrumXYZ/zerok-macros.git" }
 arbitrary = { version="1.0", features=["derive"] }
-arbitrary-wrappers = { git = "ssh://git@github.com/SpectrumXYZ/arbitrary-wrappers.git" }
+arbitrary-wrappers = { git = "ssh://git@github.com/SpectrumXYZ/arbitrary-wrappers.git", rev = "bd84e90d131bdc4418a6c96543cb1003db1dd73b" }
 
 # We need the legacy feature in order to avoid gas estimation issues. See https://github.com/gakonst/ethers-rs/issues/825
 ethers = { features=["legacy"], git = "https://github.com/gakonst/ethers-rs", branch = "master" }

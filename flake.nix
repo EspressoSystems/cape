@@ -62,8 +62,6 @@
           mySolc = pkgs.callPackage ./nix/solc-bin { version = "0.8.10"; };
           pythonEnv = pkgs.poetry2nix.mkPoetryEnv {
             projectDir = ./.;
-            overrides = pkgs.poetry2nix.overrides.withDefaults
-              (import ./nix/poetryOverrides.nix { inherit pkgs; });
           };
           myPython = with pkgs; [
             poetry

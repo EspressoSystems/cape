@@ -10,15 +10,15 @@ doctest = false
 commit = { git = "ssh://git@github.com/SpectrumXYZ/commit.git", rev = "f48cd52c59755eade0605111826eef3df6abdcf8" }
 jf-plonk = { features=["std", "test_apis"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git" }
 jf-primitives = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git" }
-jf-aap = { features=["std", "test_apis"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", rev = "fd1de050c214584a296a11f366846a53a316c4d4" }
+jf-aap = { features = ["test_apis"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", rev = "8c32d8df3faf511e54ad89fa51627837ebcd8f20" }
 jf-rescue = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git" }
 jf-utils = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git" }
-key-set = { git = "ssh://git@github.com/SpectrumXYZ/key-set.git" }
-reef = { git = "ssh://git@github.com/SpectrumXYZ/reef.git" }
+key-set = { git = "ssh://git@github.com/SpectrumXYZ/key-set.git", rev = "1cc35513c0f24c1d58d55ef699038fd647590555" }
+reef = { git = "ssh://git@github.com/SpectrumXYZ/reef.git", rev = "859f50ef6181dc81adb20d041e98ec75700cac94" }
 universal-param = { git = "ssh://git@github.com/SpectrumXYZ/universal-param.git" }
 zerok-macros = { git = "ssh://git@github.com/SpectrumXYZ/zerok-macros.git" }
 arbitrary = { version="1.0", features=["derive"] }
-arbitrary-wrappers = { git = "ssh://git@github.com/SpectrumXYZ/arbitrary-wrappers.git" }
+arbitrary-wrappers = { git = "ssh://git@github.com/SpectrumXYZ/arbitrary-wrappers.git", rev = "bd84e90d131bdc4418a6c96543cb1003db1dd73b" }
 
 # We need the legacy feature in order to avoid gas estimation issues. See https://github.com/gakonst/ethers-rs/issues/825
 ethers = { features=["legacy"], git = "https://github.com/gakonst/ethers-rs", branch = "master" }
@@ -60,5 +60,4 @@ rev = "cafc05e39692bbc5c383990063ad851f0b94a553"
 default-features = false
 
 [dev-dependencies]
-key-set = { git = "ssh://git@github.com/SpectrumXYZ/key-set.git" }
 proptest = "1.0.0"

@@ -213,7 +213,6 @@ pub struct RouteBinding {
 #[derive(AsRefStr, Copy, Clone, Debug, EnumIter, EnumString)]
 pub enum ApiRouteKey {
     closewallet,
-    deposit,
     freeze,
     getaddress,
     getbalance,
@@ -613,6 +612,34 @@ async fn newasset(
     }
 }
 
+async fn wrap(
+    bindings: &HashMap<String, RouteBinding>,
+    wallet: &mut Option<Wallet>,
+) -> Result<(), tide::Error> {
+    let wallet = require_wallet(wallet)?;
+
+    let destination = bindings
+        .get(":destination")
+        .unwrap()
+        .value
+        .to::<UserAddress>()?;
+    let eth_address = bindings
+        .get(":eth_address")
+        .unwrap()
+        .value
+        .to::<EthereumAddr>()?;
+    let asset = bindings
+        .get(":asset")
+        .unwrap()
+        .value
+        .to::<AssetDefinition>()?;
+    let amount = bindings.get(":amount").unwrap().value.as_u64()?;
+
+    Ok(wallet
+        .wrap(eth_address, asset, destination.into(), amount)
+        .await?)
+}
+
 pub async fn dispatch_url(
     req: tide::Request<WebState>,
     route_pattern: &str,
@@ -623,7 +650,6 @@ pub async fn dispatch_url(
     let key = ApiRouteKey::from_str(segments.0).expect("Unknown route");
     match key {
         ApiRouteKey::closewallet => response(&req, closewallet(wallet).await?),
-        ApiRouteKey::deposit => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::freeze => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::getaddress => response(&req, getaddress(wallet).await?),
         ApiRouteKey::getbalance => response(&req, getbalance(bindings, wallet).await?),
@@ -639,7 +665,7 @@ pub async fn dispatch_url(
         ApiRouteKey::transaction => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::unfreeze => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::unwrap => dummy_url_eval(route_pattern, bindings),
-        ApiRouteKey::wrap => dummy_url_eval(route_pattern, bindings),
+        ApiRouteKey::wrap => response(&req, wrap(bindings, wallet).await?),
     }
 }
 

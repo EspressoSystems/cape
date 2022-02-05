@@ -99,7 +99,7 @@ Get the addresses, public keys, and asset types for the current wallet.
 [route.newkey]
 PATH = ["newkey/send", "newkey/trace", "newkey/freeze"]
 DOC = """
-Generate and return a key of the given type to be used to define assets.
+Generate and return a key of the given type.
 """
 
 [route.importkey]
@@ -123,12 +123,13 @@ Transfer amount units of the given asset from the sender to the recipient. Retur
 """
 
 [route.wrap]
-PATH = ["wrap/address/:address/amount/:amount/asset/:asset"]
-":address" = "TaggedBase64"
+PATH = ["wrap/destination/:destination/ethaddress/:eth_address/amount/:amount/asset/:asset"]
+":destination" = "TaggedBase64"
+":eth_address" = "TaggedBase64"
 ":amount" = "Integer"
 ":asset" = "TaggedBase64"
 DOC = """
-Wrap amount units of the given asset from the address. Returns a serialized receipt which can be used to track the transaction through the validation process.
+Wrap amount units of the given asset from the Ethereum address to the destination.
 """
 
 [route.unwrap]
@@ -226,16 +227,6 @@ PATH = ["mint/asset/:asset/amount/:amount/sendkey/:send_key/freezekey/:freeze_ke
 ":trace_key" = "TaggedBase64"
 DOC = """
 Mint amount units of a given asset code controlled by the current wallet. Reports the asset code associated with the given keys. Keys are generated with *newkey*.
-"""
-
-# TODO !corbett This is also called sponsor, but that seems harder to understand than 'deposit' or 'wrap'.
-[route.deposit]
-PATH = ["deposit/asset/:asset/erc20/:erc20/amount/:amount"]
-":asset" = "TaggedBase64"
-":erc20" = "TaggedBase64"
-":amount" = "Integer"
-DOC = """
-Deposit (wrap) ERC-20 into CAPE.
 """
 
 [route.freeze]

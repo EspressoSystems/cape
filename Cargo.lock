@@ -149,12 +149,12 @@ dependencies = [
 [[package]]
 name = "arbitrary-wrappers"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/arbitrary-wrappers.git#165c544d82310ca8001590ca67e76aa959394711"
+source = "git+ssh://git@github.com/SpectrumXYZ/arbitrary-wrappers.git?rev=bd84e90d131bdc4418a6c96543cb1003db1dd73b#bd84e90d131bdc4418a6c96543cb1003db1dd73b"
 dependencies = [
  "arbitrary",
  "ark-std",
  "itertools 0.10.3",
- "jf-aap",
+ "jf-aap 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=8c32d8df3faf511e54ad89fa51627837ebcd8f20)",
  "rand_chacha 0.3.1",
  "serde",
  "zerok-macros",
@@ -1035,7 +1035,7 @@ dependencies = [
  "generic-array 0.14.5",
  "hex",
  "itertools 0.10.3",
- "jf-aap",
+ "jf-aap 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=8c32d8df3faf511e54ad89fa51627837ebcd8f20)",
  "jf-plonk",
  "jf-primitives",
  "jf-rescue",
@@ -1065,7 +1065,7 @@ dependencies = [
  "cap-rust-sandbox",
  "ethers 0.6.0 (git+https://github.com/gakonst/ethers-rs)",
  "itertools 0.10.3",
- "jf-aap",
+ "jf-aap 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=8c32d8df3faf511e54ad89fa51627837ebcd8f20)",
  "jf-rescue",
  "jf-utils",
  "rand 0.8.4",
@@ -1086,7 +1086,7 @@ dependencies = [
  "futures",
  "futures-util",
  "itertools 0.10.3",
- "jf-aap",
+ "jf-aap 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=8c32d8df3faf511e54ad89fa51627837ebcd8f20)",
  "jf-plonk",
  "jf-primitives",
  "jf-utils",
@@ -1994,7 +1994,7 @@ dependencies = [
 [[package]]
 name = "ethers"
 version = "0.6.0"
-source = "git+https://github.com/gakonst/ethers-rs?branch=master#dc1565c0149e03ce20c2cdf76c1aaaf9fc2e3deb"
+source = "git+https://github.com/gakonst/ethers-rs?branch=master#99230afd3278388da24532ab45d25010e1c49412"
 dependencies = [
  "ethers-addressbook 0.1.0 (git+https://github.com/gakonst/ethers-rs?branch=master)",
  "ethers-contract 0.6.0 (git+https://github.com/gakonst/ethers-rs?branch=master)",
@@ -2009,7 +2009,7 @@ dependencies = [
 [[package]]
 name = "ethers"
 version = "0.6.0"
-source = "git+https://github.com/gakonst/ethers-rs#dc1565c0149e03ce20c2cdf76c1aaaf9fc2e3deb"
+source = "git+https://github.com/gakonst/ethers-rs#99230afd3278388da24532ab45d25010e1c49412"
 dependencies = [
  "ethers-addressbook 0.1.0 (git+https://github.com/gakonst/ethers-rs)",
  "ethers-contract 0.6.0 (git+https://github.com/gakonst/ethers-rs)",
@@ -2024,7 +2024,7 @@ dependencies = [
 [[package]]
 name = "ethers-addressbook"
 version = "0.1.0"
-source = "git+https://github.com/gakonst/ethers-rs?branch=master#dc1565c0149e03ce20c2cdf76c1aaaf9fc2e3deb"
+source = "git+https://github.com/gakonst/ethers-rs?branch=master#99230afd3278388da24532ab45d25010e1c49412"
 dependencies = [
  "ethers-core 0.6.0 (git+https://github.com/gakonst/ethers-rs?branch=master)",
  "once_cell",
@@ -2035,7 +2035,7 @@ dependencies = [
 [[package]]
 name = "ethers-addressbook"
 version = "0.1.0"
-source = "git+https://github.com/gakonst/ethers-rs#dc1565c0149e03ce20c2cdf76c1aaaf9fc2e3deb"
+source = "git+https://github.com/gakonst/ethers-rs#99230afd3278388da24532ab45d25010e1c49412"
 dependencies = [
  "ethers-core 0.6.0 (git+https://github.com/gakonst/ethers-rs)",
  "once_cell",
@@ -2046,7 +2046,7 @@ dependencies = [
 [[package]]
 name = "ethers-contract"
 version = "0.6.0"
-source = "git+https://github.com/gakonst/ethers-rs?branch=master#dc1565c0149e03ce20c2cdf76c1aaaf9fc2e3deb"
+source = "git+https://github.com/gakonst/ethers-rs?branch=master#99230afd3278388da24532ab45d25010e1c49412"
 dependencies = [
  "ethers-contract-abigen 0.6.0 (git+https://github.com/gakonst/ethers-rs?branch=master)",
  "ethers-contract-derive 0.6.0 (git+https://github.com/gakonst/ethers-rs?branch=master)",
@@ -2064,7 +2064,7 @@ dependencies = [
 [[package]]
 name = "ethers-contract"
 version = "0.6.0"
-source = "git+https://github.com/gakonst/ethers-rs#dc1565c0149e03ce20c2cdf76c1aaaf9fc2e3deb"
+source = "git+https://github.com/gakonst/ethers-rs#99230afd3278388da24532ab45d25010e1c49412"
 dependencies = [
  "ethers-contract-abigen 0.6.0 (git+https://github.com/gakonst/ethers-rs)",
  "ethers-contract-derive 0.6.0 (git+https://github.com/gakonst/ethers-rs)",
@@ -2082,13 +2082,13 @@ dependencies = [
 [[package]]
 name = "ethers-contract-abigen"
 version = "0.6.0"
-source = "git+https://github.com/gakonst/ethers-rs?branch=master#dc1565c0149e03ce20c2cdf76c1aaaf9fc2e3deb"
+source = "git+https://github.com/gakonst/ethers-rs?branch=master#99230afd3278388da24532ab45d25010e1c49412"
 dependencies = [
  "Inflector",
- "anyhow",
  "cfg-if 1.0.0",
  "dunce",
  "ethers-core 0.6.0 (git+https://github.com/gakonst/ethers-rs?branch=master)",
+ "eyre",
  "getrandom 0.2.4",
  "hex",
  "once_cell",
@@ -2105,13 +2105,13 @@ dependencies = [
 [[package]]
 name = "ethers-contract-abigen"
 version = "0.6.0"
-source = "git+https://github.com/gakonst/ethers-rs#dc1565c0149e03ce20c2cdf76c1aaaf9fc2e3deb"
+source = "git+https://github.com/gakonst/ethers-rs#99230afd3278388da24532ab45d25010e1c49412"
 dependencies = [
  "Inflector",
- "anyhow",
  "cfg-if 1.0.0",
  "dunce",
  "ethers-core 0.6.0 (git+https://github.com/gakonst/ethers-rs)",
+ "eyre",
  "getrandom 0.2.4",
  "hex",
  "once_cell",
@@ -2128,7 +2128,7 @@ dependencies = [
 [[package]]
 name = "ethers-contract-derive"
 version = "0.6.0"
-source = "git+https://github.com/gakonst/ethers-rs?branch=master#dc1565c0149e03ce20c2cdf76c1aaaf9fc2e3deb"
+source = "git+https://github.com/gakonst/ethers-rs?branch=master#99230afd3278388da24532ab45d25010e1c49412"
 dependencies = [
  "ethers-contract-abigen 0.6.0 (git+https://github.com/gakonst/ethers-rs?branch=master)",
  "ethers-core 0.6.0 (git+https://github.com/gakonst/ethers-rs?branch=master)",
@@ -2142,7 +2142,7 @@ dependencies = [
 [[package]]
 name = "ethers-contract-derive"
 version = "0.6.0"
-source = "git+https://github.com/gakonst/ethers-rs#dc1565c0149e03ce20c2cdf76c1aaaf9fc2e3deb"
+source = "git+https://github.com/gakonst/ethers-rs#99230afd3278388da24532ab45d25010e1c49412"
 dependencies = [
  "ethers-contract-abigen 0.6.0 (git+https://github.com/gakonst/ethers-rs)",
  "ethers-core 0.6.0 (git+https://github.com/gakonst/ethers-rs)",
@@ -2156,7 +2156,7 @@ dependencies = [
 [[package]]
 name = "ethers-core"
 version = "0.6.0"
-source = "git+https://github.com/gakonst/ethers-rs?branch=master#dc1565c0149e03ce20c2cdf76c1aaaf9fc2e3deb"
+source = "git+https://github.com/gakonst/ethers-rs?branch=master#99230afd3278388da24532ab45d25010e1c49412"
 dependencies = [
  "arrayvec 0.7.2",
  "bytes 1.1.0",
@@ -2184,7 +2184,7 @@ dependencies = [
 [[package]]
 name = "ethers-core"
 version = "0.6.0"
-source = "git+https://github.com/gakonst/ethers-rs#dc1565c0149e03ce20c2cdf76c1aaaf9fc2e3deb"
+source = "git+https://github.com/gakonst/ethers-rs#99230afd3278388da24532ab45d25010e1c49412"
 dependencies = [
  "arrayvec 0.7.2",
  "bytes 1.1.0",
@@ -2212,7 +2212,7 @@ dependencies = [
 [[package]]
 name = "ethers-etherscan"
 version = "0.2.0"
-source = "git+https://github.com/gakonst/ethers-rs?branch=master#dc1565c0149e03ce20c2cdf76c1aaaf9fc2e3deb"
+source = "git+https://github.com/gakonst/ethers-rs?branch=master#99230afd3278388da24532ab45d25010e1c49412"
 dependencies = [
  "ethers-core 0.6.0 (git+https://github.com/gakonst/ethers-rs?branch=master)",
  "reqwest",
@@ -2225,7 +2225,7 @@ dependencies = [
 [[package]]
 name = "ethers-etherscan"
 version = "0.2.0"
-source = "git+https://github.com/gakonst/ethers-rs#dc1565c0149e03ce20c2cdf76c1aaaf9fc2e3deb"
+source = "git+https://github.com/gakonst/ethers-rs#99230afd3278388da24532ab45d25010e1c49412"
 dependencies = [
  "ethers-core 0.6.0 (git+https://github.com/gakonst/ethers-rs)",
  "reqwest",
@@ -2238,7 +2238,7 @@ dependencies = [
 [[package]]
 name = "ethers-middleware"
 version = "0.6.0"
-source = "git+https://github.com/gakonst/ethers-rs?branch=master#dc1565c0149e03ce20c2cdf76c1aaaf9fc2e3deb"
+source = "git+https://github.com/gakonst/ethers-rs?branch=master#99230afd3278388da24532ab45d25010e1c49412"
 dependencies = [
  "async-trait",
  "ethers-contract 0.6.0 (git+https://github.com/gakonst/ethers-rs?branch=master)",
@@ -2261,7 +2261,7 @@ dependencies = [
 [[package]]
 name = "ethers-middleware"
 version = "0.6.0"
-source = "git+https://github.com/gakonst/ethers-rs#dc1565c0149e03ce20c2cdf76c1aaaf9fc2e3deb"
+source = "git+https://github.com/gakonst/ethers-rs#99230afd3278388da24532ab45d25010e1c49412"
 dependencies = [
  "async-trait",
  "ethers-contract 0.6.0 (git+https://github.com/gakonst/ethers-rs)",
@@ -2284,7 +2284,7 @@ dependencies = [
 [[package]]
 name = "ethers-providers"
 version = "0.6.0"
-source = "git+https://github.com/gakonst/ethers-rs?branch=master#dc1565c0149e03ce20c2cdf76c1aaaf9fc2e3deb"
+source = "git+https://github.com/gakonst/ethers-rs?branch=master#99230afd3278388da24532ab45d25010e1c49412"
 dependencies = [
  "async-trait",
  "auto_impl",
@@ -2315,7 +2315,7 @@ dependencies = [
 [[package]]
 name = "ethers-providers"
 version = "0.6.0"
-source = "git+https://github.com/gakonst/ethers-rs#dc1565c0149e03ce20c2cdf76c1aaaf9fc2e3deb"
+source = "git+https://github.com/gakonst/ethers-rs#99230afd3278388da24532ab45d25010e1c49412"
 dependencies = [
  "async-trait",
  "auto_impl",
@@ -2346,7 +2346,7 @@ dependencies = [
 [[package]]
 name = "ethers-signers"
 version = "0.6.0"
-source = "git+https://github.com/gakonst/ethers-rs?branch=master#dc1565c0149e03ce20c2cdf76c1aaaf9fc2e3deb"
+source = "git+https://github.com/gakonst/ethers-rs?branch=master#99230afd3278388da24532ab45d25010e1c49412"
 dependencies = [
  "async-trait",
  "coins-bip32",
@@ -2367,7 +2367,7 @@ dependencies = [
 [[package]]
 name = "ethers-signers"
 version = "0.6.0"
-source = "git+https://github.com/gakonst/ethers-rs#dc1565c0149e03ce20c2cdf76c1aaaf9fc2e3deb"
+source = "git+https://github.com/gakonst/ethers-rs#99230afd3278388da24532ab45d25010e1c49412"
 dependencies = [
  "async-trait",
  "coins-bip32",
@@ -2388,7 +2388,7 @@ dependencies = [
 [[package]]
 name = "ethers-solc"
 version = "0.1.0"
-source = "git+https://github.com/gakonst/ethers-rs?branch=master#dc1565c0149e03ce20c2cdf76c1aaaf9fc2e3deb"
+source = "git+https://github.com/gakonst/ethers-rs?branch=master#99230afd3278388da24532ab45d25010e1c49412"
 dependencies = [
  "colored",
  "dunce",
@@ -2416,7 +2416,7 @@ dependencies = [
 [[package]]
 name = "ethers-solc"
 version = "0.1.0"
-source = "git+https://github.com/gakonst/ethers-rs#dc1565c0149e03ce20c2cdf76c1aaaf9fc2e3deb"
+source = "git+https://github.com/gakonst/ethers-rs#99230afd3278388da24532ab45d25010e1c49412"
 dependencies = [
  "colored",
  "dunce",
@@ -2446,6 +2446,16 @@ name = "event-listener"
 version = "2.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "77f3309417938f28bf8228fcff79a4a37103981e3e186d2ccd19c74b38f4eb71"
+
+[[package]]
+name = "eyre"
+version = "0.6.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bc225d8f637923fe585089fcf03e705c222131232d2c1fb622e84ecf725d0eb8"
+dependencies = [
+ "indenter",
+ "once_cell",
+]
 
 [[package]]
 name = "fake-simd"
@@ -3026,6 +3036,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "indenter"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ce23b50ad8242c51a442f3ff322d56b02f08852c77e4c0b4d3fd684abc89c683"
+
+[[package]]
 name = "indexmap"
 version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3133,6 +3149,42 @@ checksum = "1aab8fc367588b89dcee83ab0fd66b72b50b72fa1904d7095045ace2b0c81c35"
 [[package]]
 name = "jf-aap"
 version = "0.0.1"
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=8c32d8df3faf511e54ad89fa51627837ebcd8f20#8c32d8df3faf511e54ad89fa51627837ebcd8f20"
+dependencies = [
+ "anyhow",
+ "ark-bn254",
+ "ark-ec",
+ "ark-ed-on-bn254",
+ "ark-ff",
+ "ark-serialize",
+ "ark-std",
+ "bincode",
+ "commit",
+ "csv",
+ "derivative",
+ "displaydoc",
+ "hex-literal",
+ "itertools 0.10.3",
+ "jf-plonk",
+ "jf-primitives",
+ "jf-rescue",
+ "jf-utils",
+ "num_cpus",
+ "percentage",
+ "rand 0.8.4",
+ "rand_chacha 0.3.1",
+ "rayon",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "sha2 0.9.9",
+ "sha3 0.10.0",
+ "structopt",
+]
+
+[[package]]
+name = "jf-aap"
+version = "0.0.1"
 source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=fd1de050c214584a296a11f366846a53a316c4d4#fd1de050c214584a296a11f366846a53a316c4d4"
 dependencies = [
  "anyhow",
@@ -3174,7 +3226,7 @@ dependencies = [
 [[package]]
 name = "jf-plonk"
 version = "0.0.1"
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#c6b679f8414941dee929ee468e1688798ba88249"
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#90f77df587dbd353b6e784df37cdeca32c5745f5"
 dependencies = [
  "ark-bls12-377",
  "ark-bls12-381",
@@ -3203,7 +3255,7 @@ dependencies = [
 [[package]]
 name = "jf-primitives"
 version = "0.0.1"
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#c6b679f8414941dee929ee468e1688798ba88249"
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#90f77df587dbd353b6e784df37cdeca32c5745f5"
 dependencies = [
  "ark-ec",
  "ark-ff",
@@ -3225,7 +3277,7 @@ dependencies = [
 [[package]]
 name = "jf-rescue"
 version = "0.0.1"
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#c6b679f8414941dee929ee468e1688798ba88249"
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#90f77df587dbd353b6e784df37cdeca32c5745f5"
 dependencies = [
  "ark-bls12-377",
  "ark-bls12-381",
@@ -3250,7 +3302,7 @@ dependencies = [
 [[package]]
 name = "jf-utils"
 version = "0.0.1"
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#c6b679f8414941dee929ee468e1688798ba88249"
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#90f77df587dbd353b6e784df37cdeca32c5745f5"
 dependencies = [
  "anyhow",
  "ark-ec",
@@ -3267,7 +3319,7 @@ dependencies = [
 [[package]]
 name = "jf-utils-derive"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#c6b679f8414941dee929ee468e1688798ba88249"
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#90f77df587dbd353b6e784df37cdeca32c5745f5"
 dependencies = [
  "ark-std",
  "quote",
@@ -3306,13 +3358,13 @@ checksum = "67c21572b4949434e4fc1e1978b99c5f77064153c59d998bf13ecd96fb5ecba7"
 [[package]]
 name = "key-set"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/key-set.git#f8eefd5a26219aeb68a8c6a54c6f9f6c866a1314"
+source = "git+ssh://git@github.com/SpectrumXYZ/key-set.git?rev=1cc35513c0f24c1d58d55ef699038fd647590555#1cc35513c0f24c1d58d55ef699038fd647590555"
 dependencies = [
  "ark-serialize",
  "bincode",
  "commit",
  "itertools 0.10.3",
- "jf-aap",
+ "jf-aap 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=8c32d8df3faf511e54ad89fa51627837ebcd8f20)",
  "serde",
  "serde_with",
  "snafu 0.6.10",
@@ -3367,9 +3419,9 @@ checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 
 [[package]]
 name = "libc"
-version = "0.2.116"
+version = "0.2.117"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "565dbd88872dbe4cc8a46e527f26483c1d1f7afa6b884a3bd6cd893d4f98da74"
+checksum = "e74d72e0f9b65b5b4ca49a346af3976df0f9c61d550727f349ecd559f251a26c"
 
 [[package]]
 name = "libnghttp2-sys"
@@ -3559,7 +3611,7 @@ dependencies = [
  "futures",
  "generic-array 0.14.5",
  "itertools 0.10.3",
- "jf-aap",
+ "jf-aap 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=fd1de050c214584a296a11f366846a53a316c4d4)",
  "jf-utils",
  "serde",
  "serde_json",
@@ -4430,7 +4482,7 @@ dependencies = [
 [[package]]
 name = "reef"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/reef.git#0f5152cc2817770b75e9f981dfa6c1739a544b59"
+source = "git+ssh://git@github.com/SpectrumXYZ/reef.git?rev=859f50ef6181dc81adb20d041e98ec75700cac94#859f50ef6181dc81adb20d041e98ec75700cac94"
 dependencies = [
  "arbitrary",
  "arbitrary-wrappers",
@@ -4438,7 +4490,7 @@ dependencies = [
  "commit",
  "funty",
  "itertools 0.10.3",
- "jf-aap",
+ "jf-aap 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=8c32d8df3faf511e54ad89fa51627837ebcd8f20)",
  "serde",
  "snafu 0.6.10",
  "strum_macros",
@@ -4480,7 +4532,7 @@ dependencies = [
  "cap-rust-sandbox",
  "dirs",
  "ethers 0.6.0 (git+https://github.com/gakonst/ethers-rs?branch=master)",
- "jf-aap",
+ "jf-aap 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=8c32d8df3faf511e54ad89fa51627837ebcd8f20)",
  "jf-primitives",
  "key-set",
  "lazy_static",
@@ -4838,7 +4890,7 @@ dependencies = [
 [[package]]
 name = "seahorse"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/seahorse.git?rev=e3665f8731d1da3373827284e16bca98d839bbe8#e3665f8731d1da3373827284e16bca98d839bbe8"
+source = "git+ssh://git@github.com/SpectrumXYZ/seahorse.git?rev=63f12c7fa896f5a61a63b6ad1115a97c2987edb4#63f12c7fa896f5a61a63b6ad1115a97c2987edb4"
 dependencies = [
  "arbitrary",
  "arbitrary-wrappers",
@@ -4856,7 +4908,7 @@ dependencies = [
  "generic-array 0.14.5",
  "hmac 0.11.0",
  "itertools 0.10.3",
- "jf-aap",
+ "jf-aap 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=8c32d8df3faf511e54ad89fa51627837ebcd8f20)",
  "jf-utils",
  "key-set",
  "lazy_static",
@@ -5258,7 +5310,7 @@ dependencies = [
 [[package]]
 name = "solang-parser"
 version = "0.1.1"
-source = "git+https://github.com/hyperledger-labs/solang#bee43dddd9af857248585a086eaca7f0040e20f8"
+source = "git+https://github.com/hyperledger-labs/solang#f3e8f6fcabab91c959833cf85e3f13d327b00e38"
 dependencies = [
  "lalrpop",
  "lalrpop-util",
@@ -5493,7 +5545,7 @@ dependencies = [
 [[package]]
 name = "tagged-base64"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/tagged-base64.git?branch=main#6ec9fceae8b7d6555eed461a43db28397e8921b5"
+source = "git+ssh://git@github.com/SpectrumXYZ/tagged-base64.git?branch=main#e43bcbb33dc48af370604b15832ce91dec700bfe"
 dependencies = [
  "base64 0.13.0",
  "console_error_panic_hook",
@@ -6014,7 +6066,7 @@ dependencies = [
  "ark-serialize",
  "ark-std",
  "itertools 0.10.3",
- "jf-aap",
+ "jf-aap 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=fd1de050c214584a296a11f366846a53a316c4d4)",
  "rand_chacha 0.3.1",
 ]
 

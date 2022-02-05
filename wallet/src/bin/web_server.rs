@@ -127,7 +127,7 @@ mod tests {
 
         async fn wait(port: u64) {
             let mut backoff = Duration::from_millis(100);
-            for _ in 0..5 {
+            for _ in 0..8 {
                 // Use a one-off request, rather than going through the client, because we want to
                 // skip the middleware, which can cause connect() to return an Err() even if the
                 // request reaches the server successfully.

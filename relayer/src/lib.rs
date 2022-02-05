@@ -134,7 +134,7 @@ pub mod testing {
         CAPE::new(test_cape.address(), Arc::new(test_cape.client().clone()))
     }
 
-    const RELAYER_STARTUP_RETRIES: usize = 5;
+    const RELAYER_STARTUP_RETRIES: usize = 8;
 
     pub async fn wait_for_server(port: u64) {
         // Wait for the server to come up and start serving.

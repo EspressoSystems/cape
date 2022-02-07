@@ -432,6 +432,11 @@ mod test {
             .add_user_key(sender_key.clone(), EventIndex::default())
             .await
             .unwrap();
+        // Wait for the wallet to register the balance belonging to the key, from the initial grant
+        // records. Depending on exactly when the key was added relative to the background event
+        // handling thread, the relevant events may be processed by either the event handling thread
+        // or the key scan thread, so we will wait for both of them to complete.
+        sender.sync(mock_eqs.lock().await.now()).await.unwrap();
         sender.await_key_scan(&sender_key.address()).await.unwrap();
         let total_balance = sender
             .balance(&sender_key.address(), &AssetCode::native())
@@ -559,6 +564,11 @@ mod test {
             .add_user_key(wrapper_key.clone(), EventIndex::default())
             .await
             .unwrap();
+        // Wait for the wrapper to register the balance belonging to the key, from the initial grant
+        // records. Depending on exactly when the key was added relative to the background event
+        // handling thread, the relevant events may be processed by either the event handling thread
+        // or the key scan thread, so we will wait for both of them to complete.
+        wrapper.sync(mock_eqs.lock().await.now()).await.unwrap();
         wrapper
             .await_key_scan(&wrapper_key.address())
             .await

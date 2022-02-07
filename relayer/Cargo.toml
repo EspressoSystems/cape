@@ -16,17 +16,18 @@ ethers = { git = "https://github.com/gakonst/ethers-rs", branch = "master" }
 
 jf-aap = { features = ["test_apis"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", rev = "8c32d8df3faf511e54ad89fa51627837ebcd8f20" }
 jf-primitives = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git" }
-key-set = { git = "ssh://git@github.com/SpectrumXYZ/key-set.git", rev = "1cc35513c0f24c1d58d55ef699038fd647590555" }
+key-set = { git = "ssh://git@github.com/SpectrumXYZ/key-set.git" }
 
 lazy_static = "1.4.0"
 net = { git = "ssh://git@github.com/SpectrumXYZ/net.git" }
 rand_chacha = { version = "0.3.1", features = ["serde1"] }
-reef = { git = "ssh://git@github.com/SpectrumXYZ/reef.git", rev = "859f50ef6181dc81adb20d041e98ec75700cac94" }
+reef = { git = "ssh://git@github.com/SpectrumXYZ/reef.git" }
 serde = { version = "1.0.123", features = ["derive", "rc"] }
 serde_derive = "1.0.118"
 serde_json = "1.0.61"
 snafu = { version = "0.7", features = ["backtraces"] }
 structopt = { version = "0.3" }
+surf = { version = "2.3.2", optional = true }
 tide = "0.16.0"
 tide-websockets = "0.4.0"
 toml = "0.5"
@@ -37,4 +38,4 @@ tracing-subscriber = "0.3"
 surf = "2.3.2"
 
 [features]
-testing = []
+testing = ["surf"]

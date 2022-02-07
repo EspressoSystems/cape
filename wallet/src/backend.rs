@@ -332,7 +332,7 @@ mod test {
     use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
     use reef::Ledger;
     use relayer::testing::start_minimal_relayer_for_test;
-    use seahorse::txn_builder::TransactionStatus;
+    use seahorse::testing::await_transaction;
     use std::path::PathBuf;
     use std::time::Duration;
     use tempdir::TempDir;
@@ -345,7 +345,7 @@ mod test {
         // blockchain, as well as a mock EQS which will track the blockchain in parallel, since we
         // don't yet have a real EQS.
         let relayer_port = port().await;
-        let (contract_address, sender_key, sender_rec, records) =
+        let (contract, sender_key, sender_rec, records) =
             start_minimal_relayer_for_test(relayer_port).await;
         let relayer_url = Url::parse(&format!("http://localhost:{}", relayer_port)).unwrap();
         let sender_memo = ReceiverMemo::from_ro(rng, &sender_rec, &[]).unwrap();
@@ -401,11 +401,10 @@ mod test {
         // either.
         let mock_eqs = Arc::new(Mutex::new(mock_eqs));
 
-        (sender_key, relayer_url, contract_address, mock_eqs)
+        (sender_key, relayer_url, contract.address(), mock_eqs)
     }
 
     #[async_std::test]
-    #[ignore]
     async fn test_transfer() {
         let mut rng = ChaChaRng::from_seed([1u8; 32]);
         let universal_param = universal_setup_for_test(2usize.pow(16), &mut rng).unwrap();
@@ -433,6 +432,11 @@ mod test {
             .add_user_key(sender_key.clone(), EventIndex::default())
             .await
             .unwrap();
+        // Wait for the wallet to register the balance belonging to the key, from the initial grant
+        // records. Depending on exactly when the key was added relative to the background event
+        // handling thread, the relevant events may be processed by either the event handling thread
+        // or the key scan thread, so we will wait for both of them to complete.
+        sender.sync(mock_eqs.lock().await.now()).await.unwrap();
         sender.await_key_scan(&sender_key.address()).await.unwrap();
         let total_balance = sender
             .balance(&sender_key.address(), &AssetCode::native())
@@ -468,14 +472,7 @@ mod test {
             )
             .await
             .unwrap();
-        assert_eq!(
-            sender.await_transaction(&receipt).await.unwrap(),
-            TransactionStatus::Retired
-        );
-        assert_eq!(
-            receiver.await_transaction(&receipt).await.unwrap(),
-            TransactionStatus::Retired
-        );
+        await_transaction(&receipt, &sender, &[&receiver]).await;
         assert_eq!(
             sender
                 .balance(&sender_key.address(), &AssetCode::native())
@@ -500,14 +497,7 @@ mod test {
             )
             .await
             .unwrap();
-        assert_eq!(
-            sender.await_transaction(&receipt).await.unwrap(),
-            TransactionStatus::Retired
-        );
-        assert_eq!(
-            receiver.await_transaction(&receipt).await.unwrap(),
-            TransactionStatus::Retired
-        );
+        await_transaction(&receipt, &receiver, &[&sender]).await;
         assert_eq!(
             sender
                 .balance(&sender_key.address(), &AssetCode::native())
@@ -574,6 +564,11 @@ mod test {
             .add_user_key(wrapper_key.clone(), EventIndex::default())
             .await
             .unwrap();
+        // Wait for the wrapper to register the balance belonging to the key, from the initial grant
+        // records. Depending on exactly when the key was added relative to the background event
+        // handling thread, the relevant events may be processed by either the event handling thread
+        // or the key scan thread, so we will wait for both of them to complete.
+        wrapper.sync(mock_eqs.lock().await.now()).await.unwrap();
         wrapper
             .await_key_scan(&wrapper_key.address())
             .await
@@ -670,14 +665,7 @@ mod test {
             )
             .await
             .unwrap();
-        assert_eq!(
-            wrapper.await_transaction(&receipt).await.unwrap(),
-            TransactionStatus::Retired
-        );
-        assert_eq!(
-            sponsor.await_transaction(&receipt).await.unwrap(),
-            TransactionStatus::Retired
-        );
+        await_transaction(&receipt, &wrapper, &[&sponsor]).await;
         assert_eq!(
             wrapper
                 .balance(&wrapper_key.address(), &AssetCode::native())
@@ -709,14 +697,7 @@ mod test {
             )
             .await
             .unwrap();
-        assert_eq!(
-            wrapper.await_transaction(&receipt).await.unwrap(),
-            TransactionStatus::Retired
-        );
-        assert_eq!(
-            sponsor.await_transaction(&receipt).await.unwrap(),
-            TransactionStatus::Retired
-        );
+        await_transaction(&receipt, &wrapper, &[&sponsor]).await;
         assert_eq!(
             wrapper
                 .balance(&wrapper_key.address(), &cape_asset.code)
@@ -741,10 +722,7 @@ mod test {
             )
             .await
             .unwrap();
-        assert_eq!(
-            sponsor.await_transaction(&receipt).await.unwrap(),
-            TransactionStatus::Retired
-        );
+        await_transaction(&receipt, &sponsor, &[]).await;
         assert_eq!(
             sponsor
                 .balance(&sponsor_key.address(), &cape_asset.code)

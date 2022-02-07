@@ -544,6 +544,8 @@ async fn main() -> Result<(), std::io::Error> {
 
 #[cfg(test)]
 mod tests {
+    #![allow(dead_code)] // Some helper functions are only used with feature "slow-tests"
+
     use super::*;
     use cape_wallet::cli_client::CliClient;
 
@@ -577,6 +579,7 @@ mod tests {
 
     // The CAPE CLI currently doesn't support sponsor and wrap transactions, so a
     // burn transaction is expected to fail.
+    #[cfg(feature = "slow-tests")]
     #[test]
     fn test_cli_burn_insufficient_balance() {
         cape_wallet::cli_client::cli_test(|t| {

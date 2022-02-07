@@ -161,6 +161,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "arbitrary-wrappers"
+version = "0.1.0"
+source = "git+ssh://git@github.com/SpectrumXYZ/arbitrary-wrappers.git#bd84e90d131bdc4418a6c96543cb1003db1dd73b"
+dependencies = [
+ "arbitrary",
+ "ark-std",
+ "itertools 0.10.3",
+ "jf-aap 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=8c32d8df3faf511e54ad89fa51627837ebcd8f20)",
+ "rand_chacha 0.3.1",
+ "serde",
+ "zerok-macros",
+]
+
+[[package]]
 name = "ark-bls12-377"
 version = "0.3.0"
 source = "git+https://github.com/arkworks-rs/curves?rev=677b4ae751a274037880ede86e9b6f30f62635af#677b4ae751a274037880ede86e9b6f30f62635af"
@@ -1014,7 +1028,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "arbitrary",
- "arbitrary-wrappers",
+ "arbitrary-wrappers 0.1.0 (git+ssh://git@github.com/SpectrumXYZ/arbitrary-wrappers.git?rev=bd84e90d131bdc4418a6c96543cb1003db1dd73b)",
  "ark-bn254",
  "ark-ec",
  "ark-ed-on-bn254",
@@ -3358,7 +3372,7 @@ checksum = "67c21572b4949434e4fc1e1978b99c5f77064153c59d998bf13ecd96fb5ecba7"
 [[package]]
 name = "key-set"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/key-set.git?rev=1cc35513c0f24c1d58d55ef699038fd647590555#1cc35513c0f24c1d58d55ef699038fd647590555"
+source = "git+ssh://git@github.com/SpectrumXYZ/key-set.git#1cc35513c0f24c1d58d55ef699038fd647590555"
 dependencies = [
  "ark-serialize",
  "bincode",
@@ -4482,10 +4496,10 @@ dependencies = [
 [[package]]
 name = "reef"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/reef.git?rev=859f50ef6181dc81adb20d041e98ec75700cac94#859f50ef6181dc81adb20d041e98ec75700cac94"
+source = "git+ssh://git@github.com/SpectrumXYZ/reef.git#859f50ef6181dc81adb20d041e98ec75700cac94"
 dependencies = [
  "arbitrary",
- "arbitrary-wrappers",
+ "arbitrary-wrappers 0.1.0 (git+ssh://git@github.com/SpectrumXYZ/arbitrary-wrappers.git?rev=bd84e90d131bdc4418a6c96543cb1003db1dd73b)",
  "ark-serialize",
  "commit",
  "funty",
@@ -4890,10 +4904,10 @@ dependencies = [
 [[package]]
 name = "seahorse"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/seahorse.git?rev=63f12c7fa896f5a61a63b6ad1115a97c2987edb4#63f12c7fa896f5a61a63b6ad1115a97c2987edb4"
+source = "git+ssh://git@github.com/SpectrumXYZ/seahorse.git?rev=88e058d714eedaadd8638f047dc91fb7d98dc91d#88e058d714eedaadd8638f047dc91fb7d98dc91d"
 dependencies = [
  "arbitrary",
- "arbitrary-wrappers",
+ "arbitrary-wrappers 0.1.0 (git+ssh://git@github.com/SpectrumXYZ/arbitrary-wrappers.git)",
  "ark-serialize",
  "ark-std",
  "async-scoped",

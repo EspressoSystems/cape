@@ -2,8 +2,8 @@ name: Testnet Build
 
 on:
   schedule:
-  - cron: '0 10 * * *' # run at 10:00 UTC
-    
+    - cron: '0 10 * * *' # run at 10:00 UTC
+  workflow_dispatch:
 
 jobs:
   nightly:

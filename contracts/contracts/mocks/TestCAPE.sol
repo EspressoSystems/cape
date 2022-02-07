@@ -58,8 +58,8 @@ contract TestCAPE is CAPE {
         blockHeight = newHeight;
     }
 
-    function computeMaxCommitments(CapeBlock memory newBlock) public pure returns (uint256) {
-        return _computeMaxCommitments(newBlock);
+    function computeNumCommitments(CapeBlock memory newBlock) public pure returns (uint256) {
+        return _computeNumCommitments(newBlock);
     }
 
     function checkForeignAssetCode(uint256 assetDefinitionCode, address erc20Address) public view {

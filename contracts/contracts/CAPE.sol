@@ -206,8 +206,10 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue, ReentrancyG
     /// @notice submit a new block to the CAPE contract. Transactions are validated and the blockchain state is updated. Moreover *BURN* transactions trigger the unwrapping of cape asset records into erc20 tokens.
     /// @param newBlock block to be processed by the CAPE contract.
     function submitCapeBlock(CapeBlock memory newBlock) public nonReentrant {
-        uint256 maxSizeCommsArray = _computeMaxCommitments(newBlock) + _getQueueSize();
-        AccumulatingArray.Data memory comms = AccumulatingArray.create(maxSizeCommsArray);
+        uint256 numPendingDeposits = _getQueueSize();
+        AccumulatingArray.Data memory commitments = AccumulatingArray.create(
+            _computeNumCommitments(newBlock) + numPendingDeposits
+        );
 
         uint256 numNotes = newBlock.noteTypes.length;
 
@@ -236,7 +238,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue, ReentrancyG
 
                 _publish(note.inputNullifiers);
 
-                comms.add(note.outputCommitments);
+                commitments.add(note.outputCommitments);
 
                 (vks[i], publicInputs[i], proofs[i], extraMsgs[i]) = _prepareForProofVerification(
                     note
@@ -250,8 +252,8 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue, ReentrancyG
 
                 _publish(note.inputNullifier);
 
-                comms.add(note.mintComm);
-                comms.add(note.chgComm);
+                commitments.add(note.mintComm);
+                commitments.add(note.chgComm);
 
                 (vks[i], publicInputs[i], proofs[i], extraMsgs[i]) = _prepareForProofVerification(
                     note
@@ -264,7 +266,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue, ReentrancyG
 
                 _publish(note.inputNullifiers);
 
-                comms.add(note.outputCommitments);
+                commitments.add(note.outputCommitments);
 
                 (vks[i], publicInputs[i], proofs[i], extraMsgs[i]) = _prepareForProofVerification(
                     note
@@ -281,7 +283,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue, ReentrancyG
                 // Insert all the output commitments to the records merkle tree except from the second one (corresponding to the burned output)
                 for (uint256 i = 0; i < note.transferNote.outputCommitments.length; i++) {
                     if (i != 1) {
-                        comms.add(note.transferNote.outputCommitments[i]);
+                        commitments.add(note.transferNote.outputCommitments[i]);
                     }
                 }
 
@@ -305,29 +307,24 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue, ReentrancyG
         }
 
         // Process the pending deposits obtained after calling `depositErc20`
-        // There are some pending deposits to process
-        uint256 numPendingDeposits = _getQueueSize();
-        uint256[] memory depositComms = new uint256[](numPendingDeposits);
-
-        if (numPendingDeposits > 0) {
-            for (uint256 i = 0; i < numPendingDeposits; i++) {
-                uint256 rc = _getQueueElem(i);
-                depositComms[i] = rc;
-                comms.add(rc);
-            }
-            // Empty the queue now the record commitments are ready to be inserted
-            _emptyQueue();
+        uint256[] memory depositCommitments = new uint256[](numPendingDeposits);
+        for (uint256 i = 0; i < numPendingDeposits; i++) {
+            uint256 rc = _getQueueElem(i);
+            depositCommitments[i] = rc;
+            commitments.add(rc);
         }
+        // Empty the queue now the record commitments are ready to be inserted
+        _emptyQueue();
 
         // Only update the merkle tree and add the root if the list of records commitments is non empty
-        if (!comms.isEmpty()) {
-            _updateRecordsMerkleTree(comms.toArray());
+        if (!commitments.isEmpty()) {
+            _updateRecordsMerkleTree(commitments.items);
             _addRoot(_rootValue);
         }
 
         // In all cases (the block is empty or not), the height is incremented.
         blockHeight += 1;
-        emit BlockCommitted(blockHeight, depositComms);
+        emit BlockCommitted(blockHeight, depositCommitments);
     }
 
     /// @dev send the ERC20 tokens equivalent to the asset records being burnt. Recall that the burned record opening is contained inside the note.
@@ -345,20 +342,21 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue, ReentrancyG
     }
 
     /// @dev Compute an upper bound on the number of records to be inserted
-    /// @param newBlock block of CAPE transactions
-    function _computeMaxCommitments(CapeBlock memory newBlock) internal pure returns (uint256) {
+    function _computeNumCommitments(CapeBlock memory newBlock) internal pure returns (uint256) {
         // MintNote always has 2 commitments: mint_comm, chg_comm
-        uint256 maxComms = 2 * newBlock.mintNotes.length;
+        uint256 numComms = 2 * newBlock.mintNotes.length;
         for (uint256 i = 0; i < newBlock.transferNotes.length; i++) {
-            maxComms += newBlock.transferNotes[i].outputCommitments.length;
+            numComms += newBlock.transferNotes[i].outputCommitments.length;
         }
         for (uint256 i = 0; i < newBlock.burnNotes.length; i++) {
-            maxComms += newBlock.burnNotes[i].transferNote.outputCommitments.length;
+            // Subtract one for the burn record commitment that is not inserted.
+            // The function _containsBurnRecord checks that there are at least 2 output commitments.
+            numComms += newBlock.burnNotes[i].transferNote.outputCommitments.length - 1;
         }
         for (uint256 i = 0; i < newBlock.freezeNotes.length; i++) {
-            maxComms += newBlock.freezeNotes[i].outputCommitments.length;
+            numComms += newBlock.freezeNotes[i].outputCommitments.length;
         }
-        return maxComms;
+        return numComms;
     }
 
     /// @dev Verify if a note is of type *TRANSFER*

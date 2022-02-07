@@ -139,11 +139,14 @@
               echo "Exporting all vars in .env file"
               set -a; source .env; set +a;
 
-              export CONTRACTS_DIR=$(pwd)/contracts
+              # on mac os `bin/pwd -P` returns the canonical path on case insenstive file-systems
+              my_pwd=$(/bin/pwd -P 2> /dev/null || pwd)
+
+              export CONTRACTS_DIR=''${my_pwd}/contracts
               export HARDHAT_CONFIG=$CONTRACTS_DIR/hardhat.config.ts
-              export PATH=$(pwd)/node_modules/.bin:$PATH
+              export PATH=''${my_pwd}/node_modules/.bin:$PATH
               export PATH=$CONTRACTS_DIR/node_modules/.bin:$PATH
-              export PATH=$(pwd)/bin:$PATH
+              export PATH=''${my_pwd}/bin:$PATH
 
               git config --local blame.ignoreRevsFile .git-blame-ignore-revs
             ''

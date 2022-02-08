@@ -33,26 +33,17 @@ use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
 use seahorse::{events::EventIndex, hd::KeyTree, testing::MockLedger};
 // use snafu::ResultExt;
 // use std::convert::TryInto;
-use std::fs::File;
-use std::io::Read;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 use structopt::StructOpt;
 use tracing::{event, Level};
-// TODO remove copy pasta from router.rs
+// TODO remove copy paste from router.rs
 // TODO: Add back freezer and auditor keys and test audit/freeze
 use jf_aap::{keys::UserPubKey, MerkleTree, TransactionVerifyingKey};
 use reef::traits::Ledger;
 
-// use cape_wallet::wallet::*;
-
-// use zerok_lib::{
-//     api::client,
-//     api::SpectrumError,
-//     ledger::SpectrumLedger,
-//     universal_params::UNIVERSAL_PARAM,
-//     wallet::network::{NetworkBackend, Url},
-// };
+use std::fs::File;
+use std::io::{Read, Write};
 
 type Wallet = seahorse::Wallet<'static, MockCapeBackend<'static, ()>, CapeLedger>;
 
@@ -70,10 +61,38 @@ struct Args {
 
     /// Path to a saved wallet, or a new directory where this wallet will be saved.
     storage: PathBuf,
+
+    // Path to all pub keys for sending assets to other wallets.  Stored in file until
+    // Address Book is ready
+    pub_key_storage: PathBuf,
 }
 
 async fn retry_delay() {
     sleep(Duration::from_secs(1)).await
+}
+
+// Read then overwrite the whole file.  Plenty of race conditions possible
+// but it's fine for the test if you wait between spinnin up processes.
+async fn write_pub_key(key: &UserPubKey, path: &Path) {
+    let mut keys = get_pub_keys_from_file(path).await;
+    keys.push(key.clone());
+    let mut file = File::create(path).unwrap_or_else(|err| {
+        panic!("cannot open private key file: {}", err);
+    });
+    file.write_all(&bincode::serialize(&keys).unwrap()).unwrap();
+}
+
+async fn get_pub_keys_from_file(path: &Path) -> Vec<UserPubKey> {
+    let mut file = File::open(path).unwrap_or_else(|err| {
+        panic!("cannot open pub keys file: {}", err);
+    });
+    let mut bytes = Vec::new();
+    file.read_to_end(&mut bytes).unwrap_or_else(|err| {
+        panic!("error reading pub keys file: {}", err);
+    });
+    bincode::deserialize(&bytes).unwrap_or_else(|err| {
+        panic!("invalid private key file: {}", err);
+    })
 }
 
 #[async_std::main]
@@ -161,6 +180,7 @@ async fn main() {
         }
     }
     let pub_key = wallet.pub_keys().await.remove(0);
+    write_pub_key(&pub_key, &args.pub_key_storage).await;
     let address = pub_key.address();
     event!(
         Level::INFO,
@@ -221,30 +241,9 @@ async fn main() {
         event!(Level::INFO, "minted custom asset");
     }
 
-    // TODO actually get the peers.
-
-    // let client: surf::Client = surf::Config::new()
-    //     .set_base_url(args.server)
-    //     .try_into()
-    //     .expect("failed to start HTTP client");
-    // TODO: Fix the error parseing/uncomment this line
-    // let client = client.with(client::parse_error_body::<>);
+    // TODO actually get the peers from Address Book service.
     loop {
-        let peers: Vec<UserPubKey> = vec![];
-        // Get a list of all users in our group (this will include our own public key).
-        // let peers: Vec<UserPubKey> = match client.get("getusers").recv_json().await {
-        //     Ok(peers) => peers,
-        //     Err(err) => {
-        //         event!(
-        //             Level::ERROR,
-        //             "error getting users from server: {}\nretrying...",
-        //             err
-        //         );
-        //         retry_delay().await;
-        //         continue;
-        //     }
-        // };
-        // Filter out our own public key and randomly choose one of the other ones to transfer to.
+        let peers: Vec<UserPubKey> = get_pub_keys_from_file(&args.pub_key_storage).await;
         let recipient =
             match peers.choose_weighted(&mut rng, |pk| if *pk == pub_key { 0 } else { 1 }) {
                 Ok(recipient) => recipient,

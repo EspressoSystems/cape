@@ -14,7 +14,7 @@ dirs = "4.0"
 # may switch to `ethers = "0.6.2"` in the future; keeping this for compatibility for now
 ethers = { git = "https://github.com/gakonst/ethers-rs", branch = "master" }
 
-jf-aap = { features = ["test_apis"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", rev = "8c32d8df3faf511e54ad89fa51627837ebcd8f20" }
+jf-aap = { features = ["test_apis"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", rev = "c789791d61b46e69367f07bb375c1ae2cf66e0d9" }
 jf-primitives = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git" }
 key-set = { git = "ssh://git@github.com/SpectrumXYZ/key-set.git" }
 

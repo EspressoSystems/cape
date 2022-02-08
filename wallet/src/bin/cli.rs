@@ -10,7 +10,10 @@
 
 extern crate cape_wallet;
 use async_std::sync::Mutex;
-use cap_rust_sandbox::{ledger::CapeLedger, state::EthereumAddr};
+use cap_rust_sandbox::{
+    ledger::CapeLedger,
+    state::{Erc20Code, EthereumAddr},
+};
 use cape_wallet::{
     mocks::{MockCapeBackend, MockCapeNetwork},
     wallet::{CapeWallet, CapeWalletExt},
@@ -18,7 +21,7 @@ use cape_wallet::{
 use jf_aap::{
     keys::{AuditorKeyPair, AuditorPubKey, FreezerKeyPair, FreezerPubKey, UserKeyPair},
     proof::UniversalParam,
-    structs::{AssetCode, ReceiverMemo, RecordCommitment},
+    structs::{AssetCode, AssetPolicy, ReceiverMemo, RecordCommitment},
     MerkleTree, TransactionVerifyingKey,
 };
 use key_set::{KeySet, VerifierKeySet};
@@ -118,8 +121,7 @@ macro_rules! cli_input_from_str {
 }
 
 cli_input_from_str! {
-    bool, u64, String, AssetCode, AuditorPubKey, FreezerPubKey, UserAddress, PathBuf, ReceiverMemo,
-    RecordCommitment, MerklePath, EventIndex, EthereumAddr
+    bool, u64, AssetCode, AuditorPubKey, Erc20Code, EthereumAddr, EventIndex, FreezerPubKey, MerklePath, PathBuf, ReceiverMemo, RecordCommitment, String, UserAddress
 }
 
 impl<
@@ -268,6 +270,27 @@ fn init_commands<
             }
         ),
         command!(
+            gen_key,
+            "generate new keys",
+            C,
+            |wallet, key_type: KeyType; scan_from: Option<EventIndex>| {
+                match key_type {
+                    KeyType::Audit => match wallet.generate_audit_key().await {
+                        Ok(pub_key) => println!("{}", pub_key),
+                        Err(err) => println!("Error generating audit key: {}", err),
+                    },
+                    KeyType::Freeze => match wallet.generate_freeze_key().await {
+                        Ok(pub_key) => println!("{}", pub_key),
+                        Err(err) => println!("Error generating freeze key: {}", err),
+                    },
+                    KeyType::Spend => match wallet.generate_user_key(scan_from).await {
+                        Ok(pub_key) => println!("{}", UserAddress(pub_key.address())),
+                        Err(err) => println!("Error generating spending key: {}", err),
+                    },
+                }
+            }
+        ),
+        command!(
             load_key,
             "load a key from a file",
             C,
@@ -324,6 +347,66 @@ fn init_commands<
                         }
                     },
                 };
+            }
+        ),
+        command!(
+            sponsor,
+            "sponsor an asset",
+            C,
+            |wallet,
+             erc20_code: Erc20Code,
+             sponsor_addr: EthereumAddr;
+             auditor: Option<AuditorPubKey>,
+             freezer: Option<FreezerPubKey>,
+             trace_amount: Option<bool>,
+             trace_address: Option<bool>,
+             trace_blind: Option<bool>,
+             reveal_threshold: Option<u64>| {
+                let mut policy = AssetPolicy::default();
+                if let Some(auditor) = auditor {
+                    policy = policy.set_auditor_pub_key(auditor);
+                }
+                if let Some(freezer) = freezer {
+                    policy = policy.set_freezer_pub_key(freezer);
+                }
+                if Some(true) == trace_amount {
+                    policy = match policy.reveal_amount() {
+                        Ok(policy) => policy,
+                        Err(err) => {
+                            println!("Invalid policy: {}", err);
+                            return;
+                        }
+                    }
+                }
+                if Some(true) == trace_address {
+                    policy = match policy.reveal_user_address() {
+                        Ok(policy) => policy,
+                        Err(err) => {
+                            println!("Invalid policy: {}", err);
+                            return;
+                        }
+                    }
+                }
+                if Some(true) == trace_blind {
+                    policy = match policy.reveal_blinding_factor() {
+                        Ok(policy) => policy,
+                        Err(err) => {
+                            println!("Invalid policy: {}", err);
+                            return;
+                        }
+                    }
+                }
+                if let Some(reveal_threshold) = reveal_threshold {
+                    policy = policy.set_reveal_threshold(reveal_threshold);
+                }
+                match wallet.sponsor(erc20_code, sponsor_addr, policy).await {
+                    Ok(def) => {
+                        println!("{}", def.code);
+                    }
+                    Err(err) => {
+                        println!("{}\nAsset was not sponsored.", err);
+                    }
+                }
             }
         ),
         command!(
@@ -565,6 +648,39 @@ mod tests {
             .output(format!("(?P<default_addr{}>ADDR~.*)", wallet))
     }
 
+    fn cli_sponsor(t: &mut CliClient) -> Result<(), String> {
+        // Set ERC 20 code and sponsor address.
+        let erc20_code = Erc20Code(EthereumAddr([1u8; 20]));
+        let sponsor_addr = EthereumAddr([2u8; 20]);
+
+        t
+            // Sponsor an asset with the default policy.
+            .command(0, format!("sponsor {} {}", erc20_code, sponsor_addr))?
+            .output(format!("(?P<asset_default>ASSET_CODE~.*)"))?
+            // Sponsor a non-auditable asset with a freezer key.
+            .command(0, "gen_key freeze")?
+            .output("(?P<freezer0>FREEZEPUBKEY~.*)")?
+            .command(0, format!("sponsor {} {} freezer=$freezer0", erc20_code, sponsor_addr))?
+            .output(format!("(?P<asset_non_auditable>ASSET_CODE~.*)"))?
+            // Sponsor an auditable asset without a freezer key.
+            .command(0, "gen_key audit")?
+            .output("(?P<auditor0>AUDPUBKEY~.*)")?
+            .command(0, format!("sponsor {} {} auditor=$auditor0 trace_amount=true trace_address=true trace_blind=true reveal_threshold=10", erc20_code, sponsor_addr))?
+            .output(format!("(?P<asset_auditable>ASSET_CODE~.*)"))?
+            // Sponsor an asset with all policy attributes specified.
+            .command(0, "gen_key audit")?
+            .output("(?P<auditor1>AUDPUBKEY~.*)")?
+            .command(0, "gen_key freeze")?
+            .output("(?P<freezer1>FREEZEPUBKEY~.*)")?
+            .command(0, format!("sponsor {} {} auditor=$auditor1 freezer=$freezer1 trace_amount=true trace_address=true trace_blind=true reveal_threshold=10", erc20_code, sponsor_addr))?
+            .output(format!("(?P<asset_auditable>ASSET_CODE~.*)"))?
+            // Should fail to sponsor an auditable asset without a given auditor key.
+            .command(0, format!("sponsor {} {} trace_amount=true trace_address=true trace_blind=true reveal_threshold=10", erc20_code, sponsor_addr))?
+            .output(format!("Invalid policy: Invalid parameters: Cannot reveal amount to dummy AuditorPublicKey"))?;
+
+        Ok(())
+    }
+
     fn cli_burn_insufficient_balance(t: &mut CliClient) -> Result<(), String> {
         // Set a hard-coded Ethereum address for testing.
         let erc20_addr = EthereumAddr([1u8; 20]);
@@ -573,6 +689,16 @@ mod tests {
         t.command(0, format!("burn 0 $default_addr0 {} 10 1", erc20_addr))?
             .output(format!("TransactionError: InsufficientBalance"))?;
         Ok(())
+    }
+
+    #[test]
+    fn test_cli_sponsor() {
+        cape_wallet::cli_client::cli_test(|t| {
+            create_wallet(t, 0)?;
+            cli_sponsor(t)?;
+
+            Ok(())
+        });
     }
 
     // The CAPE CLI currently doesn't support sponsor and wrap transactions, so a

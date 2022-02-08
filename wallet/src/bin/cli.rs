@@ -21,7 +21,7 @@ use cape_wallet::{
 use jf_aap::{
     keys::{AuditorKeyPair, AuditorPubKey, FreezerKeyPair, FreezerPubKey, UserKeyPair},
     proof::UniversalParam,
-    structs::{AssetCode, AssetPolicy, ReceiverMemo, RecordCommitment},
+    structs::{AssetCode, AssetDefinition, AssetPolicy, ReceiverMemo, RecordCommitment},
     MerkleTree, TransactionVerifyingKey,
 };
 use key_set::{KeySet, VerifierKeySet};
@@ -121,7 +121,8 @@ macro_rules! cli_input_from_str {
 }
 
 cli_input_from_str! {
-    bool, u64, AssetCode, AuditorPubKey, Erc20Code, EthereumAddr, EventIndex, FreezerPubKey, MerklePath, PathBuf, ReceiverMemo, RecordCommitment, String, UserAddress
+    bool, u64, AssetCode, AssetDefinition, AuditorPubKey, Erc20Code, EthereumAddr, EventIndex, FreezerPubKey, MerklePath, PathBuf,
+    ReceiverMemo, RecordCommitment, String, UserAddress
 }
 
 impl<
@@ -401,10 +402,29 @@ fn init_commands<
                 }
                 match wallet.sponsor(erc20_code, sponsor_addr, policy).await {
                     Ok(def) => {
-                        println!("{}", def.code);
+                        println!("{}", def);
                     }
                     Err(err) => {
                         println!("{}\nAsset was not sponsored.", err);
+                    }
+                }
+            }
+        ),
+        command!(
+            wrap,
+            "wrap an asset",
+            C,
+            |wallet,
+             asset_def: AssetDefinition,
+             from: EthereumAddr,
+             to: UserAddress,
+             amount: u64| {
+                match wallet.wrap(from, asset_def, to.0, amount).await {
+                    Ok(()) => {
+                        println!("\nAsset wrapped.");
+                    }
+                    Err(err) => {
+                        println!("{}\nAsset was not wrapped.", err);
                     }
                 }
             }
@@ -650,31 +670,83 @@ mod tests {
             .output(format!("(?P<default_addr{}>ADDR~.*)", wallet))
     }
 
-    fn cli_sponsor(t: &mut CliClient) -> Result<(), String> {
-        // Set ERC 20 code and sponsor address.
+    fn cli_sponsor_all_args(t: &mut CliClient, sponsor_addr: &EthereumAddr) -> Result<(), String> {
+        // Set an ERC 20 code to sponsor.
         let erc20_code = Erc20Code(EthereumAddr([1u8; 20]));
-        let sponsor_addr = EthereumAddr([2u8; 20]);
+
+        t
+            // Generate freezer and auditor keys.
+            .command(0, "gen_key freeze")?
+            .output("(?P<freezer>FREEZEPUBKEY~.*)")?
+            .command(0, "gen_key audit")?
+            .output("(?P<auditor>AUDPUBKEY~.*)")?
+            // Sponsor an asset with all policy attributes specified.
+            .command(0, format!("sponsor {} {} auditor=$auditor freezer=$freezer trace_amount=true trace_address=true trace_blind=true reveal_threshold=10", erc20_code, sponsor_addr))?
+            .output(format!("(?P<asset_def>ASSET_DEF~.*)"))?;
+
+        Ok(())
+    }
+
+    fn cli_sponsor_skipped_args(
+        t: &mut CliClient,
+        sponsor_addr: &EthereumAddr,
+    ) -> Result<(), String> {
+        // Set an ERC 20 code to sponsor.
+        let erc20_code = Erc20Code(EthereumAddr([1u8; 20]));
 
         t
             // Sponsor an asset with the default policy.
             .command(0, format!("sponsor {} {}", erc20_code, sponsor_addr))?
-            .output(format!("(?P<asset_default>ASSET_CODE~.*)"))?
+            .output(format!("(?P<asset_default>ASSET_DEF~.*)"))?
             // Sponsor a non-auditable asset with a freezer key.
             .command(0, "gen_key freeze")?
             .output("(?P<freezer>FREEZEPUBKEY~.*)")?
             .command(0, format!("sponsor {} {} freezer=$freezer", erc20_code, sponsor_addr))?
-            .output(format!("(?P<asset_non_auditable>ASSET_CODE~.*)"))?
+            .output(format!("(?P<asset_non_auditable>ASSET_DEF~.*)"))?
             // Sponsor an auditable asset without a freezer key.
             .command(0, "gen_key audit")?
             .output("(?P<auditor>AUDPUBKEY~.*)")?
             .command(0, format!("sponsor {} {} auditor=$auditor trace_amount=true trace_address=true trace_blind=true reveal_threshold=10", erc20_code, sponsor_addr))?
-            .output(format!("(?P<asset_auditable>ASSET_CODE~.*)"))?
-            // Sponsor an asset with all policy attributes specified.
-            .command(0, format!("sponsor {} {} auditor=$auditor freezer=$freezer trace_amount=true trace_address=true trace_blind=true reveal_threshold=10", erc20_code, sponsor_addr))?
-            .output(format!("(?P<asset_auditable>ASSET_CODE~.*)"))?
+            .output(format!("(?P<asset_auditable>ASSET_DEF~.*)"))?
             // Should fail to sponsor an auditable asset without a given auditor key.
             .command(0, format!("sponsor {} {} trace_amount=true trace_address=true trace_blind=true reveal_threshold=10", erc20_code, sponsor_addr))?
             .output(format!("Invalid policy: Invalid parameters: Cannot reveal amount to dummy AuditorPublicKey"))?;
+
+        Ok(())
+    }
+
+    fn cli_wrap_sponsored(
+        t: &mut CliClient,
+        eth_addr: &EthereumAddr,
+        amount: u64,
+    ) -> Result<(), String> {
+        // Wrap an asset.
+        t.command(
+            0,
+            format!("wrap $asset_def {} $default_addr0 {}", eth_addr, amount),
+        )?
+        .output(format!("Asset wrapped."))?;
+
+        Ok(())
+    }
+
+    fn cli_wrap_unsponsored(
+        t: &mut CliClient,
+        eth_addr: &EthereumAddr,
+        amount: u64,
+    ) -> Result<(), String> {
+        // Should fail to wrap an unsponsored asset.
+        t.command(
+            0,
+            format!(
+                "wrap {} {} $default_addr0 {}",
+                AssetDefinition::dummy(),
+                eth_addr,
+                amount
+            ),
+        )?
+        .output(format!("UndefinedAsset"))?
+        .output(format!("Asset was not wrapped."))?;
 
         Ok(())
     }
@@ -693,14 +765,32 @@ mod tests {
     fn test_cli_sponsor() {
         cape_wallet::cli_client::cli_test(|t| {
             create_wallet(t, 0)?;
-            cli_sponsor(t)?;
+
+            let sponsor_addr = EthereumAddr([2u8; 20]);
+            cli_sponsor_all_args(t, &sponsor_addr)?;
+            cli_sponsor_skipped_args(t, &sponsor_addr)?;
 
             Ok(())
         });
     }
 
-    // The CAPE CLI currently doesn't support sponsor and wrap transactions, so a
-    // burn transaction is expected to fail.
+    #[test]
+    fn test_cli_wrap() {
+        cape_wallet::cli_client::cli_test(|t| {
+            create_wallet(t, 0)?;
+            let sponsor_addr = EthereumAddr([2u8; 20]);
+            cli_sponsor_all_args(t, &sponsor_addr)?;
+
+            let wrapper_addr = EthereumAddr([3u8; 20]);
+            let amount = 10;
+            cli_wrap_sponsored(t, &wrapper_addr, amount)?;
+            cli_wrap_unsponsored(t, &wrapper_addr, amount)?;
+
+            Ok(())
+        });
+    }
+
+    // TODO !keyao Add a positive test.
     #[cfg(feature = "slow-tests")]
     #[test]
     fn test_cli_burn_insufficient_balance() {

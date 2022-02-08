@@ -97,6 +97,12 @@ impl<'a> CLI<'a> for CapeCli {
     }
 }
 
+impl<'a> CLIInput<'a, CapeCli> for AssetDefinition {
+    fn parse_for_wallet(_wallet: &mut Wallet<'a, CapeCli>, s: &str) -> Option<Self> {
+        Self::from_str(s).ok()
+    }
+}
+
 impl<'a> CLIInput<'a, CapeCli> for EthereumAddr {
     fn parse_for_wallet(_wallet: &mut Wallet<'a, CapeCli>, s: &str) -> Option<Self> {
         Self::from_str(s).ok()
@@ -175,18 +181,19 @@ fn cape_specific_cli_commands<'a>() -> Vec<Command<'a, CapeCli>> {
         command!(
             wrap,
             "wrap an asset",
-            C,
-            |wallet,
+            CapeCli,
+            |io,
+             wallet,
              asset_def: AssetDefinition,
              from: EthereumAddr,
              to: UserAddress,
              amount: u64| {
                 match wallet.wrap(from, asset_def, to.0, amount).await {
                     Ok(()) => {
-                        println!("\nAsset wrapped.");
+                        cli_writeln!(io, "\nAsset wrapped.");
                     }
                     Err(err) => {
-                        println!("{}\nAsset was not wrapped.", err);
+                        cli_writeln!(io, "{}\nAsset was not wrapped.", err);
                     }
                 }
             }

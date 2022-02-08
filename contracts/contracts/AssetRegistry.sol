@@ -22,16 +22,18 @@ contract AssetRegistry {
         uint64 revealThreshold;
     }
 
-    /// @dev fetch the ERC20 token address corresponding to some asset definition
-    /// @param assetDefinition asset definition
+    /// @notice Fetch the ERC-20 token address corresponding to the
+    /// given asset definition.
+    /// @param assetDefinition an asset definition
+    /// @return An ERC-20 address
     function _lookup(AssetDefinition memory assetDefinition) internal view returns (address) {
         bytes32 key = keccak256(abi.encode(assetDefinition));
         return assets[key];
     }
 
-    /// @notice Check if an asset is already registered
-    /// @param assetDefinition describing the asset
-    /// @return true if the asset type is registered, false otherwise
+    /// @notice Is the given asset definition registered?
+    /// @param assetDefinition an asset definition
+    /// @return True if the asset type is registered, false otherwise.
     function isCapeAssetRegistered(AssetDefinition memory assetDefinition)
         public
         view
@@ -40,11 +42,11 @@ contract AssetRegistry {
         return _lookup(assetDefinition) != address(0);
     }
 
-    /// @notice Create a new asset type associated to an ERC20 token and
-    ///         register it in the registry.
-    /// @param erc20Address erc20 token address of corresponding to the asset type.
-    /// @param newAsset asset type to be registered in the contract.
-    /// @dev will revert if asset is already registered
+    /// @notice Create and register a new asset type associated with an
+    /// ERC-20 token. Will revert if the asset type is already
+    /// registered or the ERC-20 token address is zero.
+    /// @param erc20Address An ERC-20 token address
+    /// @param newAsset An asset type to be registered in the contract
     function sponsorCapeAsset(address erc20Address, AssetDefinition memory newAsset) public {
         // TODO check if real token (figure out if this is necessary/useful):
         //      the contract could still do whatever it wants even if it has
@@ -58,11 +60,12 @@ contract AssetRegistry {
         assets[key] = erc20Address;
     }
 
-    /// @notice Checks if the asset definition code is correctly derived from the ERC20 address
-    ///        of the token and the address of the sponsor.
-    /// @dev requires "view" to access msg.sender
-    /// @param assetDefinitionCode code of asset definition
-    /// @param erc20Address erc20 address bound to the asset definition
+    /// @notice Throws an exception if the asset definition code is
+    /// not correctly derived from the ERC-20 address of the token and
+    /// the address of the sponsor.
+    /// @dev Requires "view" to access msg.sender.
+    /// @param assetDefinitionCode The code of an asset definition
+    /// @param erc20Address The ERC-20 address bound to the asset definition
     function _checkForeignAssetCode(uint256 assetDefinitionCode, address erc20Address)
         internal
         view
@@ -75,9 +78,11 @@ contract AssetRegistry {
         require(derivedCode == assetDefinitionCode, "Wrong foreign asset code");
     }
 
-    /// @dev compute the asset description from the address of the erc20 token and the address of the sponsor
+    /// @dev Compute the asset description from the address of the
+    /// ERC-20 token and the address of the sponsor.
     /// @param erc20Address address of the erc20 token
     /// @param sponsor address of the sponsor
+    /// @return The asset description
     function _computeAssetDescription(address erc20Address, address sponsor)
         internal
         pure

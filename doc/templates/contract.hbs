@@ -1,65 +1,51 @@
-## Contract `{{name}}`
-
 {{{natspec.userdoc}}}
-
 {{{natspec.devdoc}}}
 
-{{#each ownFunctions}}
-### Function {{name}} [{{visibility}}]
+{{#if ownFunctions}}
+## Functions
+{{/if}}
+{{#ownFunctions}}
+### {{name}}
 ```solidity
-function {{name}}({{args}}){{#if outputs}} → {{outputs}}{{/if}}
+  function {{name}}(
+    {{#natspec.params}}
+    {{#lookup ../args.types @index}}{{/lookup}} {{param}}{{#if @last}}{{else}},{{/if}}
+    {{/natspec.params}}
+  ) {{visibility}}{{#if outputs}} returns ({{outputs}}){{/if}}
 ```
-{{{natspec.userdoc}}}
-
-{{{natspec.devdoc}}}
-
+{{#if natspec.userdoc}}{{natspec.userdoc}}{{/if}}
+{{#if natspec.devdoc}}{{natspec.devdoc}}{{/if}}
 {{#if natspec.params}}
-#### Parameters:
+#### Parameters
+| Name | Type | Description                                                          |
+| :--- | :--- | :------------------------------------------------------------------- |
 {{#natspec.params}}
-    - `{{param}}`: {{description}}
-{{/natspec.params}}
-{{/if}}
+|`{{param}}` | {{#lookup ../args.types @index}}{{/lookup}} | {{ description }}{{/natspec.params}}{{/if}}
 {{#if natspec.returns}}
-    #### Return Values:
-    {{#natspec.returns}}
-        - {{param}} {{description}}
-    {{/natspec.returns}}
+#### Return Values
+| Returns | Type          | Description                                                                  |
+| :-------| :------------ | :--------------------------------------------------------------------------- |
+{{#natspec.returns}}
+| ⇒ | {{#lookup ../args.types @index}}{{/lookup}} | {{{description}}}{{/natspec.returns}}{{/if}}
+{{/ownFunctions}}
+{{#if ownEvents}}
+## Events
 {{/if}}
-
-{{/each}}
-
-{{#each ownModifiers}}
-### Modifier `{{name}}`
+{{#ownEvents}}
+### {{name}}
 ```solidity
-modifier {{name}}({{args}})
+  event {{name}}(
+    {{#natspec.params}}
+    {{#lookup ../args.types @index}}{{/lookup}} {{param}}{{#if @last}}{{else}},{{/if}}
+    {{/natspec.params}}
+  )
 ```
-
-{{{natspec.userdoc}}}
-
-{{{natspec.devdoc}}}
-
-{{/each}}
-
-{{#each ownEvents}}
-### Event {{name}}
-```solidity
-event {{name}}({{args}})
-```
-
-{{{natspec.userdoc}}}
-
-{{{natspec.devdoc}}}
-
-{{/each}}
-
-{{#each ownStructs}}
-### Struct {{name}}
-
-#### Members
-{{#each members}}
-
-{{type}} {{name}}
-
-{{/each}}
-
-{{/each}}
+{{#if natspec.userdoc}}{{natspec.userdoc}}{{/if}}
+{{#if natspec.devdoc}}{{natspec.devdoc}}{{/if}}
+{{#if natspec.params}}
+#### Parameters
+| Name                           | Type          | Description                                    |
+| :----------------------------- | :------------ | :--------------------------------------------- |
+{{#natspec.params}}
+|`{{param}}`| {{#lookup ../args.types @index}}{{/lookup}} | {{{description}}}{{/natspec.params}}{{/if}}
+{{/ownEvents}}

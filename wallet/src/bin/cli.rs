@@ -659,20 +659,16 @@ mod tests {
             .output(format!("(?P<asset_default>ASSET_CODE~.*)"))?
             // Sponsor a non-auditable asset with a freezer key.
             .command(0, "gen_key freeze")?
-            .output("(?P<freezer0>FREEZEPUBKEY~.*)")?
-            .command(0, format!("sponsor {} {} freezer=$freezer0", erc20_code, sponsor_addr))?
+            .output("(?P<freezer>FREEZEPUBKEY~.*)")?
+            .command(0, format!("sponsor {} {} freezer=$freezer", erc20_code, sponsor_addr))?
             .output(format!("(?P<asset_non_auditable>ASSET_CODE~.*)"))?
             // Sponsor an auditable asset without a freezer key.
             .command(0, "gen_key audit")?
-            .output("(?P<auditor0>AUDPUBKEY~.*)")?
-            .command(0, format!("sponsor {} {} auditor=$auditor0 trace_amount=true trace_address=true trace_blind=true reveal_threshold=10", erc20_code, sponsor_addr))?
+            .output("(?P<auditor>AUDPUBKEY~.*)")?
+            .command(0, format!("sponsor {} {} auditor=$auditor trace_amount=true trace_address=true trace_blind=true reveal_threshold=10", erc20_code, sponsor_addr))?
             .output(format!("(?P<asset_auditable>ASSET_CODE~.*)"))?
             // Sponsor an asset with all policy attributes specified.
-            .command(0, "gen_key audit")?
-            .output("(?P<auditor1>AUDPUBKEY~.*)")?
-            .command(0, "gen_key freeze")?
-            .output("(?P<freezer1>FREEZEPUBKEY~.*)")?
-            .command(0, format!("sponsor {} {} auditor=$auditor1 freezer=$freezer1 trace_amount=true trace_address=true trace_blind=true reveal_threshold=10", erc20_code, sponsor_addr))?
+            .command(0, format!("sponsor {} {} auditor=$auditor freezer=$freezer trace_amount=true trace_address=true trace_blind=true reveal_threshold=10", erc20_code, sponsor_addr))?
             .output(format!("(?P<asset_auditable>ASSET_CODE~.*)"))?
             // Should fail to sponsor an auditable asset without a given auditor key.
             .command(0, format!("sponsor {} {} trace_amount=true trace_address=true trace_blind=true reveal_threshold=10", erc20_code, sponsor_addr))?

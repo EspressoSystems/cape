@@ -83,6 +83,12 @@ interface IPlonkVerifier {
     }
 
     /// @dev Batch verify multiple TurboPlonk proofs.
+    /// @param verifyingKeys An array of verifying keys
+    /// @param publicInputs A two-dimensional array of public inputs. **How does one create this parameter?**
+    /// @param proofs An array of Plonk proofs
+    /// @param extraTranscriptInitMsgs An array of bytes from
+    /// transcript initialization messages
+    /// @return _ A boolean that is true for successful verification, false otherwise
     function batchVerify(
         VerifyingKey[] memory verifyingKeys,
         uint256[][] memory publicInputs,

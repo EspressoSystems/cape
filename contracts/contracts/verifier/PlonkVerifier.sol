@@ -68,6 +68,11 @@ contract PlonkVerifier is IPlonkVerifier {
     }
 
     /// @dev Batch verify multiple TurboPlonk proofs.
+    /// @param verifyingKeys An array of verifier keys
+    /// @param publicInputs A two-dimensional array of public inputs. *How is this obtained or constructed?*
+    /// @param proofs An array of Plonk proofs
+    /// @param extraTranscriptInitMsgs An array of bytes from
+    /// transcript initialization messages
     function batchVerify(
         VerifyingKey[] memory verifyingKeys,
         uint256[][] memory publicInputs,
@@ -102,7 +107,9 @@ contract PlonkVerifier is IPlonkVerifier {
         return _batchVerifyOpeningProofs(pcsInfos);
     }
 
-    /// @dev Check all group points and scalar fields are valid, or else revert
+    /// @dev Validate all group points and scalar fields. Revert if
+    /// any are invalid.
+    /// @param proof A Plonk proof
     function _validateProof(PlonkProof memory proof) internal pure {
         BN254.validateG1Point(proof.wire0);
         BN254.validateG1Point(proof.wire1);
@@ -230,9 +237,10 @@ contract PlonkVerifier is IPlonkVerifier {
         }
     }
 
-    /// @dev Compute the constant term of the linearization polynomial
-    ///
+    /// @dev Compute the constant term of the linearization polynomial.
+    /// ```
     /// r_plonk = PI - L1(x) * alpha^2 - alpha * \prod_i=1..m-1 (w_i + beta * sigma_i + gamma) * (w_m + gamma) * z(xw)
+    /// ```
     /// where m is the number of wire types.
     function _computeLinPolyConstantTerm(
         Challenges memory chal,
@@ -285,13 +293,19 @@ contract PlonkVerifier is IPlonkVerifier {
         }
     }
 
-    // Compute components in [E]1 and [F]1 used for PolyComm opening verification
-    // Returned commitment is a generalization of `[F]1` described in Sec 8.4, step 10 of https://eprint.iacr.org/2019/953.pdf
-    // Returned evaluation is the scalar in `[E]1` described in Sec 8.4, step 11 of https://eprint.iacr.org/2019/953.pdf
-    //
-    // equivalent of JF's https://github.com/SpectrumXYZ/jellyfish/blob/main/plonk/src/proof_system/verifier.rs#L154-L170
-    /// @dev caller allocates the memory fr commScalars and commBases
+    /// @dev Compute components in [E]1 and [F]1 used for PolyComm opening verification
+    /// equivalent of JF's https://github.com/SpectrumXYZ/jellyfish/blob/main/plonk/src/proof_system/verifier.rs#L154-L170
+    /// caller allocates the memory fr commScalars and commBases
     /// requires Arrays of size 30.
+    /// @param verifyingKey A verifier key
+    /// @param evalData A polynomial evaluation
+    /// @param proof A Plonk proof
+    /// @param chal A set of challenges
+    /// @param commScalars Common scalars
+    /// @param commBases Common bases
+    // The returned commitment is a generalization of
+    // `[F]1` described in Sec 8.4, step 10 of https://eprint.iacr.org/2019/953.pdf
+    // Returned evaluation is the scalar in `[E]1` described in Sec 8.4, step 11 of https://eprint.iacr.org/2019/953.pdf
     function _prepareOpeningProof(
         VerifyingKey memory verifyingKey,
         Poly.EvalData memory evalData,
@@ -308,10 +322,10 @@ contract PlonkVerifier is IPlonkVerifier {
         eval = _prepareEvaluations(linPolyConstant, proof, commScalars);
     }
 
-    // `aggregate_poly_commitments()` in Jellyfish, but since we are not aggregating multiple,
-    // but rather preparing for `[F]1` from a single proof.
-    /// @dev caller allocates the memory fr commScalars and commBases
-    /// requires Arrays of size 30.
+    /// @dev Similar to `aggregate_poly_commitments()` in Jellyfish, but we are not aggregating multiple,
+    /// but rather preparing for `[F]1` from a single proof.
+    /// The caller allocates the memory fr commScalars and commBases.
+    /// Requires Arrays of size 30.
     function _preparePolyCommitments(
         VerifyingKey memory verifyingKey,
         Challenges memory chal,
@@ -390,10 +404,13 @@ contract PlonkVerifier is IPlonkVerifier {
         commBases[29] = proof.prodPerm;
     }
 
-    // `aggregate_evaluations()` in Jellyfish, but since we are not aggregating multiple, but rather preparing `[E]1` from a single proof.
-    // The returned value is the scalar in `[E]1` described in Sec 8.4, step 11 of https://eprint.iacr.org/2019/953.pdf
+    /// @dev `aggregate_evaluations()` in Jellyfish, but since we are not aggregating multiple, but rather preparing `[E]1` from a single proof.
     /// @dev caller allocates the memory fr commScalars
     /// requires Arrays of size 30.
+    /// @param linPolyConstant A linear polynomial constant
+    /// @param proof A Plonk proof
+    /// @param commScalars An array of common scalars
+    /// The returned value is the scalar in `[E]1` described in Sec 8.4, step 11 of https://eprint.iacr.org/2019/953.pdf
     function _prepareEvaluations(
         uint256 linPolyConstant,
         PlonkProof memory proof,
@@ -417,8 +434,10 @@ contract PlonkVerifier is IPlonkVerifier {
         }
     }
 
-    // Batchly verify multiple PCS opening proofs.
-    // `open_key` has been assembled from BN254.P1(), BN254.P2() and contract variable _betaH
+    /// @dev Batchly verify multiple PCS opening proofs.
+    /// `open_key` has been assembled from BN254.P1(), BN254.P2() and contract variable _betaH
+    /// @param pcsInfos An array of PcsInfo
+    /// @dev Returns true if the entire batch verifiies and false otherwise.
     function _batchVerifyOpeningProofs(PcsInfo[] memory pcsInfos) internal view returns (bool) {
         uint256 pcsLen = pcsInfos.length;
         uint256 p = BN254.R_MOD;
@@ -534,9 +553,15 @@ contract PlonkVerifier is IPlonkVerifier {
         return BN254.pairingProd2(a1, _betaH, b1, BN254.P2());
     }
 
-    // compute the linearization of the scalars and bases.
-    /// @dev caller allocates the memory fr commScalars and commBases
-    /// requires Arrays of size 30.
+    /// @dev Compute the linearization of the scalars and bases.
+    /// The caller allocates the memory from commScalars and commBases.
+    /// Requires arrays of size 30.
+    /// @param verifyingKey The verifying key
+    /// @param challenge A set of challenges
+    /// @param evalData Polynomial evaluation data
+    /// @param proof A Plonk proof
+    /// @param bases An array of BN254 G1 points
+    /// @param scalars An array of scalars
     function _linearizationScalarsAndBases(
         VerifyingKey memory verifyingKey,
         Challenges memory challenge,

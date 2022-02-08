@@ -6,6 +6,8 @@ contract RootStore {
     uint64 internal _writeHead;
     uint256 internal constant _EMPTY_NODE_VALUE = 0;
 
+    /// @dev Create a root store.
+    /// @param nRoots The maximum number of roots to store
     constructor(uint64 nRoots) {
         // Set up the circular buffer for handling the last N roots
         require(nRoots > 1, "A least 2 roots required");
@@ -23,11 +25,16 @@ contract RootStore {
         _writeHead = 1; // The first root value is 0 when the tree is empty
     }
 
+    /// @dev Add a root value. Only keep the latest nRoots ones.
+    /// @param newRoot The value of the new root
     function _addRoot(uint256 newRoot) internal {
         _roots[_writeHead] = newRoot;
         _writeHead = (_writeHead + 1) % uint64(_roots.length);
     }
 
+    /// @dev Is the root value contained in the store?
+    /// @param root The root value to find
+    /// @return _ True if the root value is in the store, false otherwise
     function _containsRoot(uint256 root) internal view returns (bool) {
         // TODO (optimization) evaluate gas cost of this loop based search vs mapping-assisted search
         for (uint256 i = 0; i < _roots.length; i++) {
@@ -38,6 +45,8 @@ contract RootStore {
         return false;
     }
 
+    /// @dev Raise an exception if the root is not present in the store.
+    /// @param root The required root value
     function _checkContainsRoot(uint256 root) internal view {
         require(_containsRoot(root), "Root not found");
     }

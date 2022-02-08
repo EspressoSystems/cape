@@ -128,6 +128,10 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue, ReentrancyG
         BurnNote[] burnNotes;
     }
 
+    /// @notice CAPE contract constructor method
+    /// @param merkleTreeHeight height of the merkle tree that stores the asset record commitments
+    /// @param nRoots number of the most recent roots of the records merkle tree to be stored
+    /// @param verifierAddr address of the Plonk Verifier contract
     constructor(
         uint8 merkleTreeHeight,
         uint64 nRoots,
@@ -136,7 +140,8 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue, ReentrancyG
         _verifier = IPlonkVerifier(verifierAddr);
     }
 
-    // Checks if a block is empty
+    /// @notice Checks if a block is empty
+    /// @param block block of CAPE transactions
     function _isBlockEmpty(CapeBlock memory block) internal returns (bool) {
         bool res = (block.transferNotes.length == 0 &&
             block.burnNotes.length == 0 &&
@@ -145,17 +150,19 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue, ReentrancyG
         return res;
     }
 
-    /// Publish an array of nullifiers
+    /// @dev Publish an array of nullifiers
     /// @dev Requires all nullifiers to be unique and unpublished.
     /// @dev A block creator must not submit notes with duplicate nullifiers.
+    /// @param newNullifiers list of nullifiers to publish
     function _publish(uint256[] memory newNullifiers) internal {
         for (uint256 j = 0; j < newNullifiers.length; j++) {
             _publish(newNullifiers[j]);
         }
     }
 
-    /// Publish a nullifier if it hasn't been published before
+    /// @dev Publish a nullifier if it hasn't been published before
     /// @dev reverts if the nullifier is already published
+    /// @param nullifier nullifier to publish
     function _publish(uint256 nullifier) internal {
         require(!nullifiers[nullifier], "Nullifier already published");
         nullifiers[nullifier] = true;
@@ -177,7 +184,9 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue, ReentrancyG
         emit Erc20TokensDeposited(roBytes, erc20Address, msg.sender);
     }
 
-    /// @notice Checks if the asset definition code is correctly derived from the internal asset code.
+    /// @dev Checks if the asset definition code is correctly derived from the internal asset code.
+    /// @param assetDefinitionCode asset definition code
+    /// @param internalAssetCode internal asset code
     function _checkDomesticAssetCode(uint256 assetDefinitionCode, uint256 internalAssetCode)
         internal
         view
@@ -194,7 +203,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue, ReentrancyG
         require(derivedCode == assetDefinitionCode, "Wrong domestic asset code");
     }
 
-    /// @notice submit a new block to the CAPE contract. Transactions are validated and the blockchain state is updated. Moreover burn transactions trigger the unwrapping of cape asset records into erc20 tokens.
+    /// @notice submit a new block to the CAPE contract. Transactions are validated and the blockchain state is updated. Moreover *BURN* transactions trigger the unwrapping of cape asset records into erc20 tokens.
     /// @param newBlock block to be processed by the CAPE contract.
     function submitCapeBlock(CapeBlock memory newBlock) public nonReentrant {
         uint256 maxSizeCommsArray = _computeMaxCommitments(newBlock) + _getQueueSize();
@@ -300,7 +309,6 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue, ReentrancyG
         uint256 numPendingDeposits = _getQueueSize();
         uint256[] memory depositComms = new uint256[](numPendingDeposits);
 
-        // See https://github.com/SpectrumXYZ/cape/issues/400 for why we check that the queue has at most MAX_QUEUE_SIZE elements
         if (numPendingDeposits > 0) {
             for (uint256 i = 0; i < numPendingDeposits; i++) {
                 uint256 rc = _getQueueElem(i);
@@ -322,6 +330,8 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue, ReentrancyG
         emit BlockCommitted(blockHeight, depositComms);
     }
 
+    /// @dev send the ERC20 tokens equivalent to the asset records being burnt. Recall that the burned record opening is contained inside the note.
+    /// @param note note of type *BURN*
     function _handleWithdrawal(BurnNote memory note) internal {
         address ercTokenAddress = _lookup(note.recordOpening.assetDef);
         ERC20 token = ERC20(ercTokenAddress);
@@ -335,6 +345,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue, ReentrancyG
     }
 
     /// @dev Compute an upper bound on the number of records to be inserted
+    /// @param newBlock block of CAPE transactions
     function _computeMaxCommitments(CapeBlock memory newBlock) internal pure returns (uint256) {
         // MintNote always has 2 commitments: mint_comm, chg_comm
         uint256 maxComms = 2 * newBlock.mintNotes.length;
@@ -350,6 +361,8 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue, ReentrancyG
         return maxComms;
     }
 
+    /// @dev Verify if a note is of type *TRANSFER*
+    /// @param note note which could be of type *TRANSFER* or *BURN*
     function _checkTransfer(TransferNote memory note) internal pure {
         require(
             !_containsBurnPrefix(note.auxInfo.extraProofBoundData),
@@ -357,27 +370,35 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue, ReentrancyG
         );
     }
 
+    /// @dev check if a note has expired
+    /// @param note note for which we want to check its timestamp against the current block height
     function _isExpired(TransferNote memory note) internal view returns (bool) {
         return note.auxInfo.validUntil < blockHeight;
     }
 
+    /// @dev check if a burn note is well formed
+    /// @param note note of type *BURN*
     function _checkBurn(BurnNote memory note) internal view {
         bytes memory extra = note.transferNote.auxInfo.extraProofBoundData;
         require(_containsBurnPrefix(extra), "Bad burn tag");
         require(_containsBurnRecord(note), "Bad record commitment");
     }
 
-    function _containsBurnPrefix(bytes memory extraProofBoundData) internal pure returns (bool) {
-        if (extraProofBoundData.length < CAPE_BURN_MAGIC_BYTES_SIZE) {
+    /// @dev helper function to check if a sequence of bytes contains hardcoded prefix
+    /// @param byteSeq sequence of bytes
+    function _containsBurnPrefix(bytes memory byteSeq) internal pure returns (bool) {
+        if (byteSeq.length < CAPE_BURN_MAGIC_BYTES_SIZE) {
             return false;
         }
         return
             BytesLib.equal(
-                BytesLib.slice(extraProofBoundData, 0, CAPE_BURN_MAGIC_BYTES_SIZE),
+                BytesLib.slice(byteSeq, 0, CAPE_BURN_MAGIC_BYTES_SIZE),
                 CAPE_BURN_MAGIC_BYTES
             );
     }
 
+    /// @dev check if the burned record opening and the record commitment in position 1 are consistent
+    /// @param note note of type *BURN*
     function _containsBurnRecord(BurnNote memory note) internal view returns (bool) {
         if (note.transferNote.outputCommitments.length < 2) {
             return false;
@@ -386,6 +407,8 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue, ReentrancyG
         return rc == note.transferNote.outputCommitments[1];
     }
 
+    /// @dev compute the commitment of a record opening
+    /// @param ro record opening
     function _deriveRecordCommitment(RecordOpening memory ro) internal view returns (uint256 rc) {
         require(ro.assetDef.policy.revealMap < 2**12, "Reveal map exceeds 12 bits");
 
@@ -416,8 +439,8 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue, ReentrancyG
         return RescueLib.commit(inputs);
     }
 
-    // An overloaded function (one for each note type) to prepare all inputs necessary
-    // for batch verification of the plonk proof
+    /// @dev An overloaded function (one for each note type) to prepare all inputs necessary for batch verification of the plonk proof
+    /// @param note note of type *TRANSFER*
     function _prepareForProofVerification(TransferNote memory note)
         internal
         view
@@ -482,6 +505,8 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue, ReentrancyG
         );
     }
 
+    /// @dev An overloaded function (one for each note type) to prepare all inputs necessary for batch verification of the plonk proof
+    /// @param note note of type *BURN*
     function _prepareForProofVerification(BurnNote memory note)
         internal
         view
@@ -495,6 +520,8 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue, ReentrancyG
         return _prepareForProofVerification(note.transferNote);
     }
 
+    /// @dev An overloaded function (one for each note type) to prepare all inputs necessary for batch verification of the plonk proof
+    /// @param note note of type *MINT*
     function _prepareForProofVerification(MintNote memory note)
         internal
         view
@@ -554,6 +581,8 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue, ReentrancyG
         transcriptInitMsg = EdOnBN254.serialize(note.auxInfo.txnMemoVerKey);
     }
 
+    /// @dev An overloaded function (one for each note type) to prepare all inputs necessary for batch verification of the plonk proof
+    /// @param note note of type *FREEZE*
     function _prepareForProofVerification(FreezeNote memory note)
         internal
         view

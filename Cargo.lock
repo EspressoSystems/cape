@@ -149,26 +149,12 @@ dependencies = [
 [[package]]
 name = "arbitrary-wrappers"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/arbitrary-wrappers.git?rev=bd84e90d131bdc4418a6c96543cb1003db1dd73b#bd84e90d131bdc4418a6c96543cb1003db1dd73b"
+source = "git+ssh://git@github.com/SpectrumXYZ/arbitrary-wrappers.git#e0bf09f31c057b2788eee30dcb6f7f698095e8ed"
 dependencies = [
  "arbitrary",
  "ark-std",
  "itertools 0.10.3",
- "jf-aap 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=8c32d8df3faf511e54ad89fa51627837ebcd8f20)",
- "rand_chacha 0.3.1",
- "serde",
- "zerok-macros",
-]
-
-[[package]]
-name = "arbitrary-wrappers"
-version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/arbitrary-wrappers.git#bd84e90d131bdc4418a6c96543cb1003db1dd73b"
-dependencies = [
- "arbitrary",
- "ark-std",
- "itertools 0.10.3",
- "jf-aap 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=8c32d8df3faf511e54ad89fa51627837ebcd8f20)",
+ "jf-aap",
  "rand_chacha 0.3.1",
  "serde",
  "zerok-macros",
@@ -1028,7 +1014,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "arbitrary",
- "arbitrary-wrappers 0.1.0 (git+ssh://git@github.com/SpectrumXYZ/arbitrary-wrappers.git?rev=bd84e90d131bdc4418a6c96543cb1003db1dd73b)",
+ "arbitrary-wrappers",
  "ark-bn254",
  "ark-ec",
  "ark-ed-on-bn254",
@@ -1049,7 +1035,7 @@ dependencies = [
  "generic-array 0.14.5",
  "hex",
  "itertools 0.10.3",
- "jf-aap 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=8c32d8df3faf511e54ad89fa51627837ebcd8f20)",
+ "jf-aap",
  "jf-plonk",
  "jf-primitives",
  "jf-rescue",
@@ -1079,7 +1065,7 @@ dependencies = [
  "cap-rust-sandbox",
  "ethers 0.6.0 (git+https://github.com/gakonst/ethers-rs)",
  "itertools 0.10.3",
- "jf-aap 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=8c32d8df3faf511e54ad89fa51627837ebcd8f20)",
+ "jf-aap",
  "jf-rescue",
  "jf-utils",
  "rand 0.8.4",
@@ -1100,7 +1086,7 @@ dependencies = [
  "futures",
  "futures-util",
  "itertools 0.10.3",
- "jf-aap 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=8c32d8df3faf511e54ad89fa51627837ebcd8f20)",
+ "jf-aap",
  "jf-plonk",
  "jf-primitives",
  "jf-utils",
@@ -3163,7 +3149,7 @@ checksum = "1aab8fc367588b89dcee83ab0fd66b72b50b72fa1904d7095045ace2b0c81c35"
 [[package]]
 name = "jf-aap"
 version = "0.0.1"
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=8c32d8df3faf511e54ad89fa51627837ebcd8f20#8c32d8df3faf511e54ad89fa51627837ebcd8f20"
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=c789791d61b46e69367f07bb375c1ae2cf66e0d9#c789791d61b46e69367f07bb375c1ae2cf66e0d9"
 dependencies = [
  "anyhow",
  "ark-bn254",
@@ -3194,47 +3180,6 @@ dependencies = [
  "sha2 0.9.9",
  "sha3 0.10.0",
  "structopt",
-]
-
-[[package]]
-name = "jf-aap"
-version = "0.0.1"
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=fd1de050c214584a296a11f366846a53a316c4d4#fd1de050c214584a296a11f366846a53a316c4d4"
-dependencies = [
- "anyhow",
- "ark-bls12-377",
- "ark-bls12-381",
- "ark-bn254",
- "ark-ec",
- "ark-ed-on-bls12-377",
- "ark-ed-on-bls12-381",
- "ark-ed-on-bn254",
- "ark-ff",
- "ark-serialize",
- "ark-std",
- "bincode",
- "commit",
- "csv",
- "derivative",
- "displaydoc",
- "hex-literal",
- "itertools 0.10.3",
- "jf-plonk",
- "jf-primitives",
- "jf-rescue",
- "jf-utils",
- "num_cpus",
- "percentage",
- "rand 0.8.4",
- "rand_chacha 0.3.1",
- "rayon",
- "serde",
- "serde_derive",
- "serde_json",
- "sha2 0.9.9",
- "sha3 0.10.0",
- "structopt",
- "thiserror",
 ]
 
 [[package]]
@@ -3372,13 +3317,13 @@ checksum = "67c21572b4949434e4fc1e1978b99c5f77064153c59d998bf13ecd96fb5ecba7"
 [[package]]
 name = "key-set"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/key-set.git#1cc35513c0f24c1d58d55ef699038fd647590555"
+source = "git+ssh://git@github.com/SpectrumXYZ/key-set.git#ce16c51eb10ebfd8a19b5200720c81c9dd086904"
 dependencies = [
  "ark-serialize",
  "bincode",
  "commit",
  "itertools 0.10.3",
- "jf-aap 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=8c32d8df3faf511e54ad89fa51627837ebcd8f20)",
+ "jf-aap",
  "serde",
  "serde_with",
  "snafu 0.6.10",
@@ -3616,7 +3561,7 @@ dependencies = [
 [[package]]
 name = "net"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/net.git#7f46bc8df52f99e61a723122107e6f45f082928a"
+source = "git+ssh://git@github.com/SpectrumXYZ/net.git#bdf20c7e87dec3fbcf0ba12ca4f235e2099d0a9e"
 dependencies = [
  "ark-serialize",
  "ark-std",
@@ -3625,7 +3570,7 @@ dependencies = [
  "futures",
  "generic-array 0.14.5",
  "itertools 0.10.3",
- "jf-aap 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=fd1de050c214584a296a11f366846a53a316c4d4)",
+ "jf-aap",
  "jf-utils",
  "serde",
  "serde_json",
@@ -4096,6 +4041,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
 
 [[package]]
+name = "pipe"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1c7b8f27da217eb966df4c58d4159ea939431950ca03cf782c22bd7c5c1d8d75"
+dependencies = [
+ "crossbeam-channel",
+]
+
+[[package]]
 name = "pipeline"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4496,15 +4450,15 @@ dependencies = [
 [[package]]
 name = "reef"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/reef.git#859f50ef6181dc81adb20d041e98ec75700cac94"
+source = "git+ssh://git@github.com/SpectrumXYZ/reef.git#bd921b17c422e14fdaa12cae2e2a034eebf2a500"
 dependencies = [
  "arbitrary",
- "arbitrary-wrappers 0.1.0 (git+ssh://git@github.com/SpectrumXYZ/arbitrary-wrappers.git?rev=bd84e90d131bdc4418a6c96543cb1003db1dd73b)",
+ "arbitrary-wrappers",
  "ark-serialize",
  "commit",
  "funty",
  "itertools 0.10.3",
- "jf-aap 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=8c32d8df3faf511e54ad89fa51627837ebcd8f20)",
+ "jf-aap",
  "serde",
  "snafu 0.6.10",
  "strum_macros",
@@ -4546,7 +4500,7 @@ dependencies = [
  "cap-rust-sandbox",
  "dirs",
  "ethers 0.6.0 (git+https://github.com/gakonst/ethers-rs?branch=master)",
- "jf-aap 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=8c32d8df3faf511e54ad89fa51627837ebcd8f20)",
+ "jf-aap",
  "jf-primitives",
  "key-set",
  "lazy_static",
@@ -4904,10 +4858,10 @@ dependencies = [
 [[package]]
 name = "seahorse"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/seahorse.git?rev=88e058d714eedaadd8638f047dc91fb7d98dc91d#88e058d714eedaadd8638f047dc91fb7d98dc91d"
+source = "git+ssh://git@github.com/SpectrumXYZ/seahorse.git?rev=0420e2047cb498df029de253e5eb541ed1cbdeb5#0420e2047cb498df029de253e5eb541ed1cbdeb5"
 dependencies = [
  "arbitrary",
- "arbitrary-wrappers 0.1.0 (git+ssh://git@github.com/SpectrumXYZ/arbitrary-wrappers.git)",
+ "arbitrary-wrappers",
  "ark-serialize",
  "ark-std",
  "async-scoped",
@@ -4922,12 +4876,13 @@ dependencies = [
  "generic-array 0.14.5",
  "hmac 0.11.0",
  "itertools 0.10.3",
- "jf-aap 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=8c32d8df3faf511e54ad89fa51627837ebcd8f20)",
+ "jf-aap",
  "jf-utils",
  "key-set",
  "lazy_static",
  "mnemonic",
  "net",
+ "pipe",
  "proptest 0.8.7",
  "rand_chacha 0.3.1",
  "reef",
@@ -6075,12 +6030,12 @@ dependencies = [
 [[package]]
 name = "universal-param"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/universal-param.git#988da65b09eca7547ecdb878409455c4f95d4687"
+source = "git+ssh://git@github.com/SpectrumXYZ/universal-param.git#81e4eab45efdf761a44cf6d64d488b8135bbfbce"
 dependencies = [
  "ark-serialize",
  "ark-std",
  "itertools 0.10.3",
- "jf-aap 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=fd1de050c214584a296a11f366846a53a316c4d4)",
+ "jf-aap",
  "rand_chacha 0.3.1",
 ]
 

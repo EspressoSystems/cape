@@ -5,7 +5,7 @@ use cap_rust_sandbox::{ledger::*, state::*, universal_param::UNIVERSAL_PARAM};
 use futures::stream::Stream;
 use itertools::izip;
 use jf_aap::{
-    keys::{UserAddress, UserKeyPair, UserPubKey},
+    keys::{UserAddress, UserPubKey},
     proof::{freeze::FreezeProvingKey, transfer::TransferProvingKey, UniversalParam},
     structs::{AssetDefinition, Nullifier, ReceiverMemo, RecordCommitment, RecordOpening},
     MerklePath, MerkleTree, Signature, TransactionNote,
@@ -24,7 +24,7 @@ use seahorse::{
     persistence::AtomicWalletStorage,
     testing,
     txn_builder::{RecordDatabase, TransactionState},
-    KeyStreamState, WalletBackend, WalletError, WalletState,
+    WalletBackend, WalletError, WalletState,
 };
 use serde::{de::DeserializeOwned, Serialize};
 use std::collections::HashMap;
@@ -207,11 +207,7 @@ impl MockCapeNetwork {
                 transactions: Default::default(),
             },
             key_scans: Default::default(),
-            key_state: KeyStreamState {
-                auditor: 0,
-                freezer: 0,
-                user: 1,
-            },
+            key_state: Default::default(),
             auditable_assets: Default::default(),
             audit_keys: Default::default(),
             freeze_keys: Default::default(),
@@ -510,8 +506,8 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> MockCapeBackend<'a, Meta> {
     pub async fn new_for_test(
         ledger: Arc<Mutex<MockCapeLedger<'a>>>,
         storage: Arc<Mutex<AtomicWalletStorage<'a, CapeLedger, Meta>>>,
+        key_stream: KeyTree,
     ) -> Result<MockCapeBackend<'a, Meta>, WalletError<CapeLedger>> {
-        let key_stream = storage.lock().await.key_stream();
         Ok(Self {
             key_stream,
             storage,
@@ -759,11 +755,10 @@ impl<'a> SystemUnderTest<'a> for CapeTest {
         &mut self,
         ledger: Arc<Mutex<MockLedger<'a, Self::Ledger, Self::MockNetwork, Self::MockStorage>>>,
         _initial_grants: Vec<(RecordOpening, u64)>,
-        _seed: [u8; 32],
+        key_stream: KeyTree,
         storage: Arc<Mutex<Self::MockStorage>>,
-        _key_pair: UserKeyPair,
     ) -> Self::MockBackend {
-        MockCapeBackend::new_for_test(ledger, storage)
+        MockCapeBackend::new_for_test(ledger, storage, key_stream)
             .await
             .unwrap()
     }

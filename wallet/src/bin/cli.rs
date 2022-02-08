@@ -5,9 +5,6 @@
 // allows the user to enter commands for a wallet interactively.
 //
 
-// TODO !keyao Merge duplicate CLI code among Cape, Spectrum and Seahorse.
-// Issue: https://github.com/SpectrumXYZ/cape/issues/429.
-
 extern crate cape_wallet;
 use async_std::sync::Mutex;
 use cap_rust_sandbox::{
@@ -456,7 +453,8 @@ mod tests {
         });
     }
 
-    // TODO !keyao Add a positive test.
+    // TODO !keyao Add CLI tests for the burn command.
+    // Issue: https://github.com/SpectrumXYZ/cape/issues/474.
     #[cfg(feature = "slow-tests")]
     #[test]
     fn test_cli_burn_insufficient_balance() {

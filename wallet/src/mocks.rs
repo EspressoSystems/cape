@@ -268,7 +268,10 @@ impl MockCapeNetwork {
         }
     }
 
-    fn submit_operations(&mut self, ops: Vec<CapeOperation>) -> Result<(), CapeValidationError> {
+    pub fn submit_operations(
+        &mut self,
+        ops: Vec<CapeOperation>,
+    ) -> Result<(), CapeValidationError> {
         let (new_state, effects) = self.contract.submit_operations(ops)?;
         let mut events = vec![];
         for effect in effects {
@@ -479,7 +482,7 @@ pub type MockCapeLedger<'a> =
 
 pub struct MockCapeBackend<'a, Meta: Serialize + DeserializeOwned> {
     storage: Arc<Mutex<AtomicWalletStorage<'a, CapeLedger, Meta>>>,
-    ledger: Arc<Mutex<MockCapeLedger<'a>>>,
+    pub(crate) ledger: Arc<Mutex<MockCapeLedger<'a>>>,
     key_stream: KeyTree,
 }
 

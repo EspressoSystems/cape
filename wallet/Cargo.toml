@@ -58,4 +58,6 @@ tempdir = "0.3.7"
 tracing-test = "0.2.1"
 
 [features]
+default = ["testing"]
+testing = []
 slow-tests = []

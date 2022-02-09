@@ -286,7 +286,7 @@ pub fn dummy_url_eval(
         .build())
 }
 
-fn wallet_error(source: CapeWalletError) -> tide::Error {
+pub fn wallet_error(source: CapeWalletError) -> tide::Error {
     server_error(CapeAPIError::Wallet {
         msg: source.to_string(),
     })
@@ -380,7 +380,7 @@ async fn known_assets(wallet: &Wallet) -> HashMap<AssetCode, AssetInfo> {
     assets
 }
 
-fn require_wallet(wallet: &mut Option<Wallet>) -> Result<&mut Wallet, tide::Error> {
+pub fn require_wallet(wallet: &mut Option<Wallet>) -> Result<&mut Wallet, tide::Error> {
     wallet
         .as_mut()
         .ok_or_else(|| server_error(CapeAPIError::MissingWallet))

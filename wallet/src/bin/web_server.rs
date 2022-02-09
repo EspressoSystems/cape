@@ -694,4 +694,39 @@ mod tests {
             .await
             .unwrap();
     }
+
+    #[async_std::test]
+    #[traced_test]
+    async fn test_dummy_populate() {
+        let server = TestServer::new().await;
+        server
+            .get::<()>(&format!(
+                "newwallet/{}/path/{}",
+                server.get::<String>("getmnemonic").await.unwrap(),
+                server.path()
+            ))
+            .await
+            .unwrap();
+        server.get::<()>("populatefortest").await.unwrap();
+
+        let info = server.get::<WalletSummary>("getinfo").await.unwrap();
+        assert_eq!(info.addresses.len(), 2);
+        assert_eq!(info.spend_keys.len(), 2);
+        assert_eq!(info.audit_keys.len(), 2);
+        assert_eq!(info.freeze_keys.len(), 2);
+        assert_eq!(info.assets.len(), 2); // native asset + wrapped asset
+
+        let address = info.addresses[0].clone();
+        let wrapped_asset = info.assets[1].asset.code;
+        assert_eq!(
+            server
+                .get::<BalanceInfo>(&format!(
+                    "getbalance/address/{}/asset/{}",
+                    address, wrapped_asset
+                ))
+                .await
+                .unwrap(),
+            BalanceInfo::Balance(1000)
+        );
+    }
 }

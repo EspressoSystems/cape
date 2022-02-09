@@ -140,16 +140,6 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue, ReentrancyG
         _verifier = IPlonkVerifier(verifierAddr);
     }
 
-    /// @notice Checks if a block is empty
-    /// @param block block of CAPE transactions
-    function _isBlockEmpty(CapeBlock memory block) internal returns (bool) {
-        bool res = (block.transferNotes.length == 0 &&
-            block.burnNotes.length == 0 &&
-            block.freezeNotes.length == 0 &&
-            block.mintNotes.length == 0);
-        return res;
-    }
-
     /// @dev Publish an array of nullifiers
     /// @dev Requires all nullifiers to be unique and unpublished.
     /// @dev A block creator must not submit notes with duplicate nullifiers.

@@ -54,7 +54,7 @@ contract AssetRegistry {
         require(erc20Address != address(0), "Bad asset address");
         require(!isCapeAssetRegistered(newAsset), "Asset already registered");
 
-        _checkForeignAssetCode(newAsset.code, erc20Address);
+        _checkForeignAssetCode(newAsset.code, erc20Address, msg.sender);
 
         bytes32 key = keccak256(abi.encode(newAsset));
         assets[key] = erc20Address;
@@ -66,16 +66,20 @@ contract AssetRegistry {
     /// @dev Requires "view" to access msg.sender.
     /// @param assetDefinitionCode The code of an asset definition
     /// @param erc20Address The ERC-20 address bound to the asset definition
-    function _checkForeignAssetCode(uint256 assetDefinitionCode, address erc20Address)
-        internal
-        view
-    {
-        bytes memory description = _computeAssetDescription(erc20Address, msg.sender);
-        bytes memory randomBytes = bytes.concat(
-            keccak256(bytes.concat(DOM_SEP_FOREIGN_ASSET, description))
+    /// @param sponsor The sponsor address of this wrapped asset
+    function _checkForeignAssetCode(
+        uint256 assetDefinitionCode,
+        address erc20Address,
+        address sponsor
+    ) internal view {
+        bytes memory description = _computeAssetDescription(erc20Address, sponsor);
+        require(
+            assetDefinitionCode ==
+                BN254.fromLeBytesModOrder(
+                    bytes.concat(keccak256(bytes.concat(DOM_SEP_FOREIGN_ASSET, description)))
+                ),
+            "Wrong foreign asset code"
         );
-        uint256 derivedCode = BN254.fromLeBytesModOrder(randomBytes);
-        require(derivedCode == assetDefinitionCode, "Wrong foreign asset code");
     }
 
     /// @dev Compute the asset description from the address of the

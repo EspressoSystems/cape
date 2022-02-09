@@ -62,8 +62,12 @@ contract TestCAPE is CAPE {
         return _computeNumCommitments(newBlock);
     }
 
-    function checkForeignAssetCode(uint256 assetDefinitionCode, address erc20Address) public view {
-        _checkForeignAssetCode(assetDefinitionCode, erc20Address);
+    function checkForeignAssetCode(
+        uint256 assetDefinitionCode,
+        address erc20Address,
+        address sponsor
+    ) public view {
+        _checkForeignAssetCode(assetDefinitionCode, erc20Address, sponsor);
     }
 
     function checkDomesticAssetCode(uint256 assetDefinitionCode, uint256 internalAssetCode)

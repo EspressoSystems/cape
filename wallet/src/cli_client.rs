@@ -1,6 +1,3 @@
-// TODO !keyao Merge duplicate CLI code among Cape, Spectrum and Seahorse.
-// Issue: https://github.com/SpectrumXYZ/cape/issues/429.
-
 #![allow(dead_code)]
 
 use escargot::CargoBuild;

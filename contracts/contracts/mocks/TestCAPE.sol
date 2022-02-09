@@ -85,20 +85,13 @@ contract TestCAPE is CAPE {
         return _computeAssetDescription(erc20Address, sponsor);
     }
 
-    // Functions to access the pending deposits queue
-    function getPendingDepositsAtIndex(uint256 index) public returns (uint256) {
-        return _queue[index];
-    }
-
-    function isPendingDepositsQueueEmpty() public returns (bool) {
-        return _isQueueEmpty();
+    function pendingDepositsLength() public view returns (uint256) {
+        return pendingDeposits.length;
     }
 
     function fillUpPendingDepositsQueue() public {
-        bool isQueueFull = (_getQueueSize() == MAX_QUEUE_SIZE);
-        while (!isQueueFull) {
-            _pushToQueue(0);
-            isQueueFull = (_getQueueSize() == MAX_QUEUE_SIZE);
+        for (uint256 i = pendingDeposits.length; i < MAX_NUM_PENDING_DEPOSIT; i++) {
+            pendingDeposits.push(100 + i);
         }
     }
 }

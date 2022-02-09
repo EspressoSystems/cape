@@ -48,7 +48,7 @@ async fn check_pending_deposits_queue_at_index(
 
     let deposit_record_commitment_contract = contracts_info
         .cape_contract
-        .get_pending_deposits_at_index(U256::from(queue_index))
+        .pending_deposits(U256::from(queue_index))
         .call()
         .await?;
     let deposit_record_commitment = RecordCommitment::from(&ro);
@@ -207,11 +207,9 @@ async fn integration_test_wrapping_erc20_tokens() -> Result<()> {
 
     check_pending_deposits_queue_at_index(1, 1, ro2.clone(), contracts_info).await?;
 
-    assert!(
-        !cape_contract
-            .is_pending_deposits_queue_empty()
-            .call()
-            .await?
+    assert_ne!(
+        cape_contract.pending_deposits_length().call().await?,
+        U256::zero()
     );
 
     // Now we submit a new block to the contract and check that the records merkle tree is updated correctly
@@ -260,12 +258,10 @@ async fn integration_test_wrapping_erc20_tokens() -> Result<()> {
     ));
 
     // Check that the pending deposits queue is empty
-    let is_queue_empty = cape_contract
-        .is_pending_deposits_queue_empty()
-        .call()
-        .await?;
-
-    assert!(is_queue_empty);
+    assert_eq!(
+        cape_contract.pending_deposits_length().call().await?,
+        U256::zero()
+    );
 
     // Check the record commitments for the deposits were emitted
     let logs = cape_contract

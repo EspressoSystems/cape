@@ -87,11 +87,6 @@ abigen!(
     SimpleToken,
     "../abi/contracts/SimpleToken.sol/SimpleToken/abi.json",
     event_derives(serde::Deserialize, serde::Serialize);
-
-    TestQueue,
-    "../abi/contracts/mocks/TestQueue.sol/TestQueue/abi.json",
-    event_derives(serde::Deserialize, serde::Serialize);
-
 );
 
 impl From<ark_bn254::G1Affine> for G1Point {

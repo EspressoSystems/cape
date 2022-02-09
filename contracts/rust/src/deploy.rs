@@ -4,8 +4,8 @@ use crate::state::CAPE_MERKLE_HEIGHT;
 use crate::test_utils::contract_abi_path;
 use crate::types::{
     AssetRegistry, GenericInto, Greeter, SimpleToken, TestBN254, TestCAPE, TestCapeTypes,
-    TestEdOnBN254, TestPlonkVerifier, TestPolynomialEval, TestQueue, TestRecordsMerkleTree,
-    TestRescue, TestRootStore, TestTranscript, TestVerifyingKeys,
+    TestEdOnBN254, TestPlonkVerifier, TestPolynomialEval, TestRecordsMerkleTree, TestRescue,
+    TestRootStore, TestTranscript, TestVerifyingKeys,
 };
 use anyhow::Result;
 use ethers::prelude::{k256::ecdsa::SigningKey, Address, Http, Provider, SignerMiddleware, Wallet};
@@ -50,11 +50,6 @@ mk_deploy_fun!(
     "mocks/TestCapeTypes.sol/TestCapeTypes"
 );
 
-mk_deploy_fun!(
-    deploy_queue_test,
-    TestQueue<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>,
-    "mocks/TestQueue.sol/TestQueue"
-);
 mk_deploy_fun!(
     deploy_erc20_token,
     SimpleToken<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>,

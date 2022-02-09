@@ -21,19 +21,24 @@ import "./interfaces/IPlonkVerifier.sol";
 import "./AssetRegistry.sol";
 import "./RecordsMerkleTree.sol";
 import "./RootStore.sol";
-import "./Queue.sol";
 
-contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue, ReentrancyGuard {
+contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
+    using AccumulatingArray for AccumulatingArray.Data;
+
     mapping(uint256 => bool) public nullifiers;
     uint64 public blockHeight;
     IPlonkVerifier private _verifier;
-
-    using AccumulatingArray for AccumulatingArray.Data;
+    uint256[] public pendingDeposits;
 
     bytes public constant CAPE_BURN_MAGIC_BYTES = "TRICAPE burn";
     uint256 public constant CAPE_BURN_MAGIC_BYTES_SIZE = 12;
     bytes14 public constant DOM_SEP_DOMESTIC_ASSET = "DOMESTIC_ASSET";
     uint256 public constant AAP_NATIVE_ASSET_CODE = 1;
+    // In order to avoid the contract running out of gas if the queue is too large
+    // we set the maximum number of pending deposits record commitments to process
+    // when a new block is submitted. This is a temporary solution.
+    // See https://github.com/SpectrumXYZ/cape/issues/400
+    uint256 public constant MAX_NUM_PENDING_DEPOSIT = 10;
 
     event BlockCommitted(uint64 indexed height, uint256[] depositCommitments);
     event Erc20TokensDeposited(bytes roBytes, address erc20TokenAddress, address from);
@@ -136,7 +141,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue, ReentrancyG
         uint8 merkleTreeHeight,
         uint64 nRoots,
         address verifierAddr
-    ) RecordsMerkleTree(merkleTreeHeight) RootStore(nRoots) Queue() {
+    ) RecordsMerkleTree(merkleTreeHeight) RootStore(nRoots) {
         _verifier = IPlonkVerifier(verifierAddr);
     }
 
@@ -165,8 +170,10 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue, ReentrancyG
         require(isCapeAssetRegistered(ro.assetDef), "Asset definition not registered");
 
         // We skip the sanity checks mentioned in the rust specification as they are optional.
-        uint256 recordCommitment = _deriveRecordCommitment(ro);
-        _pushToQueue(recordCommitment);
+        if (pendingDeposits.length >= MAX_NUM_PENDING_DEPOSIT) {
+            revert("Pending deposits queue is full");
+        }
+        pendingDeposits.push(_deriveRecordCommitment(ro));
 
         SafeTransferLib.safeTransferFrom(
             ERC20(erc20Address),
@@ -203,9 +210,8 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue, ReentrancyG
     /// @notice submit a new block to the CAPE contract. Transactions are validated and the blockchain state is updated. Moreover *BURN* transactions trigger the unwrapping of cape asset records into erc20 tokens.
     /// @param newBlock block to be processed by the CAPE contract.
     function submitCapeBlock(CapeBlock memory newBlock) public nonReentrant {
-        uint256 numPendingDeposits = _getQueueSize();
         AccumulatingArray.Data memory commitments = AccumulatingArray.create(
-            _computeNumCommitments(newBlock) + numPendingDeposits
+            _computeNumCommitments(newBlock) + pendingDeposits.length
         );
 
         uint256 numNotes = newBlock.noteTypes.length;
@@ -278,9 +284,9 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue, ReentrancyG
                 _publish(note.transferNote.inputNullifiers);
 
                 // Insert all the output commitments to the records merkle tree except from the second one (corresponding to the burned output)
-                for (uint256 i = 0; i < note.transferNote.outputCommitments.length; i++) {
-                    if (i != 1) {
-                        commitments.add(note.transferNote.outputCommitments[i]);
+                for (uint256 j = 0; j < note.transferNote.outputCommitments.length; j++) {
+                    if (j != 1) {
+                        commitments.add(note.transferNote.outputCommitments[j]);
                     }
                 }
 
@@ -304,14 +310,14 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue, ReentrancyG
         }
 
         // Process the pending deposits obtained after calling `depositErc20`
-        uint256[] memory depositCommitments = new uint256[](numPendingDeposits);
-        for (uint256 i = 0; i < numPendingDeposits; i++) {
-            uint256 rc = _getQueueElem(i);
+        uint256[] memory depositCommitments = new uint256[](pendingDeposits.length);
+        for (uint256 i = 0; i < pendingDeposits.length; i++) {
+            uint256 rc = pendingDeposits[i];
             depositCommitments[i] = rc;
             commitments.add(rc);
         }
         // Empty the queue now the record commitments are ready to be inserted
-        _emptyQueue();
+        delete pendingDeposits;
 
         // Only update the merkle tree and add the root if the list of records commitments is non empty
         if (!commitments.isEmpty()) {

@@ -310,14 +310,9 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
         }
 
         // Process the pending deposits obtained after calling `depositErc20`
-        uint256[] memory depositCommitments = new uint256[](pendingDeposits.length);
         for (uint256 i = 0; i < pendingDeposits.length; i++) {
-            uint256 rc = pendingDeposits[i];
-            depositCommitments[i] = rc;
-            commitments.add(rc);
+            commitments.add(pendingDeposits[i]);
         }
-        // Empty the queue now the record commitments are ready to be inserted
-        delete pendingDeposits;
 
         // Only update the merkle tree and add the root if the list of records commitments is non empty
         if (!commitments.isEmpty()) {
@@ -327,7 +322,12 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
 
         // In all cases (the block is empty or not), the height is incremented.
         blockHeight += 1;
-        emit BlockCommitted(blockHeight, depositCommitments);
+
+        // Inform clients about the new block and the processed deposits.
+        emit BlockCommitted(blockHeight, pendingDeposits);
+
+        // Empty the queue now that the record commitments have been inserted
+        delete pendingDeposits;
     }
 
     /// @dev send the ERC20 tokens equivalent to the asset records being burnt. Recall that the burned record opening is contained inside the note.

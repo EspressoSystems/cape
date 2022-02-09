@@ -9,6 +9,7 @@ use async_std::{
     task::{spawn, JoinHandle},
 };
 use net::server;
+use rand_chacha::ChaChaRng;
 use std::collections::hash_map::HashMap;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
@@ -73,6 +74,7 @@ pub struct WebState {
     pub(crate) web_path: PathBuf,
     pub(crate) api: toml::Value,
     pub(crate) wallet: Arc<Mutex<Option<Wallet>>>,
+    pub(crate) rng: Arc<Mutex<ChaChaRng>>,
 }
 
 async fn form_demonstration(req: tide::Request<WebState>) -> Result<tide::Body, tide::Error> {
@@ -236,6 +238,7 @@ fn add_form_demonstration(web_server: &mut tide::Server<WebState>) {
 }
 
 pub fn init_server(
+    rng: ChaChaRng,
     api_path: PathBuf,
     web_path: PathBuf,
     port: u64,
@@ -245,6 +248,7 @@ pub fn init_server(
         web_path: web_path.clone(),
         api: api.clone(),
         wallet: Arc::new(Mutex::new(None)),
+        rng: Arc::new(Mutex::new(rng)),
     });
     web_server
         .with(server::trace)

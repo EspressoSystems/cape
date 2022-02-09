@@ -54,6 +54,10 @@ HEADING_DESCRIPTION = "Description"
 # TODO !corbett How do we generate a one-time receiving address?
 # TODO !corbett Better way to specify optional elements to avoid combinatorial explosion. See newasset for an example.
 
+[route.getmnemonic]
+PATH = ["getmnemonic"]
+DOC = "Generate a random mnemonic phrase."
+
 [route.newwallet]
 PATH = ["newwallet/:mnemonic", "newwallet/:mnemonic/path/:path"]
 ":path" = "TaggedBase64"

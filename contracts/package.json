@@ -16,6 +16,7 @@
   "dependencies": {
     "@noble/bls12-381": "^1.0.1",
     "@openzeppelin/contracts": "^4.3.3",
+    "@rari-capital/solmate": "^6.2.0",
     "@summa-tx/memview-sol": "^2.0.0",
     "async": "^3.2.2",
     "async-child-process": "^1.1.1",

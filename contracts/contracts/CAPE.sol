@@ -9,8 +9,8 @@ pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@rari-capital/solmate/src/utils/SafeTransferLib.sol";
 
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 import "./libraries/AccumulatingArray.sol";
@@ -162,16 +162,19 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue, ReentrancyG
     /// @param ro record opening that will be inserted in the records merkle tree once the deposit is validated.
     /// @param erc20Address address of the ERC20 token corresponding to the deposit.
     function depositErc20(RecordOpening memory ro, address erc20Address) public nonReentrant {
-        ERC20 token = ERC20(erc20Address);
         require(isCapeAssetRegistered(ro.assetDef), "Asset definition not registered");
 
         // We skip the sanity checks mentioned in the rust specification as they are optional.
         uint256 recordCommitment = _deriveRecordCommitment(ro);
         _pushToQueue(recordCommitment);
 
-        token.transferFrom(msg.sender, address(this), ro.amount);
-        bytes memory roBytes = abi.encode(ro);
-        emit Erc20TokensDeposited(roBytes, erc20Address, msg.sender);
+        SafeTransferLib.safeTransferFrom(
+            ERC20(erc20Address),
+            msg.sender,
+            address(this),
+            ro.amount
+        );
+        emit Erc20TokensDeposited(abi.encode(ro), erc20Address, msg.sender);
     }
 
     /// @dev Checks if the asset definition code is correctly derived from the internal asset code.
@@ -325,14 +328,17 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue, ReentrancyG
     /// @param note note of type *BURN*
     function _handleWithdrawal(BurnNote memory note) internal {
         address ercTokenAddress = _lookup(note.recordOpening.assetDef);
-        ERC20 token = ERC20(ercTokenAddress);
 
         // Extract recipient address
         address recipientAddress = BytesLib.toAddress(
             note.transferNote.auxInfo.extraProofBoundData,
             CAPE_BURN_MAGIC_BYTES_SIZE
         );
-        token.transfer(recipientAddress, note.recordOpening.amount);
+        SafeTransferLib.safeTransfer(
+            ERC20(ercTokenAddress),
+            recipientAddress,
+            note.recordOpening.amount
+        );
     }
 
     /// @dev Compute an upper bound on the number of records to be inserted

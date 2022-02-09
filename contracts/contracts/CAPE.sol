@@ -181,16 +181,20 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue, ReentrancyG
         internal
         view
     {
-        bytes memory randomBytes = bytes.concat(
-            keccak256(
-                bytes.concat(
-                    DOM_SEP_DOMESTIC_ASSET,
-                    bytes32(Utils.reverseEndianness(internalAssetCode))
-                )
-            )
+        require(
+            assetDefinitionCode ==
+                BN254.fromLeBytesModOrder(
+                    bytes.concat(
+                        keccak256(
+                            bytes.concat(
+                                DOM_SEP_DOMESTIC_ASSET,
+                                bytes32(Utils.reverseEndianness(internalAssetCode))
+                            )
+                        )
+                    )
+                ),
+            "Wrong domestic asset code"
         );
-        uint256 derivedCode = BN254.fromLeBytesModOrder(randomBytes);
-        require(derivedCode == assetDefinitionCode, "Wrong domestic asset code");
     }
 
     /// @notice submit a new block to the CAPE contract. Transactions are validated and the blockchain state is updated. Moreover *BURN* transactions trigger the unwrapping of cape asset records into erc20 tokens.

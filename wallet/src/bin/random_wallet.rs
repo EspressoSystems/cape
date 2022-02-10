@@ -9,6 +9,7 @@ use cape_wallet::testing::port;
 use cape_wallet::CapeWallet;
 use ethers::prelude::Address;
 use jf_aap::proof::UniversalParam;
+use jf_aap::structs::AssetPolicy;
 use jf_aap::structs::{AssetCode, ReceiverMemo};
 use key_set::VerifierKeySet;
 use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
@@ -252,50 +253,50 @@ async fn main() {
     }
 
     // Check if we already have a mintable asset (if we are loading from a saved wallet).
-    // let my_asset = match wallet
-    //     .assets()
-    //     .await
-    //     .into_values()
-    //     .find(|info| info.mint_info.is_some())
-    // {
-    //     Some(info) => {
-    //         event!(
-    //             Level::INFO,
-    //             "found saved wallet with custom asset type {}",
-    //             info.asset.code
-    //         );
-    //         info.asset
-    //     }
-    //     None => {
-    //         let my_asset = wallet
-    //             .define_asset(&[], AssetPolicy::default())
-    //             .await
-    //             .expect("failed to define asset");
-    //         event!(Level::INFO, "defined a new asset type: {}", my_asset.code);
-    //         my_asset
-    //     }
-    // };
-    // // If we don't yet have a balance of our asset type, mint some.
-    // if wallet.balance(&address, &my_asset.code).await == 0 {
-    //     event!(Level::INFO, "minting my asset type {}", my_asset.code);
-    //     loop {
-    //         let txn = wallet
-    //             .mint(&address, 1, &my_asset.code, 1u64 << 32, address.clone())
-    //             .await
-    //             .expect("failed to generate mint transaction");
-    //         let status = wallet
-    //             .await_transaction(&txn)
-    //             .await
-    //             .expect("error waiting for mint to complete");
-    //         if status.succeeded() {
-    //             break;
-    //         }
-    //         // The mint transaction is allowed to fail due to contention from other clients.
-    //         event!(Level::WARN, "mint transaction failed, retrying...");
-    //         retry_delay().await;
-    //     }
-    //     event!(Level::INFO, "minted custom asset");
-    // }
+    let my_asset = match wallet
+        .assets()
+        .await
+        .into_values()
+        .find(|info| info.mint_info.is_some())
+    {
+        Some(info) => {
+            event!(
+                Level::INFO,
+                "found saved wallet with custom asset type {}",
+                info.asset.code
+            );
+            info.asset
+        }
+        None => {
+            let my_asset = wallet
+                .define_asset(&[], AssetPolicy::default())
+                .await
+                .expect("failed to define asset");
+            event!(Level::INFO, "defined a new asset type: {}", my_asset.code);
+            my_asset
+        }
+    };
+    // If we don't yet have a balance of our asset type, mint some.
+    if wallet.balance(&address, &my_asset.code).await == 0 {
+        event!(Level::INFO, "minting my asset type {}", my_asset.code);
+        loop {
+            let txn = wallet
+                .mint(&address, 1, &my_asset.code, 1u64 << 32, address.clone())
+                .await
+                .expect("failed to generate mint transaction");
+            let status = wallet
+                .await_transaction(&txn)
+                .await
+                .expect("error waiting for mint to complete");
+            if status.succeeded() {
+                break;
+            }
+            // The mint transaction is allowed to fail due to contention from other clients.
+            event!(Level::WARN, "mint transaction failed, retrying...");
+            retry_delay().await;
+        }
+        event!(Level::INFO, "minted custom asset");
+    }
 
     // TODO actually get the peers from Address Book service.
     loop {
@@ -345,7 +346,7 @@ async fn main() {
             amount,
             if *asset == AssetCode::native() {
                 String::from("the native asset")
-            } else if *asset == AssetCode::native() {
+            } else if *asset == my_asset.code {
                 String::from("my asset")
             } else {
                 asset.to_string()

@@ -1,18 +1,29 @@
+use addr_pk_map::{init_web_server, InsertPubKey};
 use jf_aap::keys::{UserKeyPair, UserPubKey};
-use jf_aap::Signature;
 use rand_chacha::rand_core::SeedableRng;
-use serde::Serialize;
-use std::process::Command;
 use std::time::Duration;
 
 const ROUND_TRIP_COUNT: u64 = 100;
 const NOT_FOUND_COUNT: u64 = 100;
-const SERVER_STARTUP_MS: u64 = 500;
+const ADDRESS_BOOK_STARTUP_RETRIES: usize = 8;
+const ADDRESS_BOOK_PORT: u64 = 50078;
 
-#[derive(Serialize)]
-struct InsertPubKey {
-    pub_key_bytes: Vec<u8>,
-    sig: Signature,
+// Shamelessly copied from relayer/src/lib.rs
+async fn wait_for_server(port: u64) {
+    // Wait for the server to come up and start serving.
+    let mut backoff = Duration::from_millis(100);
+    for _ in 0..ADDRESS_BOOK_STARTUP_RETRIES {
+        if surf::connect(format!("http://localhost:{}", port))
+            .send()
+            .await
+            .is_ok()
+        {
+            return;
+        }
+        backoff *= 2;
+        std::thread::sleep(backoff);
+    }
+    panic!("Address Book did not start in {:?} milliseconds", backoff);
 }
 
 // Test
@@ -23,12 +34,20 @@ struct InsertPubKey {
 #[async_std::test]
 async fn round_trip() {
     // TODO !corbett find an unused port rather than assuming 50078 is free.
-    let mut child = Command::new("cargo")
-        .arg("run")
-        .spawn()
-        .expect("Failed to run server");
-    // TODO !corbett Instead, wait for SIGUSR1 from child.
-    std::thread::sleep(Duration::from_millis(SERVER_STARTUP_MS));
+    // let mut child = Command::new("cargo")
+    //     .env("RUST_LOG", "error")
+    //     .arg("run")
+    //     .spawn()
+    //     .expect("Failed to run server");
+    init_web_server().await.expect("Failed to run server.");
+    // tide::log::start();
+    // let mut app = tide::with_state(ServerState::default());
+    // app.at("/insert_pubkey").post(insert_pubkey);
+    // app.at("/request_pubkey").post(request_pubkey);
+    // let port = std::env::var("PORT").unwrap_or_else(|_| DEFAULT_MAP_PORT.to_string());
+    // let address = format!("0.0.0.0:{}", port);
+    // app.listen(address).await?;
+    wait_for_server(ADDRESS_BOOK_PORT).await;
 
     let mut rng = rand_chacha::ChaChaRng::from_seed([0u8; 32]);
     let mut rng2 = rand_chacha::ChaChaRng::from_seed([0u8; 32]);
@@ -86,7 +105,7 @@ async fn round_trip() {
         assert!(bincode::deserialize::<UserPubKey>(&bytes).is_err());
     }
 
-    child
-        .kill()
-        .expect("Server exited before it could be killed.");
+    // child
+    //     .kill()
+    //     .expect("Server exited before it could be killed.");
 }

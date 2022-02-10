@@ -5,12 +5,6 @@ use ethers::prelude::*;
 use jf_aap::structs::Nullifier;
 use jf_aap::NodeValue;
 
-// TODO create a function should_revert similar to the one in the `assertion` module
-pub fn eth_transaction_has_been_mined(receipt: &TransactionReceipt) -> bool {
-    let status = receipt.status.unwrap();
-    status == U64::from(1)
-}
-
 pub fn convert_u256_to_bytes_le(num: U256) -> Vec<u8> {
     let mut u8_arr = [0u8; 32];
     num.to_little_endian(&mut u8_arr);

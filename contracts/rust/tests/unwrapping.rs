@@ -1,14 +1,13 @@
 use anyhow::Result;
-use cap_rust_sandbox::assertion::Matcher;
+use cap_rust_sandbox::assertion::{EnsureMined, Matcher};
 use cap_rust_sandbox::cape::CapeBlock;
 use cap_rust_sandbox::deploy::{deploy_cape_test, deploy_erc20_token};
 use cap_rust_sandbox::ethereum::get_funded_client;
-use cap_rust_sandbox::helpers::eth_transaction_has_been_mined;
 use cap_rust_sandbox::ledger::CapeLedger;
 use cap_rust_sandbox::state::{erc20_asset_description, Erc20Code, EthereumAddr};
 use cap_rust_sandbox::test_utils::{
     check_erc20_token_balance, compare_roots_records_test_cape_contract, create_faucet,
-    generate_burn_tx, ContractsInfo,
+    generate_burn_tx, ContractsInfo, PrintGas,
 };
 use cap_rust_sandbox::types as sol;
 use cap_rust_sandbox::types::GenericInto;
@@ -102,13 +101,13 @@ async fn integration_test_unwrapping() -> Result<()> {
     let miner = UserPubKey::default();
     let empty_block = CapeBlock::generate(vec![], vec![], miner.address())?;
 
-    let receipt = cape_contract
+    cape_contract
         .submit_cape_block(empty_block.clone().into())
         .send()
         .await?
-        .await;
-
-    assert!(eth_transaction_has_been_mined(&receipt.unwrap().unwrap()));
+        .await?
+        .ensure_mined()
+        .print_gas("Credit deposit");
 
     // Create burn transaction and record opening based on the content of the records merkle tree
     let unwrapped_assets_recipient_eth_address = final_recipient_of_unwrapped_assets.address();
@@ -153,7 +152,8 @@ async fn integration_test_unwrapping() -> Result<()> {
         .submit_cape_block(cape_block.clone().into())
         .send()
         .await?
-        .await?;
+        .await?
+        .print_gas("Burn transaction");
 
     // The recipient has received the ERC20 tokens
     check_erc20_token_balance(

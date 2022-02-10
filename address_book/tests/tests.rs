@@ -1,4 +1,4 @@
-use addr_pk_map::{init_web_server, InsertPubKey};
+use address_book::{init_web_server, InsertPubKey};
 use jf_aap::keys::{UserKeyPair, UserPubKey};
 use rand_chacha::rand_core::SeedableRng;
 use std::time::Duration;

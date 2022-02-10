@@ -1,7 +1,9 @@
 [package]
-name = "addr_pk_map"
+name = "address_book"
 version = "0.0.1"
+authors = ["Fernando Krell <fernando@translucence.net>", "John D. Corbett <corbett@pictographer.com>"]
 edition = "2018"
+description = "Web server that maintains a persistent mapping from user addresses to user public keys"
 
 [dependencies]
 async-std = { version = "1.6.0", features = ["attributes"] }

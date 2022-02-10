@@ -1,4 +1,4 @@
-use addr_pk_map::init_web_server;
+use address_book::init_web_server;
 
 /// Run a web server that provides a key/value store mapping user
 /// addresses to public keys.

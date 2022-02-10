@@ -22,7 +22,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "addr_pk_map"
+name = "address_book"
 version = "0.0.1"
 dependencies = [
  "async-std",

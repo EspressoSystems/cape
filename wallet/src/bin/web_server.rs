@@ -52,6 +52,7 @@ async fn main() -> Result<(), std::io::Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use async_std::task::sleep;
     use cap_rust_sandbox::state::{Erc20Code, EthereumAddr};
     use cape_wallet::{
         routes::{BalanceInfo, CapeAPIError, PubKey, WalletSummary},
@@ -145,6 +146,7 @@ mod tests {
                 {
                     return;
                 }
+                sleep(backoff).await;
                 backoff *= 2;
             }
             panic!("Wallet server did not start in {:?}", backoff);

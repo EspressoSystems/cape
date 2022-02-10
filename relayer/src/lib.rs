@@ -68,6 +68,7 @@ async fn relay(
     transaction: CapeTransaction,
 ) -> Result<TransactionReceipt, Error> {
     let miner = UserPubKey::default();
+
     let cape_block = CapeBlock::from_cape_transactions(vec![transaction], miner.address())
         .map_err(|err| Error::BadBlock {
             msg: err.to_string(),

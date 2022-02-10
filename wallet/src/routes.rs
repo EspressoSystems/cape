@@ -1,6 +1,6 @@
 // Copyright © 2021 Translucence Research, Inc. All rights reserved.
 
-pub use crate::{
+use crate::{
     mocks::{MockCapeBackend, MockCapeNetwork},
     wallet::{CapeWalletError, CapeWalletExt},
     web::WebState,

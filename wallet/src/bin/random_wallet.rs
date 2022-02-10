@@ -11,8 +11,6 @@ use ethers::prelude::Address;
 use jf_aap::proof::UniversalParam;
 use jf_aap::structs::{AssetCode, ReceiverMemo};
 use key_set::VerifierKeySet;
-use rand::distributions::weighted::WeightedError;
-use rand::seq::SliceRandom;
 use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
 use relayer::testing::start_minimal_relayer_for_test;
 use seahorse::{events::EventIndex, hd::KeyTree};
@@ -27,6 +25,8 @@ use jf_aap::{
     keys::UserKeyPair, keys::UserPubKey, testing_apis::universal_setup_for_test,
     TransactionVerifyingKey,
 };
+use rand::distributions::weighted::WeightedError;
+use rand::seq::SliceRandom;
 use reef::traits::Ledger;
 use seahorse::WalletBackend;
 use std::fs::File;
@@ -65,7 +65,7 @@ async fn create_test_network<'a>(
     // blockchain, as well as a mock EQS which will track the blockchain in parallel, since we
     // don't yet have a real EQS.
     let relayer_port = port().await;
-    let (contract_address, sender_key, sender_rec, records) =
+    let (contract, sender_key, sender_rec, records) =
         start_minimal_relayer_for_test(relayer_port).await;
     let relayer_url = Url::parse(&format!("http://localhost:{}", relayer_port)).unwrap();
     let sender_memo = ReceiverMemo::from_ro(rng, &sender_rec, &[]).unwrap();
@@ -121,7 +121,7 @@ async fn create_test_network<'a>(
     // either.
     let mock_eqs = Arc::new(Mutex::new(mock_eqs));
 
-    (sender_key, relayer_url, contract_address, mock_eqs)
+    (sender_key, relayer_url, contract.address(), mock_eqs)
 }
 
 async fn retry_delay() {

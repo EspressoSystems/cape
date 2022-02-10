@@ -53,17 +53,24 @@ async fn main() -> Result<(), std::io::Error> {
 mod tests {
     use super::*;
     use async_std::task::sleep;
-    use cap_rust_sandbox::state::{Erc20Code, EthereumAddr};
+    use cap_rust_sandbox::{
+        ledger::CapeLedger,
+        state::{Erc20Code, EthereumAddr},
+    };
     use cape_wallet::{
         routes::{BalanceInfo, CapeAPIError, PubKey, WalletSummary},
         testing::port,
     };
+    use futures::Future;
     use jf_cap::{
         keys::UserKeyPair,
         structs::{AssetCode, AssetDefinition},
     };
     use net::{client, UserAddress};
-    use seahorse::{hd::KeyTree, txn_builder::AssetInfo};
+    use seahorse::{
+        hd::KeyTree,
+        txn_builder::{AssetInfo, TransactionReceipt},
+    };
     use serde::de::DeserializeOwned;
     use std::collections::hash_map::HashMap;
     use std::convert::TryInto;
@@ -74,6 +81,18 @@ mod tests {
     use tagged_base64::TaggedBase64;
     use tempdir::TempDir;
     use tracing_test::traced_test;
+
+    async fn retry<Fut: Future<Output = bool>>(f: impl Fn() -> Fut) {
+        let mut backoff = Duration::from_millis(100);
+        for _ in 0..10 {
+            if f().await {
+                return;
+            }
+            sleep(backoff).await;
+            backoff *= 2;
+        }
+        panic!("retry loop did not complete in {:?}", backoff);
+    }
 
     struct TestServer {
         client: surf::Client,
@@ -134,22 +153,16 @@ mod tests {
         }
 
         async fn wait(port: u64) {
-            let mut backoff = Duration::from_millis(100);
-            for _ in 0..8 {
+            retry(|| async move {
                 // Use a one-off request, rather than going through the client, because we want to
                 // skip the middleware, which can cause connect() to return an Err() even if the
                 // request reaches the server successfully.
-                if surf::connect(format!("http://localhost:{}", port))
+                surf::connect(format!("http://localhost:{}", port))
                     .send()
                     .await
                     .is_ok()
-                {
-                    return;
-                }
-                sleep(backoff).await;
-                backoff *= 2;
-            }
-            panic!("Wallet server did not start in {:?}", backoff);
+            })
+            .await
         }
     }
 
@@ -712,11 +725,29 @@ mod tests {
         server.get::<()>("populatefortest").await.unwrap();
 
         let info = server.get::<WalletSummary>("getinfo").await.unwrap();
-        assert_eq!(info.addresses.len(), 2);
-        assert_eq!(info.spend_keys.len(), 2);
+        assert_eq!(info.addresses.len(), 3);
+        assert_eq!(info.spend_keys.len(), 3);
         assert_eq!(info.audit_keys.len(), 2);
         assert_eq!(info.freeze_keys.len(), 2);
         assert_eq!(info.assets.len(), 2); // native asset + wrapped asset
+
+        // One of the addresses should have a non-zero balance of the native asset type.
+        let mut found = false;
+        for address in &info.addresses {
+            if let BalanceInfo::Balance(1000) = server
+                .get::<BalanceInfo>(&format!(
+                    "getbalance/address/{}/asset/{}",
+                    address,
+                    AssetCode::native()
+                ))
+                .await
+                .unwrap()
+            {
+                found = true;
+                break;
+            }
+        }
+        assert!(found);
 
         let address = info.addresses[0].clone();
         // One of the wallet's two assets is the native asset, and the other is the wrapped asset
@@ -737,6 +768,99 @@ mod tests {
                 .await
                 .unwrap(),
             BalanceInfo::Balance(1000)
+        );
+    }
+
+    #[async_std::test]
+    #[traced_test]
+    async fn test_send() {
+        let server = TestServer::new().await;
+        let mut rng = ChaChaRng::from_seed([1; 32]);
+
+        // Should fail if a wallet is not already open.
+        server
+            .requires_wallet::<AssetDefinition>(&format!(
+                "send/sender/{}/asset/{}/recipient/{}/amount/1/fee/1",
+                UserKeyPair::generate(&mut rng).address(),
+                AssetCode::random(&mut rng).0,
+                EthereumAddr([1; 20]),
+            ))
+            .await;
+
+        // Now open a wallet.
+        server
+            .get::<()>(&format!(
+                "newwallet/{}/path/{}",
+                server.get::<String>("getmnemonic").await.unwrap(),
+                server.path()
+            ))
+            .await
+            .unwrap();
+        // Populate the wallet with some dummy data so we have a balance of an asset to send.
+        server.get::<()>("populatefortest").await.unwrap();
+        let info = server.get::<WalletSummary>("getinfo").await.unwrap();
+        // One of the wallet's addresses (the faucet address) should have a nonzero balance of the
+        // native asset, and at least one should have a 0 balance. Get one of each so we can
+        // transfer from an account with non-zero balance to one with 0 balance. Note that in the
+        // current setup, we can't easily transfer from one wallet to another, because each instance
+        // of the server uses its own ledger. So we settle for an intra-wallet transfer.
+        let mut funded_account = None;
+        let mut unfunded_account = None;
+        for address in info.addresses {
+            if let BalanceInfo::Balance(1000) = server
+                .get::<BalanceInfo>(&format!(
+                    "getbalance/address/{}/asset/{}",
+                    address,
+                    AssetCode::native()
+                ))
+                .await
+                .unwrap()
+            {
+                funded_account = Some(address);
+            } else {
+                unfunded_account = Some(address);
+            }
+        }
+        let src_address = funded_account.unwrap();
+        let dst_address = unfunded_account.unwrap();
+
+        // Make a transfer.
+        server
+            .get::<TransactionReceipt<CapeLedger>>(&format!(
+                "send/sender/{}/asset/{}/recipient/{}/amount/{}/fee/{}",
+                src_address,
+                &AssetCode::native(),
+                dst_address,
+                100,
+                1
+            ))
+            .await
+            .unwrap();
+        // Wait for the balance to show up.
+        retry(|| async {
+            server
+                .get::<BalanceInfo>(&format!(
+                    "getbalance/address/{}/asset/{}",
+                    dst_address,
+                    AssetCode::native()
+                ))
+                .await
+                .unwrap()
+                == BalanceInfo::Balance(100)
+        })
+        .await;
+
+        // Check that the balance was deducted from the sending account.
+        assert_eq!(
+            BalanceInfo::Balance(899),
+            server
+                .get::<BalanceInfo>(&format!(
+                    "getbalance/address/{}/asset/{}",
+                    src_address,
+                    AssetCode::native()
+                ))
+                .await
+                .unwrap()
         );
     }
 }

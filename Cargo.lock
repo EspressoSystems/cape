@@ -29,9 +29,11 @@ dependencies = [
  "atomic_store 0.0.2 (git+ssh://git@github.com/SpectrumXYZ/atomicstore.git)",
  "bincode",
  "itertools 0.10.3",
- "jf-aap",
- "net 0.1.0 (git+ssh://git@github.com/SpectrumXYZ/net.git)",
+ "jf-aap 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=eca7b7e85718c7770c24ad90dd34b8a07209a01b)",
+ "net",
+ "rand_chacha 0.3.1",
  "serde",
+ "surf",
  "tide",
 ]
 
@@ -3208,6 +3210,47 @@ dependencies = [
  "sha2 0.9.9",
  "sha3 0.10.0",
  "structopt",
+]
+
+[[package]]
+name = "jf-aap"
+version = "0.0.1"
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=eca7b7e85718c7770c24ad90dd34b8a07209a01b#eca7b7e85718c7770c24ad90dd34b8a07209a01b"
+dependencies = [
+ "anyhow",
+ "ark-bls12-377",
+ "ark-bls12-381",
+ "ark-bn254",
+ "ark-ec",
+ "ark-ed-on-bls12-377",
+ "ark-ed-on-bls12-381",
+ "ark-ed-on-bn254",
+ "ark-ff",
+ "ark-serialize",
+ "ark-std",
+ "bincode",
+ "commit",
+ "csv",
+ "derivative",
+ "displaydoc",
+ "hex-literal",
+ "itertools 0.10.3",
+ "jf-plonk",
+ "jf-primitives",
+ "jf-rescue",
+ "jf-utils",
+ "num_cpus",
+ "percentage",
+ "rand 0.8.4",
+ "rand_chacha 0.3.1",
+ "rayon",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "sha2 0.9.9",
+ "sha3 0.9.1",
+ "structopt",
+ "thiserror",
 ]
 
 [[package]]

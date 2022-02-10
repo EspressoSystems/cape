@@ -2,8 +2,7 @@ use async_std::sync::{Arc, RwLock};
 use jf_aap::keys::{UserAddress, UserPubKey};
 use jf_aap::Signature;
 use std::collections::HashMap;
-use tide::prelude::*;
-use tide::StatusCode;
+use tide::{prelude::*, StatusCode};
 
 #[derive(Debug, Deserialize)]
 struct InsertPubKey {
@@ -18,6 +17,8 @@ struct ServerState {
     map: Arc<RwLock<HashMap<UserAddress, UserPubKey>>>,
 }
 
+/// Run a web server that provides a key/value store mapping user
+/// addresses to public keys.
 #[async_std::main]
 async fn main() -> Result<(), std::io::Error> {
     tide::log::start();
@@ -26,10 +27,14 @@ async fn main() -> Result<(), std::io::Error> {
     app.at("/request_pubkey").post(request_pubkey);
     let port = std::env::var("PORT").unwrap_or_else(|_| DEFAULT_MAP_PORT.to_string());
     let address = format!("0.0.0.0:{}", port);
+    // TODO !corbett signal SIGUSR1 indicating we're just about to start.
     app.listen(address).await?;
     Ok(())
 }
 
+/// Lookup a user public key from a signed public key address. Fail with
+/// tide::StatusCode::BadRequest if key deserialization or the signature check
+/// fail.
 fn verify_sig_and_get_pub_key(insert_request: InsertPubKey) -> Result<UserPubKey, tide::Error> {
     let pub_key: UserPubKey = bincode::deserialize(&insert_request.pub_key_bytes)
         .map_err(|e| tide::Error::new(tide::StatusCode::BadRequest, e))?;
@@ -39,17 +44,12 @@ fn verify_sig_and_get_pub_key(insert_request: InsertPubKey) -> Result<UserPubKey
     Ok(pub_key)
 }
 
+/// Insert or update the public key at the given address.
 async fn insert_pubkey(mut req: tide::Request<ServerState>) -> Result<tide::Response, tide::Error> {
     let insert_request: InsertPubKey = net::server::request_body(&mut req).await?;
     let pub_key = verify_sig_and_get_pub_key(insert_request)?;
     let mut hash_map = req.state().map.write().await;
-    match hash_map.insert(pub_key.address(), pub_key.clone()) {
-        None => println!("inserting pub key{:?}", pub_key),
-        Some(old_pub_key) => println!(
-            "updating pub key{:?}, old pub_key:{:?}",
-            pub_key, old_pub_key
-        ),
-    }
+    hash_map.insert(pub_key.address(), pub_key.clone());
     Ok(tide::Response::new(StatusCode::Ok))
 }
 

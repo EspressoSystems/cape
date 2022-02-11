@@ -92,7 +92,6 @@ library BN254 {
         return G1Point(p.x, P_MOD - (p.y % P_MOD));
     }
 
-    // TODO: (alex) add test
     /// @return res = -fr the negation of scalar field element.
     function negate(uint256 fr) internal pure returns (uint256 res) {
         return R_MOD - (fr % R_MOD);
@@ -348,7 +347,6 @@ library BN254 {
         // a = x^((p+1)/4)
         assembly {
             // credit: Aztec
-            // FIXME (Optimization): gas cost
             let mPtr := mload(0x40)
             mstore(mPtr, 0x20)
             mstore(add(mPtr, 0x20), 0x20)

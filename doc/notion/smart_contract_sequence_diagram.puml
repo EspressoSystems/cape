@@ -12,7 +12,7 @@ A -> CapeContract: sponsor_cape_asset(usdc_address(), asset_def)
 
 end group
 
-group Wrapping: USDC -> AAP record
+group Wrapping: USDC -> CAP record
 
 A -> A: asset_def = usdc_cape_asset_def() \n deposit_amount = 1000
 A -> USDC: approve(cape_contract.address(), deposit_amount)
@@ -20,7 +20,7 @@ A -> A: ro = RecordOpening::new( \n   &mut rng, \n   deposit_amount.as_u64(), \n
 A -> CapeContract: deposit_erc20(ro, usdc_address(), eth_user_address)
 end
 
-group Transfers within AAP
+group Transfers within CAP
 
 A -> A: (tx,r_out) := JellyFish.generate_transfer_transaction(usk_a,upk_b,at,null,r_out)
 A -> R: tx
@@ -34,7 +34,7 @@ end note
 R -> CapeContract: submit_cape_block(b,[])
 end group
 
-group Unwrapping: AAP record -> USDC token
+group Unwrapping: CAP record -> USDC token
  B -> B: asset_def = usdc_cape_asset_def()
  B -> B: burn_amount = 1000
  B -> B: burned_ro = RecordOpening::new( \n    &mut rng, \n    burn_amount,\n    asset_def, \n    cape_user_keypair.pub_key(),\n    FreezeFlag::Unfrozen)

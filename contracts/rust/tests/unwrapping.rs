@@ -12,11 +12,11 @@ use cap_rust_sandbox::test_utils::{
 use cap_rust_sandbox::types as sol;
 use cap_rust_sandbox::types::GenericInto;
 use ethers::prelude::U256;
-use jf_aap::keys::{CredIssuerPubKey, UserPubKey};
-use jf_aap::structs::{
+use jf_cap::keys::{CredIssuerPubKey, UserPubKey};
+use jf_cap::structs::{
     AssetCode, AssetDefinition, AssetPolicy, FreezeFlag, RecordCommitment, RecordOpening,
 };
-use jf_aap::{MerkleTree, TransactionNote};
+use jf_cap::{MerkleTree, TransactionNote};
 use reef::Ledger;
 
 #[tokio::test]

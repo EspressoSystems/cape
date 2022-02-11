@@ -16,7 +16,7 @@ use ethers::{
     signers::Signer,
 };
 use futures::Stream;
-use jf_aap::{
+use jf_cap::{
     keys::{UserAddress, UserPubKey},
     proof::UniversalParam,
     structs::{AssetDefinition, Nullifier, ReceiverMemo, RecordOpening},
@@ -322,7 +322,7 @@ mod test {
     };
     use cap_rust_sandbox::{deploy::deploy_erc20_token, types::SimpleToken};
     use ethers::types::{TransactionRequest, U256};
-    use jf_aap::{
+    use jf_cap::{
         keys::UserKeyPair,
         structs::{AssetCode, AssetPolicy},
         testing_apis::universal_setup_for_test,
@@ -354,7 +354,7 @@ mod test {
             xfr: vec![
                 // For regular transfers, including non-native transfers
                 TransactionVerifyingKey::Transfer(
-                    jf_aap::proof::transfer::preprocess(
+                    jf_cap::proof::transfer::preprocess(
                         &universal_param,
                         2,
                         3,
@@ -366,7 +366,7 @@ mod test {
                 // For burns (which currently require exactly 2 inputs and outputs, but this is an
                 // artificial restriction which should be lifted)
                 TransactionVerifyingKey::Transfer(
-                    jf_aap::proof::transfer::preprocess(
+                    jf_cap::proof::transfer::preprocess(
                         &universal_param,
                         2,
                         2,
@@ -379,14 +379,14 @@ mod test {
             .into_iter()
             .collect(),
             freeze: vec![TransactionVerifyingKey::Freeze(
-                jf_aap::proof::freeze::preprocess(&universal_param, 2, CapeLedger::merkle_height())
+                jf_cap::proof::freeze::preprocess(&universal_param, 2, CapeLedger::merkle_height())
                     .unwrap()
                     .1,
             )]
             .into_iter()
             .collect(),
             mint: TransactionVerifyingKey::Mint(
-                jf_aap::proof::mint::preprocess(&universal_param, CapeLedger::merkle_height())
+                jf_cap::proof::mint::preprocess(&universal_param, CapeLedger::merkle_height())
                     .unwrap()
                     .1,
             ),

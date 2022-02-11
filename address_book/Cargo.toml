@@ -1,0 +1,18 @@
+[package]
+name = "address_book"
+version = "0.0.1"
+authors = ["Fernando Krell <fernando@translucence.net>", "John D. Corbett <corbett@pictographer.com>"]
+edition = "2018"
+description = "Web server that maintains a persistent mapping from user addresses to user public keys"
+
+[dependencies]
+async-std = { version = "1.6.0", features = ["attributes"] }
+atomic_store = { git = "ssh://git@github.com/SpectrumXYZ/atomicstore.git" }
+bincode = "1.3.3"
+itertools = "0.10.1"
+jf-aap = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", rev = "eca7b7e85718c7770c24ad90dd34b8a07209a01b" }
+net = { git = "ssh://git@github.com/SpectrumXYZ/net.git" }
+rand_chacha = "0.3.1"
+serde = { version = "1.0", features = ["derive"] }
+surf = "2.3.2"
+tide = "0.16.0"

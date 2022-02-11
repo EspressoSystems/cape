@@ -22,6 +22,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "address_book"
+version = "0.0.1"
+dependencies = [
+ "async-std",
+ "atomic_store 0.0.2 (git+ssh://git@github.com/SpectrumXYZ/atomicstore.git)",
+ "bincode",
+ "itertools 0.10.3",
+ "jf-aap 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=eca7b7e85718c7770c24ad90dd34b8a07209a01b)",
+ "net",
+ "rand_chacha 0.3.1",
+ "serde",
+ "surf",
+ "tide",
+]
+
+[[package]]
 name = "adler"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -154,7 +170,7 @@ dependencies = [
  "arbitrary",
  "ark-std",
  "itertools 0.10.3",
- "jf-aap",
+ "jf-aap 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=c789791d61b46e69367f07bb375c1ae2cf66e0d9)",
  "rand_chacha 0.3.1",
  "serde",
  "zerok-macros",
@@ -1035,7 +1051,7 @@ dependencies = [
  "generic-array 0.14.5",
  "hex",
  "itertools 0.10.3",
- "jf-aap",
+ "jf-aap 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=c789791d61b46e69367f07bb375c1ae2cf66e0d9)",
  "jf-plonk",
  "jf-primitives",
  "jf-rescue",
@@ -1065,7 +1081,7 @@ dependencies = [
  "cap-rust-sandbox",
  "ethers 0.6.0 (git+https://github.com/gakonst/ethers-rs)",
  "itertools 0.10.3",
- "jf-aap",
+ "jf-aap 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=c789791d61b46e69367f07bb375c1ae2cf66e0d9)",
  "jf-rescue",
  "jf-utils",
  "rand 0.8.4",
@@ -1086,7 +1102,7 @@ dependencies = [
  "futures",
  "futures-util",
  "itertools 0.10.3",
- "jf-aap",
+ "jf-aap 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=c789791d61b46e69367f07bb375c1ae2cf66e0d9)",
  "jf-plonk",
  "jf-primitives",
  "jf-utils",
@@ -3183,6 +3199,47 @@ dependencies = [
 ]
 
 [[package]]
+name = "jf-aap"
+version = "0.0.1"
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=eca7b7e85718c7770c24ad90dd34b8a07209a01b#eca7b7e85718c7770c24ad90dd34b8a07209a01b"
+dependencies = [
+ "anyhow",
+ "ark-bls12-377",
+ "ark-bls12-381",
+ "ark-bn254",
+ "ark-ec",
+ "ark-ed-on-bls12-377",
+ "ark-ed-on-bls12-381",
+ "ark-ed-on-bn254",
+ "ark-ff",
+ "ark-serialize",
+ "ark-std",
+ "bincode",
+ "commit",
+ "csv",
+ "derivative",
+ "displaydoc",
+ "hex-literal",
+ "itertools 0.10.3",
+ "jf-plonk",
+ "jf-primitives",
+ "jf-rescue",
+ "jf-utils",
+ "num_cpus",
+ "percentage",
+ "rand 0.8.4",
+ "rand_chacha 0.3.1",
+ "rayon",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "sha2 0.9.9",
+ "sha3 0.9.1",
+ "structopt",
+ "thiserror",
+]
+
+[[package]]
 name = "jf-plonk"
 version = "0.0.1"
 source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#90f77df587dbd353b6e784df37cdeca32c5745f5"
@@ -3323,7 +3380,7 @@ dependencies = [
  "bincode",
  "commit",
  "itertools 0.10.3",
- "jf-aap",
+ "jf-aap 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=c789791d61b46e69367f07bb375c1ae2cf66e0d9)",
  "serde",
  "serde_with",
  "snafu 0.6.10",
@@ -3570,7 +3627,7 @@ dependencies = [
  "futures",
  "generic-array 0.14.5",
  "itertools 0.10.3",
- "jf-aap",
+ "jf-aap 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=c789791d61b46e69367f07bb375c1ae2cf66e0d9)",
  "jf-utils",
  "serde",
  "serde_json",
@@ -4458,7 +4515,7 @@ dependencies = [
  "commit",
  "funty",
  "itertools 0.10.3",
- "jf-aap",
+ "jf-aap 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=c789791d61b46e69367f07bb375c1ae2cf66e0d9)",
  "serde",
  "snafu 0.6.10",
  "strum_macros",
@@ -4500,7 +4557,7 @@ dependencies = [
  "cap-rust-sandbox",
  "dirs",
  "ethers 0.6.0 (git+https://github.com/gakonst/ethers-rs?branch=master)",
- "jf-aap",
+ "jf-aap 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=c789791d61b46e69367f07bb375c1ae2cf66e0d9)",
  "jf-primitives",
  "key-set",
  "lazy_static",
@@ -4876,7 +4933,7 @@ dependencies = [
  "generic-array 0.14.5",
  "hmac 0.11.0",
  "itertools 0.10.3",
- "jf-aap",
+ "jf-aap 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=c789791d61b46e69367f07bb375c1ae2cf66e0d9)",
  "jf-utils",
  "key-set",
  "lazy_static",
@@ -6035,7 +6092,7 @@ dependencies = [
  "ark-serialize",
  "ark-std",
  "itertools 0.10.3",
- "jf-aap",
+ "jf-aap 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=c789791d61b46e69367f07bb375c1ae2cf66e0d9)",
  "rand_chacha 0.3.1",
 ]
 

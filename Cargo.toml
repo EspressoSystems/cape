@@ -1,6 +1,7 @@
 [workspace]
 
 members = [
+    "address_book",
     "contracts/rust",
     "doc/workflow",
     "relayer",

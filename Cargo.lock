@@ -170,7 +170,7 @@ dependencies = [
  "arbitrary",
  "ark-std",
  "itertools 0.10.3",
- "jf-aap",
+ "jf-aap 0.0.1 (git+ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git?rev=8c32d8df3faf511e54ad89fa51627837ebcd8f20)",
  "rand_chacha 0.3.1",
  "serde",
  "zerok-macros",

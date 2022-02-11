@@ -15,7 +15,7 @@ use cape_wallet::{
     mocks::{MockCapeBackend, MockCapeLedger /*, MockCapeNetwork*/},
     wallet::CapeWalletExt,
 };
-use jf_aap::{
+use jf_cap::{
     keys::{AuditorPubKey, FreezerPubKey},
     proof::UniversalParam,
     structs::{AssetCode, AssetDefinition, AssetPolicy},
@@ -82,6 +82,42 @@ impl<'a> CLI<'a> for CapeCli {
         //     freeze: KeySet::new(
         //         vec![TransactionVerifyingKey::Freeze(
         //             jf_aap::proof::freeze::preprocess(&*univ_param, 2, CapeLedger::merkle_height())
+        //                 .unwrap()
+        //                 .1,
+        //         )]
+        //         .into_iter(),
+        //     )
+        //     .unwrap(),
+        // };
+        // let ledger = Arc::new(Mutex::new(MockLedger::new(MockCapeNetwork::new(
+        //     verif_crs,
+        //     MerkleTree::new(CapeLedger::merkle_height()).unwrap(),
+        //     vec![],
+        // ))));
+        // MockCapeBackend::new(ledger, loader)
+        // let verif_crs = VerifierKeySet {
+        //     mint: TransactionVerifyingKey::Mint(
+        //         jf_cap::proof::mint::preprocess(&*univ_param, CapeLedger::merkle_height())
+        //             .unwrap()
+        //             .1,
+        //     ),
+        //     xfr: KeySet::new(
+        //         vec![TransactionVerifyingKey::Transfer(
+        //             jf_cap::proof::transfer::preprocess(
+        //                 &*univ_param,
+        //                 3,
+        //                 3,
+        //                 CapeLedger::merkle_height(),
+        //             )
+        //             .unwrap()
+        //             .1,
+        //         )]
+        //         .into_iter(),
+        //     )
+        //     .unwrap(),
+        //     freeze: KeySet::new(
+        //         vec![TransactionVerifyingKey::Freeze(
+        //             jf_cap::proof::freeze::preprocess(&*univ_param, 2, CapeLedger::merkle_height())
         //                 .unwrap()
         //                 .1,
         //         )]

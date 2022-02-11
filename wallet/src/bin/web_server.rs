@@ -52,12 +52,13 @@ async fn main() -> Result<(), std::io::Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use async_std::task::sleep;
     use cap_rust_sandbox::state::{Erc20Code, EthereumAddr};
     use cape_wallet::{
         routes::{BalanceInfo, CapeAPIError, PubKey, WalletSummary},
         testing::port,
     };
-    use jf_aap::{
+    use jf_cap::{
         keys::UserKeyPair,
         structs::{AssetCode, AssetDefinition},
     };
@@ -145,6 +146,7 @@ mod tests {
                 {
                     return;
                 }
+                sleep(backoff).await;
                 backoff *= 2;
             }
             panic!("Wallet server did not start in {:?}", backoff);
@@ -693,5 +695,48 @@ mod tests {
             ))
             .await
             .unwrap();
+    }
+
+    #[async_std::test]
+    #[traced_test]
+    async fn test_dummy_populate() {
+        let server = TestServer::new().await;
+        server
+            .get::<()>(&format!(
+                "newwallet/{}/path/{}",
+                server.get::<String>("getmnemonic").await.unwrap(),
+                server.path()
+            ))
+            .await
+            .unwrap();
+        server.get::<()>("populatefortest").await.unwrap();
+
+        let info = server.get::<WalletSummary>("getinfo").await.unwrap();
+        assert_eq!(info.addresses.len(), 2);
+        assert_eq!(info.spend_keys.len(), 2);
+        assert_eq!(info.audit_keys.len(), 2);
+        assert_eq!(info.freeze_keys.len(), 2);
+        assert_eq!(info.assets.len(), 2); // native asset + wrapped asset
+
+        let address = info.addresses[0].clone();
+        // One of the wallet's two assets is the native asset, and the other is the wrapped asset
+        // for which we have a nonzero balance, but the order depends on the hash of the wrapped
+        // asset code, which is non-deterministic, so we check both.
+        let wrapped_asset = if info.assets[0].asset.code == AssetCode::native() {
+            info.assets[1].asset.code
+        } else {
+            info.assets[0].asset.code
+        };
+        assert_ne!(wrapped_asset, AssetCode::native());
+        assert_eq!(
+            server
+                .get::<BalanceInfo>(&format!(
+                    "getbalance/address/{}/asset/{}",
+                    address, wrapped_asset
+                ))
+                .await
+                .unwrap(),
+            BalanceInfo::Balance(1000)
+        );
     }
 }

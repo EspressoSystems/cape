@@ -9,7 +9,7 @@ mod tests {
     };
     use anyhow::Result;
     use ethers::prelude::Middleware;
-    use jf_aap::{keys::UserPubKey, utils::TxnsParams};
+    use jf_cap::{keys::UserPubKey, utils::TxnsParams};
     use reef::Ledger;
 
     #[tokio::test]

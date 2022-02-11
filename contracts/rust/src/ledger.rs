@@ -2,12 +2,12 @@ use crate::state::*;
 use arbitrary::{Arbitrary, Unstructured};
 use arbitrary_wrappers::*;
 use commit::{Commitment, Committable, RawCommitmentBuilder};
-use jf_aap::{
+use jf_cap::{
     keys::{AuditorKeyPair, AuditorPubKey},
     structs::{AssetCode, AssetDefinition, Nullifier, RecordCommitment, RecordOpening},
     TransactionNote,
 };
-use reef::{aap, traits::*, AuditError, AuditMemoOpening};
+use reef::{cap, traits::*, AuditError, AuditMemoOpening};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::Display;
@@ -54,34 +54,34 @@ impl<'a> Arbitrary<'a> for CapeNullifierSet {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, strum_macros::Display)]
 pub enum CapeTransactionKind {
-    AAP(aap::TransactionKind),
+    CAP(cap::TransactionKind),
     Burn,
     Wrap,
 }
 
 impl TransactionKind for CapeTransactionKind {
     fn send() -> Self {
-        Self::AAP(aap::TransactionKind::send())
+        Self::CAP(cap::TransactionKind::send())
     }
 
     fn receive() -> Self {
-        Self::AAP(aap::TransactionKind::receive())
+        Self::CAP(cap::TransactionKind::receive())
     }
 
     fn mint() -> Self {
-        Self::AAP(aap::TransactionKind::mint())
+        Self::CAP(cap::TransactionKind::mint())
     }
 
     fn freeze() -> Self {
-        Self::AAP(aap::TransactionKind::freeze())
+        Self::CAP(cap::TransactionKind::freeze())
     }
 
     fn unfreeze() -> Self {
-        Self::AAP(aap::TransactionKind::unfreeze())
+        Self::CAP(cap::TransactionKind::unfreeze())
     }
 
     fn unknown() -> Self {
-        Self::AAP(aap::TransactionKind::unknown())
+        Self::CAP(cap::TransactionKind::unknown())
     }
 }
 
@@ -112,8 +112,8 @@ impl Transaction for CapeTransition {
     type Hash = Commitment<Self>;
     type Kind = CapeTransactionKind;
 
-    fn aap(note: TransactionNote, _proofs: Vec<()>) -> Self {
-        Self::Transaction(CapeTransaction::AAP(note))
+    fn cap(note: TransactionNote, _proofs: Vec<()>) -> Self {
+        Self::Transaction(CapeTransaction::CAP(note))
     }
 
     fn open_audit_memo(
@@ -122,9 +122,9 @@ impl Transaction for CapeTransition {
         keys: &HashMap<AuditorPubKey, AuditorKeyPair>,
     ) -> Result<AuditMemoOpening, AuditError> {
         match self {
-            Self::Transaction(CapeTransaction::AAP(note)) => note.open_audit_memo(assets, keys),
+            Self::Transaction(CapeTransaction::CAP(note)) => note.open_audit_memo(assets, keys),
             Self::Transaction(CapeTransaction::Burn { xfr, .. }) => {
-                aap::open_xfr_audit_memo(assets, keys, xfr)
+                cap::open_xfr_audit_memo(assets, keys, xfr)
             }
             _ => Err(AuditError::NoAuditMemos),
         }
@@ -158,7 +158,7 @@ impl Transaction for CapeTransition {
 
     fn kind(&self) -> CapeTransactionKind {
         match self {
-            Self::Transaction(CapeTransaction::AAP(txn)) => match txn {
+            Self::Transaction(CapeTransaction::CAP(txn)) => match txn {
                 TransactionNote::Transfer(..) => CapeTransactionKind::send(),
                 TransactionNote::Mint(..) => CapeTransactionKind::mint(),
                 TransactionNote::Freeze(..) => CapeTransactionKind::freeze(),

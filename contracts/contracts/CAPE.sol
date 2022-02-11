@@ -33,7 +33,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
     bytes public constant CAPE_BURN_MAGIC_BYTES = "TRICAPE burn";
     uint256 public constant CAPE_BURN_MAGIC_BYTES_SIZE = 12;
     bytes14 public constant DOM_SEP_DOMESTIC_ASSET = "DOMESTIC_ASSET";
-    uint256 public constant AAP_NATIVE_ASSET_CODE = 1;
+    uint256 public constant CAP_NATIVE_ASSET_CODE = 1;
     // In order to avoid the contract running out of gas if the queue is too large
     // we set the maximum number of pending deposits record commitments to process
     // when a new block is submitted. This is a temporary solution.
@@ -310,14 +310,9 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
         }
 
         // Process the pending deposits obtained after calling `depositErc20`
-        uint256[] memory depositCommitments = new uint256[](pendingDeposits.length);
         for (uint256 i = 0; i < pendingDeposits.length; i++) {
-            uint256 rc = pendingDeposits[i];
-            depositCommitments[i] = rc;
-            commitments.add(rc);
+            commitments.add(pendingDeposits[i]);
         }
-        // Empty the queue now the record commitments are ready to be inserted
-        delete pendingDeposits;
 
         // Only update the merkle tree and add the root if the list of records commitments is non empty
         if (!commitments.isEmpty()) {
@@ -327,7 +322,12 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
 
         // In all cases (the block is empty or not), the height is incremented.
         blockHeight += 1;
-        emit BlockCommitted(blockHeight, depositCommitments);
+
+        // Inform clients about the new block and the processed deposits.
+        emit BlockCommitted(blockHeight, pendingDeposits);
+
+        // Empty the queue now that the record commitments have been inserted
+        delete pendingDeposits;
     }
 
     /// @dev send the ERC20 tokens equivalent to the asset records being burnt. Recall that the burned record opening is contained inside the note.
@@ -475,7 +475,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
                 note.auditMemo.data.length
         );
         publicInput[0] = note.auxInfo.merkleRoot;
-        publicInput[1] = AAP_NATIVE_ASSET_CODE;
+        publicInput[1] = CAP_NATIVE_ASSET_CODE;
         publicInput[2] = note.auxInfo.validUntil;
         publicInput[3] = note.auxInfo.fee;
         {
@@ -550,7 +550,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
         // 9: see below; 8: asset policy; rest: audit memo
         publicInput = new uint256[](9 + 8 + 2 + note.auditMemo.data.length);
         publicInput[0] = note.auxInfo.merkleRoot;
-        publicInput[1] = AAP_NATIVE_ASSET_CODE;
+        publicInput[1] = CAP_NATIVE_ASSET_CODE;
         publicInput[2] = note.inputNullifier;
         publicInput[3] = note.auxInfo.fee;
         publicInput[4] = note.mintComm;
@@ -612,7 +612,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
             3 + note.inputNullifiers.length + note.outputCommitments.length
         );
         publicInput[0] = note.auxInfo.merkleRoot;
-        publicInput[1] = AAP_NATIVE_ASSET_CODE;
+        publicInput[1] = CAP_NATIVE_ASSET_CODE;
         publicInput[2] = note.auxInfo.fee;
         {
             uint256 idx = 3;

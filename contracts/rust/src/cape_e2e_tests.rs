@@ -10,16 +10,16 @@ use crate::{
 };
 use anyhow::Result;
 use ethers::prelude::U256;
-use jf_aap::keys::{UserKeyPair, UserPubKey};
-use jf_aap::structs::{AssetDefinition, FreezeFlag, RecordCommitment, RecordOpening};
-use jf_aap::testing_apis::universal_setup_for_test;
-use jf_aap::transfer::TransferNote;
-use jf_aap::transfer::TransferNoteInput;
-use jf_aap::AccMemberWitness;
-use jf_aap::MerkleLeafProof;
-use jf_aap::MerkleTree;
-use jf_aap::TransactionNote;
-use jf_aap::TransactionVerifyingKey;
+use jf_cap::keys::{UserKeyPair, UserPubKey};
+use jf_cap::structs::{AssetDefinition, FreezeFlag, RecordCommitment, RecordOpening};
+use jf_cap::testing_apis::universal_setup_for_test;
+use jf_cap::transfer::TransferNote;
+use jf_cap::transfer::TransferNoteInput;
+use jf_cap::AccMemberWitness;
+use jf_cap::MerkleLeafProof;
+use jf_cap::MerkleTree;
+use jf_cap::TransactionNote;
+use jf_cap::TransactionVerifyingKey;
 use jf_utils::CanonicalBytes;
 use key_set::{KeySet, ProverKeySet, VerifierKeySet};
 use rand::SeedableRng;
@@ -38,11 +38,11 @@ async fn test_2user_maybe_submit(should_submit: bool) -> Result<()> {
     let srs = universal_setup_for_test(max_degree, &mut prng)?;
 
     let (xfr_prove_key, xfr_verif_key, _) =
-        jf_aap::proof::transfer::preprocess(&srs, 1, 2, CapeLedger::merkle_height()).unwrap();
+        jf_cap::proof::transfer::preprocess(&srs, 1, 2, CapeLedger::merkle_height()).unwrap();
     let (mint_prove_key, mint_verif_key, _) =
-        jf_aap::proof::mint::preprocess(&srs, CapeLedger::merkle_height()).unwrap();
+        jf_cap::proof::mint::preprocess(&srs, CapeLedger::merkle_height()).unwrap();
     let (freeze_prove_key, freeze_verif_key, _) =
-        jf_aap::proof::freeze::preprocess(&srs, 2, CapeLedger::merkle_height()).unwrap();
+        jf_cap::proof::freeze::preprocess(&srs, 2, CapeLedger::merkle_height()).unwrap();
 
     for (label, key) in vec![
         ("xfr", CanonicalBytes::from(xfr_verif_key.clone())),
@@ -206,7 +206,7 @@ async fn test_2user_maybe_submit(should_submit: bool) -> Result<()> {
 
     let new_recs = txn1.output_commitments.to_vec();
 
-    let txn1_cape = CapeTransaction::AAP(TransactionNote::Transfer(Box::new(txn1)));
+    let txn1_cape = CapeTransaction::CAP(TransactionNote::Transfer(Box::new(txn1)));
 
     let (new_state, effects) = validator
         .submit_operations(vec![CapeOperation::SubmitBlock(vec![txn1_cape.clone()])])

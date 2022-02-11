@@ -12,7 +12,7 @@ use cap_rust_sandbox::{
     universal_param::UNIVERSAL_PARAM,
 };
 use futures::{prelude::*, stream::iter};
-use jf_aap::{
+use jf_cap::{
     keys::{AuditorPubKey, FreezerPubKey, UserPubKey},
     structs::{AssetCode, AssetDefinition, AssetPolicy},
     MerkleTree, TransactionVerifyingKey,
@@ -286,7 +286,7 @@ pub fn dummy_url_eval(
         .build())
 }
 
-fn wallet_error(source: CapeWalletError) -> tide::Error {
+pub fn wallet_error(source: CapeWalletError) -> tide::Error {
     server_error(CapeAPIError::Wallet {
         msg: source.to_string(),
     })
@@ -317,11 +317,11 @@ pub async fn init_wallet(
 
     let verif_crs = VerifierKeySet {
         mint: TransactionVerifyingKey::Mint(
-            jf_aap::proof::mint::preprocess(&*UNIVERSAL_PARAM, CapeLedger::merkle_height())?.1,
+            jf_cap::proof::mint::preprocess(&*UNIVERSAL_PARAM, CapeLedger::merkle_height())?.1,
         ),
         xfr: KeySet::new(
             vec![TransactionVerifyingKey::Transfer(
-                jf_aap::proof::transfer::preprocess(
+                jf_cap::proof::transfer::preprocess(
                     &*UNIVERSAL_PARAM,
                     3,
                     3,
@@ -334,7 +334,7 @@ pub async fn init_wallet(
         .unwrap(),
         freeze: KeySet::new(
             vec![TransactionVerifyingKey::Freeze(
-                jf_aap::proof::freeze::preprocess(
+                jf_cap::proof::freeze::preprocess(
                     &*UNIVERSAL_PARAM,
                     2,
                     CapeLedger::merkle_height(),
@@ -380,7 +380,7 @@ async fn known_assets(wallet: &Wallet) -> HashMap<AssetCode, AssetInfo> {
     assets
 }
 
-fn require_wallet(wallet: &mut Option<Wallet>) -> Result<&mut Wallet, tide::Error> {
+pub fn require_wallet(wallet: &mut Option<Wallet>) -> Result<&mut Wallet, tide::Error> {
     wallet
         .as_mut()
         .ok_or_else(|| server_error(CapeAPIError::MissingWallet))

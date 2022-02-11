@@ -4,13 +4,14 @@ use crate::assertion::Matcher;
 use crate::cape::CapeBlock;
 use crate::deploy::deploy_cape_test;
 use crate::ledger::CapeLedger;
+use crate::test_utils::PrintGas;
 use crate::types as sol;
 use crate::types::{GenericInto, MerkleRootSol, NullifierSol};
 use anyhow::Result;
 use ethers::prelude::U256;
-use jf_aap::keys::UserPubKey;
-use jf_aap::structs::{AssetCodeSeed, InternalAssetCode};
-use jf_aap::utils::TxnsParams;
+use jf_cap::keys::UserPubKey;
+use jf_cap::structs::{AssetCodeSeed, InternalAssetCode};
+use jf_cap::utils::TxnsParams;
 use rand::Rng;
 use reef::Ledger;
 
@@ -95,7 +96,8 @@ async fn test_submit_empty_block_to_cape_contract() -> Result<()> {
         .submit_cape_block(cape_block.into())
         .send()
         .await?
-        .await?;
+        .await?
+        .print_gas("Submit empty block");
 
     // The height is incremented anyways.
     assert_eq!(contract.block_height().call().await?, 1u64);
@@ -146,7 +148,8 @@ async fn test_submit_block_to_cape_contract() -> Result<()> {
         .submit_cape_block(cape_block.into())
         .send()
         .await?
-        .await?;
+        .await?
+        .print_gas("Submit transfer + mint + freeze");
 
     // Check that now the nullifier has been inserted
     assert!(

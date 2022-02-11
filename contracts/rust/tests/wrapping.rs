@@ -1,9 +1,8 @@
 use anyhow::Result;
+use cap_rust_sandbox::assertion::EnsureMined;
 use cap_rust_sandbox::cape::CapeBlock;
 use cap_rust_sandbox::deploy::{deploy_cape_test, deploy_erc20_token};
-use cap_rust_sandbox::helpers::{
-    compare_merkle_root_from_contract_and_jf_tree, eth_transaction_has_been_mined,
-};
+use cap_rust_sandbox::helpers::compare_merkle_root_from_contract_and_jf_tree;
 use cap_rust_sandbox::ledger::CapeLedger;
 use cap_rust_sandbox::state::{erc20_asset_description, Erc20Code, EthereumAddr};
 use cap_rust_sandbox::test_utils::{check_erc20_token_balance, ContractsInfo};
@@ -12,12 +11,12 @@ use cap_rust_sandbox::types::{GenericInto, MerkleRootSol, RecordOpening as Recor
 use ethers::abi::AbiDecode;
 use ethers::prelude::U256;
 use itertools::Itertools;
-use jf_aap::keys::UserPubKey;
-use jf_aap::structs::{
+use jf_cap::keys::UserPubKey;
+use jf_cap::structs::{
     AssetCode, AssetDefinition, AssetPolicy, FreezeFlag, RecordCommitment, RecordOpening,
 };
-use jf_aap::utils::TxnsParams;
-use jf_aap::MerkleTree;
+use jf_cap::utils::TxnsParams;
+use jf_cap::MerkleTree;
 use reef::Ledger;
 
 async fn check_pending_deposits_queue_at_index(
@@ -221,14 +220,13 @@ async fn integration_test_wrapping_erc20_tokens() -> Result<()> {
 
     println!("Submitting block");
     // Submit to the contract
-    let receipt = cape_contract
+    cape_contract
         .submit_cape_block(cape_block.clone().into())
         .gas(U256::from(10_000_000))
         .send()
         .await?
-        .await;
-
-    assert!(eth_transaction_has_been_mined(&receipt.unwrap().unwrap()));
+        .await?
+        .ensure_mined();
 
     // Check the block has been processed.
     assert_eq!(cape_contract.block_height().call().await?, 1u64);

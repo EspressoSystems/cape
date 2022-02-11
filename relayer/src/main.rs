@@ -8,7 +8,7 @@ use crate::state_persistence::StatePersistence;
 use crate::txn_queue::TxnQueue;
 
 use cap_rust_sandbox::state::{CapeContractState, CAPE_MERKLE_HEIGHT};
-use jf_aap::MerkleTree;
+use jf_cap::MerkleTree;
 
 use async_std::sync::{Arc, RwLock};
 

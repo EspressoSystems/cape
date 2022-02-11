@@ -48,3 +48,16 @@ where
         check_contains(&error, message);
     }
 }
+
+pub trait EnsureMined {
+    fn ensure_mined(self) -> Self;
+}
+
+impl EnsureMined for Option<TransactionReceipt> {
+    fn ensure_mined(self) -> Self {
+        if self.as_ref().unwrap().status.unwrap() != U64::from(1) {
+            panic!("Transaction not mined");
+        }
+        self
+    }
+}

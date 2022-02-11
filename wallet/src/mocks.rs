@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use cap_rust_sandbox::{ledger::*, state::*, universal_param::UNIVERSAL_PARAM};
 use futures::stream::Stream;
 use itertools::izip;
-use jf_aap::{
+use jf_cap::{
     keys::{UserAddress, UserPubKey},
     proof::{freeze::FreezeProvingKey, transfer::TransferProvingKey, UniversalParam},
     structs::{AssetDefinition, Nullifier, ReceiverMemo, RecordCommitment, RecordOpening},
@@ -143,7 +143,7 @@ impl MockCapeNetwork {
     ) -> Result<WalletState<'a, CapeLedger>, CapeWalletError> {
         // Construct proving keys of the same arities as the verifier keys from the validator.
         let proving_keys = Arc::new(ProverKeySet {
-            mint: jf_aap::proof::mint::preprocess(univ_param, CAPE_MERKLE_HEIGHT)
+            mint: jf_cap::proof::mint::preprocess(univ_param, CAPE_MERKLE_HEIGHT)
                 .map_err(|source| CapeWalletError::CryptoError { source })?
                 .0,
             freeze: self
@@ -153,7 +153,7 @@ impl MockCapeNetwork {
                 .iter()
                 .map(|k| {
                     Ok::<FreezeProvingKey, WalletError<CapeLedger>>(
-                        jf_aap::proof::freeze::preprocess(
+                        jf_cap::proof::freeze::preprocess(
                             univ_param,
                             k.num_inputs(),
                             CAPE_MERKLE_HEIGHT,
@@ -170,7 +170,7 @@ impl MockCapeNetwork {
                 .iter()
                 .map(|k| {
                     Ok::<TransferProvingKey, WalletError<CapeLedger>>(
-                        jf_aap::proof::transfer::preprocess(
+                        jf_cap::proof::transfer::preprocess(
                             univ_param,
                             k.num_inputs(),
                             k.num_outputs(),
@@ -197,7 +197,7 @@ impl MockCapeNetwork {
             proving_keys,
             txn_state: TransactionState {
                 validator: CapeTruster::new(self.block_height, record_mt.num_leaves()),
-                now: Default::default(),
+                now: self.now(),
                 nullifiers: Default::default(),
                 // Completely sparse nullifier set
                 record_mt,
@@ -268,7 +268,10 @@ impl MockCapeNetwork {
         }
     }
 
-    fn submit_operations(&mut self, ops: Vec<CapeOperation>) -> Result<(), CapeValidationError> {
+    pub fn submit_operations(
+        &mut self,
+        ops: Vec<CapeOperation>,
+    ) -> Result<(), CapeValidationError> {
         let (new_state, effects) = self.contract.submit_operations(ops)?;
         let mut events = vec![];
         for effect in effects {
@@ -402,7 +405,7 @@ impl<'a> MockNetwork<'a, CapeLedger> for MockCapeNetwork {
 
         // Validate the new memos.
         match &txn.txn {
-            CapeTransition::Transaction(CapeTransaction::AAP(note)) => {
+            CapeTransition::Transaction(CapeTransaction::CAP(note)) => {
                 if note.verify_receiver_memos_signature(&memos, &sig).is_err() {
                     return Err(CapeWalletError::Failed {
                         msg: String::from("invalid memos signature"),
@@ -479,7 +482,7 @@ pub type MockCapeLedger<'a> =
 
 pub struct MockCapeBackend<'a, Meta: Serialize + DeserializeOwned> {
     storage: Arc<Mutex<AtomicWalletStorage<'a, CapeLedger, Meta>>>,
-    ledger: Arc<Mutex<MockCapeLedger<'a>>>,
+    pub(crate) ledger: Arc<Mutex<MockCapeLedger<'a>>>,
     key_stream: KeyTree,
 }
 
@@ -770,9 +773,9 @@ impl<'a> SystemUnderTest<'a> for CapeTest {
 #[cfg(test)]
 mod cape_wallet_tests {
     use super::*;
-    use crate::wallet::CapeWalletExt;
-    use jf_aap::structs::{AssetCode, AssetPolicy};
-    use seahorse::txn_builder::TransactionError;
+    use crate::wallet::{CapeWallet, CapeWalletExt};
+    use jf_cap::structs::{AssetCode, AssetPolicy};
+    use seahorse::{testing::await_transaction, txn_builder::TransactionError};
     use std::time::Instant;
 
     #[cfg(feature = "slow-tests")]
@@ -808,12 +811,12 @@ mod cape_wallet_tests {
         let erc20_addr = EthereumAddr([1u8; 20]);
         let erc20_code = Erc20Code(erc20_addr);
         let sponsor_addr = EthereumAddr([2u8; 20]);
-        let aap_asset_policy = AssetPolicy::default();
+        let cap_asset_policy = AssetPolicy::default();
 
         // Sponsor the ERC20 token.
-        let aap_asset = wallets[0]
+        let cap_asset = wallets[0]
             .0
-            .sponsor(erc20_code, sponsor_addr.clone(), aap_asset_policy)
+            .sponsor(erc20_code, sponsor_addr.clone(), cap_asset_policy)
             .await
             .unwrap();
         println!("Sponsor completed: {}s", now.elapsed().as_secs_f32());
@@ -842,14 +845,14 @@ mod cape_wallet_tests {
             .0
             .wrap(
                 sponsor_addr.clone(),
-                aap_asset.clone(),
+                cap_asset.clone(),
                 owner.clone(),
                 wrap_amount,
             )
             .await
             .unwrap();
         println!("Wrap completed: {}s", now.elapsed().as_secs_f32());
-        assert_eq!(wallets[0].0.balance(&owner, &aap_asset.code).await, 0);
+        assert_eq!(wallets[0].0.balance(&owner, &cap_asset.code).await, 0);
 
         // Submit dummy transactions to finalize the wrap.
         now = Instant::now();
@@ -876,7 +879,7 @@ mod cape_wallet_tests {
             initial_grant - mint_fee
         );
         assert_eq!(
-            wallets[0].0.balance(&owner, &aap_asset.code).await,
+            wallets[0].0.balance(&owner, &cap_asset.code).await,
             wrap_amount
         );
 
@@ -888,7 +891,7 @@ mod cape_wallet_tests {
             .burn(
                 &owner,
                 sponsor_addr.clone(),
-                &aap_asset.code.clone(),
+                &cap_asset.code.clone(),
                 burn_amount,
                 burn_fee,
             )
@@ -912,7 +915,7 @@ mod cape_wallet_tests {
             .burn(
                 &owner,
                 sponsor_addr.clone(),
-                &aap_asset.code.clone(),
+                &cap_asset.code.clone(),
                 burn_amount,
                 burn_fee,
             )
@@ -934,7 +937,7 @@ mod cape_wallet_tests {
             .burn(
                 &owner,
                 sponsor_addr.clone(),
-                &aap_asset.code.clone(),
+                &cap_asset.code.clone(),
                 burn_amount,
                 burn_fee,
             )
@@ -944,12 +947,74 @@ mod cape_wallet_tests {
         println!("Burn completed: {}s", now.elapsed().as_secs_f32());
 
         // Check the balance after the burn.
-        assert_eq!(wallets[0].0.balance(&owner, &aap_asset.code).await, 0);
+        assert_eq!(wallets[0].0.balance(&owner, &cap_asset.code).await, 0);
         assert_eq!(
             wallets[0].0.balance(&owner, &AssetCode::native()).await,
             initial_grant - mint_fee - burn_fee
         );
 
         Ok(())
+    }
+
+    #[async_std::test]
+    async fn test_create_with_existing_ledger() {
+        let mut t = CapeTest::default();
+
+        // Initialize a ledger and wallet, and get the owner address.
+        let mut now = Instant::now();
+        let initial_grant = 10;
+        let (ledger, mut wallets) = t
+            .create_test_network(&[(2, 2)], vec![initial_grant], &mut now)
+            .await;
+        ledger.lock().await.set_block_size(1).unwrap();
+
+        let (mut wallet1, address1) = wallets.remove(0);
+        let receipt = wallet1
+            .transfer(&address1, &AssetCode::native(), &[(address1.clone(), 1)], 1)
+            .await
+            .unwrap();
+        await_transaction(&receipt, &wallet1, &[]).await;
+        assert_eq!(
+            wallet1.balance(&address1, &AssetCode::native()).await,
+            initial_grant - 1
+        );
+
+        // A new wallet joins the system after there are already some transactions on the ledger.
+        let storage = t.create_storage().await;
+        let key_stream = storage.key_stream();
+        let backend = MockCapeBackend::new_for_test(
+            ledger.clone(),
+            Arc::new(Mutex::new(storage)),
+            key_stream,
+        )
+        .await
+        .unwrap();
+        let mut wallet2 = CapeWallet::new(backend).await.unwrap();
+        wallet2.sync(ledger.lock().await.now()).await.unwrap();
+        let address2 = wallet2.generate_user_key(None).await.unwrap().address();
+
+        // Transfer to the late wallet.
+        let receipt = wallet1
+            .transfer(&address1, &AssetCode::native(), &[(address2.clone(), 2)], 1)
+            .await
+            .unwrap();
+        await_transaction(&receipt, &wallet1, &[&wallet2]).await;
+        assert_eq!(
+            wallet1.balance(&address1, &AssetCode::native()).await,
+            initial_grant - 4
+        );
+        assert_eq!(wallet2.balance(&address2, &AssetCode::native()).await, 2);
+
+        // Transfer back.
+        let receipt = wallet2
+            .transfer(&address2, &AssetCode::native(), &[(address1.clone(), 1)], 1)
+            .await
+            .unwrap();
+        await_transaction(&receipt, &wallet2, &[&wallet1]).await;
+        assert_eq!(
+            wallet1.balance(&address1, &AssetCode::native()).await,
+            initial_grant - 3
+        );
+        assert_eq!(wallet2.balance(&address2, &AssetCode::native()).await, 0);
     }
 }

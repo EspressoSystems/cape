@@ -1,7 +1,7 @@
 use async_std::task;
 use cap_rust_sandbox::{cape::CapeBlock, state::CapeTransaction, types::CAPE};
 use ethers::{core::k256::ecdsa::SigningKey, prelude::*};
-use jf_aap::keys::UserPubKey;
+use jf_cap::keys::UserPubKey;
 use net::server::{add_error_body, request_body, response};
 use serde::{Deserialize, Serialize};
 use snafu::Snafu;
@@ -103,11 +103,11 @@ pub fn init_web_server(
 #[cfg(any(test, feature = "testing"))]
 pub mod testing {
     use super::*;
-    use async_std::sync::Arc;
+    use async_std::{sync::Arc, task::sleep};
     use cap_rust_sandbox::{
         deploy::deploy_cape_test, ledger::CapeLedger, test_utils::create_faucet, types::TestCAPE,
     };
-    use jf_aap::{
+    use jf_cap::{
         keys::UserKeyPair,
         structs::{RecordCommitment, RecordOpening},
         MerkleTree,
@@ -147,6 +147,7 @@ pub mod testing {
             {
                 return;
             }
+            sleep(backoff).await;
             backoff *= 2;
         }
         panic!("Minimal relayer did not start in {:?}", backoff);
@@ -175,7 +176,7 @@ mod test {
         test_utils::contract_abi_path,
         types::{GenericInto, CAPE},
     };
-    use jf_aap::{
+    use jf_cap::{
         keys::UserKeyPair,
         structs::{AssetDefinition, FreezeFlag, RecordOpening},
         testing_apis::universal_setup_for_test,
@@ -219,10 +220,10 @@ mod test {
     ) -> CapeTransaction {
         let srs = universal_setup_for_test(2usize.pow(16), rng).unwrap();
         let xfr_prove_key =
-            jf_aap::proof::transfer::preprocess(&srs, 1, 2, CapeLedger::merkle_height())
+            jf_cap::proof::transfer::preprocess(&srs, 1, 2, CapeLedger::merkle_height())
                 .unwrap()
                 .0;
-        let valid_until = 2u64.pow(jf_aap::constants::MAX_TIMESTAMP_LEN as u32) - 1;
+        let valid_until = 2u64.pow(jf_cap::constants::MAX_TIMESTAMP_LEN as u32) - 1;
         let inputs = vec![TransferNoteInput {
             ro: faucet_rec.clone(),
             acc_member_witness: AccMemberWitness::lookup_from_tree(&records, 0)
@@ -243,7 +244,7 @@ mod test {
             TransferNote::generate_native(rng, inputs, &outputs, 1, valid_until, &xfr_prove_key)
                 .unwrap()
                 .0;
-        CapeTransaction::AAP(TransactionNote::Transfer(Box::new(note)))
+        CapeTransaction::CAP(TransactionNote::Transfer(Box::new(note)))
     }
 
     #[async_std::test]

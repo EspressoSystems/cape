@@ -1,6 +1,6 @@
 use cap_rust_sandbox::{state::CAPE_MERKLE_HEIGHT, universal_param::UNIVERSAL_PARAM};
-use jf_aap::keys::{UserAddress, UserKeyPair};
-use jf_aap::TransactionVerifyingKey;
+use jf_cap::keys::{UserAddress, UserKeyPair};
+use jf_cap::TransactionVerifyingKey;
 use key_set::{KeySet, VerifierKeySet};
 
 use dirs::data_local_dir;
@@ -68,13 +68,13 @@ pub(crate) fn verifier_keys() -> VerifierKeySet {
     // Set up the validator.
     let univ_setup = &*UNIVERSAL_PARAM;
     let (_, xfr_verif_key_12, _) =
-        jf_aap::proof::transfer::preprocess(univ_setup, 1, 2, CAPE_MERKLE_HEIGHT).unwrap();
+        jf_cap::proof::transfer::preprocess(univ_setup, 1, 2, CAPE_MERKLE_HEIGHT).unwrap();
     let (_, xfr_verif_key_23, _) =
-        jf_aap::proof::transfer::preprocess(univ_setup, 2, 3, CAPE_MERKLE_HEIGHT).unwrap();
+        jf_cap::proof::transfer::preprocess(univ_setup, 2, 3, CAPE_MERKLE_HEIGHT).unwrap();
     let (_, mint_verif_key, _) =
-        jf_aap::proof::mint::preprocess(univ_setup, CAPE_MERKLE_HEIGHT).unwrap();
+        jf_cap::proof::mint::preprocess(univ_setup, CAPE_MERKLE_HEIGHT).unwrap();
     let (_, freeze_verif_key, _) =
-        jf_aap::proof::freeze::preprocess(univ_setup, 2, CAPE_MERKLE_HEIGHT).unwrap();
+        jf_cap::proof::freeze::preprocess(univ_setup, 2, CAPE_MERKLE_HEIGHT).unwrap();
     VerifierKeySet {
         mint: TransactionVerifyingKey::Mint(mint_verif_key),
         xfr: KeySet::new(

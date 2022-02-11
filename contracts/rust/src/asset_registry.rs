@@ -1,7 +1,7 @@
 #![cfg(test)]
 use anyhow::Result;
 use ethers::prelude::Address;
-use jf_aap::structs::{AssetCode, AssetDefinition, AssetPolicy};
+use jf_cap::structs::{AssetCode, AssetDefinition, AssetPolicy};
 
 use crate::assertion::Matcher;
 use crate::deploy::deploy_test_asset_registry_contract;

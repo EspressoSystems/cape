@@ -53,7 +53,7 @@ You also need access to the following git repos
 
 - https://github.com/SpectrumXYZ/commit
 - https://github.com/SpectrumXYZ/curves
-- https://github.com/SpectrumXYZ/jellyfish-aap
+- https://github.com/SpectrumXYZ/jellyfish-cap
 - https://github.com/SpectrumXYZ/reef
 - https://github.com/SpectrumXYZ/spectrum
 - https://github.com/SpectrumXYZ/tagged-base64

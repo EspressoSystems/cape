@@ -11,12 +11,12 @@ use cap_rust_sandbox::types::{GenericInto, MerkleRootSol, RecordOpening as Recor
 use ethers::abi::AbiDecode;
 use ethers::prelude::U256;
 use itertools::Itertools;
-use jf_aap::keys::UserPubKey;
-use jf_aap::structs::{
+use jf_cap::keys::UserPubKey;
+use jf_cap::structs::{
     AssetCode, AssetDefinition, AssetPolicy, FreezeFlag, RecordCommitment, RecordOpening,
 };
-use jf_aap::utils::TxnsParams;
-use jf_aap::MerkleTree;
+use jf_cap::utils::TxnsParams;
+use jf_cap::MerkleTree;
 use reef::Ledger;
 
 async fn check_pending_deposits_queue_at_index(

@@ -15,7 +15,7 @@ use cape_wallet::{
     mocks::{MockCapeBackend, MockCapeNetwork},
     wallet::CapeWalletExt,
 };
-use jf_aap::{
+use jf_cap::{
     keys::{AuditorPubKey, FreezerPubKey},
     proof::UniversalParam,
     structs::{AssetCode, AssetDefinition, AssetPolicy},
@@ -53,13 +53,13 @@ impl<'a> CLI<'a> for CapeCli {
     ) -> Result<Self::Backend, WalletError<CapeLedger>> {
         let verif_crs = VerifierKeySet {
             mint: TransactionVerifyingKey::Mint(
-                jf_aap::proof::mint::preprocess(&*univ_param, CapeLedger::merkle_height())
+                jf_cap::proof::mint::preprocess(&*univ_param, CapeLedger::merkle_height())
                     .unwrap()
                     .1,
             ),
             xfr: KeySet::new(
                 vec![TransactionVerifyingKey::Transfer(
-                    jf_aap::proof::transfer::preprocess(
+                    jf_cap::proof::transfer::preprocess(
                         &*univ_param,
                         3,
                         3,
@@ -73,7 +73,7 @@ impl<'a> CLI<'a> for CapeCli {
             .unwrap(),
             freeze: KeySet::new(
                 vec![TransactionVerifyingKey::Freeze(
-                    jf_aap::proof::freeze::preprocess(&*univ_param, 2, CapeLedger::merkle_height())
+                    jf_cap::proof::freeze::preprocess(&*univ_param, 2, CapeLedger::merkle_height())
                         .unwrap()
                         .1,
                 )]

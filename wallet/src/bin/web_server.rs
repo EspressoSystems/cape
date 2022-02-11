@@ -58,7 +58,7 @@ mod tests {
         routes::{BalanceInfo, CapeAPIError, PubKey, WalletSummary},
         testing::port,
     };
-    use jf_aap::{
+    use jf_cap::{
         keys::UserKeyPair,
         structs::{AssetCode, AssetDefinition},
     };

@@ -4,9 +4,9 @@ use crate::{types as sol, types::TestVerifyingKeys};
 use anyhow::Result;
 use ark_std::{rand::Rng, test_rng};
 use ethers::prelude::*;
-use jf_aap::proof::{freeze, mint, transfer};
-use jf_aap::structs::NoteType;
-use jf_aap::testing_apis::universal_setup_for_test;
+use jf_cap::proof::{freeze, mint, transfer};
+use jf_cap::structs::NoteType;
+use jf_cap::testing_apis::universal_setup_for_test;
 
 const TREE_DEPTH: u8 = 24;
 const SUPPORTED_VKS: [(NoteType, u8, u8, u8); 3] = [

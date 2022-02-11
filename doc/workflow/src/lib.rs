@@ -3,10 +3,10 @@
 use cap_rust_sandbox::state::{is_erc20_asset_def_valid, Erc20Code, EthereumAddr};
 use ethers::prelude::*;
 use itertools::Itertools;
-use jf_aap::keys::UserPubKey;
-use jf_aap::structs::{AssetDefinition, FreezeFlag, Nullifier, RecordCommitment, RecordOpening};
-use jf_aap::TransactionNote::Transfer;
-use jf_aap::{txn_batch_verify, MerkleCommitment, MerkleFrontier, NodeValue, TransactionNote};
+use jf_cap::keys::UserPubKey;
+use jf_cap::structs::{AssetDefinition, FreezeFlag, Nullifier, RecordCommitment, RecordOpening};
+use jf_cap::TransactionNote::Transfer;
+use jf_cap::{txn_batch_verify, MerkleCommitment, MerkleFrontier, NodeValue, TransactionNote};
 use std::collections::{HashMap, HashSet, LinkedList};
 
 mod constants;
@@ -353,7 +353,7 @@ impl CapeContract {
 
 #[cfg(test)]
 mod test {
-    use jf_aap::{
+    use jf_cap::{
         keys::{AuditorKeyPair, FreezerKeyPair, UserKeyPair},
         structs::{AssetCode, AssetPolicy, FreezeFlag},
         transfer::TransferNote,

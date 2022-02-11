@@ -103,7 +103,7 @@ pub fn init_web_server(
 #[cfg(any(test, feature = "testing"))]
 pub mod testing {
     use super::*;
-    use async_std::sync::Arc;
+    use async_std::{sync::Arc, task::sleep};
     use cap_rust_sandbox::{
         deploy::deploy_cape_test, ledger::CapeLedger, test_utils::create_faucet, types::TestCAPE,
     };
@@ -147,6 +147,7 @@ pub mod testing {
             {
                 return;
             }
+            sleep(backoff).await;
             backoff *= 2;
         }
         panic!("Minimal relayer did not start in {:?}", backoff);

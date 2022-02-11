@@ -7,13 +7,13 @@ use jf_aap::Signature;
 use std::collections::HashMap;
 use tide::{prelude::*, StatusCode};
 
+pub const DEFAULT_PORT: u16 = 50078u16;
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct InsertPubKey {
     pub pub_key_bytes: Vec<u8>,
     pub sig: Signature,
 }
-
-pub const DEFAULT_MAP_PORT: u16 = 50078u16;
 
 #[derive(Clone, Default)]
 struct ServerState {
@@ -25,7 +25,7 @@ pub async fn init_web_server() -> std::io::Result<JoinHandle<std::io::Result<()>
     let mut app = tide::with_state(ServerState::default());
     app.at("/insert_pubkey").post(insert_pubkey);
     app.at("/request_pubkey").post(request_pubkey);
-    let port = std::env::var("PORT").unwrap_or_else(|_| DEFAULT_MAP_PORT.to_string());
+    let port = std::env::var("PORT").unwrap_or_else(|_| DEFAULT_PORT.to_string());
     let address = format!("0.0.0.0:{}", port);
     Ok(spawn(app.listen(address)))
 }
@@ -57,7 +57,7 @@ async fn request_pubkey(
     mut req: tide::Request<ServerState>,
 ) -> Result<tide::Response, tide::Error> {
     let address: UserAddress = net::server::request_body(&mut req).await?;
-    let hash_map = req.state().map.write().await;
+    let hash_map = req.state().map.read().await;
     match hash_map.get(&address) {
         Some(value) => {
             let bytes = bincode::serialize(value).unwrap();

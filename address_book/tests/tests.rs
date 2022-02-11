@@ -1,4 +1,4 @@
-use address_book::{init_web_server, InsertPubKey};
+use address_book::{init_web_server, InsertPubKey, DEFAULT_PORT};
 use jf_aap::keys::{UserKeyPair, UserPubKey};
 use rand_chacha::rand_core::SeedableRng;
 use std::time::Duration;
@@ -6,10 +6,9 @@ use std::time::Duration;
 const ROUND_TRIP_COUNT: u64 = 100;
 const NOT_FOUND_COUNT: u64 = 100;
 const ADDRESS_BOOK_STARTUP_RETRIES: usize = 8;
-const ADDRESS_BOOK_PORT: u64 = 50078;
 
 // Shamelessly copied from relayer/src/lib.rs
-async fn wait_for_server(port: u64) {
+async fn wait_for_server(port: u16) {
     // Wait for the server to come up and start serving.
     let mut backoff = Duration::from_millis(100);
     for _ in 0..ADDRESS_BOOK_STARTUP_RETRIES {
@@ -35,7 +34,7 @@ async fn wait_for_server(port: u64) {
 async fn round_trip() {
     // TODO !corbett find an unused port rather than assuming 50078 is free.
     init_web_server().await.expect("Failed to run server.");
-    wait_for_server(ADDRESS_BOOK_PORT).await;
+    wait_for_server(DEFAULT_PORT).await;
 
     let mut rng = rand_chacha::ChaChaRng::from_seed([0u8; 32]);
     let mut rng2 = rand_chacha::ChaChaRng::from_seed([0u8; 32]);

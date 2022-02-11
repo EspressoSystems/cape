@@ -12,29 +12,31 @@ use cap_rust_sandbox::{
     state::{Erc20Code, EthereumAddr},
 };
 use cape_wallet::{
-    mocks::{MockCapeBackend, MockCapeNetwork},
+    mocks::{MockCapeBackend, MockCapeLedger /*, MockCapeNetwork*/},
     wallet::CapeWalletExt,
 };
 use jf_aap::{
     keys::{AuditorPubKey, FreezerPubKey},
     proof::UniversalParam,
     structs::{AssetCode, AssetDefinition, AssetPolicy},
-    MerkleTree, TransactionVerifyingKey,
+    /*MerkleTree, TransactionVerifyingKey,*/
 };
-use key_set::{KeySet, VerifierKeySet};
+// use key_set::{KeySet, VerifierKeySet};
 use net::UserAddress;
-use reef::Ledger;
+// use reef::Ledger;
 use seahorse::{
     cli::*,
+    hd,
     io::SharedIO,
     loader::{LoadMethod, LoaderMetadata, WalletLoader},
-    testing::MockLedger,
+    persistence::AtomicWalletStorage,
+    // testing::MockLedger,
     WalletError,
 };
 use std::any::type_name;
 use std::io::Write;
 use std::path::PathBuf;
-use std::process::exit;
+// use std::process::exit;
 use std::str::FromStr;
 use std::sync::Arc;
 use structopt::StructOpt;
@@ -44,49 +46,55 @@ pub struct CapeCli;
 impl<'a> CLI<'a> for CapeCli {
     type Ledger = CapeLedger;
     type Backend = MockCapeBackend<'a, LoaderMetadata>;
-    type Args = Args;
+    type Args = MockCapeArgs<'a>;
 
     fn init_backend(
-        univ_param: &'a UniversalParam,
-        _args: Self::Args,
+        _univ_param: &'a UniversalParam,
+        args: Self::Args,
         loader: &mut impl WalletLoader<CapeLedger, Meta = LoaderMetadata>,
     ) -> Result<Self::Backend, WalletError<CapeLedger>> {
-        let verif_crs = VerifierKeySet {
-            mint: TransactionVerifyingKey::Mint(
-                jf_aap::proof::mint::preprocess(&*univ_param, CapeLedger::merkle_height())
-                    .unwrap()
-                    .1,
-            ),
-            xfr: KeySet::new(
-                vec![TransactionVerifyingKey::Transfer(
-                    jf_aap::proof::transfer::preprocess(
-                        &*univ_param,
-                        3,
-                        3,
-                        CapeLedger::merkle_height(),
-                    )
-                    .unwrap()
-                    .1,
-                )]
-                .into_iter(),
-            )
-            .unwrap(),
-            freeze: KeySet::new(
-                vec![TransactionVerifyingKey::Freeze(
-                    jf_aap::proof::freeze::preprocess(&*univ_param, 2, CapeLedger::merkle_height())
-                        .unwrap()
-                        .1,
-                )]
-                .into_iter(),
-            )
-            .unwrap(),
-        };
-        let ledger = Arc::new(Mutex::new(MockLedger::new(MockCapeNetwork::new(
-            verif_crs,
-            MerkleTree::new(CapeLedger::merkle_height()).unwrap(),
-            vec![],
-        ))));
-        MockCapeBackend::new(ledger, loader)
+        // TODO !keyao Is this correct?
+        MockCapeBackend::new_for_test(
+            args.ledger.clone(),
+            Arc::new(Mutex::new(AtomicWalletStorage::new(loader, 128)?)),
+            args.key_stream,
+        )
+        // let verif_crs = VerifierKeySet {
+        //     mint: TransactionVerifyingKey::Mint(
+        //         jf_aap::proof::mint::preprocess(&*univ_param, CapeLedger::merkle_height())
+        //             .unwrap()
+        //             .1,
+        //     ),
+        //     xfr: KeySet::new(
+        //         vec![TransactionVerifyingKey::Transfer(
+        //             jf_aap::proof::transfer::preprocess(
+        //                 &*univ_param,
+        //                 3,
+        //                 3,
+        //                 CapeLedger::merkle_height(),
+        //             )
+        //             .unwrap()
+        //             .1,
+        //         )]
+        //         .into_iter(),
+        //     )
+        //     .unwrap(),
+        //     freeze: KeySet::new(
+        //         vec![TransactionVerifyingKey::Freeze(
+        //             jf_aap::proof::freeze::preprocess(&*univ_param, 2, CapeLedger::merkle_height())
+        //                 .unwrap()
+        //                 .1,
+        //         )]
+        //         .into_iter(),
+        //     )
+        //     .unwrap(),
+        // };
+        // let ledger = Arc::new(Mutex::new(MockLedger::new(MockCapeNetwork::new(
+        //     verif_crs,
+        //     MerkleTree::new(CapeLedger::merkle_height()).unwrap(),
+        //     vec![],
+        // ))));
+        // MockCapeBackend::new(ledger, loader)
     }
 
     fn extra_commands() -> Vec<Command<'a, Self>> {
@@ -185,9 +193,9 @@ fn cape_specific_cli_commands<'a>() -> Vec<Command<'a, CapeCli>> {
              from: EthereumAddr,
              to: UserAddress,
              amount: u64| {
-                match wallet.wrap(from, asset_def, to.0, amount).await {
+                match wallet.wrap(from, asset_def.clone(), to.0, amount).await {
                     Ok(()) => {
-                        cli_writeln!(io, "\nAsset wrapped.");
+                        cli_writeln!(io, "\nAsset wrapped: {}", asset_def.code);
                     }
                     Err(err) => {
                         cli_writeln!(io, "{}\nAsset was not wrapped.", err);
@@ -201,19 +209,53 @@ fn cape_specific_cli_commands<'a>() -> Vec<Command<'a, CapeCli>> {
             CapeCli,
             |io,
              wallet,
-             asset: ListItem<AssetCode>,
+             asset_code: AssetCode,
              from: UserAddress,
              to: EthereumAddr,
              amount: u64,
              fee: u64;
              wait: Option<bool>| {
                 let res = wallet
-                    .burn(&from.0, to, &asset.item, amount, fee)
+                    .burn(&from.0, to, &asset_code, amount, fee)
                     .await;
+                    cli_writeln!(io, "{}", asset_code);
+
                 finish_transaction::<CapeCli>(io, wallet, res, wait, "burned").await;
             }
         ),
     ]
+}
+
+pub struct MockCapeArgs<'a> {
+    io: SharedIO,
+    key_stream: hd::KeyTree,
+    ledger: Arc<Mutex<MockCapeLedger<'a>>>,
+}
+
+impl<'a> CLIArgs for MockCapeArgs<'a> {
+    fn key_gen_path(&self) -> Option<PathBuf> {
+        None
+    }
+
+    fn storage_path(&self) -> Option<PathBuf> {
+        None
+    }
+
+    fn io(&self) -> Option<SharedIO> {
+        Some(self.io.clone())
+    }
+
+    fn encrypted(&self) -> bool {
+        true
+    }
+
+    fn load_method(&self) -> LoadMethod {
+        LoadMethod::Mnemonic
+    }
+
+    fn use_tmp_storage(&self) -> bool {
+        true
+    }
 }
 
 #[derive(StructOpt)]
@@ -313,7 +355,68 @@ mod tests {
     #![allow(dead_code)] // Some helper functions are only used with feature "slow-tests"
 
     use super::*;
-    use cape_wallet::cli_client::CliClient;
+    use async_std::{
+        sync::{Arc, Mutex},
+        task::spawn,
+    };
+    use cape_wallet::{
+        cli_client::CliClient,
+        mocks::{CapeTest, MockCapeLedger},
+    };
+    use futures::stream::{iter, StreamExt};
+    use pipe::{PipeReader, PipeWriter};
+    use seahorse::{
+        hd,
+        io::Tee,
+        testing::{cli_match::*, SystemUnderTest},
+        WalletBackend,
+    };
+    use std::time::Instant;
+
+    async fn create_cape_network<'a>(
+        t: &mut CapeTest,
+        initial_grants: &[u64],
+    ) -> (Arc<Mutex<MockCapeLedger<'a>>>, Vec<hd::KeyTree>) {
+        // Use `create_test_network` to create a ledger with some initial records.
+        let (ledger, wallets) = t
+            .create_test_network(&[(2, 2)], initial_grants.to_vec(), &mut Instant::now())
+            .await;
+        // Set `block_size` to `1` so we don't have to explicitly flush the ledger after each
+        // transaction submission.
+        ledger.lock().await.set_block_size(1).unwrap();
+        // We don't actually care about the open wallets returned by `create_test_network`, because
+        // the CLI does its own wallet loading. But we do want to get their key streams, so that
+        // the wallets we create through the CLI can deterministically generate the keys that own
+        // the initial records.
+        let key_streams = iter(wallets)
+            .then(|(wallet, _)| async move { wallet.lock().await.backend().key_stream() })
+            .collect::<Vec<_>>()
+            .await;
+        (ledger, key_streams)
+    }
+
+    fn create_cape_wallet(
+        ledger: Arc<Mutex<MockCapeLedger<'static>>>,
+        key_stream: hd::KeyTree,
+    ) -> (Tee<PipeWriter>, Tee<PipeReader>) {
+        let (io, input, output) = SharedIO::pipe();
+
+        // Run a CLI interface for a wallet in the background.
+        spawn(async move {
+            let args = MockCapeArgs {
+                io,
+                key_stream,
+                ledger,
+            };
+            cli_main::<CapeLedger, CapeCli>(args).await.unwrap();
+        });
+
+        // Wait for the CLI to start up and then return the input and output pipes.
+        let input = Tee::new(input);
+        let mut output = Tee::new(output);
+        wait_for_prompt(&mut output);
+        (input, output)
+    }
 
     fn create_wallet(t: &mut CliClient, wallet: usize) -> Result<&mut CliClient, String> {
         let key_path = t.wallet_key_path(wallet)?;
@@ -453,16 +556,76 @@ mod tests {
         });
     }
 
-    // TODO !keyao Add CLI tests for the burn command.
-    // Issue: https://github.com/SpectrumXYZ/cape/issues/474.
-    #[cfg(feature = "slow-tests")]
-    #[test]
-    fn test_cli_burn_insufficient_balance() {
-        cape_wallet::cli_client::cli_test(|t| {
-            create_wallet(t, 0)?;
-            cli_burn_insufficient_balance(t)?;
+    // #[cfg(feature = "slow-tests")]
+    #[async_std::test]
+    async fn test_cli_burn() {
+        let mut t = CapeTest::default();
+        let (ledger, key_streams) = create_cape_network(&mut t, &[1000, 1000, 1000]).await;
 
-            Ok(())
-        });
+        // Create wallets for sponsor, wrapper and receiver.
+        let (mut sponsor_input, mut sponsor_output) =
+            create_cape_wallet(ledger.clone(), key_streams[0].clone());
+        writeln!(sponsor_input, "1").unwrap();
+        wait_for_prompt(&mut sponsor_output);
+        let (mut wrapper_input, mut wrapper_output) =
+            create_cape_wallet(ledger.clone(), key_streams[1].clone());
+        writeln!(wrapper_input, "1").unwrap();
+        wait_for_prompt(&mut wrapper_output);
+        let (mut receiver_input, mut receiver_output) =
+            create_cape_wallet(ledger.clone(), key_streams[2].clone());
+        writeln!(receiver_input, "1").unwrap();
+        wait_for_prompt(&mut receiver_output);
+
+        // Get the freezer and auditor keys for the sponsor, and the receiver's addresses.
+        writeln!(sponsor_input, "gen_key freeze").unwrap();
+        let freezer_key =
+            match_output(&mut sponsor_output, &["(?P<freezekey>FREEZEPUBKEY~.*)"]).get("freezekey");
+        writeln!(sponsor_input, "gen_key audit").unwrap();
+        let auditor_key =
+            match_output(&mut sponsor_output, &["(?P<audkey>AUDPUBKEY~.*)"]).get("audkey");
+        writeln!(receiver_input, "gen_key spend scan_from=start wait=true").unwrap();
+        let receiver_addr = match_output(&mut receiver_output, &["(?P<addr>ADDR~.*)"]).get("addr");
+        writeln!(receiver_input, "balance 0").unwrap();
+        match_output(&mut receiver_output, &[format!("{} 1000", receiver_addr)]);
+
+        // Sponsor and wrap an asset.
+        let erc20_code = Erc20Code(EthereumAddr([1u8; 20]));
+        let sponsor_eth_addr = EthereumAddr([2u8; 20]);
+        writeln!(sponsor_input, "sponsor {} {} freezer={} auditor={} trace_amount=true trace_address=true trace_blind=true reveal_threshold=10", erc20_code, sponsor_eth_addr, freezer_key, auditor_key).unwrap();
+        let asset_def =
+            match_output(&mut sponsor_output, &["(?P<asset_def>ASSET_DEF~.*)"]).get("asset_def");
+        let wrapper_eth_addr = EthereumAddr([3u8; 20]);
+        let amount = 10;
+        writeln!(
+            wrapper_input,
+            "wrap {} {} {} {}",
+            asset_def, wrapper_eth_addr, receiver_addr, amount
+        )
+        .unwrap();
+        let asset_code = match_output(
+            &mut wrapper_output,
+            &["Asset wrapped: (?P<asset_code>ASSET_CODE~.*)"],
+        )
+        .get("asset_code");
+
+        // Submit a dummy transaction to finalize the wrap.
+        writeln!(receiver_input, "issue my_asset").unwrap();
+        wait_for_prompt(&mut receiver_output);
+        writeln!(
+            receiver_input,
+            "mint 1 {} {} 20 1",
+            receiver_addr, receiver_addr
+        )
+        .unwrap();
+        wait_for_prompt(&mut receiver_output);
+
+        // Burn the sponsored asset.
+        writeln!(
+            receiver_input,
+            "burn {} {} {} {} 1",
+            asset_code, receiver_addr, wrapper_eth_addr, amount
+        )
+        .unwrap();
+        match_output(&mut receiver_output, &["(?P<txn>TXN~.*)"]);
     }
 }

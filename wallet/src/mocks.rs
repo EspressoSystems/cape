@@ -503,7 +503,7 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> MockCapeBackend<'a, Meta> {
         })
     }
 
-    pub async fn new_for_test(
+    pub fn new_for_test(
         ledger: Arc<Mutex<MockCapeLedger<'a>>>,
         storage: Arc<Mutex<AtomicWalletStorage<'a, CapeLedger, Meta>>>,
         key_stream: KeyTree,
@@ -758,9 +758,7 @@ impl<'a> SystemUnderTest<'a> for CapeTest {
         key_stream: KeyTree,
         storage: Arc<Mutex<Self::MockStorage>>,
     ) -> Self::MockBackend {
-        MockCapeBackend::new_for_test(ledger, storage, key_stream)
-            .await
-            .unwrap()
+        MockCapeBackend::new_for_test(ledger, storage, key_stream).unwrap()
     }
 
     fn universal_param(&self) -> &'a UniversalParam {

@@ -58,12 +58,16 @@ contract TestCAPE is CAPE {
         blockHeight = newHeight;
     }
 
-    function computeMaxCommitments(CapeBlock memory newBlock) public pure returns (uint256) {
-        return _computeMaxCommitments(newBlock);
+    function computeNumCommitments(CapeBlock memory newBlock) public pure returns (uint256) {
+        return _computeNumCommitments(newBlock);
     }
 
-    function checkForeignAssetCode(uint256 assetDefinitionCode, address erc20Address) public view {
-        _checkForeignAssetCode(assetDefinitionCode, erc20Address);
+    function checkForeignAssetCode(
+        uint256 assetDefinitionCode,
+        address erc20Address,
+        address sponsor
+    ) public view {
+        _checkForeignAssetCode(assetDefinitionCode, erc20Address, sponsor);
     }
 
     function checkDomesticAssetCode(uint256 assetDefinitionCode, uint256 internalAssetCode)
@@ -81,20 +85,13 @@ contract TestCAPE is CAPE {
         return _computeAssetDescription(erc20Address, sponsor);
     }
 
-    // Functions to access the pending deposits queue
-    function getPendingDepositsAtIndex(uint256 index) public returns (uint256) {
-        return _queue[index];
-    }
-
-    function isPendingDepositsQueueEmpty() public returns (bool) {
-        return _isQueueEmpty();
+    function pendingDepositsLength() public view returns (uint256) {
+        return pendingDeposits.length;
     }
 
     function fillUpPendingDepositsQueue() public {
-        bool isQueueFull = (_getQueueSize() == MAX_QUEUE_SIZE);
-        while (!isQueueFull) {
-            _pushToQueue(0);
-            isQueueFull = (_getQueueSize() == MAX_QUEUE_SIZE);
+        for (uint256 i = pendingDeposits.length; i < MAX_NUM_PENDING_DEPOSIT; i++) {
+            pendingDeposits.push(100 + i);
         }
     }
 }

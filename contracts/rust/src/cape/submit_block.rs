@@ -15,7 +15,7 @@ use rand::Rng;
 use reef::Ledger;
 
 #[tokio::test]
-async fn test_compute_max_commitments() {
+async fn test_compute_num_commitments() {
     let contract = deploy_cape_test().await;
     let rng = &mut ark_std::test_rng();
 
@@ -25,9 +25,10 @@ async fn test_compute_max_commitments() {
         let burn_notes = (0..rng.gen_range(0..2))
             .map(|_| {
                 let mut note = sol::BurnNote::default();
-                let n = rng.gen_range(0..10);
+                let n = rng.gen_range(2..10); // burn notes must have a least 2 record commitments
                 note.transfer_note.output_commitments = [U256::from(0)].repeat(n);
-                num_comms += n;
+                // subtract one because the burn record commitment is not inserted
+                num_comms += n - 1;
                 note
             })
             .collect();
@@ -68,13 +69,13 @@ async fn test_compute_max_commitments() {
             miner_addr: UserPubKey::default().address().into(),
         };
 
-        let max_comms_sol = contract
-            .compute_max_commitments(cape_block)
+        let num_comms_sol = contract
+            .compute_num_commitments(cape_block)
             .call()
             .await
             .unwrap();
 
-        assert_eq!(max_comms_sol, U256::from(num_comms));
+        assert_eq!(num_comms_sol, U256::from(num_comms));
     }
 }
 

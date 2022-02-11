@@ -19,7 +19,7 @@ ethers = { git = "https://github.com/gakonst/ethers-rs", branch = "master" }
 futures = "0.3.0"
 futures-util = "0.3.8"
 itertools = "0.10.1"
-jf-aap = { features = ["test_apis"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", rev = "8c32d8df3faf511e54ad89fa51627837ebcd8f20" }
+jf-aap = { features = ["test_apis"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", rev = "c789791d61b46e69367f07bb375c1ae2cf66e0d9" }
 key-set = { git = "ssh://git@github.com/SpectrumXYZ/key-set.git" }
 lazy_static = "1.4.0"
 jf-plonk = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git" }
@@ -32,7 +32,7 @@ rand_chacha = "0.3.1"
 regex = "1.5.4"
 reef = { git = "ssh://git@github.com/SpectrumXYZ/reef.git" }
 relayer = { path = "../relayer", features = ["testing"] }
-seahorse = { git = "ssh://git@github.com/SpectrumXYZ/seahorse.git", rev = "88e058d714eedaadd8638f047dc91fb7d98dc91d", features = ["testing"] }
+seahorse = { git = "ssh://git@github.com/SpectrumXYZ/seahorse.git", rev = "0420e2047cb498df029de253e5eb541ed1cbdeb5", features = ["testing"] }
 serde = { version = "1.0.123", features = ["derive", "rc"] }
 serde_derive = "1.0.118"
 serde_json = "1.0.61"
@@ -58,4 +58,6 @@ tempdir = "0.3.7"
 tracing-test = "0.2.1"
 
 [features]
+default = ["testing"]
+testing = []
 slow-tests = []

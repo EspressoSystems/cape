@@ -14,7 +14,6 @@ pub mod ethereum;
 pub mod helpers;
 pub mod ledger;
 mod plonk_verifier;
-mod queue;
 mod records_merkle_tree;
 mod root_store;
 pub mod state;

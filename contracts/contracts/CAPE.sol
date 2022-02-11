@@ -9,8 +9,8 @@ pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@rari-capital/solmate/src/utils/SafeTransferLib.sol";
 
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 import "./libraries/AccumulatingArray.sol";
@@ -21,19 +21,24 @@ import "./interfaces/IPlonkVerifier.sol";
 import "./AssetRegistry.sol";
 import "./RecordsMerkleTree.sol";
 import "./RootStore.sol";
-import "./Queue.sol";
 
-contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue, ReentrancyGuard {
+contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
+    using AccumulatingArray for AccumulatingArray.Data;
+
     mapping(uint256 => bool) public nullifiers;
     uint64 public blockHeight;
     IPlonkVerifier private _verifier;
-
-    using AccumulatingArray for AccumulatingArray.Data;
+    uint256[] public pendingDeposits;
 
     bytes public constant CAPE_BURN_MAGIC_BYTES = "TRICAPE burn";
     uint256 public constant CAPE_BURN_MAGIC_BYTES_SIZE = 12;
     bytes14 public constant DOM_SEP_DOMESTIC_ASSET = "DOMESTIC_ASSET";
     uint256 public constant AAP_NATIVE_ASSET_CODE = 1;
+    // In order to avoid the contract running out of gas if the queue is too large
+    // we set the maximum number of pending deposits record commitments to process
+    // when a new block is submitted. This is a temporary solution.
+    // See https://github.com/SpectrumXYZ/cape/issues/400
+    uint256 public constant MAX_NUM_PENDING_DEPOSIT = 10;
 
     event BlockCommitted(uint64 indexed height, uint256[] depositCommitments);
     event Erc20TokensDeposited(bytes roBytes, address erc20TokenAddress, address from);
@@ -136,18 +141,8 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue, ReentrancyG
         uint8 merkleTreeHeight,
         uint64 nRoots,
         address verifierAddr
-    ) RecordsMerkleTree(merkleTreeHeight) RootStore(nRoots) Queue() {
+    ) RecordsMerkleTree(merkleTreeHeight) RootStore(nRoots) {
         _verifier = IPlonkVerifier(verifierAddr);
-    }
-
-    /// @notice Checks if a block is empty
-    /// @param block block of CAPE transactions
-    function _isBlockEmpty(CapeBlock memory block) internal returns (bool) {
-        bool res = (block.transferNotes.length == 0 &&
-            block.burnNotes.length == 0 &&
-            block.freezeNotes.length == 0 &&
-            block.mintNotes.length == 0);
-        return res;
     }
 
     /// @dev Publish an array of nullifiers
@@ -172,16 +167,21 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue, ReentrancyG
     /// @param ro record opening that will be inserted in the records merkle tree once the deposit is validated.
     /// @param erc20Address address of the ERC20 token corresponding to the deposit.
     function depositErc20(RecordOpening memory ro, address erc20Address) public nonReentrant {
-        ERC20 token = ERC20(erc20Address);
         require(isCapeAssetRegistered(ro.assetDef), "Asset definition not registered");
 
         // We skip the sanity checks mentioned in the rust specification as they are optional.
-        uint256 recordCommitment = _deriveRecordCommitment(ro);
-        _pushToQueue(recordCommitment);
+        if (pendingDeposits.length >= MAX_NUM_PENDING_DEPOSIT) {
+            revert("Pending deposits queue is full");
+        }
+        pendingDeposits.push(_deriveRecordCommitment(ro));
 
-        token.transferFrom(msg.sender, address(this), ro.amount);
-        bytes memory roBytes = abi.encode(ro);
-        emit Erc20TokensDeposited(roBytes, erc20Address, msg.sender);
+        SafeTransferLib.safeTransferFrom(
+            ERC20(erc20Address),
+            msg.sender,
+            address(this),
+            ro.amount
+        );
+        emit Erc20TokensDeposited(abi.encode(ro), erc20Address, msg.sender);
     }
 
     /// @dev Checks if the asset definition code is correctly derived from the internal asset code.
@@ -191,23 +191,28 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue, ReentrancyG
         internal
         view
     {
-        bytes memory randomBytes = bytes.concat(
-            keccak256(
-                bytes.concat(
-                    DOM_SEP_DOMESTIC_ASSET,
-                    bytes32(Utils.reverseEndianness(internalAssetCode))
-                )
-            )
+        require(
+            assetDefinitionCode ==
+                BN254.fromLeBytesModOrder(
+                    bytes.concat(
+                        keccak256(
+                            bytes.concat(
+                                DOM_SEP_DOMESTIC_ASSET,
+                                bytes32(Utils.reverseEndianness(internalAssetCode))
+                            )
+                        )
+                    )
+                ),
+            "Wrong domestic asset code"
         );
-        uint256 derivedCode = BN254.fromLeBytesModOrder(randomBytes);
-        require(derivedCode == assetDefinitionCode, "Wrong domestic asset code");
     }
 
     /// @notice submit a new block to the CAPE contract. Transactions are validated and the blockchain state is updated. Moreover *BURN* transactions trigger the unwrapping of cape asset records into erc20 tokens.
     /// @param newBlock block to be processed by the CAPE contract.
     function submitCapeBlock(CapeBlock memory newBlock) public nonReentrant {
-        uint256 maxSizeCommsArray = _computeMaxCommitments(newBlock) + _getQueueSize();
-        AccumulatingArray.Data memory comms = AccumulatingArray.create(maxSizeCommsArray);
+        AccumulatingArray.Data memory commitments = AccumulatingArray.create(
+            _computeNumCommitments(newBlock) + pendingDeposits.length
+        );
 
         uint256 numNotes = newBlock.noteTypes.length;
 
@@ -236,7 +241,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue, ReentrancyG
 
                 _publish(note.inputNullifiers);
 
-                comms.add(note.outputCommitments);
+                commitments.add(note.outputCommitments);
 
                 (vks[i], publicInputs[i], proofs[i], extraMsgs[i]) = _prepareForProofVerification(
                     note
@@ -250,8 +255,8 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue, ReentrancyG
 
                 _publish(note.inputNullifier);
 
-                comms.add(note.mintComm);
-                comms.add(note.chgComm);
+                commitments.add(note.mintComm);
+                commitments.add(note.chgComm);
 
                 (vks[i], publicInputs[i], proofs[i], extraMsgs[i]) = _prepareForProofVerification(
                     note
@@ -264,7 +269,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue, ReentrancyG
 
                 _publish(note.inputNullifiers);
 
-                comms.add(note.outputCommitments);
+                commitments.add(note.outputCommitments);
 
                 (vks[i], publicInputs[i], proofs[i], extraMsgs[i]) = _prepareForProofVerification(
                     note
@@ -279,9 +284,9 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue, ReentrancyG
                 _publish(note.transferNote.inputNullifiers);
 
                 // Insert all the output commitments to the records merkle tree except from the second one (corresponding to the burned output)
-                for (uint256 i = 0; i < note.transferNote.outputCommitments.length; i++) {
-                    if (i != 1) {
-                        comms.add(note.transferNote.outputCommitments[i]);
+                for (uint256 j = 0; j < note.transferNote.outputCommitments.length; j++) {
+                    if (j != 1) {
+                        commitments.add(note.transferNote.outputCommitments[j]);
                     }
                 }
 
@@ -305,60 +310,59 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, Queue, ReentrancyG
         }
 
         // Process the pending deposits obtained after calling `depositErc20`
-        // There are some pending deposits to process
-        uint256 numPendingDeposits = _getQueueSize();
-        uint256[] memory depositComms = new uint256[](numPendingDeposits);
-
-        if (numPendingDeposits > 0) {
-            for (uint256 i = 0; i < numPendingDeposits; i++) {
-                uint256 rc = _getQueueElem(i);
-                depositComms[i] = rc;
-                comms.add(rc);
-            }
-            // Empty the queue now the record commitments are ready to be inserted
-            _emptyQueue();
+        for (uint256 i = 0; i < pendingDeposits.length; i++) {
+            commitments.add(pendingDeposits[i]);
         }
 
         // Only update the merkle tree and add the root if the list of records commitments is non empty
-        if (!comms.isEmpty()) {
-            _updateRecordsMerkleTree(comms.toArray());
+        if (!commitments.isEmpty()) {
+            _updateRecordsMerkleTree(commitments.items);
             _addRoot(_rootValue);
         }
 
         // In all cases (the block is empty or not), the height is incremented.
         blockHeight += 1;
-        emit BlockCommitted(blockHeight, depositComms);
+
+        // Inform clients about the new block and the processed deposits.
+        emit BlockCommitted(blockHeight, pendingDeposits);
+
+        // Empty the queue now that the record commitments have been inserted
+        delete pendingDeposits;
     }
 
     /// @dev send the ERC20 tokens equivalent to the asset records being burnt. Recall that the burned record opening is contained inside the note.
     /// @param note note of type *BURN*
     function _handleWithdrawal(BurnNote memory note) internal {
         address ercTokenAddress = _lookup(note.recordOpening.assetDef);
-        ERC20 token = ERC20(ercTokenAddress);
 
         // Extract recipient address
         address recipientAddress = BytesLib.toAddress(
             note.transferNote.auxInfo.extraProofBoundData,
             CAPE_BURN_MAGIC_BYTES_SIZE
         );
-        token.transfer(recipientAddress, note.recordOpening.amount);
+        SafeTransferLib.safeTransfer(
+            ERC20(ercTokenAddress),
+            recipientAddress,
+            note.recordOpening.amount
+        );
     }
 
     /// @dev Compute an upper bound on the number of records to be inserted
-    /// @param newBlock block of CAPE transactions
-    function _computeMaxCommitments(CapeBlock memory newBlock) internal pure returns (uint256) {
+    function _computeNumCommitments(CapeBlock memory newBlock) internal pure returns (uint256) {
         // MintNote always has 2 commitments: mint_comm, chg_comm
-        uint256 maxComms = 2 * newBlock.mintNotes.length;
+        uint256 numComms = 2 * newBlock.mintNotes.length;
         for (uint256 i = 0; i < newBlock.transferNotes.length; i++) {
-            maxComms += newBlock.transferNotes[i].outputCommitments.length;
+            numComms += newBlock.transferNotes[i].outputCommitments.length;
         }
         for (uint256 i = 0; i < newBlock.burnNotes.length; i++) {
-            maxComms += newBlock.burnNotes[i].transferNote.outputCommitments.length;
+            // Subtract one for the burn record commitment that is not inserted.
+            // The function _containsBurnRecord checks that there are at least 2 output commitments.
+            numComms += newBlock.burnNotes[i].transferNote.outputCommitments.length - 1;
         }
         for (uint256 i = 0; i < newBlock.freezeNotes.length; i++) {
-            maxComms += newBlock.freezeNotes[i].outputCommitments.length;
+            numComms += newBlock.freezeNotes[i].outputCommitments.length;
         }
-        return maxComms;
+        return numComms;
     }
 
     /// @dev Verify if a note is of type *TRANSFER*

@@ -69,6 +69,10 @@ pub trait CapeWalletExt<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> {
     ) -> Result<AssetDefinition, CapeWalletError>;
 
     // We may return a `WrapReceipt`, i.e., a record commitment to track wraps, once it's defined.
+    //
+    // It would be better to replace the `AssetDefinition` parameter with `AssetCode` to be
+    // consistent with other transactions, but currently there is no way to inform the wallet of
+    // the existence of an asset (so that it can convert a code to a definition) without owning it.
     async fn wrap(
         &mut self,
         src_addr: EthereumAddr,

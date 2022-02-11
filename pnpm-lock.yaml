@@ -12,6 +12,7 @@ importers:
       '@nomiclabs/hardhat-ethers': ^2.0.2
       '@nomiclabs/hardhat-waffle': ^2.0.1
       '@openzeppelin/contracts': ^4.3.3
+      '@rari-capital/solmate': ^6.2.0
       '@summa-tx/memview-sol': ^2.0.0
       '@typechain/ethers-v5': 8.0.2
       '@typechain/hardhat': ^3.0.0
@@ -44,6 +45,7 @@ importers:
     dependencies:
       '@noble/bls12-381': 1.0.1
       '@openzeppelin/contracts': 4.3.3
+      '@rari-capital/solmate': 6.2.0
       '@summa-tx/memview-sol': 2.0.0
       async: 3.2.2
       async-child-process: 1.1.1
@@ -919,6 +921,10 @@ packages:
     resolution: {integrity: sha512-tDBopO1c98Yk7Cv/PZlHqrvtVjlgK5R4J6jxLwoO7qxK4xqOiZG+zSkIvGFpPZ0ikc3QOED3plgdqjgNTnBc7g==}
     dev: false
 
+  /@rari-capital/solmate/6.2.0:
+    resolution: {integrity: sha512-g94F+Ra9ixyJyNgvnOIufNjUz488uEG0nxIEEtJ7+g+tA1XGUupRB2kB5b+VO7WYO26RNOVD2fW6xE4e14iWpg==}
+    dev: false
+
   /@resolver-engine/core/0.3.3:
     resolution: {integrity: sha512-eB8nEbKDJJBi5p5SrvrvILn4a0h42bKtbCTri3ZxCGt6UvoQyp7HnGOfki944bUjBSHKK3RvgfViHn+kqdXtnQ==}
     dependencies:
@@ -1068,8 +1074,8 @@ packages:
     dev: true
     optional: true
 
-  /@truffle/hdwallet-provider/2.0.1:
-    resolution: {integrity: sha512-HTibaoO4/3AFEjWROil9uwAI+b9G3+TUmJWrbxTFTN8tO/0G2wl9UgVHvelnOUUvCy3eoR6L2JScXmpBmHfpuQ==}
+  /@truffle/hdwallet-provider/2.0.3:
+    resolution: {integrity: sha512-jT7X9P8hmXDaoem6GPzYhZ1p6PnW2l7sPMtVe7JCDXZTlv8hMy/ZfcyEppEoNqpad8vjWWpvGuETvyPpBEbLOw==}
     dependencies:
       '@ethereumjs/common': 2.6.0
       '@ethereumjs/tx': 3.4.0
@@ -8196,7 +8202,7 @@ packages:
   /solidity-bytes-utils/0.8.0:
     resolution: {integrity: sha512-r109ZHEf7zTMm1ENW6/IJFDWilFR/v0BZnGuFgDHJUV80ByobnV2k3txvwQaJ9ApL+6XAfwqsw5VFzjALbQPCw==}
     dependencies:
-      '@truffle/hdwallet-provider': 2.0.1
+      '@truffle/hdwallet-provider': 2.0.3
     transitivePeerDependencies:
       - '@babel/core'
       - supports-color

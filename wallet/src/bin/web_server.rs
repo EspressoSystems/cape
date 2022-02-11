@@ -1,6 +1,7 @@
 // Copyright © 2021 Translucence Research, Inc. All rights reserved.
 
 use cape_wallet::web::{default_api_path, default_web_path, init_server, NodeOpt};
+use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
 use std::path::PathBuf;
 use structopt::StructOpt;
 
@@ -37,7 +38,13 @@ async fn main() -> Result<(), std::io::Error> {
 
     // Use something different than the default Spectrum port (60000 vs 50000).
     let port = std::env::var("PORT").unwrap_or_else(|_| String::from("60000"));
-    init_server(api_path, web_path, port.parse().unwrap())?.await?;
+    init_server(
+        ChaChaRng::from_entropy(),
+        api_path,
+        web_path,
+        port.parse().unwrap(),
+    )?
+    .await?;
 
     Ok(())
 }
@@ -55,7 +62,6 @@ mod tests {
         structs::{AssetCode, AssetDefinition},
     };
     use net::{client, UserAddress};
-    use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
     use seahorse::{hd::KeyTree, txn_builder::AssetInfo};
     use serde::de::DeserializeOwned;
     use std::collections::hash_map::HashMap;
@@ -67,11 +73,6 @@ mod tests {
     use tagged_base64::TaggedBase64;
     use tempdir::TempDir;
     use tracing_test::traced_test;
-
-    fn random_mnemonic(rng: &mut ChaChaRng) -> String {
-        // TODO add an endpoint for generating random mnemonics
-        KeyTree::random(rng).unwrap().1
-    }
 
     struct TestServer {
         client: surf::Client,
@@ -87,7 +88,13 @@ mod tests {
             // the server will continue running until the process is killed, even after the test
             // ends. This is probably not so bad, since each test's server task should be idle once
             // the test is over, and anyways I don't see a good way around it.
-            init_server(default_api_path(), default_web_path(), port).unwrap();
+            init_server(
+                ChaChaRng::from_seed([42; 32]),
+                default_api_path(),
+                default_web_path(),
+                port,
+            )
+            .unwrap();
             Self::wait(port).await;
 
             let client: surf::Client = surf::Config::new()
@@ -144,13 +151,26 @@ mod tests {
         }
     }
 
+    #[async_std::test]
+    #[traced_test]
+    async fn test_getmnemonic() {
+        let server = TestServer::new().await;
+
+        let mnemonic = server.get::<String>("getmnemonic").await.unwrap();
+
+        // Check that the mnemonic decodes correctly.
+        KeyTree::from_mnemonic(mnemonic.as_str().as_bytes()).unwrap();
+
+        // Check that successive calls give different mnemonics.
+        assert_ne!(mnemonic, server.get::<String>("getmnemonic").await.unwrap());
+    }
+
     #[cfg(feature = "slow-tests")]
     #[async_std::test]
     #[traced_test]
     async fn test_newwallet() {
         let server = TestServer::new().await;
-        let mut rng = ChaChaRng::from_seed([42u8; 32]);
-        let mnemonic = random_mnemonic(&mut rng);
+        let mnemonic = server.get::<String>("getmnemonic").await.unwrap();
 
         // Should fail if the mnemonic is invalid.
         server
@@ -183,8 +203,7 @@ mod tests {
     #[traced_test]
     async fn test_openwallet() {
         let server = TestServer::new().await;
-        let mut rng = ChaChaRng::from_seed([42u8; 32]);
-        let mnemonic = random_mnemonic(&mut rng);
+        let mnemonic = server.get::<String>("getmnemonic").await.unwrap();
         println!("mnemonic: {}", mnemonic);
 
         // Should fail if no wallet exists.
@@ -214,7 +233,7 @@ mod tests {
         server
             .get::<()>(&format!(
                 "openwallet/{}/path/{}",
-                random_mnemonic(&mut rng),
+                server.get::<String>("getmnemonic").await.unwrap(),
                 server.path()
             ))
             .await
@@ -231,7 +250,6 @@ mod tests {
     #[traced_test]
     async fn test_closewallet() {
         let server = TestServer::new().await;
-        let mut rng = ChaChaRng::from_seed([42u8; 32]);
 
         // Should fail if a wallet is not already open.
         server.requires_wallet::<()>("closewallet").await;
@@ -240,7 +258,7 @@ mod tests {
         server
             .get::<()>(&format!(
                 "newwallet/{}/path/{}",
-                random_mnemonic(&mut rng),
+                server.get::<String>("getmnemonic").await.unwrap(),
                 server.path()
             ))
             .await
@@ -252,7 +270,6 @@ mod tests {
     #[traced_test]
     async fn test_getinfo() {
         let server = TestServer::new().await;
-        let mut rng = ChaChaRng::from_seed([42u8; 32]);
 
         // Should fail if a wallet is not already open.
         server.requires_wallet::<WalletSummary>("getinfo").await;
@@ -261,7 +278,7 @@ mod tests {
         server
             .get::<()>(&format!(
                 "newwallet/{}/path/{}",
-                random_mnemonic(&mut rng),
+                server.get::<String>("getmnemonic").await.unwrap(),
                 server.path()
             ))
             .await
@@ -286,7 +303,6 @@ mod tests {
     #[traced_test]
     async fn test_getaddress() {
         let server = TestServer::new().await;
-        let mut rng = ChaChaRng::from_seed([42u8; 32]);
 
         // Should fail if a wallet is not already open.
         server
@@ -297,7 +313,7 @@ mod tests {
         server
             .get::<()>(&format!(
                 "newwallet/{}/path/{}",
-                random_mnemonic(&mut rng),
+                server.get::<String>("getmnemonic").await.unwrap(),
                 server.path()
             ))
             .await
@@ -333,7 +349,7 @@ mod tests {
         server
             .get::<()>(&format!(
                 "newwallet/{}/path/{}",
-                random_mnemonic(&mut rng),
+                server.get::<String>("getmnemonic").await.unwrap(),
                 server.path()
             ))
             .await
@@ -414,7 +430,6 @@ mod tests {
     #[traced_test]
     async fn test_newkey() {
         let server = TestServer::new().await;
-        let mut rng = ChaChaRng::from_seed([42u8; 32]);
 
         // Should fail if a wallet is not already open.
         server.requires_wallet::<PubKey>("newkey/send").await;
@@ -425,7 +440,7 @@ mod tests {
         server
             .get::<()>(&format!(
                 "newwallet/{}/path/{}",
-                random_mnemonic(&mut rng),
+                server.get::<String>("getmnemonic").await.unwrap(),
                 server.path()
             ))
             .await
@@ -472,7 +487,6 @@ mod tests {
     #[traced_test]
     async fn test_newasset() {
         let server = TestServer::new().await;
-        let mut rng = ChaChaRng::from_seed([42u8; 32]);
 
         // Set parameters for newasset.
         let erc20_code = Erc20Code(EthereumAddr([1u8; 20]));
@@ -500,7 +514,7 @@ mod tests {
         server
             .get::<()>(&format!(
                 "newwallet/{}/path/{}",
-                random_mnemonic(&mut rng),
+                server.get::<String>("getmnemonic").await.unwrap(),
                 server.path()
             ))
             .await
@@ -624,7 +638,7 @@ mod tests {
         server
             .get::<()>(&format!(
                 "newwallet/{}/path/{}",
-                random_mnemonic(&mut rng),
+                server.get::<String>("getmnemonic").await.unwrap(),
                 server.path()
             ))
             .await
@@ -679,5 +693,40 @@ mod tests {
             ))
             .await
             .unwrap();
+    }
+
+    #[async_std::test]
+    #[traced_test]
+    async fn test_dummy_populate() {
+        let server = TestServer::new().await;
+        server
+            .get::<()>(&format!(
+                "newwallet/{}/path/{}",
+                server.get::<String>("getmnemonic").await.unwrap(),
+                server.path()
+            ))
+            .await
+            .unwrap();
+        server.get::<()>("populatefortest").await.unwrap();
+
+        let info = server.get::<WalletSummary>("getinfo").await.unwrap();
+        assert_eq!(info.addresses.len(), 2);
+        assert_eq!(info.spend_keys.len(), 2);
+        assert_eq!(info.audit_keys.len(), 2);
+        assert_eq!(info.freeze_keys.len(), 2);
+        assert_eq!(info.assets.len(), 2); // native asset + wrapped asset
+
+        let address = info.addresses[0].clone();
+        let wrapped_asset = info.assets[1].asset.code;
+        assert_eq!(
+            server
+                .get::<BalanceInfo>(&format!(
+                    "getbalance/address/{}/asset/{}",
+                    address, wrapped_asset
+                ))
+                .await
+                .unwrap(),
+            BalanceInfo::Balance(1000)
+        );
     }
 }

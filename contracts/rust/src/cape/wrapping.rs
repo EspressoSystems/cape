@@ -177,6 +177,7 @@ async fn test_check_foreign_asset_code() -> Result<()> {
         .check_foreign_asset_code(
             ro.asset_def.code.generic_into::<sol::AssetCodeSol>().0,
             Address::random(),
+            Address::random(),
         )
         .call()
         .await
@@ -194,8 +195,8 @@ async fn test_check_foreign_asset_code() -> Result<()> {
         .check_foreign_asset_code(
             domestic_asset_code.generic_into::<AssetCodeSol>().0,
             erc20_address,
+            sponsor,
         )
-        .from(sponsor)
         .call()
         .await
         .should_revert_with_message("Wrong foreign asset code");
@@ -210,8 +211,8 @@ async fn test_check_foreign_asset_code() -> Result<()> {
         .check_foreign_asset_code(
             asset_code_wrong_sponsor.generic_into::<AssetCodeSol>().0,
             sponsor,
+            sponsor,
         )
-        .from(sponsor)
         .call()
         .await
         .should_revert_with_message("Wrong foreign asset code");
@@ -224,8 +225,8 @@ async fn test_check_foreign_asset_code() -> Result<()> {
         .check_foreign_asset_code(
             asset_code.generic_into::<sol::AssetCodeSol>().0,
             Address::random(),
+            sponsor,
         )
-        .from(sponsor)
         .call()
         .await
         .should_revert_with_message("Wrong foreign asset code");
@@ -235,8 +236,8 @@ async fn test_check_foreign_asset_code() -> Result<()> {
         .check_foreign_asset_code(
             asset_code.generic_into::<sol::AssetCodeSol>().0,
             erc20_address,
+            sponsor,
         )
-        .from(sponsor)
         .call()
         .await
         .should_not_revert();

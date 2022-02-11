@@ -9,6 +9,7 @@ use async_std::{
     task::{spawn, JoinHandle},
 };
 use net::server;
+use rand_chacha::ChaChaRng;
 use std::collections::hash_map::HashMap;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
@@ -73,6 +74,7 @@ pub struct WebState {
     pub(crate) web_path: PathBuf,
     pub(crate) api: toml::Value,
     pub(crate) wallet: Arc<Mutex<Option<Wallet>>>,
+    pub(crate) rng: Arc<Mutex<ChaChaRng>>,
 }
 
 async fn form_demonstration(req: tide::Request<WebState>) -> Result<tide::Body, tide::Error> {
@@ -216,6 +218,56 @@ async fn entry_page(req: tide::Request<WebState>) -> Result<tide::Response, tide
     }
 }
 
+#[cfg(any(test, feature = "testing"))]
+async fn populatefortest(req: tide::Request<WebState>) -> Result<tide::Response, tide::Error> {
+    use crate::{
+        routes::{require_wallet, wallet_error},
+        wallet::CapeWalletExt,
+    };
+    use cap_rust_sandbox::state::{CapeOperation, Erc20Code, EthereumAddr};
+
+    let wallet = &mut *req.state().wallet.lock().await;
+    let wallet = require_wallet(wallet)?;
+
+    // Generate two of each kind of key, to simulate multiple accounts.
+    for _ in 0..2 {
+        wallet.generate_user_key(None).await.map_err(wallet_error)?;
+        wallet.generate_audit_key().await.map_err(wallet_error)?;
+        wallet.generate_freeze_key().await.map_err(wallet_error)?;
+    }
+
+    // Add a wrapped asset, and give it some nonzero balance.
+    let erc20_code = Erc20Code(EthereumAddr([1; 20]));
+    let sponsor_addr = EthereumAddr([2; 20]);
+    let asset_def = wallet
+        .sponsor(erc20_code, sponsor_addr.clone(), Default::default())
+        .await
+        .map_err(wallet_error)?;
+    wallet
+        .wrap(
+            sponsor_addr,
+            asset_def,
+            wallet.pub_keys().await[0].address(),
+            1000,
+        )
+        .await
+        .map_err(wallet_error)?;
+    // Submit an empty block to force the wrap to be finalized.
+    let t = {
+        let guard = wallet.lock().await;
+        let mut mock_ledger = guard.backend().ledger.lock().await;
+        mock_ledger
+            .network()
+            .submit_operations(vec![CapeOperation::SubmitBlock(vec![])])
+            .unwrap();
+        mock_ledger.now()
+    };
+    // Wait for the wallet to process events corresponding to the wrapped asset.
+    wallet.sync(t).await.unwrap();
+
+    server::response(&req, ())
+}
+
 async fn handle_web_socket(
     req: tide::Request<WebState>,
     wsc: WebSocketConnection,
@@ -236,6 +288,7 @@ fn add_form_demonstration(web_server: &mut tide::Server<WebState>) {
 }
 
 pub fn init_server(
+    rng: ChaChaRng,
     api_path: PathBuf,
     web_path: PathBuf,
     port: u64,
@@ -245,6 +298,7 @@ pub fn init_server(
         web_path: web_path.clone(),
         api: api.clone(),
         wallet: Arc::new(Mutex::new(None)),
+        rng: Arc::new(Mutex::new(rng)),
     });
     web_server
         .with(server::trace)
@@ -290,6 +344,9 @@ pub fn init_server(
             }
         });
     }
+
+    #[cfg(any(test, feature = "testing"))]
+    web_server.at("populatefortest").get(populatefortest);
 
     let addr = format!("0.0.0.0:{}", port);
     Ok(spawn(web_server.listen(addr)))

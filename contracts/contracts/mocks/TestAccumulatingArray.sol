@@ -6,25 +6,25 @@ import {AccumulatingArray} from "../libraries/AccumulatingArray.sol";
 contract TestAccumulatingArray {
     using AccumulatingArray for AccumulatingArray.Data;
 
-    function accumulate(uint256[][] memory arrays, uint256 maxLength)
+    function accumulate(uint256[][] memory arrays, uint256 length)
         public
         pure
         returns (uint256[] memory)
     {
-        AccumulatingArray.Data memory accumulated = AccumulatingArray.create(maxLength);
+        AccumulatingArray.Data memory accumulated = AccumulatingArray.create(length);
         for (uint256 i = 0; i < arrays.length; i++) {
             accumulated.add(arrays[i]);
         }
-        return accumulated.toArray();
+        return accumulated.items;
     }
 
     // Adds single element arrays as individual items
-    function accumulateWithIndividuals(uint256[][] memory arrays, uint256 maxLength)
+    function accumulateWithIndividuals(uint256[][] memory arrays, uint256 length)
         public
         pure
         returns (uint256[] memory)
     {
-        AccumulatingArray.Data memory accumulated = AccumulatingArray.create(maxLength);
+        AccumulatingArray.Data memory accumulated = AccumulatingArray.create(length);
         for (uint256 i = 0; i < arrays.length; i++) {
             if (arrays[i].length == 1) {
                 accumulated.add(arrays[i][0]);
@@ -32,6 +32,6 @@ contract TestAccumulatingArray {
                 accumulated.add(arrays[i]);
             }
         }
-        return accumulated.toArray();
+        return accumulated.items;
     }
 }

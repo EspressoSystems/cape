@@ -2,7 +2,7 @@
 
 use crate::{
     mocks::{MockCapeBackend, MockCapeNetwork},
-    wallet::CapeWalletExt,
+    wallet::{CapeWalletError, CapeWalletExt},
     web::WebState,
 };
 use async_std::sync::{Arc, Mutex};
@@ -19,12 +19,14 @@ use jf_aap::{
 };
 use key_set::{KeySet, VerifierKeySet};
 use net::{server::response, TaggedBlob, UserAddress};
+use rand_chacha::ChaChaRng;
 use reef::traits::Ledger;
 use seahorse::{
+    hd::KeyTree,
     loader::{Loader, LoaderMetadata},
     testing::MockLedger,
     txn_builder::AssetInfo,
-    WalletBackend, WalletError, WalletStorage,
+    WalletBackend, WalletStorage,
 };
 use serde::{Deserialize, Serialize};
 use snafu::Snafu;
@@ -217,6 +219,7 @@ pub enum ApiRouteKey {
     getaddress,
     getbalance,
     getinfo,
+    getmnemonic,
     importkey,
     mint,
     newasset,
@@ -283,7 +286,7 @@ pub fn dummy_url_eval(
         .build())
 }
 
-fn wallet_error(source: WalletError<CapeLedger>) -> tide::Error {
+pub fn wallet_error(source: CapeWalletError) -> tide::Error {
     server_error(CapeAPIError::Wallet {
         msg: source.to_string(),
     })
@@ -377,7 +380,7 @@ async fn known_assets(wallet: &Wallet) -> HashMap<AssetCode, AssetInfo> {
     assets
 }
 
-fn require_wallet(wallet: &mut Option<Wallet>) -> Result<&mut Wallet, tide::Error> {
+pub fn require_wallet(wallet: &mut Option<Wallet>) -> Result<&mut Wallet, tide::Error> {
     wallet
         .as_mut()
         .ok_or_else(|| server_error(CapeAPIError::MissingWallet))
@@ -391,6 +394,12 @@ fn require_wallet(wallet: &mut Option<Wallet>) -> Result<&mut Wallet, tide::Erro
 // serializing the endpoint responses according to the requested content type
 // and building a Response object.
 //
+
+pub async fn getmnemonic(rng: &mut ChaChaRng) -> Result<String, tide::Error> {
+    Ok(KeyTree::random(rng)
+        .map_err(|source| wallet_error(CapeWalletError::KeyError { source }))?
+        .1)
+}
 
 pub async fn newwallet(
     bindings: &HashMap<String, RouteBinding>,
@@ -646,7 +655,9 @@ pub async fn dispatch_url(
     bindings: &HashMap<String, RouteBinding>,
 ) -> Result<tide::Response, tide::Error> {
     let segments = route_pattern.split_once('/').unwrap_or((route_pattern, ""));
-    let wallet = &mut *req.state().wallet.lock().await;
+    let state = req.state();
+    let rng = &mut *state.rng.lock().await;
+    let wallet = &mut *state.wallet.lock().await;
     let key = ApiRouteKey::from_str(segments.0).expect("Unknown route");
     match key {
         ApiRouteKey::closewallet => response(&req, closewallet(wallet).await?),
@@ -654,6 +665,7 @@ pub async fn dispatch_url(
         ApiRouteKey::getaddress => response(&req, getaddress(wallet).await?),
         ApiRouteKey::getbalance => response(&req, getbalance(bindings, wallet).await?),
         ApiRouteKey::getinfo => response(&req, getinfo(wallet).await?),
+        ApiRouteKey::getmnemonic => response(&req, getmnemonic(rng).await?),
         ApiRouteKey::importkey => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::mint => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::newasset => response(&req, newasset(bindings, wallet).await?),

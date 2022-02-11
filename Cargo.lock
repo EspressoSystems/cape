@@ -4858,7 +4858,7 @@ dependencies = [
 [[package]]
 name = "seahorse"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/seahorse.git?branch=zz-update-jellyfish-links#f92031bcfb2b267141194d19e8d3515b3fa0390a"
+source = "git+ssh://git@github.com/SpectrumXYZ/seahorse.git?rev=96951980e1ad947181a4663bd4d343d3bd2ef867#96951980e1ad947181a4663bd4d343d3bd2ef867"
 dependencies = [
  "arbitrary",
  "arbitrary-wrappers",

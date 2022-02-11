@@ -50,13 +50,12 @@ where
 }
 
 pub trait EnsureMined {
-    fn ensure_mined(&self) -> &Self;
+    fn ensure_mined(self) -> Self;
 }
 
 impl EnsureMined for Option<TransactionReceipt> {
-    fn ensure_mined(&self) -> &Self {
-        let status = self.as_ref().unwrap().status.unwrap();
-        if status != U64::from(1) {
+    fn ensure_mined(self) -> Self {
+        if self.as_ref().unwrap().status.unwrap() != U64::from(1) {
             panic!("Transaction not mined");
         }
         self

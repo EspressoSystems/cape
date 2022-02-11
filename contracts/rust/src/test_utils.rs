@@ -225,11 +225,11 @@ pub async fn compare_roots_records_test_cape_contract(
 }
 
 pub trait PrintGas {
-    fn print_gas(&self, prefix: &str) -> &Self;
+    fn print_gas(self, prefix: &str) -> Self;
 }
 
 impl PrintGas for Option<TransactionReceipt> {
-    fn print_gas(&self, prefix: &str) -> &Self {
+    fn print_gas(self, prefix: &str) -> Self {
         println!(
             "{} gas used: {}",
             prefix,

@@ -394,12 +394,22 @@ To run an end-to-end test against rinkeby
 - Faucets: [Simple](https://goerli-faucet.slock.it),
   [Social](https://faucet.goerli.mudit.blog/).
 
-# Gas Reporter
+# Gas Usage
+
+## Gas Reporter
 
 Set the env var `REPORT_GAS` to get extra output about the gas consumption of
 contract functions called in the tests.
 
     env REPORT_GAS=1 hardhat test
+
+## Gas usage of block submissions
+
+Run
+
+    cargo run --release --bin gas_usage
+
+To show gas usage of sending various notes to the contract.
 
 # CI
 

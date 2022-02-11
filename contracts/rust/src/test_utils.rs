@@ -3,6 +3,7 @@ use crate::helpers::compare_merkle_root_from_contract_and_jf_tree;
 use crate::ledger::CapeLedger;
 use crate::types::TestRecordsMerkleTree;
 use crate::types::{field_to_u256, SimpleToken, TestCAPE};
+use ethers::prelude::TransactionReceipt;
 use ethers::prelude::{
     k256::ecdsa::SigningKey, Address, Http, Provider, SignerMiddleware, Wallet, H160, U256,
 };
@@ -221,4 +222,19 @@ pub async fn compare_roots_records_test_cape_contract(
         should_be_equal,
         compare_merkle_root_from_contract_and_jf_tree(root_value_u256, root_fr254)
     );
+}
+
+pub trait PrintGas {
+    fn print_gas(self, prefix: &str) -> Self;
+}
+
+impl PrintGas for Option<TransactionReceipt> {
+    fn print_gas(self, prefix: &str) -> Self {
+        println!(
+            "{} gas used: {}",
+            prefix,
+            self.as_ref().unwrap().gas_used.unwrap()
+        );
+        self
+    }
 }

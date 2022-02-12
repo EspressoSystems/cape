@@ -8,8 +8,8 @@ mod tests {
     use crate::types::GenericInto;
 
     use crate::types::MerkleRootSol;
-    use jf_aap::keys::UserPubKey;
-    use jf_aap::utils::TxnsParams;
+    use jf_cap::keys::UserPubKey;
+    use jf_cap::utils::TxnsParams;
 
     use async_std::sync::Mutex;
 

@@ -9,12 +9,12 @@ use crate::types as sol;
 use anyhow::{anyhow, bail, Result};
 use ark_serialize::*;
 use ethers::prelude::Address;
-use jf_aap::freeze::FreezeNote;
-use jf_aap::keys::UserAddress;
-use jf_aap::mint::MintNote;
-use jf_aap::structs::{RecordCommitment, RecordOpening};
-use jf_aap::transfer::TransferNote;
-use jf_aap::TransactionNote;
+use jf_cap::freeze::FreezeNote;
+use jf_cap::keys::UserAddress;
+use jf_cap::mint::MintNote;
+use jf_cap::structs::{RecordCommitment, RecordOpening};
+use jf_cap::transfer::TransferNote;
+use jf_cap::TransactionNote;
 use num_traits::{FromPrimitive, ToPrimitive};
 use std::str::from_utf8;
 
@@ -202,7 +202,7 @@ impl CapeBlock {
 
         for tx in transactions {
             match tx {
-                CapeTransaction::AAP(note) => notes.push(note),
+                CapeTransaction::CAP(note) => notes.push(note),
                 CapeTransaction::Burn { xfr, ro } => {
                     notes.push(TransactionNote::from(*xfr));
                     burned_ros.push(*ro);
@@ -326,9 +326,9 @@ mod tests {
     use crate::types::{GenericInto, MerkleRootSol, RecordCommitmentSol, TestCapeTypes};
     use anyhow::Result;
     use ethers::prelude::U256;
-    use jf_aap::keys::UserKeyPair;
-    use jf_aap::structs::RecordOpening;
-    use jf_aap::utils::TxnsParams;
+    use jf_cap::keys::UserKeyPair;
+    use jf_cap::structs::RecordOpening;
+    use jf_cap::utils::TxnsParams;
     use reef::Ledger;
 
     #[tokio::test]
@@ -401,8 +401,8 @@ mod tests {
         use crate::types::{AssetCodeSol, GenericInto, InternalAssetCodeSol};
         use ark_bn254::{Bn254, Fr};
         use ark_std::UniformRand;
-        use jf_aap::structs::{AssetCodeSeed, InternalAssetCode};
-        use jf_aap::{
+        use jf_cap::structs::{AssetCodeSeed, InternalAssetCode};
+        use jf_cap::{
             freeze::FreezeNote,
             mint::MintNote,
             structs::{
@@ -472,7 +472,7 @@ mod tests {
 
             // Create a matching pair of codes
             let rng = &mut ark_std::test_rng();
-            let description = b"aap_usdx";
+            let description = b"cap_usdx";
             let seed = AssetCodeSeed::generate(rng);
             let internal_asset_code = InternalAssetCode::new(seed, description);
             let asset_code = AssetCode::new_domestic(seed, description);
@@ -549,7 +549,7 @@ mod tests {
             let contract = deploy_test_cape_types_contract().await;
             for _ in 0..5 {
                 // NOTE: `sol::AssetPolicy` is from abigen! on contract,
-                // it collides with `jf_aap::structs::AssetPolicy`
+                // it collides with `jf_cap::structs::AssetPolicy`
                 let policy = AssetPolicy::rand_for_test(rng);
                 assert_eq!(
                     policy.clone(),
@@ -579,7 +579,7 @@ mod tests {
             let contract = deploy_test_cape_types_contract().await;
             for _ in 0..5 {
                 // NOTE: `sol::RecordOpening` is from abigen! on contract,
-                // it collides with `jf_aap::structs::RecordOpening`
+                // it collides with `jf_cap::structs::RecordOpening`
                 let ro = RecordOpening::rand_for_test(rng);
                 let res = contract
                     .check_record_opening(ro.clone().generic_into::<sol::RecordOpening>())

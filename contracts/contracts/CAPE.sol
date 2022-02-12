@@ -33,7 +33,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
     bytes public constant CAPE_BURN_MAGIC_BYTES = "TRICAPE burn";
     uint256 public constant CAPE_BURN_MAGIC_BYTES_SIZE = 12;
     bytes14 public constant DOM_SEP_DOMESTIC_ASSET = "DOMESTIC_ASSET";
-    uint256 public constant AAP_NATIVE_ASSET_CODE = 1;
+    uint256 public constant CAP_NATIVE_ASSET_CODE = 1;
     // In order to avoid the contract running out of gas if the queue is too large
     // we set the maximum number of pending deposits record commitments to process
     // when a new block is submitted. This is a temporary solution.
@@ -475,7 +475,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
                 note.auditMemo.data.length
         );
         publicInput[0] = note.auxInfo.merkleRoot;
-        publicInput[1] = AAP_NATIVE_ASSET_CODE;
+        publicInput[1] = CAP_NATIVE_ASSET_CODE;
         publicInput[2] = note.auxInfo.validUntil;
         publicInput[3] = note.auxInfo.fee;
         {
@@ -550,7 +550,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
         // 9: see below; 8: asset policy; rest: audit memo
         publicInput = new uint256[](9 + 8 + 2 + note.auditMemo.data.length);
         publicInput[0] = note.auxInfo.merkleRoot;
-        publicInput[1] = AAP_NATIVE_ASSET_CODE;
+        publicInput[1] = CAP_NATIVE_ASSET_CODE;
         publicInput[2] = note.inputNullifier;
         publicInput[3] = note.auxInfo.fee;
         publicInput[4] = note.mintComm;
@@ -612,7 +612,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
             3 + note.inputNullifiers.length + note.outputCommitments.length
         );
         publicInput[0] = note.auxInfo.merkleRoot;
-        publicInput[1] = AAP_NATIVE_ASSET_CODE;
+        publicInput[1] = CAP_NATIVE_ASSET_CODE;
         publicInput[2] = note.auxInfo.fee;
         {
             uint256 idx = 3;

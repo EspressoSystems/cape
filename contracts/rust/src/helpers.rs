@@ -2,8 +2,8 @@ use ark_ed_on_bn254::Fq as Fr254;
 use ark_ff::{BigInteger, PrimeField};
 use ark_serialize::*;
 use ethers::prelude::*;
-use jf_aap::structs::Nullifier;
-use jf_aap::NodeValue;
+use jf_cap::structs::Nullifier;
+use jf_cap::NodeValue;
 
 pub fn convert_u256_to_bytes_le(num: U256) -> Vec<u8> {
     let mut u8_arr = [0u8; 32];

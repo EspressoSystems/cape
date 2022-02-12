@@ -39,6 +39,20 @@ async fn test_quadratic_residue() -> Result<()> {
 }
 
 #[tokio::test]
+async fn test_fr_negate() -> Result<()> {
+    let rng = &mut ark_std::test_rng();
+    let contract = deploy_test_bn254_contract().await;
+
+    for _ in 0..10 {
+        let p: Fr = Fr::rand(rng).into();
+        let minus_p_sol: Fr = u256_to_field(contract.negate_fr(field_to_u256(p)).call().await?);
+        assert_eq!(minus_p_sol, (-p).into());
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn test_add() -> Result<()> {
     let rng = &mut ark_std::test_rng();
     let contract = deploy_test_bn254_contract().await;
@@ -97,7 +111,7 @@ async fn test_negate() -> Result<()> {
 
     for _ in 0..10 {
         let p: G1Affine = G1Projective::rand(rng).into();
-        let minus_p_sol: G1Point = contract.negate(p.into()).call().await?.into();
+        let minus_p_sol: G1Point = contract.negate_g1(p.into()).call().await?.into();
         assert_eq!(minus_p_sol, (-p).into());
     }
 

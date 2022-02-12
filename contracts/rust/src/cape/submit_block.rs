@@ -9,9 +9,9 @@ use crate::types as sol;
 use crate::types::{GenericInto, MerkleRootSol, NullifierSol};
 use anyhow::Result;
 use ethers::prelude::U256;
-use jf_aap::keys::UserPubKey;
-use jf_aap::structs::{AssetCodeSeed, InternalAssetCode};
-use jf_aap::utils::TxnsParams;
+use jf_cap::keys::UserPubKey;
+use jf_cap::structs::{AssetCodeSeed, InternalAssetCode};
+use jf_cap::utils::TxnsParams;
 use rand::Rng;
 use reef::Ledger;
 

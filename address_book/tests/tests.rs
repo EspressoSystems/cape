@@ -1,5 +1,5 @@
 use address_book::{init_web_server, InsertPubKey, DEFAULT_PORT};
-use jf_aap::keys::{UserKeyPair, UserPubKey};
+use jf_cap::keys::{UserKeyPair, UserPubKey};
 use rand_chacha::rand_core::SeedableRng;
 use std::time::Duration;
 

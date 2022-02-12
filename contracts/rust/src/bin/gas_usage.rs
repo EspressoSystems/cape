@@ -6,7 +6,7 @@ use cap_rust_sandbox::{
     test_utils::PrintGas,
     types::{GenericInto, MerkleRootSol},
 };
-use jf_aap::{keys::UserPubKey, utils::TxnsParams};
+use jf_cap::{keys::UserPubKey, utils::TxnsParams};
 use reef::Ledger;
 
 #[tokio::main]

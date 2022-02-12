@@ -3,7 +3,7 @@ use ark_bn254::{Bn254, Fq, Fr};
 use ark_ff::PrimeField;
 use ark_std::{convert::TryInto, test_rng};
 use itertools::izip;
-use jf_aap::testing_apis::universal_setup_for_test;
+use jf_cap::testing_apis::universal_setup_for_test;
 use jf_plonk::{
     circuit::{Arithmetization, Circuit, PlonkCircuit},
     proof_system::{
@@ -91,8 +91,6 @@ pub(crate) fn gen_plonk_proof_for_test(
 // Different `m`s lead to different circuits.
 // Different `a0`s lead to different witness values.
 // For UltraPlonk circuits, `a0` should be less than or equal to `m+1`
-// TODO: there are a couple of selectors that are not used with this example
-// For example, the q_H selectors and q_Ecc selectors.
 #[allow(dead_code)]
 fn gen_circuit_for_test<F: PrimeField>(m: usize, a0: usize) -> Result<PlonkCircuit<F>> {
     let mut cs: PlonkCircuit<F> = PlonkCircuit::new_turbo_plonk();

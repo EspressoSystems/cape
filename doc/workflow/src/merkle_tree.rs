@@ -1,5 +1,5 @@
 #![allow(unused_variables)]
-use jf_aap::{structs::RecordCommitment, MerkleCommitment, MerkleFrontier};
+use jf_cap::{structs::RecordCommitment, MerkleCommitment, MerkleFrontier};
 
 use crate::CapeContract;
 

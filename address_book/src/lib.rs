@@ -2,8 +2,8 @@ use async_std::{
     sync::{Arc, RwLock},
     task::{spawn, JoinHandle},
 };
-use jf_aap::keys::{UserAddress, UserPubKey};
-use jf_aap::Signature;
+use jf_cap::keys::{UserAddress, UserPubKey};
+use jf_cap::Signature;
 use std::collections::HashMap;
 use tide::{prelude::*, StatusCode};
 

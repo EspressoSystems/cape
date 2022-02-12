@@ -12,34 +12,31 @@ use cap_rust_sandbox::{
     state::{Erc20Code, EthereumAddr},
 };
 use cape_wallet::{
-    mocks::{MockCapeBackend, MockCapeLedger /*, MockCapeNetwork*/},
+    mocks::{CapeTest, MockCapeBackend, MockCapeLedger},
     wallet::CapeWalletExt,
 };
 use jf_cap::{
     keys::{AuditorPubKey, FreezerPubKey},
     proof::UniversalParam,
     structs::{AssetCode, AssetDefinition, AssetPolicy},
-    /*MerkleTree, TransactionVerifyingKey,*/
 };
-// use key_set::{KeySet, VerifierKeySet};
 use net::UserAddress;
-// use reef::Ledger;
 use seahorse::{
     cli::*,
     hd,
     io::SharedIO,
     loader::{LoadMethod, LoaderMetadata, WalletLoader},
     persistence::AtomicWalletStorage,
-    // testing::MockLedger,
-    WalletError,
+    testing::SystemUnderTest,
+    WalletBackend, WalletError,
 };
 use std::any::type_name;
 use std::io::Write;
 use std::path::PathBuf;
-// use std::process::exit;
+use std::process::exit;
 use std::str::FromStr;
 use std::sync::Arc;
-use structopt::StructOpt;
+use std::time::Instant;
 
 pub struct CapeCli;
 
@@ -53,84 +50,11 @@ impl<'a> CLI<'a> for CapeCli {
         args: Self::Args,
         loader: &mut impl WalletLoader<CapeLedger, Meta = LoaderMetadata>,
     ) -> Result<Self::Backend, WalletError<CapeLedger>> {
-        // TODO !keyao Is this correct?
         MockCapeBackend::new_for_test(
             args.ledger.clone(),
             Arc::new(Mutex::new(AtomicWalletStorage::new(loader, 128)?)),
             args.key_stream,
         )
-        // let verif_crs = VerifierKeySet {
-        //     mint: TransactionVerifyingKey::Mint(
-        //         jf_aap::proof::mint::preprocess(&*univ_param, CapeLedger::merkle_height())
-        //             .unwrap()
-        //             .1,
-        //     ),
-        //     xfr: KeySet::new(
-        //         vec![TransactionVerifyingKey::Transfer(
-        //             jf_aap::proof::transfer::preprocess(
-        //                 &*univ_param,
-        //                 3,
-        //                 3,
-        //                 CapeLedger::merkle_height(),
-        //             )
-        //             .unwrap()
-        //             .1,
-        //         )]
-        //         .into_iter(),
-        //     )
-        //     .unwrap(),
-        //     freeze: KeySet::new(
-        //         vec![TransactionVerifyingKey::Freeze(
-        //             jf_aap::proof::freeze::preprocess(&*univ_param, 2, CapeLedger::merkle_height())
-        //                 .unwrap()
-        //                 .1,
-        //         )]
-        //         .into_iter(),
-        //     )
-        //     .unwrap(),
-        // };
-        // let ledger = Arc::new(Mutex::new(MockLedger::new(MockCapeNetwork::new(
-        //     verif_crs,
-        //     MerkleTree::new(CapeLedger::merkle_height()).unwrap(),
-        //     vec![],
-        // ))));
-        // MockCapeBackend::new(ledger, loader)
-        // let verif_crs = VerifierKeySet {
-        //     mint: TransactionVerifyingKey::Mint(
-        //         jf_cap::proof::mint::preprocess(&*univ_param, CapeLedger::merkle_height())
-        //             .unwrap()
-        //             .1,
-        //     ),
-        //     xfr: KeySet::new(
-        //         vec![TransactionVerifyingKey::Transfer(
-        //             jf_cap::proof::transfer::preprocess(
-        //                 &*univ_param,
-        //                 3,
-        //                 3,
-        //                 CapeLedger::merkle_height(),
-        //             )
-        //             .unwrap()
-        //             .1,
-        //         )]
-        //         .into_iter(),
-        //     )
-        //     .unwrap(),
-        //     freeze: KeySet::new(
-        //         vec![TransactionVerifyingKey::Freeze(
-        //             jf_cap::proof::freeze::preprocess(&*univ_param, 2, CapeLedger::merkle_height())
-        //                 .unwrap()
-        //                 .1,
-        //         )]
-        //         .into_iter(),
-        //     )
-        //     .unwrap(),
-        // };
-        // let ledger = Arc::new(Mutex::new(MockLedger::new(MockCapeNetwork::new(
-        //     verif_crs,
-        //     MerkleTree::new(CapeLedger::merkle_height()).unwrap(),
-        //     vec![],
-        // ))));
-        // MockCapeBackend::new(ledger, loader)
     }
 
     fn extra_commands() -> Vec<Command<'a, Self>> {
@@ -294,91 +218,34 @@ impl<'a> CLIArgs for MockCapeArgs<'a> {
     }
 }
 
-#[derive(StructOpt)]
-pub struct Args {
-    /// Generate keys for a wallet, do not run the REPL.
-    ///
-    /// The keys are stored in FILE and FILE.pub.
-    #[structopt(short = "g", long)]
-    pub key_gen: Option<PathBuf>,
-
-    /// Path to a saved wallet, or a new directory where this wallet will be saved.
-    ///
-    /// If not given, the wallet will be stored in ~/.translucence/wallet. If a wallet already
-    /// exists there, it will be loaded. Otherwise, a new wallet will be created.
-    #[structopt(short, long)]
-    pub storage: Option<PathBuf>,
-
-    /// Store the contents of the wallet in plaintext.
-    ///
-    /// You will not require a password to access your wallet, and your wallet will not be protected
-    /// from malicious software that gains access to a device where you loaded your wallet.
-    ///
-    /// This option is only available when creating a new wallet. When loading an existing wallet, a
-    /// password will always be required if the wallet was created without the --unencrypted flag.
-    #[structopt(long)]
-    pub unencrypted: bool,
-
-    /// Load the wallet using a password and salt, rather than a mnemonic phrase.
-    #[structopt(long)]
-    pub password: bool,
-
-    /// Create a new wallet and store it an a temporary location which will be deleted on exit.
-    ///
-    /// This option is mutually exclusive with --storage.
-    #[structopt(long)]
-    #[structopt(conflicts_with("storage"))]
-    #[structopt(hidden(true))]
-    pub tmp_storage: bool,
-
-    #[structopt(long)]
-    /// Run in a mode which is friendlier to automated scripting.
-    ///
-    /// Instead of prompting the user for input with a line editor, the prompt will be printed,
-    /// followed by a newline, and the input will be read without an editor.
-    pub non_interactive: bool,
-}
-
-impl CLIArgs for Args {
-    fn key_gen_path(&self) -> Option<PathBuf> {
-        self.key_gen.clone()
-    }
-
-    fn storage_path(&self) -> Option<PathBuf> {
-        self.storage.clone()
-    }
-
-    fn io(&self) -> Option<SharedIO> {
-        if self.non_interactive {
-            Some(SharedIO::std())
-        } else {
-            None
-        }
-    }
-
-    fn encrypted(&self) -> bool {
-        !self.unencrypted
-    }
-
-    fn load_method(&self) -> LoadMethod {
-        if self.password {
-            LoadMethod::Password
-        } else {
-            LoadMethod::Mnemonic
-        }
-    }
-
-    fn use_tmp_storage(&self) -> bool {
-        self.tmp_storage
-    }
-}
-
 #[async_std::main]
 async fn main() -> Result<(), std::io::Error> {
     tracing_subscriber::fmt().pretty().init();
 
+    let (io, _, _) = SharedIO::pipe();
+
+    let mut t = CapeTest::default();
+    let (ledger, wallets) = t
+        .create_test_network(&[(2, 2)], vec![1000], &mut Instant::now())
+        .await;
+
+    // Set `block_size` to `1` so we don't have to explicitly flush the ledger after each
+    // transaction submission.
+    ledger.lock().await.set_block_size(1).unwrap();
+
+    // We don't actually care about the open wallet returned by `create_test_network`, because
+    // the CLI does its own wallet loading. But we do want to get its key stream, so that the
+    // wallet we create through the CLI can deterministically generate the key that own the
+    // initial record.
+    let key_stream = wallets[0].0.lock().await.backend().key_stream();
+
     // Initialize the wallet CLI.
-    if let Err(err) = cli_main::<CapeLedger, CapeCli>(Args::from_args()).await {
+    let args = MockCapeArgs {
+        io,
+        key_stream,
+        ledger,
+    };
+    if let Err(err) = cli_main::<CapeLedger, CapeCli>(args).await {
         println!("{}", err);
         exit(1);
     }
@@ -395,19 +262,10 @@ mod tests {
         sync::{Arc, Mutex},
         task::spawn,
     };
-    use cape_wallet::{
-        cli_client::CliClient,
-        mocks::{CapeTest, MockCapeLedger},
-    };
+    use cape_wallet::{cli_client::CliClient, mocks::MockCapeLedger};
     use futures::stream::{iter, StreamExt};
     use pipe::{PipeReader, PipeWriter};
-    use seahorse::{
-        hd,
-        io::Tee,
-        testing::{cli_match::*, SystemUnderTest},
-        WalletBackend,
-    };
-    use std::time::Instant;
+    use seahorse::{hd, io::Tee, testing::cli_match::*};
 
     async fn create_cape_network<'a>(
         t: &mut CapeTest,
@@ -563,7 +421,11 @@ mod tests {
         Ok(())
     }
 
+    // TODO !keyao Replace the use of `CliClient` with `CapeTest` and CLI matching helpers in
+    // Seahorse, simiar to `test_cli_burn`.
+    // Related issue: https://github.com/SpectrumXYZ/cape/issues/477.
     #[test]
+    #[ignore]
     fn test_cli_sponsor() {
         cape_wallet::cli_client::cli_test(|t| {
             create_wallet(t, 0)?;
@@ -576,7 +438,11 @@ mod tests {
         });
     }
 
+    // TODO !keyao Replace the use of `CliClient` with `CapeTest` and CLI matching helpers in
+    // Seahorse, simiar to `test_cli_burn`.
+    // Related issue: https://github.com/SpectrumXYZ/cape/issues/477.
     #[test]
+    #[ignore]
     fn test_cli_wrap() {
         cape_wallet::cli_client::cli_test(|t| {
             create_wallet(t, 0)?;
@@ -592,7 +458,7 @@ mod tests {
         });
     }
 
-    // #[cfg(feature = "slow-tests")]
+    #[cfg(feature = "slow-tests")]
     #[async_std::test]
     async fn test_cli_burn() {
         let mut t = CapeTest::default();

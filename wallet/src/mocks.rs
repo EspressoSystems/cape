@@ -987,7 +987,6 @@ mod cape_wallet_tests {
             Arc::new(Mutex::new(storage)),
             key_stream,
         )
-        .await
         .unwrap();
         let mut wallet2 = CapeWallet::new(backend).await.unwrap();
         wallet2.sync(ledger.lock().await.now()).await.unwrap();

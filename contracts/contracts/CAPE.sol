@@ -207,7 +207,15 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
         );
     }
 
-    /// @notice submit a new block to the CAPE contract. Transactions are validated and the blockchain state is updated. Moreover *BURN* transactions trigger the unwrapping of cape asset records into erc20 tokens.
+    /// @notice Submit a new block with extra data to the CAPE contract.
+    /// @param newBlock block to be processed by the CAPE contract.
+    /// @param extraData extra data to be stored in calldata, this data is ignored by the contract function.
+    // solhint-disable-next-line no-unused-vars
+    function submitCapeBlockWithMemos(CapeBlock memory newBlock, bytes calldata extraData) public {
+        submitCapeBlock(newBlock);
+    }
+
+    /// @notice Submit a new block to the CAPE contract. Transactions are validated and the blockchain state is updated. Moreover *BURN* transactions trigger the unwrapping of cape asset records into erc20 tokens.
     /// @param newBlock block to be processed by the CAPE contract.
     function submitCapeBlock(CapeBlock memory newBlock) public nonReentrant {
         AccumulatingArray.Data memory commitments = AccumulatingArray.create(

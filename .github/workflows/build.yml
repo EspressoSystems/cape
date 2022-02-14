@@ -66,6 +66,10 @@ jobs:
       - name: Linting
         run: nix-shell --run "prepend-timestamps lint-ci"
 
+      - name: Build Slow Tests
+        # Make sure the slow tests build, but don't run them (we have another workflow for that).
+        run: nix-shell --run "prepend-timestamps cargo test --release --features=slow-tests --no-run"
+
       - name: Run Tests
         run: nix-shell --run "prepend-timestamps cape-test-geth"
 

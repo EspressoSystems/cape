@@ -117,11 +117,12 @@ Import the given key into the current wallet. For transfer (send) keys, the opti
 """
 
 [route.send]
-PATH = ["send/sender/:sender/amount/:amount/asset/:asset/recipient/:recipient"]
+PATH = ["send/sender/:sender/asset/:asset/recipient/:recipient/amount/:amount/fee/:fee"]
 ":sender" = "TaggedBase64"
-":amount" = "Integer"
 ":asset" = "TaggedBase64"
 ":recipient" = "TaggedBase64"
+":amount" = "Integer"
+":fee" = "Integer"
 DOC = """
 Transfer amount units of the given asset from the sender to the recipient. Returns a serialized receipt which can be used to track the transaction through the validation process.
 """

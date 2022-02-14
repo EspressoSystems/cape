@@ -773,9 +773,9 @@ impl<'a> SystemUnderTest<'a> for CapeTest {
 #[cfg(test)]
 mod cape_wallet_tests {
     use super::*;
-    use crate::wallet::{CapeWallet, CapeWalletExt};
+    use crate::wallet::CapeWalletExt;
     use jf_cap::structs::{AssetCode, AssetPolicy};
-    use seahorse::{testing::await_transaction, txn_builder::TransactionError};
+    use seahorse::txn_builder::TransactionError;
     use std::time::Instant;
 
     #[cfg(feature = "slow-tests")]

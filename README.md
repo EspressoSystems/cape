@@ -174,10 +174,18 @@ The genesis block is generated with the python script `bin/make-genesis-block`.
 If time permits replacing the `run-geth` bash script with a python script that
 uses `make-genesis-block` and `hdwallet-derive` could be useful.
 
+Note: when making calls (not transactions) to the go-ethereum node,
+`msg.sender` is the zero address.
+
 ## Testing against hardhat node
 
 You can choose to let hardhat start a hardhat node automatically or start a node
 yourself and let hardhat connect to it.
+
+Note: when making calls (not transactions) to the hardhat node, `msg.sender` is
+set by the hardhat node to be the first address in `hardhat accounts`. Since
+this is differnt from the behaviour we see with go-ethereum this can lead to
+confusion for example when switching from go-ethereum to hardhat to debug.
 
 ### Separate hardhat node
 

@@ -1,8 +1,8 @@
 // Copyright © 2021 Translucence Research, Inc. All rights reserved.
 
 use crate::routes::{
-    dispatch_url, dispatch_web_socket, server_error, CapeAPIError, RouteBinding, UrlSegmentType,
-    UrlSegmentValue, Wallet,
+    dispatch_url, dispatch_web_socket, CapeAPIError, RouteBinding, UrlSegmentType, UrlSegmentValue,
+    Wallet,
 };
 use async_std::{
     sync::{Arc, Mutex},

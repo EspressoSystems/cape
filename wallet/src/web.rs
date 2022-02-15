@@ -300,18 +300,7 @@ fn add_form_demonstration(web_server: &mut tide::Server<WebState>) {
 }
 
 pub fn init_server(
-<<<<<<< HEAD
-<<<<<<< HEAD
     mut rng: ChaChaRng,
-=======
-<<<<<<< HEAD
-    rng: ChaChaRng,
-=======
->>>>>>> 6de9d6c (Implement CAPE CLI to support burn and move wallet modules (#425))
->>>>>>> 4baee54 (Implement CAPE CLI to support burn and move wallet modules (#425))
-=======
-    rng: ChaChaRng,
->>>>>>> 44e9213 (Rebase)
     api_path: PathBuf,
     web_path: PathBuf,
     port: u64,
@@ -323,15 +312,7 @@ pub fn init_server(
         api: api.clone(),
         wallet: Arc::new(Mutex::new(None)),
         rng: Arc::new(Mutex::new(rng)),
-<<<<<<< HEAD
-<<<<<<< HEAD
         faucet_key_pair,
-=======
-=======
->>>>>>> 6de9d6c (Implement CAPE CLI to support burn and move wallet modules (#425))
->>>>>>> 4baee54 (Implement CAPE CLI to support burn and move wallet modules (#425))
-=======
->>>>>>> 44e9213 (Rebase)
     });
     web_server
         .with(server::trace)

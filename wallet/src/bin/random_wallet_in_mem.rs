@@ -1,8 +1,5 @@
 // A wallet that generates random transactions, for testing purposes.
-<<<<<<< HEAD
 #![deny(warnings)]
-=======
->>>>>>> a8dc065 (Wallet test with multiple wallets in memory)
 
 use async_std::sync::{Arc, Mutex};
 use async_std::task::sleep;
@@ -12,9 +9,9 @@ use cape_wallet::mocks::*;
 use cape_wallet::testing::port;
 use cape_wallet::CapeWallet;
 use ethers::prelude::Address;
-use jf_aap::proof::UniversalParam;
-use jf_aap::structs::AssetPolicy;
-use jf_aap::structs::{AssetCode, ReceiverMemo};
+use jf_cap::proof::UniversalParam;
+use jf_cap::structs::AssetPolicy;
+use jf_cap::structs::{AssetCode, ReceiverMemo};
 use key_set::VerifierKeySet;
 use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
 use relayer::testing::start_minimal_relayer_for_test;
@@ -26,8 +23,8 @@ use surf::Url;
 use tracing::{event, Level};
 // TODO remove copy paste from router.rs
 // TODO: Add back freezer and auditor keys and test audit/freeze
-use jf_aap::keys::UserPubKey;
-use jf_aap::{keys::UserKeyPair, testing_apis::universal_setup_for_test, TransactionVerifyingKey};
+use jf_cap::keys::UserPubKey;
+use jf_cap::{keys::UserKeyPair, testing_apis::universal_setup_for_test, TransactionVerifyingKey};
 use rand::seq::SliceRandom;
 use reef::traits::Ledger;
 use std::path::Path;
@@ -80,7 +77,7 @@ async fn create_test_network<'a>(
         xfr: vec![
             // For regular transfers, including non-native transfers
             TransactionVerifyingKey::Transfer(
-                jf_aap::proof::transfer::preprocess(
+                jf_cap::proof::transfer::preprocess(
                     universal_param,
                     2,
                     3,
@@ -92,7 +89,7 @@ async fn create_test_network<'a>(
             // For burns (which currently require exactly 2 inputs and outputs, but this is an
             // artificial restriction which should be lifted)
             TransactionVerifyingKey::Transfer(
-                jf_aap::proof::transfer::preprocess(
+                jf_cap::proof::transfer::preprocess(
                     universal_param,
                     2,
                     2,
@@ -105,14 +102,14 @@ async fn create_test_network<'a>(
         .into_iter()
         .collect(),
         freeze: vec![TransactionVerifyingKey::Freeze(
-            jf_aap::proof::freeze::preprocess(universal_param, 2, CapeLedger::merkle_height())
+            jf_cap::proof::freeze::preprocess(universal_param, 2, CapeLedger::merkle_height())
                 .unwrap()
                 .1,
         )]
         .into_iter()
         .collect(),
         mint: TransactionVerifyingKey::Mint(
-            jf_aap::proof::mint::preprocess(universal_param, CapeLedger::merkle_height())
+            jf_cap::proof::mint::preprocess(universal_param, CapeLedger::merkle_height())
                 .unwrap()
                 .1,
         ),
@@ -139,14 +136,7 @@ async fn retry_delay() {
     sleep(Duration::from_secs(1)).await
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 #[allow(clippy::needless_lifetimes)]
-=======
->>>>>>> a8dc065 (Wallet test with multiple wallets in memory)
-=======
-#[allow(clippy::needless_lifetimes)]
->>>>>>> dc08889 (Ignore clippy lifetimes warning)
 async fn create_backend_and_sender_wallet<'a>(
     rng: &mut ChaChaRng,
     universal_param: &'a UniversalParam,
@@ -269,15 +259,7 @@ async fn main() {
     let mut public_keys = vec![];
 
     for _i in 0..(args.num_wallets) {
-<<<<<<< HEAD
-<<<<<<< HEAD
         // TODO send native asset from sender to all wallets.
-=======
-        // TODO send to all wallets.
->>>>>>> a8dc065 (Wallet test with multiple wallets in memory)
-=======
-        // TODO send native asset from sender to all wallets.
->>>>>>> dc08889 (Ignore clippy lifetimes warning)
         let (k, w) = create_wallet(&mut rng, &universal_param, &network, &args.storage).await;
 
         public_keys.push(k);

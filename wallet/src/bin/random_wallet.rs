@@ -8,9 +8,9 @@ use cape_wallet::mocks::*;
 use cape_wallet::testing::port;
 use cape_wallet::CapeWallet;
 use ethers::prelude::Address;
-use jf_aap::proof::UniversalParam;
-use jf_aap::structs::AssetPolicy;
-use jf_aap::structs::{AssetCode, ReceiverMemo};
+use jf_cap::proof::UniversalParam;
+use jf_cap::structs::AssetPolicy;
+use jf_cap::structs::{AssetCode, ReceiverMemo};
 use key_set::VerifierKeySet;
 use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
 use relayer::testing::start_minimal_relayer_for_test;
@@ -22,7 +22,7 @@ use surf::Url;
 use tracing::{event, Level};
 // TODO remove copy paste from router.rs
 // TODO: Add back freezer and auditor keys and test audit/freeze
-use jf_aap::{
+use jf_cap::{
     keys::UserKeyPair, keys::UserPubKey, testing_apis::universal_setup_for_test,
     TransactionVerifyingKey,
 };
@@ -75,7 +75,7 @@ async fn create_test_network<'a>(
         xfr: vec![
             // For regular transfers, including non-native transfers
             TransactionVerifyingKey::Transfer(
-                jf_aap::proof::transfer::preprocess(
+                jf_cap::proof::transfer::preprocess(
                     universal_param,
                     2,
                     3,
@@ -87,7 +87,7 @@ async fn create_test_network<'a>(
             // For burns (which currently require exactly 2 inputs and outputs, but this is an
             // artificial restriction which should be lifted)
             TransactionVerifyingKey::Transfer(
-                jf_aap::proof::transfer::preprocess(
+                jf_cap::proof::transfer::preprocess(
                     universal_param,
                     2,
                     2,
@@ -100,14 +100,14 @@ async fn create_test_network<'a>(
         .into_iter()
         .collect(),
         freeze: vec![TransactionVerifyingKey::Freeze(
-            jf_aap::proof::freeze::preprocess(universal_param, 2, CapeLedger::merkle_height())
+            jf_cap::proof::freeze::preprocess(universal_param, 2, CapeLedger::merkle_height())
                 .unwrap()
                 .1,
         )]
         .into_iter()
         .collect(),
         mint: TransactionVerifyingKey::Mint(
-            jf_aap::proof::mint::preprocess(universal_param, CapeLedger::merkle_height())
+            jf_cap::proof::mint::preprocess(universal_param, CapeLedger::merkle_height())
                 .unwrap()
                 .1,
         ),

@@ -61,3 +61,6 @@ default-features = false
 
 [dev-dependencies]
 proptest = "1.0.0"
+
+[build-dependencies]
+glob = "^0.3.0"

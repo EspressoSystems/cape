@@ -254,11 +254,10 @@ solc-select do not have such a fallback mechanisms.
 
 ## Ethereum contracts
 
-Compile the contracts to extract the abi for the ethers abigen (workflow to be
-improved!).
-Run the following command from the root of the `cap-on-ethereum` checkout:
+To compile all the contracts run the following command from the root of the
+`cap-on-ethereum` checkout:
 
-    build-abi
+    hardhat compile
 
 Note: structs will only be included in the ABI if there is a (public, I guess)
 function that uses them.
@@ -266,7 +265,7 @@ function that uses them.
 To have rust typings, add the contract to the `abigen!` macro call in
 `./contracts/rust/src/types.rs`.
 
-Instead of running `geth` and `build-abi` one can also just run
+Instead of running `geth` and `hardhat compile` one can also just run
 
     hivemind
 

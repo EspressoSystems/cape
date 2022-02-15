@@ -1049,6 +1049,7 @@ dependencies = [
  "ethers-core 0.6.0 (git+https://github.com/gakonst/ethers-rs?branch=master)",
  "futures",
  "generic-array 0.14.5",
+ "glob",
  "hex",
  "itertools 0.10.3",
  "jf-cap",

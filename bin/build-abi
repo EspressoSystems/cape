@@ -16,6 +16,7 @@ contracts_dir = Path(os.environ["CONTRACTS_DIR"])
 abi_dir = contracts_dir / "abi"
 artifacts_dir = contracts_dir / "artifacts"
 
+
 # For each solidity file (respectively its artifact output directory)
 for directory in artifacts_dir.rglob("*.sol"):
 
@@ -27,24 +28,34 @@ for directory in artifacts_dir.rglob("*.sol"):
         contract_file = hardhat_json.parent
         out_dir = abi_dir / contract_file.relative_to(artifacts_dir) / contract_name
 
-        abi_out = out_dir / "abi.json"
-
-        if abi_out.exists() and abi_out.stat().st_mtime > hardhat_json.stat().st_mtime:
-            print(f"Up to date: {contract_name}")
-            continue
-
-        print(f"Extracting ABI for {contract_name}")
-
         os.makedirs(out_dir, exist_ok=True)
 
         with open(hardhat_json) as f:
             output = json.load(f)
 
-        with open(abi_out, "w") as f:
-            json.dump(output["abi"], f)
+        abi_out = out_dir / "abi.json"
+        bytecode_out = out_dir / "bin.txt"
 
-        with open(out_dir / "bin.txt", "w") as f:
-            print(output["bytecode"], file=f)
+        # Only write files if they changed, to avoid invalidating cargo build script cache.
+        try:
+            with open(abi_out, "r") as f:
+                existing = json.load(f)
+        except OSError:  # file doesn't exist
+            existing = None
+
+        if output["abi"] != existing:
+            with open(abi_out, "w") as f:
+                json.dump(output["abi"], f)
+
+        try:
+            with open(bytecode_out, "r") as f:
+                existing = f.read().strip()
+        except OSError:  # file doesn't exist
+            existing = None
+
+        if output["bytecode"] != existing:
+            with open(bytecode_out, "w") as f:
+                print(output["bytecode"], file=f)
 
 
 print("Finished extracting ABIs")

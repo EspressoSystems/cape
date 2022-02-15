@@ -1,5 +1,8 @@
 // A wallet that generates random transactions, for testing purposes.
+<<<<<<< HEAD
 #![deny(warnings)]
+=======
+>>>>>>> a8dc065 (Wallet test with multiple wallets in memory)
 
 use async_std::sync::{Arc, Mutex};
 use async_std::task::sleep;
@@ -136,7 +139,10 @@ async fn retry_delay() {
     sleep(Duration::from_secs(1)).await
 }
 
+<<<<<<< HEAD
 #[allow(clippy::needless_lifetimes)]
+=======
+>>>>>>> a8dc065 (Wallet test with multiple wallets in memory)
 async fn create_backend_and_sender_wallet<'a>(
     rng: &mut ChaChaRng,
     universal_param: &'a UniversalParam,
@@ -259,7 +265,11 @@ async fn main() {
     let mut public_keys = vec![];
 
     for _i in 0..(args.num_wallets) {
+<<<<<<< HEAD
         // TODO send native asset from sender to all wallets.
+=======
+        // TODO send to all wallets.
+>>>>>>> a8dc065 (Wallet test with multiple wallets in memory)
         let (k, w) = create_wallet(&mut rng, &universal_param, &network, &args.storage).await;
 
         public_keys.push(k);

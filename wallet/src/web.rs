@@ -41,22 +41,10 @@ pub struct NodeOpt {
 
 /// Returns the project directory.
 fn project_path() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+    PathBuf::from(env!("WALLET_DIR"))
 }
 
-/// Returns "<repo>/public/" where <repo> is
-/// derived from the executable path assuming the executable is in
-/// two directory levels down and the project directory name
-/// can be derived from the executable name.
-///
-/// For example, if the executable path is
-/// ```text
-/// ~/tri/systems/system/examples/multi_machine/target/release/multi_machine
-/// ```
-/// then the asset path is
-/// ```text
-/// ~/tri/systems/system/examples/multi_machine/public/
-/// ```
+/// Returns the default path to the web directory.
 pub fn default_web_path() -> PathBuf {
     const ASSET_DIR: &str = "public";
     let dir = project_path();

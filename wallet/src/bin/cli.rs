@@ -675,7 +675,7 @@ mod tests {
         });
     }
 
-    // #[cfg(feature = "slow-tests")]
+    #[cfg(feature = "slow-tests")]
     #[async_std::test]
     async fn test_cli_burn() {
         let mut t = CapeTest::default();

@@ -143,7 +143,6 @@
               my_pwd=$(/bin/pwd -P 2> /dev/null || pwd)
 
               export CONTRACTS_DIR=''${my_pwd}/contracts
-              export WALLET_DIR=''${my_pwd}/wallet
               export HARDHAT_CONFIG=$CONTRACTS_DIR/hardhat.config.ts
               export PATH=''${my_pwd}/node_modules/.bin:$PATH
               export PATH=$CONTRACTS_DIR/node_modules/.bin:$PATH

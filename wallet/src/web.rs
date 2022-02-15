@@ -1,8 +1,8 @@
 // Copyright © 2021 Translucence Research, Inc. All rights reserved.
 
 use crate::routes::{
-    dispatch_url, dispatch_web_socket, CapeAPIError, RouteBinding, UrlSegmentType, UrlSegmentValue,
-    Wallet,
+    dispatch_url, dispatch_web_socket, server_error, CapeAPIError, RouteBinding, UrlSegmentType,
+    UrlSegmentValue, Wallet,
 };
 use async_std::{
     sync::{Arc, Mutex},
@@ -41,7 +41,14 @@ pub struct NodeOpt {
 
 /// Returns the project directory.
 fn project_path() -> PathBuf {
-    PathBuf::from(env!("WALLET_DIR"))
+    PathBuf::from(std::env::var("WALLET").map_err(|_| {
+        server_error(CapeAPIError::Internal {
+            msg: String::from(
+                "WALLET directory is not set. Please set the server's WALLET directory, or \
+                    specify different locations to assets and API using :assets and :api, respectively.",
+            ),
+        })
+    }).unwrap())
 }
 
 /// Returns the default path to the web directory.

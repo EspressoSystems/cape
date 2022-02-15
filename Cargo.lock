@@ -1110,6 +1110,7 @@ dependencies = [
  "lazy_static",
  "markdown",
  "net",
+ "pipe",
  "rand_chacha 0.3.1",
  "reef",
  "regex",
@@ -4874,7 +4875,7 @@ dependencies = [
 [[package]]
 name = "seahorse"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/seahorse.git?rev=96951980e1ad947181a4663bd4d343d3bd2ef867#96951980e1ad947181a4663bd4d343d3bd2ef867"
+source = "git+ssh://git@github.com/SpectrumXYZ/seahorse.git?rev=ace20bc5f1bcf5b88ca0562799b8e80e6c52e933#ace20bc5f1bcf5b88ca0562799b8e80e6c52e933"
 dependencies = [
  "arbitrary",
  "arbitrary-wrappers",
@@ -4902,6 +4903,7 @@ dependencies = [
  "proptest 0.8.7",
  "rand_chacha 0.3.1",
  "reef",
+ "regex",
  "rpassword",
  "rust-argon2",
  "rustyline",

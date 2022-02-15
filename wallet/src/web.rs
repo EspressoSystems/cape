@@ -42,10 +42,12 @@ pub struct NodeOpt {
 /// Returns the project directory.
 fn project_path() -> PathBuf {
     let dir = std::env::var("WALLET").unwrap_or_else(|_| {
-        println!("WALLET directory is not set. Using the default paths, ./public and ./api for \
-            asset and API paths, respectively. To use different paths, set the WALLET environment \
-            variable, or specify :assets and :api arguments.");
-        "."
+        println!(
+            "WALLET directory is not set. Using the default paths, ./public and ./api for asset \
+            and API paths, respectively. To use different paths, set the WALLET environment \
+            variable, or specify :assets and :api arguments."
+        );
+        String::from(".")
     });
     PathBuf::from(dir)
 }

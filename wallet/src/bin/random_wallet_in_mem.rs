@@ -140,9 +140,13 @@ async fn retry_delay() {
 }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 #[allow(clippy::needless_lifetimes)]
 =======
 >>>>>>> a8dc065 (Wallet test with multiple wallets in memory)
+=======
+#[allow(clippy::needless_lifetimes)]
+>>>>>>> dc08889 (Ignore clippy lifetimes warning)
 async fn create_backend_and_sender_wallet<'a>(
     rng: &mut ChaChaRng,
     universal_param: &'a UniversalParam,
@@ -266,10 +270,14 @@ async fn main() {
 
     for _i in 0..(args.num_wallets) {
 <<<<<<< HEAD
+<<<<<<< HEAD
         // TODO send native asset from sender to all wallets.
 =======
         // TODO send to all wallets.
 >>>>>>> a8dc065 (Wallet test with multiple wallets in memory)
+=======
+        // TODO send native asset from sender to all wallets.
+>>>>>>> dc08889 (Ignore clippy lifetimes warning)
         let (k, w) = create_wallet(&mut rng, &universal_param, &network, &args.storage).await;
 
         public_keys.push(k);

@@ -180,7 +180,7 @@ mod tests {
         assert_ne!(mnemonic, server.get::<String>("getmnemonic").await.unwrap());
     }
 
-    // #[cfg(feature = "slow-tests")]
+    #[cfg(feature = "slow-tests")]
     #[async_std::test]
     #[traced_test]
     async fn test_newwallet() {

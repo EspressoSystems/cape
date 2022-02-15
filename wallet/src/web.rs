@@ -41,14 +41,13 @@ pub struct NodeOpt {
 
 /// Returns the project directory.
 fn project_path() -> PathBuf {
-    PathBuf::from(std::env::var("WALLET").map_err(|_| {
-        server_error(CapeAPIError::Internal {
-            msg: String::from(
-                "WALLET directory is not set. Please set the server's WALLET directory, or \
-                    specify different locations to assets and API using :assets and :api, respectively.",
-            ),
-        })
-    }).unwrap())
+    let dir = std::env::var("WALLET").unwrap_or_else(|_| {
+        println!("WALLET directory is not set. Using the default paths, ./public and ./api for \
+            asset and API paths, respectively. To use different paths, set the WALLET environment \
+            variable, or specify :assets and :api arguments.");
+        "."
+    });
+    PathBuf::from(dir)
 }
 
 /// Returns the default path to the web directory.

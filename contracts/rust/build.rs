@@ -1,13 +1,20 @@
 use glob::glob;
 use std::{env, process::Command};
 
-fn main() {
-    // Run the build command first so that the ABI files are for the glob expansion below.
-    Command::new("build-abi")
-        .output()
-        .expect("failed to compile contracts");
+fn find_abi_paths() -> glob::Paths {
+    glob(&format!("{}/abi/**/*.json", env!("CONTRACTS_DIR"))).unwrap()
+}
 
-    for entry in glob(&format!("{}/abi/**/*.json", env!("CONTRACTS_DIR"))).unwrap() {
+fn main() {
+    // If no abi files exist, generate them. This enables "cargo build" in a fresh repo.
+    if find_abi_paths().peekable().peek().is_none() {
+        Command::new("build-abi")
+            .output()
+            .expect("failed to compile contracts");
+    }
+
+    // Rerun this script (and recompile crate) if any abi files change.
+    for entry in find_abi_paths() {
         // run `cargo build -vv` to inspect output
         println!("cargo:rerun-if-changed={}", entry.unwrap().display());
     }

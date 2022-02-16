@@ -1,8 +1,9 @@
 use glob::glob;
-use std::process::Command;
+use std::{env, process::Command};
 
 fn main() {
-    for entry in glob("../abi/**/*.json").unwrap() {
+    for entry in glob(&format!("{}/abi/**/*.json", env!("CONTRACTS_DIR"))).unwrap() {
+        // run `cargo build -vv` to inspect output
         println!("cargo:rerun-if-changed={}", entry.unwrap().display());
     }
 

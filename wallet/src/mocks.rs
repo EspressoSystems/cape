@@ -258,7 +258,7 @@ impl MockCapeNetwork {
 
     pub fn register_user_key(&mut self, key_pair: &UserKeyPair) -> Result<(), CapeWalletError> {
         let pub_key = key_pair.pub_key();
-        self.address_map.insert(pub_key.address(), pub_key.clone());
+        self.address_map.insert(pub_key.address(), pub_key);
         Ok(())
     }
 

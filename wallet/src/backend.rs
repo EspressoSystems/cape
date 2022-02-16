@@ -1,5 +1,5 @@
 use crate::{mocks::MockCapeLedger, CapeWalletBackend, CapeWalletError, EthMiddleware};
-use address_book::DEFAULT_PORT;
+use address_book::{InsertPubKey, DEFAULT_PORT};
 use async_std::sync::{Arc, Mutex, MutexGuard};
 use async_trait::async_trait;
 use cap_rust_sandbox::{
@@ -18,7 +18,7 @@ use ethers::{
 };
 use futures::Stream;
 use jf_cap::{
-    keys::{UserAddress, UserPubKey},
+    keys::{UserAddress, UserKeyPair, UserPubKey},
     proof::UniversalParam,
     structs::{AssetDefinition, Nullifier, ReceiverMemo, RecordOpening},
     Signature,
@@ -184,7 +184,7 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
 
     async fn get_public_key(&self, address: &UserAddress) -> Result<UserPubKey, CapeWalletError> {
         let address_bytes = bincode::serialize(address).unwrap();
-        let mut response = surf::post("http://localhost:{}/request_pubkey", DEFAULT_PORT)
+        let mut response = surf::post(format!("http://localhost:{}/request_pubkey", DEFAULT_PORT))
             .content_type(surf::http::mime::BYTE_STREAM)
             .body_bytes(&address_bytes)
             .await
@@ -230,18 +230,21 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
             .get_transaction(block_id, txn_id)
     }
 
-    async fn register_user_key(&mut self, pub_key: &UserPubKey) -> Result<(), CapeWalletError> {
-        let pub_key_bytes = bincode::serialize(pub_key).unwrap();
-        let sig = user_key.sign(&pub_key_bytes);
+    async fn register_user_key(&mut self, key_pair: &UserKeyPair) -> Result<(), CapeWalletError> {
+        let pub_key_bytes = bincode::serialize(&key_pair.pub_key()).unwrap();
+        let sig = key_pair.sign(&pub_key_bytes);
         let json_request = InsertPubKey { pub_key_bytes, sig };
-        surf::post("http://127.0.0.1:50078/insert_pubkey")
+        match surf::post(format!("http://127.0.0.1:{}/insert_pubkey", DEFAULT_PORT))
             .content_type(surf::http::mime::JSON)
             .body_json(&json_request)
             .unwrap()
             .await
-            .map_err(|err| CapeWalletError::Failed {
+        {
+            Ok(_) => Ok(()),
+            Err(err) => Err(CapeWalletError::Failed {
                 msg: format!("error inserting public key: {}", err),
-            })
+            }),
+        }
     }
 
     async fn post_memos(

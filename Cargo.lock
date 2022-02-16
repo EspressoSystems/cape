@@ -1093,6 +1093,7 @@ dependencies = [
 name = "cape_wallet"
 version = "0.1.0"
 dependencies = [
+ "address_book",
  "async-std",
  "async-trait",
  "bincode",
@@ -3202,7 +3203,7 @@ dependencies = [
 [[package]]
 name = "jf-plonk"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#567e166786d05038e8731eb3ceabbc5a3fd8c932"
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#7c089b0e00e06cf179700494436817629e399873"
 dependencies = [
  "ark-bls12-377",
  "ark-bls12-381",
@@ -3231,7 +3232,7 @@ dependencies = [
 [[package]]
 name = "jf-primitives"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#567e166786d05038e8731eb3ceabbc5a3fd8c932"
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#7c089b0e00e06cf179700494436817629e399873"
 dependencies = [
  "ark-ec",
  "ark-ff",
@@ -3253,7 +3254,7 @@ dependencies = [
 [[package]]
 name = "jf-rescue"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#567e166786d05038e8731eb3ceabbc5a3fd8c932"
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#7c089b0e00e06cf179700494436817629e399873"
 dependencies = [
  "ark-bls12-377",
  "ark-bls12-381",
@@ -3278,7 +3279,7 @@ dependencies = [
 [[package]]
 name = "jf-utils"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#567e166786d05038e8731eb3ceabbc5a3fd8c932"
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#7c089b0e00e06cf179700494436817629e399873"
 dependencies = [
  "anyhow",
  "ark-ec",
@@ -3295,7 +3296,7 @@ dependencies = [
 [[package]]
 name = "jf-utils-derive"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#567e166786d05038e8731eb3ceabbc5a3fd8c932"
+source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#7c089b0e00e06cf179700494436817629e399873"
 dependencies = [
  "ark-std",
  "quote",
@@ -4875,7 +4876,7 @@ dependencies = [
 [[package]]
 name = "seahorse"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/seahorse.git?rev=ace20bc5f1bcf5b88ca0562799b8e80e6c52e933#ace20bc5f1bcf5b88ca0562799b8e80e6c52e933"
+source = "git+ssh://git@github.com/SpectrumXYZ/seahorse.git?branch=keyao-key-type#7ace3dcd2b091d150c243944fdfe9bf264c68b74"
 dependencies = [
  "arbitrary",
  "arbitrary-wrappers",

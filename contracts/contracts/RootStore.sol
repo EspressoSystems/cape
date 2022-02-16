@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 contract RootStore {
     uint256[] internal _roots;
+    mapping(uint256 => bool) internal _rootsMap;
     uint64 internal _writeHead;
     uint256 internal constant _EMPTY_NODE_VALUE = 0;
 
@@ -28,7 +29,12 @@ contract RootStore {
     /// @dev Add a root value. Only keep the latest nRoots ones.
     /// @param newRoot The value of the new root
     function _addRoot(uint256 newRoot) internal {
+        // Remove the root we will "overwrite"
+        _rootsMap[_roots[_writeHead]] = false;
+
         _roots[_writeHead] = newRoot;
+        _rootsMap[newRoot] = true;
+
         _writeHead = (_writeHead + 1) % uint64(_roots.length);
     }
 
@@ -36,13 +42,7 @@ contract RootStore {
     /// @param root The root value to find
     /// @return _ True if the root value is in the store, false otherwise
     function _containsRoot(uint256 root) internal view returns (bool) {
-        // TODO (optimization) evaluate gas cost of this loop based search vs mapping-assisted search
-        for (uint256 i = 0; i < _roots.length; i++) {
-            if (_roots[i] == root) {
-                return true;
-            }
-        }
-        return false;
+        return _rootsMap[root];
     }
 
     /// @dev Raise an exception if the root is not present in the store.

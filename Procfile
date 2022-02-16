@@ -1,2 +1,2 @@
 geth: run-geth
-contracts-compile: hardhat-compile-watch
+contracts-compile: build-abi-watch

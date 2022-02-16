@@ -5,7 +5,7 @@
 #  1       No regular files were provided as input or an error occurred
 #  2       A file was added to a directory and the directory watch option was specified
 #
-while ! find contracts -iname "*.sol" | entr -d -c hardhat compile; do
+while ! find contracts -iname "*.sol" | entr -d -c build-abi; do
     sleep 0.1
 done
 echo "Ctrl-C detected, exiting ..."

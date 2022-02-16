@@ -1,4 +1,5 @@
 use crate::{mocks::MockCapeLedger, CapeWalletBackend, CapeWalletError, EthMiddleware};
+use address_book::DEFAULT_PORT;
 use async_std::sync::{Arc, Mutex, MutexGuard};
 use async_trait::async_trait;
 use cap_rust_sandbox::{
@@ -182,7 +183,17 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
     }
 
     async fn get_public_key(&self, address: &UserAddress) -> Result<UserPubKey, CapeWalletError> {
-        self.mock_eqs.lock().await.network().get_public_key(address)
+        let address_bytes = bincode::serialize(address).unwrap();
+        let mut response = surf::post("http://localhost:{}/request_pubkey", DEFAULT_PORT)
+            .content_type(surf::http::mime::BYTE_STREAM)
+            .body_bytes(&address_bytes)
+            .await
+            .map_err(|err| CapeWalletError::Failed {
+                msg: format!("error requesting public key: {}", err),
+            })?;
+        let bytes = response.body_bytes().await.unwrap();
+        let pub_key: UserPubKey = bincode::deserialize(&bytes).unwrap();
+        Ok(pub_key)
     }
 
     async fn get_nullifier_proof(
@@ -220,11 +231,17 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
     }
 
     async fn register_user_key(&mut self, pub_key: &UserPubKey) -> Result<(), CapeWalletError> {
-        self.mock_eqs
-            .lock()
+        let pub_key_bytes = bincode::serialize(pub_key).unwrap();
+        let sig = user_key.sign(&pub_key_bytes);
+        let json_request = InsertPubKey { pub_key_bytes, sig };
+        surf::post("http://127.0.0.1:50078/insert_pubkey")
+            .content_type(surf::http::mime::JSON)
+            .body_json(&json_request)
+            .unwrap()
             .await
-            .network()
-            .register_user_key(pub_key)
+            .map_err(|err| CapeWalletError::Failed {
+                msg: format!("error inserting public key: {}", err),
+            })
     }
 
     async fn post_memos(

@@ -25,15 +25,15 @@ lazy_static = "1.4.0"
 jf-plonk = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git" }
 jf-primitives = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git"}
 jf-utils = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git"}
-
 markdown = "0.3"
 net = { git = "ssh://git@github.com/SpectrumXYZ/net.git" }
 rand = "0.8.4"
+pipe = { version = "0.4" }
 rand_chacha = "0.3.1"
 regex = "1.5.4"
 reef = { git = "ssh://git@github.com/SpectrumXYZ/reef.git" }
 relayer = { path = "../relayer", features = ["testing"] }
-seahorse = { git = "ssh://git@github.com/SpectrumXYZ/seahorse.git", rev = "96951980e1ad947181a4663bd4d343d3bd2ef867", features = ["testing"] }
+seahorse = { git = "ssh://git@github.com/SpectrumXYZ/seahorse.git", rev = "9e0f875998ff42016c1df3cf7109fee1be44a56b", features = ["testing"] }
 serde = { version = "1.0.123", features = ["derive", "rc"] }
 serde_derive = "1.0.118"
 serde_json = "1.0.61"

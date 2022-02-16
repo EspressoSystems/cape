@@ -68,7 +68,7 @@
             pythonEnv
           ];
 
-          stableToolchain = pkgs.rust-bin.stable."1.56.1".minimal.override {
+          stableToolchain = pkgs.rust-bin.stable."1.58.1".minimal.override {
             extensions = [ "rustfmt" "clippy" "llvm-tools-preview" "rust-src" ];
           };
           rustDeps = with pkgs; [
@@ -147,6 +147,7 @@
               export PATH=''${my_pwd}/node_modules/.bin:$PATH
               export PATH=$CONTRACTS_DIR/node_modules/.bin:$PATH
               export PATH=''${my_pwd}/bin:$PATH
+              export WALLET=''${my_pwd}/wallet
 
               git config --local blame.ignoreRevsFile .git-blame-ignore-revs
             ''

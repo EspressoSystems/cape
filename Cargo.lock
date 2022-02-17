@@ -4906,7 +4906,7 @@ dependencies = [
 [[package]]
 name = "seahorse"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/seahorse.git?branch=keyao-key-type#7ace3dcd2b091d150c243944fdfe9bf264c68b74"
+source = "git+ssh://git@github.com/SpectrumXYZ/seahorse.git?rev=fc47d4da9ab5a1de6777e835c818b45cd8370041#fc47d4da9ab5a1de6777e835c818b45cd8370041"
 dependencies = [
  "arbitrary",
  "arbitrary-wrappers",

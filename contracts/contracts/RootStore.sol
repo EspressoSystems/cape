@@ -5,7 +5,6 @@ contract RootStore {
     uint256[] internal _roots;
     mapping(uint256 => bool) internal _rootsMap;
     uint64 internal _writeHead;
-    uint256 internal constant _EMPTY_NODE_VALUE = 0;
 
     /// @dev Create a root store.
     /// @param nRoots The maximum number of roots to store
@@ -15,21 +14,15 @@ contract RootStore {
 
         _roots = new uint256[](nRoots);
 
-        // Set all roots to EMPTY_NODE_VALUE.
+        // Intially all roots are set to zero.
         // This value is such that no adversary can extend a branch from this root node.
         // See proposition 2, page 48 of the AT-Spec document SpectrumXYZ/AT-spec@01f71ce
-
-        for (uint256 i = 0; i < nRoots; i++) {
-            _roots[i] = _EMPTY_NODE_VALUE;
-        }
-
-        _writeHead = 1; // The first root value is 0 when the tree is empty
     }
 
     /// @dev Add a root value. Only keep the latest nRoots ones.
     /// @param newRoot The value of the new root
     function _addRoot(uint256 newRoot) internal {
-        // Remove the root we will "overwrite"
+        // Ensure the root we will "overwrite" is removed.
         _rootsMap[_roots[_writeHead]] = false;
 
         _roots[_writeHead] = newRoot;

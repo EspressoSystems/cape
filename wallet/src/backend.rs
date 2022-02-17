@@ -1,5 +1,5 @@
 use crate::{mocks::MockCapeLedger, CapeWalletBackend, CapeWalletError, EthMiddleware};
-use address_book::{InsertPubKey, DEFAULT_PORT};
+use address_book::{address_book_port, InsertPubKey};
 use async_std::sync::{Arc, Mutex, MutexGuard};
 use async_trait::async_trait;
 use cap_rust_sandbox::{
@@ -184,13 +184,16 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
 
     async fn get_public_key(&self, address: &UserAddress) -> Result<UserPubKey, CapeWalletError> {
         let address_bytes = bincode::serialize(address).unwrap();
-        let mut response = surf::post(format!("http://localhost:{}/request_pubkey", DEFAULT_PORT))
-            .content_type(surf::http::mime::BYTE_STREAM)
-            .body_bytes(&address_bytes)
-            .await
-            .map_err(|err| CapeWalletError::Failed {
-                msg: format!("error requesting public key: {}", err),
-            })?;
+        let mut response = surf::post(format!(
+            "http://localhost:{}/request_pubkey",
+            address_book_port()
+        ))
+        .content_type(surf::http::mime::BYTE_STREAM)
+        .body_bytes(&address_bytes)
+        .await
+        .map_err(|err| CapeWalletError::Failed {
+            msg: format!("error requesting public key: {}", err),
+        })?;
         let bytes = response.body_bytes().await.unwrap();
         let pub_key: UserPubKey = bincode::deserialize(&bytes).unwrap();
         Ok(pub_key)
@@ -234,11 +237,14 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
         let pub_key_bytes = bincode::serialize(&key_pair.pub_key()).unwrap();
         let sig = key_pair.sign(&pub_key_bytes);
         let json_request = InsertPubKey { pub_key_bytes, sig };
-        match surf::post(format!("http://127.0.0.1:{}/insert_pubkey", DEFAULT_PORT))
-            .content_type(surf::http::mime::JSON)
-            .body_json(&json_request)
-            .unwrap()
-            .await
+        match surf::post(format!(
+            "http://localhost:{}/insert_pubkey",
+            address_book_port()
+        ))
+        .content_type(surf::http::mime::JSON)
+        .body_json(&json_request)
+        .unwrap()
+        .await
         {
             Ok(_) => Ok(()),
             Err(err) => Err(CapeWalletError::Failed {
@@ -363,7 +369,7 @@ mod test {
         universal_param: &'a UniversalParam,
     ) -> (UserKeyPair, Url, Address, Arc<Mutex<MockCapeLedger<'a>>>) {
         init_web_server().await.expect("Failed to run server.");
-        wait_for_server(DEFAULT_PORT).await;
+        wait_for_server().await;
 
         // Set up a network that includes a minimal relayer, connected to a real Ethereum
         // blockchain, as well as a mock EQS which will track the blockchain in parallel, since we

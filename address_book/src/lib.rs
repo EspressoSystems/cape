@@ -22,21 +22,24 @@ struct ServerState {
     map: Arc<RwLock<HashMap<UserAddress, UserPubKey>>>,
 }
 
+pub fn address_book_port() -> String {
+    std::env::var("PORT").unwrap_or_else(|_| DEFAULT_PORT.to_string())
+}
+
 pub async fn init_web_server() -> std::io::Result<JoinHandle<std::io::Result<()>>> {
     tide::log::start();
     let mut app = tide::with_state(ServerState::default());
     app.at("/insert_pubkey").post(insert_pubkey);
     app.at("/request_pubkey").post(request_pubkey);
-    let port = std::env::var("PORT").unwrap_or_else(|_| DEFAULT_PORT.to_string());
-    let address = format!("0.0.0.0:{}", port);
+    let address = format!("0.0.0.0:{}", address_book_port());
     Ok(spawn(app.listen(address)))
 }
 
-pub async fn wait_for_server(port: u16) {
+pub async fn wait_for_server() {
     // Wait for the server to come up and start serving.
     let mut backoff = Duration::from_millis(100);
     for _ in 0..ADDRESS_BOOK_STARTUP_RETRIES {
-        if surf::connect(format!("http://localhost:{}", port))
+        if surf::connect(format!("http://localhost:{}", address_book_port()))
             .send()
             .await
             .is_ok()

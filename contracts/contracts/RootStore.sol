@@ -22,6 +22,8 @@ contract RootStore {
     /// @dev Add a root value. Only keep the latest nRoots ones.
     /// @param newRoot The value of the new root
     function _addRoot(uint256 newRoot) internal {
+        require(!_rootsMap[newRoot], "Root already exists");
+
         // Ensure the root we will "overwrite" is removed.
         _rootsMap[_roots[_writeHead]] = false;
 

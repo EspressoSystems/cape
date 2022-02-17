@@ -117,8 +117,11 @@ pub mod testing {
 
     pub async fn deploy_test_contract_with_faucet(
     ) -> (TestCAPE<Middleware>, UserKeyPair, RecordOpening, MerkleTree) {
+        println!("here deploy_test_contract_with_faucet 120");
         let cape_contract = deploy_cape_test().await;
+        println!("here deploy_test_contract_with_faucet 122");
         let (faucet_key_pair, faucet_record_opening) = create_faucet(&cape_contract).await;
+
         let mut records = MerkleTree::new(CapeLedger::merkle_height()).unwrap();
         let faucet_comm = RecordCommitment::from(&faucet_record_opening);
         records.push(faucet_comm.to_field_element());
@@ -157,7 +160,10 @@ pub mod testing {
     pub async fn start_minimal_relayer_for_test(
         port: u64,
     ) -> (TestCAPE<Middleware>, UserKeyPair, RecordOpening, MerkleTree) {
+        println!("here start_minimal_relayer_for_test 160");
+
         let (contract, faucet, faucet_rec, records) = deploy_test_contract_with_faucet().await;
+        println!("here start_minimal_relayer_for_test 161");
         init_web_server(upcast_test_cape_to_cape(contract.clone()), port.to_string());
         wait_for_server(port).await;
         (contract, faucet, faucet_rec, records)

@@ -1,13 +1,15 @@
 use async_std::{
     sync::{Arc, RwLock},
-    task::{spawn, JoinHandle},
+    task::{sleep, spawn, JoinHandle},
 };
 use jf_cap::keys::{UserAddress, UserPubKey};
 use jf_cap::Signature;
 use std::collections::HashMap;
+use std::time::Duration;
 use tide::{prelude::*, StatusCode};
 
 pub const DEFAULT_PORT: u16 = 50078u16;
+const ADDRESS_BOOK_STARTUP_RETRIES: usize = 8;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct InsertPubKey {
@@ -28,6 +30,23 @@ pub async fn init_web_server() -> std::io::Result<JoinHandle<std::io::Result<()>
     let port = std::env::var("PORT").unwrap_or_else(|_| DEFAULT_PORT.to_string());
     let address = format!("0.0.0.0:{}", port);
     Ok(spawn(app.listen(address)))
+}
+
+pub async fn wait_for_server(port: u16) {
+    // Wait for the server to come up and start serving.
+    let mut backoff = Duration::from_millis(100);
+    for _ in 0..ADDRESS_BOOK_STARTUP_RETRIES {
+        if surf::connect(format!("http://localhost:{}", port))
+            .send()
+            .await
+            .is_ok()
+        {
+            return;
+        }
+        sleep(backoff).await;
+        backoff *= 2;
+    }
+    panic!("Address Book did not start in {:?} milliseconds", backoff);
 }
 
 /// Lookup a user public key from a signed public key address. Fail with

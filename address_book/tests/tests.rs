@@ -1,29 +1,9 @@
-use address_book::{init_web_server, InsertPubKey, DEFAULT_PORT};
+use address_book::{init_web_server, wait_for_server, InsertPubKey, DEFAULT_PORT};
 use jf_cap::keys::{UserKeyPair, UserPubKey};
 use rand_chacha::rand_core::SeedableRng;
-use std::time::Duration;
 
 const ROUND_TRIP_COUNT: u64 = 100;
 const NOT_FOUND_COUNT: u64 = 100;
-const ADDRESS_BOOK_STARTUP_RETRIES: usize = 8;
-
-// Shamelessly copied from relayer/src/lib.rs
-async fn wait_for_server(port: u16) {
-    // Wait for the server to come up and start serving.
-    let mut backoff = Duration::from_millis(100);
-    for _ in 0..ADDRESS_BOOK_STARTUP_RETRIES {
-        if surf::connect(format!("http://localhost:{}", port))
-            .send()
-            .await
-            .is_ok()
-        {
-            return;
-        }
-        backoff *= 2;
-        std::thread::sleep(backoff);
-    }
-    panic!("Address Book did not start in {:?} milliseconds", backoff);
-}
 
 // Test
 //    lookup(insert(x)) = x

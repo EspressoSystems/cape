@@ -340,6 +340,7 @@ mod test {
         testing::port,
         CapeWallet, CapeWalletExt,
     };
+    use address_book::{init_web_server, wait_for_server};
     use cap_rust_sandbox::{deploy::deploy_erc20_token, types::SimpleToken};
     use ethers::types::{TransactionRequest, U256};
     use jf_cap::{
@@ -361,13 +362,21 @@ mod test {
         rng: &mut ChaChaRng,
         universal_param: &'a UniversalParam,
     ) -> (UserKeyPair, Url, Address, Arc<Mutex<MockCapeLedger<'a>>>) {
+        init_web_server().await.expect("Failed to run server.");
+        wait_for_server(DEFAULT_PORT).await;
+
         // Set up a network that includes a minimal relayer, connected to a real Ethereum
         // blockchain, as well as a mock EQS which will track the blockchain in parallel, since we
         // don't yet have a real EQS.
         let relayer_port = port().await;
+        println!("here create_test_network 370");
+
         let (contract, sender_key, sender_rec, records) =
             start_minimal_relayer_for_test(relayer_port).await;
+        println!("here create_test_network 373");
+
         let relayer_url = Url::parse(&format!("http://localhost:{}", relayer_port)).unwrap();
+
         let sender_memo = ReceiverMemo::from_ro(rng, &sender_rec, &[]).unwrap();
 
         let verif_crs = VerifierKeySet {
@@ -428,8 +437,10 @@ mod test {
     async fn test_transfer() {
         let mut rng = ChaChaRng::from_seed([1u8; 32]);
         let universal_param = universal_setup_for_test(2usize.pow(16), &mut rng).unwrap();
+        println!("here test_transfer 435");
         let (sender_key, relayer_url, contract_address, mock_eqs) =
             create_test_network(&mut rng, &universal_param).await;
+        println!("here test_transfer 438");
 
         // Create a sender wallet and add the key pair that owns the faucet record.
         let sender_dir = TempDir::new("cape_wallet_backend_test").unwrap();

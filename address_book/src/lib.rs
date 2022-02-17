@@ -5,7 +5,7 @@ use async_std::{
 use jf_cap::keys::{UserAddress, UserPubKey};
 use jf_cap::Signature;
 use std::collections::HashMap;
-use tide::{prelude::*, StatusCode};
+use tide::{log::LevelFilter, prelude::*, StatusCode};
 
 pub const DEFAULT_PORT: u16 = 50078u16;
 
@@ -20,8 +20,10 @@ struct ServerState {
     map: Arc<RwLock<HashMap<UserAddress, UserPubKey>>>,
 }
 
-pub async fn init_web_server() -> std::io::Result<JoinHandle<std::io::Result<()>>> {
-    tide::log::start();
+pub async fn init_web_server(
+    log_level: LevelFilter,
+) -> std::io::Result<JoinHandle<std::io::Result<()>>> {
+    tide::log::with_level(log_level);
     let mut app = tide::with_state(ServerState::default());
     app.at("/insert_pubkey").post(insert_pubkey);
     app.at("/request_pubkey").post(request_pubkey);

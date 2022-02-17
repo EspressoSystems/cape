@@ -1,6 +1,7 @@
 use address_book::{address_book_port, init_web_server, wait_for_server, InsertPubKey};
 use jf_cap::keys::{UserKeyPair, UserPubKey};
 use rand_chacha::rand_core::SeedableRng;
+use tide::log::LevelFilter;
 
 const ROUND_TRIP_COUNT: u64 = 100;
 const NOT_FOUND_COUNT: u64 = 100;
@@ -13,7 +14,9 @@ const NOT_FOUND_COUNT: u64 = 100;
 #[async_std::test]
 async fn round_trip() {
     // TODO !corbett find an unused port rather than assuming 50078 is free.
-    init_web_server().await.expect("Failed to run server.");
+    init_web_server(LevelFilter::Error)
+        .await
+        .expect("Failed to run server.");
     wait_for_server().await;
 
     let mut rng = rand_chacha::ChaChaRng::from_seed([0u8; 32]);

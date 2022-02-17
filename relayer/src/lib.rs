@@ -119,7 +119,6 @@ pub mod testing {
     ) -> (TestCAPE<Middleware>, UserKeyPair, RecordOpening, MerkleTree) {
         let cape_contract = deploy_cape_test().await;
         let (faucet_key_pair, faucet_record_opening) = create_faucet(&cape_contract).await;
-
         let mut records = MerkleTree::new(CapeLedger::merkle_height()).unwrap();
         let faucet_comm = RecordCommitment::from(&faucet_record_opening);
         records.push(faucet_comm.to_field_element());

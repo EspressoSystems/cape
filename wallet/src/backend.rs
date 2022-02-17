@@ -363,12 +363,15 @@ mod test {
     use std::path::PathBuf;
     use std::time::Duration;
     use tempdir::TempDir;
+    use tide::log::LevelFilter;
 
     async fn create_test_network<'a>(
         rng: &mut ChaChaRng,
         universal_param: &'a UniversalParam,
     ) -> (UserKeyPair, Url, Address, Arc<Mutex<MockCapeLedger<'a>>>) {
-        init_web_server().await.expect("Failed to run server.");
+        init_web_server(LevelFilter::Error)
+            .await
+            .expect("Failed to run server.");
         wait_for_server().await;
 
         // Set up a network that includes a minimal relayer, connected to a real Ethereum

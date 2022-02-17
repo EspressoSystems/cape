@@ -5,7 +5,7 @@ use cap_rust_sandbox::{ledger::*, state::*, universal_param::UNIVERSAL_PARAM};
 use futures::stream::Stream;
 use itertools::izip;
 use jf_cap::{
-    keys::{UserAddress, UserPubKey},
+    keys::{UserAddress, UserKeyPair, UserPubKey},
     proof::{freeze::FreezeProvingKey, transfer::TransferProvingKey, UniversalParam},
     structs::{AssetDefinition, Nullifier, ReceiverMemo, RecordCommitment, RecordOpening},
     MerklePath, MerkleTree, Signature, TransactionNote,
@@ -256,8 +256,9 @@ impl MockCapeNetwork {
             .clone())
     }
 
-    pub fn register_user_key(&mut self, pub_key: &UserPubKey) -> Result<(), CapeWalletError> {
-        self.address_map.insert(pub_key.address(), pub_key.clone());
+    pub fn register_user_key(&mut self, key_pair: &UserKeyPair) -> Result<(), CapeWalletError> {
+        let pub_key = key_pair.pub_key();
+        self.address_map.insert(pub_key.address(), pub_key);
         Ok(())
     }
 
@@ -555,13 +556,13 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
 
     async fn register_user_key(
         &mut self,
-        pub_key: &UserPubKey,
+        key_pair: &UserKeyPair,
     ) -> Result<(), WalletError<CapeLedger>> {
         self.ledger
             .lock()
             .await
             .network()
-            .register_user_key(pub_key)
+            .register_user_key(key_pair)
     }
 
     async fn get_nullifier_proof(

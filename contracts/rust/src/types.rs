@@ -297,8 +297,14 @@ macro_rules! jf_conversion_for_ed_on_bn254_new_type {
     ($jf_type:ident) => {
         impl From<EdOnBN254Point> for $jf_type {
             fn from(p: EdOnBN254Point) -> Self {
-                let x: ark_bn254::Fr = u256_to_field(p.x);
-                let y: ark_bn254::Fr = u256_to_field(p.y);
+                let mut x: ark_bn254::Fr = u256_to_field(p.x);
+                let mut y: ark_bn254::Fr = u256_to_field(p.y);
+                // deal with different affine repr of zero point in EVM and arkworks
+                if x.is_zero() && y.is_zero() {
+                    let zero = ark_ed_on_bn254::EdwardsAffine::default();
+                    x = zero.x;
+                    y = zero.y;
+                }
                 let mut bytes = vec![];
                 (x, y)
                     .serialize(&mut bytes)
@@ -316,7 +322,15 @@ macro_rules! jf_conversion_for_ed_on_bn254_new_type {
                 CanonicalSerialize::serialize_uncompressed(&pk, &mut bytes).unwrap();
                 let x = U256::from_little_endian(&bytes[..32]);
                 let y = U256::from_little_endian(&bytes[32..]);
-                Self { x, y }
+                // deal with different affine repr of zero point in EVM and arkworks
+                if x == U256::zero() && y == U256::one() {
+                    Self {
+                        x: U256::zero(),
+                        y: U256::zero(),
+                    }
+                } else {
+                    Self { x, y }
+                }
             }
         }
     };

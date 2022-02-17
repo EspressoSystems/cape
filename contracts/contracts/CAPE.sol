@@ -32,8 +32,6 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
 
     bytes public constant CAPE_BURN_MAGIC_BYTES = "TRICAPE burn";
     uint256 public constant CAPE_BURN_MAGIC_BYTES_SIZE = 12;
-    bytes14 public constant DOM_SEP_DOMESTIC_ASSET = "DOMESTIC_ASSET";
-    uint256 public constant CAP_NATIVE_ASSET_CODE = 1;
     // In order to avoid the contract running out of gas if the queue is too large
     // we set the maximum number of pending deposits record commitments to process
     // when a new block is submitted. This is a temporary solution.
@@ -182,29 +180,6 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
             ro.amount
         );
         emit Erc20TokensDeposited(abi.encode(ro), erc20Address, msg.sender);
-    }
-
-    /// @dev Checks if the asset definition code is correctly derived from the internal asset code.
-    /// @param assetDefinitionCode asset definition code
-    /// @param internalAssetCode internal asset code
-    function _checkDomesticAssetCode(uint256 assetDefinitionCode, uint256 internalAssetCode)
-        internal
-        view
-    {
-        require(
-            assetDefinitionCode ==
-                BN254.fromLeBytesModOrder(
-                    bytes.concat(
-                        keccak256(
-                            bytes.concat(
-                                DOM_SEP_DOMESTIC_ASSET,
-                                bytes32(Utils.reverseEndianness(internalAssetCode))
-                            )
-                        )
-                    )
-                ),
-            "Wrong domestic asset code"
-        );
     }
 
     /// @notice Submit a new block with extra data to the CAPE contract.

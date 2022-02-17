@@ -1,43 +1,33 @@
 // A wallet that generates random transactions, for testing purposes.
+#![deny(warnings)]
 
-use async_std::sync::{Arc, Mutex};
 use async_std::task::sleep;
-use cap_rust_sandbox::ledger::*;
+use cape_wallet::backend::create_test_network;
 use cape_wallet::backend::CapeBackend;
 use cape_wallet::mocks::*;
-use cape_wallet::testing::port;
 use cape_wallet::CapeWallet;
-use ethers::prelude::Address;
-use jf_cap::proof::UniversalParam;
+use jf_cap::keys::UserKeyPair;
+use jf_cap::structs::AssetCode;
 use jf_cap::structs::AssetPolicy;
-use jf_cap::structs::{AssetCode, ReceiverMemo};
-use key_set::VerifierKeySet;
+use jf_cap::{keys::UserPubKey, testing_apis::universal_setup_for_test};
+use rand::distributions::weighted::WeightedError;
+use rand::seq::SliceRandom;
 use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
-use relayer::testing::start_minimal_relayer_for_test;
+use seahorse::WalletBackend;
 use seahorse::{events::EventIndex, hd::KeyTree};
+use std::fs::File;
+use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 use structopt::StructOpt;
-use surf::Url;
 use tracing::{event, Level};
-// TODO remove copy paste from router.rs
-// TODO: Add back freezer and auditor keys and test audit/freeze
-use jf_cap::{
-    keys::UserKeyPair, keys::UserPubKey, testing_apis::universal_setup_for_test,
-    TransactionVerifyingKey,
-};
-use rand::distributions::weighted::WeightedError;
-use rand::seq::SliceRandom;
-use reef::traits::Ledger;
-use seahorse::WalletBackend;
-use std::fs::File;
-use std::io::{Read, Write};
 
 #[derive(StructOpt)]
 struct Args {
     /// Path to a private key file to use for the wallet.
     ///
     /// If not given, new keys are generated randomly.
+    /// Ignored if the sender flag is set
     #[structopt(short, long)]
     key_path: Option<PathBuf>,
 
@@ -48,81 +38,13 @@ struct Args {
     /// Path to a saved wallet, or a new directory where this wallet will be saved.
     storage: PathBuf,
 
-    // Path to all pub keys for sending assets to other wallets.  Stored in file until
-    // Address Book is ready
+    /// Path to all pub keys for sending assets to other wallets.  Stored in file until
+    /// Address Book is ready
     pub_key_storage: PathBuf,
 
-    // If true create then give the wallet the faucet key to send some native assets.
+    /// If true then give the wallet the faucet key to send some native assets.
     #[structopt(long)]
     sender: bool,
-}
-
-// TODO remove; Copied from backend.rs
-async fn create_test_network<'a>(
-    rng: &mut ChaChaRng,
-    universal_param: &UniversalParam,
-) -> (UserKeyPair, Url, Address, Arc<Mutex<MockCapeLedger<'a>>>) {
-    // Set up a network that includes a minimal relayer, connected to a real Ethereum
-    // blockchain, as well as a mock EQS which will track the blockchain in parallel, since we
-    // don't yet have a real EQS.
-    let relayer_port = port().await;
-    let (contract, sender_key, sender_rec, records) =
-        start_minimal_relayer_for_test(relayer_port).await;
-    let relayer_url = Url::parse(&format!("http://localhost:{}", relayer_port)).unwrap();
-    let sender_memo = ReceiverMemo::from_ro(rng, &sender_rec, &[]).unwrap();
-
-    let verif_crs = VerifierKeySet {
-        xfr: vec![
-            // For regular transfers, including non-native transfers
-            TransactionVerifyingKey::Transfer(
-                jf_cap::proof::transfer::preprocess(
-                    universal_param,
-                    2,
-                    3,
-                    CapeLedger::merkle_height(),
-                )
-                .unwrap()
-                .1,
-            ),
-            // For burns (which currently require exactly 2 inputs and outputs, but this is an
-            // artificial restriction which should be lifted)
-            TransactionVerifyingKey::Transfer(
-                jf_cap::proof::transfer::preprocess(
-                    universal_param,
-                    2,
-                    2,
-                    CapeLedger::merkle_height(),
-                )
-                .unwrap()
-                .1,
-            ),
-        ]
-        .into_iter()
-        .collect(),
-        freeze: vec![TransactionVerifyingKey::Freeze(
-            jf_cap::proof::freeze::preprocess(universal_param, 2, CapeLedger::merkle_height())
-                .unwrap()
-                .1,
-        )]
-        .into_iter()
-        .collect(),
-        mint: TransactionVerifyingKey::Mint(
-            jf_cap::proof::mint::preprocess(universal_param, CapeLedger::merkle_height())
-                .unwrap()
-                .1,
-        ),
-    };
-    let mut mock_eqs = MockCapeLedger::new(MockCapeNetwork::new(
-        verif_crs,
-        records,
-        vec![(sender_memo, 0)],
-    ));
-    mock_eqs.set_block_size(1).unwrap();
-    // The minimal test relayer does not block transactions, so the mock EQS shouldn't
-    // either.
-    let mock_eqs = Arc::new(Mutex::new(mock_eqs));
-
-    (sender_key, relayer_url, contract.address(), mock_eqs)
 }
 
 async fn retry_delay() {
@@ -130,7 +52,7 @@ async fn retry_delay() {
 }
 
 // Read then overwrite the whole file.  Plenty of race conditions possible
-// but it's fine for the test if you wait between spinnin up processes.
+// but it's fine for the test if you wait between spinning up processes.
 async fn write_pub_key(key: &UserPubKey, path: &Path) {
     let mut keys: Vec<UserPubKey> = if path.exists() {
         get_pub_keys_from_file(path).await
@@ -202,36 +124,31 @@ async fn main() {
         wallet.await_key_scan(&sender_key.address()).await.unwrap();
         sender_key.pub_key()
     } else {
-        println!("Not Sender");
-        wallet.generate_user_key(None).await.unwrap()
-    };
-    match args.key_path {
-        Some(path) => {
-            let mut file = File::open(path).unwrap_or_else(|err| {
-                panic!("cannot open private key file: {}", err);
-            });
-            let mut bytes = Vec::new();
-            file.read_to_end(&mut bytes).unwrap_or_else(|err| {
-                panic!("error reading private key file: {}", err);
-            });
-            wallet
-                .add_user_key(
-                    bincode::deserialize(&bytes).unwrap_or_else(|err| {
-                        panic!("invalid private key file: {}", err);
-                    }),
-                    EventIndex::default(),
-                )
-                .await
-                .unwrap_or_else(|err| {
-                    panic!("error loading key: {}", err);
+        match args.key_path {
+            Some(path) => {
+                let mut file = File::open(path).unwrap_or_else(|err| {
+                    panic!("cannot open private key file: {}", err);
                 });
-        }
-        None => {
-            wallet.generate_user_key(None).await.unwrap_or_else(|err| {
+                let mut bytes = Vec::new();
+                file.read_to_end(&mut bytes).unwrap_or_else(|err| {
+                    panic!("error reading private key file: {}", err);
+                });
+                let key: UserKeyPair = bincode::deserialize(&bytes).unwrap_or_else(|err| {
+                    panic!("invalid private key file: {}", err);
+                });
+                wallet
+                    .add_user_key(key.clone(), EventIndex::default())
+                    .await
+                    .unwrap_or_else(|err| {
+                        panic!("error loading key: {}", err);
+                    });
+                key.pub_key()
+            }
+            None => wallet.generate_user_key(None).await.unwrap_or_else(|err| {
                 panic!("error generating random key: {}", err);
-            });
+            }),
         }
-    }
+    };
 
     println!("Wallet created");
 

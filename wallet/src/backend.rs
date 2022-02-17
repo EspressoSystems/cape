@@ -1,4 +1,7 @@
-use crate::{mocks::MockCapeLedger, CapeWalletBackend, CapeWalletError, EthMiddleware};
+use crate::{
+    mocks::MockCapeLedger, mocks::MockCapeNetwork, testing::port, CapeWalletBackend,
+    CapeWalletError, EthMiddleware,
+};
 use async_std::sync::{Arc, Mutex, MutexGuard};
 use async_trait::async_trait;
 use cap_rust_sandbox::{
@@ -17,13 +20,16 @@ use ethers::{
 };
 use futures::Stream;
 use jf_cap::{
-    keys::{UserAddress, UserPubKey},
+    keys::{UserAddress, UserKeyPair, UserPubKey},
     proof::UniversalParam,
     structs::{AssetDefinition, Nullifier, ReceiverMemo, RecordOpening},
-    Signature,
+    Signature, TransactionVerifyingKey,
 };
+use key_set::VerifierKeySet;
 use net::client::parse_error_body;
 use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
+use reef::Ledger;
+use relayer::testing::start_minimal_relayer_for_test;
 use seahorse::{
     events::{EventIndex, EventSource, LedgerEvent},
     hd,
@@ -312,8 +318,75 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
     }
 }
 
+#[allow(clippy::needless_lifetimes)]
+pub async fn create_test_network<'a>(
+    rng: &mut ChaChaRng,
+    universal_param: &'a UniversalParam,
+) -> (UserKeyPair, Url, Address, Arc<Mutex<MockCapeLedger<'a>>>) {
+    // Set up a network that includes a minimal relayer, connected to a real Ethereum
+    // blockchain, as well as a mock EQS which will track the blockchain in parallel, since we
+    // don't yet have a real EQS.
+    let relayer_port = port().await;
+    let (contract, sender_key, sender_rec, records) =
+        start_minimal_relayer_for_test(relayer_port).await;
+    let relayer_url = Url::parse(&format!("http://localhost:{}", relayer_port)).unwrap();
+    let sender_memo = ReceiverMemo::from_ro(rng, &sender_rec, &[]).unwrap();
+
+    let verif_crs = VerifierKeySet {
+        xfr: vec![
+            // For regular transfers, including non-native transfers
+            TransactionVerifyingKey::Transfer(
+                jf_cap::proof::transfer::preprocess(
+                    universal_param,
+                    2,
+                    3,
+                    CapeLedger::merkle_height(),
+                )
+                .unwrap()
+                .1,
+            ),
+            // For burns (which currently require exactly 2 inputs and outputs, but this is an
+            // artificial restriction which should be lifted)
+            TransactionVerifyingKey::Transfer(
+                jf_cap::proof::transfer::preprocess(
+                    universal_param,
+                    2,
+                    2,
+                    CapeLedger::merkle_height(),
+                )
+                .unwrap()
+                .1,
+            ),
+        ]
+        .into_iter()
+        .collect(),
+        freeze: vec![TransactionVerifyingKey::Freeze(
+            jf_cap::proof::freeze::preprocess(universal_param, 2, CapeLedger::merkle_height())
+                .unwrap()
+                .1,
+        )]
+        .into_iter()
+        .collect(),
+        mint: TransactionVerifyingKey::Mint(
+            jf_cap::proof::mint::preprocess(universal_param, CapeLedger::merkle_height())
+                .unwrap()
+                .1,
+        ),
+    };
+    let mut mock_eqs = MockCapeLedger::new(MockCapeNetwork::new(
+        verif_crs,
+        records,
+        vec![(sender_memo, 0)],
+    ));
+    mock_eqs.set_block_size(1).unwrap();
+    // The minimal test relayer does not block transactions, so the mock EQS shouldn't
+    // either.
+    let mock_eqs = Arc::new(Mutex::new(mock_eqs));
+
+    (sender_key, relayer_url, contract.address(), mock_eqs)
+}
 #[cfg(test)]
-mod test {
+pub mod test {
     use super::*;
     use crate::{
         mocks::{MockCapeNetwork, MockCapeWalletLoader},
@@ -336,73 +409,6 @@ mod test {
     use std::path::PathBuf;
     use std::time::Duration;
     use tempdir::TempDir;
-
-    async fn create_test_network<'a>(
-        rng: &mut ChaChaRng,
-        universal_param: &'a UniversalParam,
-    ) -> (UserKeyPair, Url, Address, Arc<Mutex<MockCapeLedger<'a>>>) {
-        // Set up a network that includes a minimal relayer, connected to a real Ethereum
-        // blockchain, as well as a mock EQS which will track the blockchain in parallel, since we
-        // don't yet have a real EQS.
-        let relayer_port = port().await;
-        let (contract, sender_key, sender_rec, records) =
-            start_minimal_relayer_for_test(relayer_port).await;
-        let relayer_url = Url::parse(&format!("http://localhost:{}", relayer_port)).unwrap();
-        let sender_memo = ReceiverMemo::from_ro(rng, &sender_rec, &[]).unwrap();
-
-        let verif_crs = VerifierKeySet {
-            xfr: vec![
-                // For regular transfers, including non-native transfers
-                TransactionVerifyingKey::Transfer(
-                    jf_cap::proof::transfer::preprocess(
-                        &universal_param,
-                        2,
-                        3,
-                        CapeLedger::merkle_height(),
-                    )
-                    .unwrap()
-                    .1,
-                ),
-                // For burns (which currently require exactly 2 inputs and outputs, but this is an
-                // artificial restriction which should be lifted)
-                TransactionVerifyingKey::Transfer(
-                    jf_cap::proof::transfer::preprocess(
-                        &universal_param,
-                        2,
-                        2,
-                        CapeLedger::merkle_height(),
-                    )
-                    .unwrap()
-                    .1,
-                ),
-            ]
-            .into_iter()
-            .collect(),
-            freeze: vec![TransactionVerifyingKey::Freeze(
-                jf_cap::proof::freeze::preprocess(&universal_param, 2, CapeLedger::merkle_height())
-                    .unwrap()
-                    .1,
-            )]
-            .into_iter()
-            .collect(),
-            mint: TransactionVerifyingKey::Mint(
-                jf_cap::proof::mint::preprocess(&universal_param, CapeLedger::merkle_height())
-                    .unwrap()
-                    .1,
-            ),
-        };
-        let mut mock_eqs = MockCapeLedger::new(MockCapeNetwork::new(
-            verif_crs,
-            records,
-            vec![(sender_memo, 0)],
-        ));
-        mock_eqs.set_block_size(1).unwrap();
-        // The minimal test relayer does not block transactions, so the mock EQS shouldn't
-        // either.
-        let mock_eqs = Arc::new(Mutex::new(mock_eqs));
-
-        (sender_key, relayer_url, contract.address(), mock_eqs)
-    }
 
     #[async_std::test]
     async fn test_transfer() {

@@ -11,7 +11,7 @@ contract TestRescue {
         uint256 a,
         uint256 b,
         uint256 c
-    ) public view returns (uint256) {
+    ) public returns (uint256) {
         return RescueLib.hash(a, b, c);
     }
 }

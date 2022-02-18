@@ -13,7 +13,6 @@ use jf_cap::{keys::UserPubKey, testing_apis::universal_setup_for_test};
 use rand::distributions::weighted::WeightedError;
 use rand::seq::SliceRandom;
 use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
-use seahorse::WalletBackend;
 use seahorse::{events::EventIndex, hd::KeyTree};
 use std::fs::File;
 use std::io::{Read, Write};
@@ -218,17 +217,6 @@ async fn main() {
     // TODO actually get the peers from Address Book service.
     loop {
         let peers: Vec<UserPubKey> = get_pub_keys_from_file(&args.pub_key_storage).await;
-        // Register the keys from file to memory because we don't have Address book Service yet
-        for other_pk in peers.iter() {
-            if *other_pk != pub_key {
-                let state = &mut *wallet.lock().await;
-                state
-                    .backend_mut()
-                    .register_user_key(other_pk)
-                    .await
-                    .unwrap();
-            }
-        }
         let recipient =
             match peers.choose_weighted(&mut rng, |pk| if *pk == pub_key { 0 } else { 1 }) {
                 Ok(recipient) => recipient,

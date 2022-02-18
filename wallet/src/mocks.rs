@@ -1,7 +1,9 @@
-use crate::wallet::{CapeWalletBackend, CapeWalletError, EthMiddleware};
+use crate::wallet::{CapeWalletBackend, CapeWalletError};
 use async_std::sync::{Mutex, MutexGuard};
 use async_trait::async_trait;
-use cap_rust_sandbox::{ledger::*, state::*, universal_param::UNIVERSAL_PARAM};
+use cap_rust_sandbox::{
+    deploy::EthMiddleware, ledger::*, state::*, universal_param::UNIVERSAL_PARAM,
+};
 use futures::stream::Stream;
 use itertools::izip;
 use jf_cap::{

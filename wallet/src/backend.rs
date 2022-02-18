@@ -1,7 +1,8 @@
-use crate::{mocks::MockCapeLedger, CapeWalletBackend, CapeWalletError, EthMiddleware};
+use crate::{mocks::MockCapeLedger, CapeWalletBackend, CapeWalletError};
 use async_std::sync::{Arc, Mutex, MutexGuard};
 use async_trait::async_trait;
 use cap_rust_sandbox::{
+    deploy::EthMiddleware,
     ledger::{CapeLedger, CapeNullifierSet, CapeTransition},
     state::{Erc20Code, EthereumAddr},
     types::CAPE,

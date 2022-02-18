@@ -27,6 +27,10 @@ contract AssetRegistry {
     /// @notice Return the CAP-native asset definition
     function nativeDomesticAsset() public pure returns (AssetDefinition memory assetDefinition) {
         assetDefinition.code = CAP_NATIVE_ASSET_CODE;
+        // affine representation of zero point in arkwork is (0,1)
+        assetDefinition.policy.auditorPk.y = 1;
+        assetDefinition.policy.credPk.y = 1;
+        assetDefinition.policy.freezerPk.y = 1;
     }
 
     /// @notice Fetch the ERC-20 token address corresponding to the
@@ -78,7 +82,7 @@ contract AssetRegistry {
         uint256 assetDefinitionCode,
         address erc20Address,
         address sponsor
-    ) internal view {
+    ) internal pure {
         bytes memory description = _computeAssetDescription(erc20Address, sponsor);
         require(
             assetDefinitionCode ==
@@ -94,7 +98,7 @@ contract AssetRegistry {
     /// @param internalAssetCode internal asset code
     function _checkDomesticAssetCode(uint256 assetDefinitionCode, uint256 internalAssetCode)
         internal
-        view
+        pure
     {
         require(
             assetDefinitionCode ==

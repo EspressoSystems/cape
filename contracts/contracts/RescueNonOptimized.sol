@@ -285,7 +285,7 @@ contract RescueNonOptimized {
         uint256 a,
         uint256 b,
         uint256 c
-    ) public returns (uint256) {
+    ) public view returns (uint256) {
         uint256[_STATE_SIZE] memory input;
         uint256[_STATE_SIZE] memory state;
 

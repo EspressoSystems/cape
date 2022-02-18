@@ -1,9 +1,10 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
+import { BigNumber } from "ethers";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
-  const { deploy } = deployments;
+  const { deploy, execute } = deployments;
   const { deployer } = await getNamedAccounts();
 
   let rescueLib = await deploy("RescueLib", {
@@ -25,6 +26,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const treeDepth = 24;
   const nRoots = 10;
+  // TODO: (alex) change this to actual wallet's public address
+  const faucetManager = {
+    x: BigNumber.from(0),
+    y: BigNumber.from(1),
+  };
 
   await deploy("CAPE", {
     from: deployer,
@@ -35,6 +41,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       VerifyingKeys: verifyingKeys.address,
     },
   });
+  await execute(
+    "CAPE",
+    {
+      from: deployer,
+    },
+    "faucetSetupForTestnet",
+    faucetManager
+  );
 };
 
 export default func;

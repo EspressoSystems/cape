@@ -38,7 +38,7 @@ contract TestCAPE is CAPE {
         return _containsRoot(root);
     }
 
-    function containsBurnPrefix(bytes memory extraProofBoundData) public view returns (bool) {
+    function containsBurnPrefix(bytes memory extraProofBoundData) public pure returns (bool) {
         return _containsBurnPrefix(extraProofBoundData);
     }
 
@@ -66,13 +66,13 @@ contract TestCAPE is CAPE {
         uint256 assetDefinitionCode,
         address erc20Address,
         address sponsor
-    ) public view {
+    ) public pure {
         _checkForeignAssetCode(assetDefinitionCode, erc20Address, sponsor);
     }
 
     function checkDomesticAssetCode(uint256 assetDefinitionCode, uint256 internalAssetCode)
         public
-        view
+        pure
     {
         _checkDomesticAssetCode(assetDefinitionCode, internalAssetCode);
     }

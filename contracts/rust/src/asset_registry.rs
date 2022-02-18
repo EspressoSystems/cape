@@ -7,6 +7,7 @@ use crate::assertion::Matcher;
 use crate::deploy::deploy_test_asset_registry_contract;
 use crate::ethereum::get_funded_client;
 use crate::state::{erc20_asset_description, Erc20Code, EthereumAddr};
+use crate::types::AssetRegistry;
 
 #[tokio::test]
 async fn test_native_domestic_asset() -> Result<()> {
@@ -59,6 +60,7 @@ async fn test_asset_registry() -> Result<()> {
         .should_revert_with_message("Wrong foreign asset code");
 
     // Register the asset
+    let contract = AssetRegistry::new(contract.address(), sponsor.clone());
     contract
         .sponsor_cape_asset(erc20_address, asset_def.clone().into())
         .send()

@@ -1,5 +1,5 @@
 //! naive assertion matcher for `ContractCall.call()` and `ContractCall.send()` tx.
-use ethers::{abi::Detokenize, prelude::*};
+use ethers::prelude::*;
 use std::fmt::Debug;
 
 pub trait Matcher {
@@ -16,7 +16,7 @@ fn check_contains(string: &str, sub_string: &str) {
 
 impl<D, M> Matcher for Result<D, ContractError<M>>
 where
-    D: Detokenize + Debug,
+    D: Debug,
     M: Middleware,
 {
     fn should_not_revert(self) {

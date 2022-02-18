@@ -163,17 +163,11 @@ pub fn u256_to_field<F: PrimeField>(v: U256) -> F {
 
 impl From<ark_ed_on_bn254::EdwardsAffine> for EdOnBN254Point {
     fn from(p: ark_ed_on_bn254::EdwardsAffine) -> Self {
-        if p.is_zero() {
-            // Solidity precompile have a different affine repr for Point of Infinity
-            Self {
-                x: U256::from(0),
-                y: U256::from(0),
-            }
-        } else {
-            Self {
-                x: U256::from_little_endian(&to_bytes!(p.x).unwrap()[..]),
-                y: U256::from_little_endian(&to_bytes!(p.y).unwrap()[..]),
-            }
+        // Even though solidity precompile for BN254 has a different Point of Infinity
+        // affine representation, we stick with arkwork's (0,1) for EdOnBN254
+        Self {
+            x: U256::from_little_endian(&to_bytes!(p.x).unwrap()[..]),
+            y: U256::from_little_endian(&to_bytes!(p.y).unwrap()[..]),
         }
     }
 }
@@ -297,14 +291,8 @@ macro_rules! jf_conversion_for_ed_on_bn254_new_type {
     ($jf_type:ident) => {
         impl From<EdOnBN254Point> for $jf_type {
             fn from(p: EdOnBN254Point) -> Self {
-                let mut x: ark_bn254::Fr = u256_to_field(p.x);
-                let mut y: ark_bn254::Fr = u256_to_field(p.y);
-                // deal with different affine repr of zero point in EVM and arkworks
-                if x.is_zero() && y.is_zero() {
-                    let zero = ark_ed_on_bn254::EdwardsAffine::default();
-                    x = zero.x;
-                    y = zero.y;
-                }
+                let x: ark_bn254::Fr = u256_to_field(p.x);
+                let y: ark_bn254::Fr = u256_to_field(p.y);
                 let mut bytes = vec![];
                 (x, y)
                     .serialize(&mut bytes)
@@ -322,15 +310,7 @@ macro_rules! jf_conversion_for_ed_on_bn254_new_type {
                 CanonicalSerialize::serialize_uncompressed(&pk, &mut bytes).unwrap();
                 let x = U256::from_little_endian(&bytes[..32]);
                 let y = U256::from_little_endian(&bytes[32..]);
-                // deal with different affine repr of zero point in EVM and arkworks
-                if x == U256::zero() && y == U256::one() {
-                    Self {
-                        x: U256::zero(),
-                        y: U256::zero(),
-                    }
-                } else {
-                    Self { x, y }
-                }
+                Self { x, y }
             }
         }
     };

@@ -30,6 +30,10 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
     IPlonkVerifier private _verifier;
     uint256[] public pendingDeposits;
 
+    // NOTE: used for faucet in testnet only, removed for mainnet
+    address public faucetSetter;
+    bool public faucetInitialized;
+
     bytes public constant CAPE_BURN_MAGIC_BYTES = "TRICAPE burn";
     uint256 public constant CAPE_BURN_MAGIC_BYTES_SIZE = 12;
     // In order to avoid the contract running out of gas if the queue is too large
@@ -141,6 +145,34 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
         address verifierAddr
     ) RecordsMerkleTree(merkleTreeHeight) RootStore(nRoots) {
         _verifier = IPlonkVerifier(verifierAddr);
+
+        // NOTE: used for faucet in testnet only, removed for mainnet
+        faucetSetter = msg.sender;
+    }
+
+    /// @notice Allocate native token faucet to a manager for testnet only
+    /// @param faucetManager public key of faucet manager for CAP native token (testnet only!)
+    function faucetSetupForTestnet(EdOnBN254.EdOnBN254Point memory faucetManager) public {
+        // faucet can only be set up once by the manager
+        require(msg.sender == faucetSetter, "Only invocable by deployer");
+        require(!faucetInitialized, "Faucet already set up");
+
+        // allocate maximum possible amount of native CAP token to faucet manager on testnet
+        RecordOpening memory ro = RecordOpening(
+            type(uint64).max,
+            nativeDomesticAsset(),
+            faucetManager,
+            false,
+            0 // arbitrary blind factor
+        );
+        uint256[] memory recordCommitments = new uint256[](1);
+        recordCommitments[0] = _deriveRecordCommitment(ro);
+
+        // insert the record into record accumulator
+        _updateRecordsMerkleTree(recordCommitments);
+        _addRoot(_rootValue);
+
+        faucetInitialized = true;
     }
 
     /// @dev Publish an array of nullifiers

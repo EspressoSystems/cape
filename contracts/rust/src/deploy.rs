@@ -9,15 +9,22 @@ use crate::types::{
 };
 use anyhow::Result;
 use ethers::prelude::{k256::ecdsa::SigningKey, Address, Http, Provider, SignerMiddleware, Wallet};
+use std::sync::Arc;
 
 // Middleware used for locally signing transactions
 pub type EthMiddleware = SignerMiddleware<Provider<Http>, Wallet<SigningKey>>;
 
 pub async fn deploy_cape_test() -> TestCAPE<EthMiddleware> {
     let client = get_funded_client().await.unwrap();
+    deploy_cape_test_with_deployer(client).await
+}
+
+pub async fn deploy_cape_test_with_deployer(
+    deployer: Arc<EthMiddleware>,
+) -> TestCAPE<EthMiddleware> {
     // deploy the PlonkVerifier
     let verifier = deploy(
-        client.clone(),
+        deployer.clone(),
         &contract_abi_path("verifier/PlonkVerifier.sol/PlonkVerifier"),
         (),
     )
@@ -26,14 +33,14 @@ pub async fn deploy_cape_test() -> TestCAPE<EthMiddleware> {
 
     // deploy TestCAPE.sol
     let contract = deploy(
-        client.clone(),
+        deployer.clone(),
         &contract_abi_path("mocks/TestCAPE.sol/TestCAPE"),
         CAPEConstructorArgs::new(CAPE_MERKLE_HEIGHT, 10, verifier.address())
             .generic_into::<(u8, u64, Address)>(),
     )
     .await
     .unwrap();
-    TestCAPE::new(contract.address(), client)
+    TestCAPE::new(contract.address(), deployer)
 }
 
 macro_rules! mk_deploy_fun {

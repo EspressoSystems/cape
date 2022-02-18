@@ -25,7 +25,7 @@ pub async fn deploy_cape_test() -> TestCAPE<SignerMiddleware<Provider<Http>, Wal
     let contract = deploy(
         client.clone(),
         &contract_abi_path("mocks/TestCAPE.sol/TestCAPE"),
-        CAPEConstructorArgs::new(CAPE_MERKLE_HEIGHT, 10, verifier.address())
+        CAPEConstructorArgs::new(CAPE_MERKLE_HEIGHT, 1000, verifier.address())
             .generic_into::<(u8, u64, Address)>(),
     )
     .await

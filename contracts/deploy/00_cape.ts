@@ -24,7 +24,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   });
 
   const treeDepth = 24;
-  const nRoots = 10;
+  const nRoots = 1000;
 
   await deploy("CAPE", {
     from: deployer,

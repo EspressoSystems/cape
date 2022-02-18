@@ -47,5 +47,14 @@ async fn test_root_store() -> Result<()> {
     assert!(contract.contains_root(roots[2]).call().await?);
     assert!(contract.contains_root(roots[3]).call().await?);
 
+    // Adding a duplicate root is not supported
+    for root in &roots[1..=3] {
+        contract
+            .add_root(*root)
+            .call()
+            .await
+            .should_revert_with_message("Root already exists");
+    }
+
     Ok(())
 }

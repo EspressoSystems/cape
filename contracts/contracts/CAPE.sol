@@ -31,7 +31,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
     uint256[] public pendingDeposits;
 
     // NOTE: used for faucet in testnet only, removed for mainnet
-    address public faucetSetter;
+    address public deployer;
     bool public faucetInitialized;
 
     bytes public constant CAPE_BURN_MAGIC_BYTES = "TRICAPE burn";
@@ -147,14 +147,14 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
         _verifier = IPlonkVerifier(verifierAddr);
 
         // NOTE: used for faucet in testnet only, removed for mainnet
-        faucetSetter = msg.sender;
+        deployer = msg.sender;
     }
 
     /// @notice Allocate native token faucet to a manager for testnet only
     /// @param faucetManager public key of faucet manager for CAP native token (testnet only!)
     function faucetSetupForTestnet(EdOnBN254.EdOnBN254Point memory faucetManager) public {
         // faucet can only be set up once by the manager
-        require(msg.sender == faucetSetter, "Only invocable by deployer");
+        require(msg.sender == deployer, "Only invocable by deployer");
         require(!faucetInitialized, "Faucet already set up");
 
         // allocate maximum possible amount of native CAP token to faucet manager on testnet

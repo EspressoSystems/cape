@@ -22,9 +22,9 @@ async fn test_faucet() -> Result<()> {
     let contract = deploy_cape_test_with_deployer(deployer.clone()).await;
     let faucet_manager = UserKeyPair::generate(rng);
 
-    // after Cape deployment, faucet is yet setup
+    // after Cape deployment, faucet is not yet setup
     assert!(!contract.faucet_initialized().call().await?);
-    assert_eq!(contract.faucet_setter().call().await?, deployer.address());
+    assert_eq!(contract.deployer().call().await?, deployer.address());
 
     // attempts to setup faucet by non deployer should fail
     let contract = TestCAPE::new(contract.address(), non_deployer);

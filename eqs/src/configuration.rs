@@ -20,6 +20,14 @@ struct EQSOptions {
     // #[structopt(long = "update_config_file")]
     // update_config_file: bool,
 
+    /// Path to assets including web server files.
+    #[structopt(long = "assets", default_value = "")]
+    pub web_path: String,
+
+    /// Path to API specification and messages.
+    #[structopt(long = "api", default_value = "")]
+    pub api_path: String,
+
     /// Path to persistence files.
     ///
     /// Persistence files will be nested under the specified directory
@@ -37,6 +45,29 @@ fn default_data_path() -> PathBuf {
     data_dir.push("tri");
     data_dir.push("cape_eqs");
     data_dir
+}
+
+pub(crate) fn web_path() -> PathBuf {
+    let web_path = EQSOptions::from_args().web_path;
+    if web_path.is_empty() {
+        let mut cur_dir = env::current_dir().unwrap_or_else(|_| PathBuf::from("./"));
+        cur_dir.push("local");
+        cur_dir
+    } else {
+        PathBuf::from(web_path)
+    }
+}
+
+pub(crate) fn api_path() -> PathBuf {
+    let api_path = EQSOptions::from_args().api_path;
+    if api_path.is_empty() {
+        let mut cur_dir = env::current_dir().unwrap_or_else(|_| PathBuf::from("./"));
+        cur_dir.push("api");
+        cur_dir.push("api.toml");
+        cur_dir
+    } else {
+        PathBuf::from(api_path)
+    }
 }
 
 /// Returns the path to stored persistence files.

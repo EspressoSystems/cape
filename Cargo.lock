@@ -31,6 +31,7 @@ dependencies = [
  "itertools 0.10.3",
  "jf-cap",
  "net",
+ "once_cell",
  "rand_chacha 0.3.1",
  "serde",
  "surf",
@@ -1093,6 +1094,7 @@ dependencies = [
 name = "cape_wallet"
 version = "0.1.0"
 dependencies = [
+ "address_book",
  "async-std",
  "async-trait",
  "bincode",
@@ -4905,7 +4907,7 @@ dependencies = [
 [[package]]
 name = "seahorse"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/seahorse.git?rev=9e0f875998ff42016c1df3cf7109fee1be44a56b#9e0f875998ff42016c1df3cf7109fee1be44a56b"
+source = "git+ssh://git@github.com/SpectrumXYZ/seahorse.git?rev=fc47d4da9ab5a1de6777e835c818b45cd8370041#fc47d4da9ab5a1de6777e835c818b45cd8370041"
 dependencies = [
  "arbitrary",
  "arbitrary-wrappers",

@@ -35,7 +35,7 @@ pub async fn deploy_cape_test_with_deployer(
     let contract = deploy(
         deployer.clone(),
         &contract_abi_path("mocks/TestCAPE.sol/TestCAPE"),
-        CAPEConstructorArgs::new(CAPE_MERKLE_HEIGHT, 10, verifier.address())
+        CAPEConstructorArgs::new(CAPE_MERKLE_HEIGHT, 1000, verifier.address())
             .generic_into::<(u8, u64, Address)>(),
     )
     .await

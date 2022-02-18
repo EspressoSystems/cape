@@ -25,7 +25,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   });
 
   const treeDepth = 24;
-  const nRoots = 10;
+  const nRoots = 1000;
   // TODO: (alex) change this to actual wallet's public address
   const faucetManager = {
     x: BigNumber.from(0),

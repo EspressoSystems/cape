@@ -327,6 +327,7 @@ mod tests {
     use crate::types::{GenericInto, MerkleRootSol, RecordCommitmentSol, TestCapeTypes};
     use anyhow::Result;
     use ethers::prelude::U256;
+    use itertools::Itertools;
     use jf_cap::keys::UserKeyPair;
     use jf_cap::structs::RecordOpening;
     use jf_cap::utils::TxnsParams;
@@ -341,9 +342,9 @@ mod tests {
 
         // simulate initial contract state to contain those record to be consumed
         let contract = deploy_cape_test().await;
-        for txn in params.txns.iter() {
+        for root in params.txns.iter().map(|txn| txn.merkle_root()).unique() {
             contract
-                .add_root(txn.merkle_root().generic_into::<MerkleRootSol>().0)
+                .add_root(root.generic_into::<MerkleRootSol>().0)
                 .send()
                 .await?
                 .await?;

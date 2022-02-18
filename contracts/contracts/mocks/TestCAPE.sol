@@ -17,9 +17,7 @@ contract TestCAPE is CAPE {
     function setInitialRecordCommitments(uint256[] memory elements) public {
         require(_rootValue == 0, "Merkle tree is nonempty");
         _updateRecordsMerkleTree(elements);
-        for (uint256 i = 0; i < _roots.length; ++i) {
-            _roots[i] = _rootValue;
-        }
+        addRoot(_rootValue);
     }
 
     function publish(uint256 nullifier) public {

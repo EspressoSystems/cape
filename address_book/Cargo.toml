@@ -13,8 +13,9 @@ itertools = "0.10.1"
 jf-aap = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", rev = "eca7b7e85718c7770c24ad90dd34b8a07209a01b" }
 net = { git = "ssh://git@github.com/SpectrumXYZ/net.git" }
 rand_chacha = "0.3.1"
-snafu = { version = "0.6.10", features = ["backtraces"] }
 serde = { version = "1.0", features = ["derive"] }
+signal-hook = "0.3.13"
+snafu = { version = "0.6.10", features = ["backtraces"] }
 structopt = { version = "0.3", features = ["paw"] }
 surf = "2.3.2"
 tide = "0.16.0"

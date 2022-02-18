@@ -1,5 +1,8 @@
 use address_book::init_web_server;
 use async_std::path::{Path, PathBuf};
+use signal_hook::{consts::SIGTERM, iterator::Signals};
+use std::process;
+use std::thread;
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -65,15 +68,27 @@ fn get_store_dir() -> String {
 /// addresses to public keys.
 #[async_std::main]
 async fn main() -> Result<(), std::io::Error> {
+    let mut signals = Signals::new(&[SIGTERM])?;
+
+    thread::spawn(move || {
+        for sig in signals.forever() {
+            println!("Received signal {:?}", sig);
+            process::exit(1);
+        }
+    });
+
     let store = if ServerOpt::from_args().load_from_store {
         Some(ServerOpt::from_args().store_path)
     } else {
         None
     };
-    init_web_server(&ServerOpt::from_args().base_url, store)
+    let handle = init_web_server(&ServerOpt::from_args().base_url, store)
         .await
         .unwrap_or_else(|err| {
             panic!("Web server exited with an error: {}", err);
         });
+    handle
+        .await
+        .unwrap_or_else(|err| panic!("Web server exited with an error: {}", err));
     Ok(())
 }

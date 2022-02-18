@@ -91,14 +91,14 @@ fn write_store(address_key_map: BincodeLoadStore<AddressKeyMap>) {
     let mut store_loader =
         AtomicStoreLoader::create(test_path.as_path(), "append_log_test_empty_iterator")
             .expect("AtomicStoreLoader::create failed");
-    let mut persisted_thing = AppendLog::create(
-        &mut store_loader,
-        //<BincodeLoadStore<AddressKeyMap>>::default(),
-        address_key_map,
-        "append_thing",
-        1024,
-    )
-    .expect("AppendLog::create failed");
+    // let mut persisted_thing = AppendLog::create(
+    //     &mut store_loader,
+    //     //<BincodeLoadStore<AddressKeyMap>>::default(),
+    //     address_key_map,
+    //     "append_thing",
+    //     1024,
+    // )
+    // .expect("AppendLog::create failed");
 
     // TODO write the AddressKeyMap
     // let _location = persisted_thing
@@ -106,16 +106,16 @@ fn write_store(address_key_map: BincodeLoadStore<AddressKeyMap>) {
     //     .expect("store_resource failed");
 }
 
-fn read_store(address_key_map: BincodeLoadStore<AddressKeyMap>) {
+fn read_store(_address_key_map: BincodeLoadStore<AddressKeyMap>) {
     let mut test_path = env::current_dir()
         .map_err(|e| PersistenceError::StdIoDirOpsError { source: e })
         .expect("Bad cwd");
     test_path.push("testing_tmp");
-    let mut store_loader =
-        AtomicStoreLoader::create(test_path.as_path(), "append_log_test_empty_iterator")
-            .expect("AtomicStoreLoader::create failed");
+    // let mut store_loader =
+    //     AtomicStoreLoader::create(test_path.as_path(), "append_log_test_empty_iterator")
+    //         .expect("AtomicStoreLoader::create failed");
 
-    let _atomic_store = AtomicStore::open(store_loader).expect("open failed");
+    // let _atomic_store = AtomicStore::open(store_loader).expect("open failed");
     // let mut persisted_thing = AppendLog::create(
     //     &mut store_loader,
     //     <BincodeLoadStore<AddressKeyMap>>::default(),

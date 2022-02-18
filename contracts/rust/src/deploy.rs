@@ -9,12 +9,22 @@ use crate::types::{
 };
 use anyhow::Result;
 use ethers::prelude::{k256::ecdsa::SigningKey, Address, Http, Provider, SignerMiddleware, Wallet};
+use std::sync::Arc;
 
-pub async fn deploy_cape_test() -> TestCAPE<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>> {
+// Middleware used for locally signing transactions
+pub type EthMiddleware = SignerMiddleware<Provider<Http>, Wallet<SigningKey>>;
+
+pub async fn deploy_cape_test() -> TestCAPE<EthMiddleware> {
     let client = get_funded_client().await.unwrap();
+    deploy_cape_test_with_deployer(client).await
+}
+
+pub async fn deploy_cape_test_with_deployer(
+    deployer: Arc<EthMiddleware>,
+) -> TestCAPE<EthMiddleware> {
     // deploy the PlonkVerifier
     let verifier = deploy(
-        client.clone(),
+        deployer.clone(),
         &contract_abi_path("verifier/PlonkVerifier.sol/PlonkVerifier"),
         (),
     )
@@ -23,14 +33,14 @@ pub async fn deploy_cape_test() -> TestCAPE<SignerMiddleware<Provider<Http>, Wal
 
     // deploy TestCAPE.sol
     let contract = deploy(
-        client.clone(),
+        deployer.clone(),
         &contract_abi_path("mocks/TestCAPE.sol/TestCAPE"),
         CAPEConstructorArgs::new(CAPE_MERKLE_HEIGHT, 1000, verifier.address())
             .generic_into::<(u8, u64, Address)>(),
     )
     .await
     .unwrap();
-    TestCAPE::new(contract.address(), client)
+    TestCAPE::new(contract.address(), deployer)
 }
 
 macro_rules! mk_deploy_fun {
@@ -46,54 +56,53 @@ macro_rules! mk_deploy_fun {
 
 mk_deploy_fun!(
     deploy_test_cape_types_contract,
-    TestCapeTypes<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>,
+    TestCapeTypes<EthMiddleware>,
     "mocks/TestCapeTypes.sol/TestCapeTypes"
 );
 
 mk_deploy_fun!(
     deploy_erc20_token,
-    SimpleToken<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>,
+    SimpleToken<EthMiddleware>,
     "SimpleToken.sol/SimpleToken"
 );
 mk_deploy_fun!(
     deploy_test_plonk_verifier_contract,
-    TestPlonkVerifier<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>,
+    TestPlonkVerifier<EthMiddleware>,
     "mocks/TestPlonkVerifier.sol/TestPlonkVerifier"
 );
 mk_deploy_fun!(
     deploy_test_polynomial_eval_contract,
-    TestPolynomialEval<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>,
+    TestPolynomialEval<EthMiddleware>,
     "mocks/TestPolynomialEval.sol/TestPolynomialEval"
 );
 mk_deploy_fun!(
     deploy_test_verifying_keys_contract,
-    TestVerifyingKeys<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>,
+    TestVerifyingKeys<EthMiddleware>,
     "mocks/TestVerifyingKeys.sol/TestVerifyingKeys"
 );
 mk_deploy_fun!(
     deploy_test_asset_registry_contract,
-    AssetRegistry<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>,
+    AssetRegistry<EthMiddleware>,
     "AssetRegistry.sol/AssetRegistry"
 );
 mk_deploy_fun!(
     deploy_test_rescue,
-    TestRescue<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>,
+    TestRescue<EthMiddleware>,
     "mocks/TestRescue.sol/TestRescue"
 );
 mk_deploy_fun!(
     deploy_test_bn254_contract,
-    TestBN254<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>,
+    TestBN254<EthMiddleware>,
     "mocks/TestBN254.sol/TestBN254"
 );
 mk_deploy_fun!(
     deploy_test_ed_on_bn_254_contract,
-    TestEdOnBN254<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>,
+    TestEdOnBN254<EthMiddleware>,
     "mocks/TestEdOnBN254.sol/TestEdOnBN254"
 );
 
 // We do not call the macro for the contracts below because they take some argument
-pub async fn deploy_greeter_contract(
-) -> Result<Greeter<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>> {
+pub async fn deploy_greeter_contract() -> Result<Greeter<EthMiddleware>> {
     let client = get_funded_client().await.unwrap();
     let contract = deploy(
         client.clone(),
@@ -105,8 +114,7 @@ pub async fn deploy_greeter_contract(
     Ok(Greeter::new(contract.address(), client))
 }
 
-pub async fn deploy_test_root_store_contract(
-) -> TestRootStore<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>> {
+pub async fn deploy_test_root_store_contract() -> TestRootStore<EthMiddleware> {
     let client = get_funded_client().await.unwrap();
     let contract = deploy(
         client.clone(),
@@ -118,8 +126,7 @@ pub async fn deploy_test_root_store_contract(
     TestRootStore::new(contract.address(), client)
 }
 
-pub async fn deploy_test_transcript_contract(
-) -> TestTranscript<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>> {
+pub async fn deploy_test_transcript_contract() -> TestTranscript<EthMiddleware> {
     let client = get_funded_client().await.unwrap();
     let contract = deploy(
         client.clone(),
@@ -133,9 +140,7 @@ pub async fn deploy_test_transcript_contract(
 
 pub async fn deploy_test_records_merkle_tree_contract(
     height: u8,
-) -> TestRecordsMerkleTree<
-    SignerMiddleware<Provider<Http>, Wallet<ethers::core::k256::ecdsa::SigningKey>>,
-> {
+) -> TestRecordsMerkleTree<EthMiddleware> {
     let client = get_funded_client().await.unwrap();
     let contract = deploy(
         client.clone(),

@@ -1,5 +1,6 @@
 #![deny(warnings)]
 mod events;
+mod faucet;
 mod note_types;
 mod submit_block;
 mod wrapping;

@@ -92,7 +92,6 @@ pub struct ServerState {
 /// If PORT is set in the environment, derive a new base_url from
 /// the given one with the port from the environment.
 pub fn override_port_from_env(base_url: &str) -> String {
-    println!("base_url: {}", &base_url);
     let override_url;
     let url = if address_book_port().is_none() {
         base_url
@@ -102,7 +101,6 @@ pub fn override_port_from_env(base_url: &str) -> String {
         if re.is_match(base_url) {
             // Replace the port from the base URL.
             //    http://localhost:0123 -> http://localhost:0456
-            println!("{}", 1);
             let colon_port = format!(":{}", override_port);
             override_url = re.replace(base_url, colon_port);
         } else {
@@ -111,19 +109,16 @@ pub fn override_port_from_env(base_url: &str) -> String {
             let re2 = Regex::new("(?P<z>[^:/])/").unwrap();
             if re2.is_match(base_url) {
                 let port_slash = format!("$z:{}/", override_port);
-                println!("{}", 2);
                 override_url = re2.replace(base_url, port_slash);
             } else {
                 // The base URL does not specify the port and does not
                 // have a slash after the protocol. Simply append
                 // a colon and the port.
-                println!("{}", 3);
                 override_url = format!("{}:{}", base_url, override_port).into()
             }
         }
         override_url.as_ref()
     };
-    println!("updated url: {}", url.to_string());
     url.to_string()
 }
 

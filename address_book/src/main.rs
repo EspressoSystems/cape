@@ -29,7 +29,9 @@ async fn main() -> Result<(), std::io::Error> {
         None
     };
     let base_url = &ServerOpt::from_args().base_url[..];
-    let handle = init_web_server(LevelFilter::Error, &base_url, opt_store_path);
+    let handle = init_web_server(LevelFilter::Error, &base_url, opt_store_path)
+        .await
+        .unwrap_or_else(|err| panic!("Web server exited with an error: {}", err));
     handle
         .await
         .unwrap_or_else(|err| panic!("Web server exited with an error: {}", err));

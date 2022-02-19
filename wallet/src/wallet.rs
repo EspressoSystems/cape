@@ -1,11 +1,7 @@
 use async_std::sync::Arc;
 use async_trait::async_trait;
-use cap_rust_sandbox::{ledger::*, state::*};
-use ethers::{
-    core::k256::ecdsa::SigningKey,
-    prelude::{Http, Provider, SignerMiddleware, Wallet as EthWallet},
-};
-use jf_aap::{
+use cap_rust_sandbox::{deploy::EthMiddleware, ledger::*, state::*};
+use jf_cap::{
     keys::UserAddress,
     structs::{AssetCode, AssetDefinition, AssetPolicy, FreezeFlag, RecordOpening},
 };
@@ -15,7 +11,6 @@ use seahorse::{
 };
 
 pub type CapeWalletError = WalletError<CapeLedger>;
-pub type EthMiddleware = SignerMiddleware<Provider<Http>, EthWallet<SigningKey>>;
 
 #[async_trait]
 pub trait CapeWalletBackend<'a>: WalletBackend<'a, CapeLedger> {
@@ -65,7 +60,7 @@ pub trait CapeWalletExt<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> {
         &mut self,
         erc20_code: Erc20Code,
         sponsor_addr: EthereumAddr,
-        aap_asset_policy: AssetPolicy,
+        cap_asset_policy: AssetPolicy,
     ) -> Result<AssetDefinition, CapeWalletError>;
 
     // We may return a `WrapReceipt`, i.e., a record commitment to track wraps, once it's defined.
@@ -77,9 +72,9 @@ pub trait CapeWalletExt<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> {
         &mut self,
         src_addr: EthereumAddr,
         // We take as input the target asset, not the source ERC20 code, because there may be more
-        // than one AAP asset for a given ERC20 token. We need the user to disambiguate (probably
-        // using a list of approved (AAP, ERC20) pairs provided by the query service).
-        aap_asset: AssetDefinition,
+        // than one CAP asset for a given ERC20 token. We need the user to disambiguate (probably
+        // using a list of approved (CAP, ERC20) pairs provided by the query service).
+        cap_asset: AssetDefinition,
         dst_addr: UserAddress,
         amount: u64,
     ) -> Result<(), CapeWalletError>;
@@ -89,7 +84,7 @@ pub trait CapeWalletExt<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> {
         &mut self,
         account: &UserAddress,
         dst_addr: EthereumAddr,
-        aap_asset: &AssetCode,
+        cap_asset: &AssetCode,
         amount: u64,
         fee: u64,
     ) -> Result<TransactionReceipt<CapeLedger>, CapeWalletError>;
@@ -107,7 +102,7 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
         &mut self,
         erc20_code: Erc20Code,
         sponsor_addr: EthereumAddr,
-        aap_asset_policy: AssetPolicy,
+        cap_asset_policy: AssetPolicy,
     ) -> Result<AssetDefinition, CapeWalletError> {
         let mut state = self.lock().await;
 
@@ -116,7 +111,7 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
         //todo Include CAPE-specific domain separator in AssetCode derivation, once Jellyfish adds
         // support for domain separators.
         let code = AssetCode::new_foreign(&description);
-        let asset = AssetDefinition::new(code, aap_asset_policy)
+        let asset = AssetDefinition::new(code, cap_asset_policy)
             .map_err(|source| CapeWalletError::CryptoError { source })?;
 
         state
@@ -130,19 +125,19 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
     async fn wrap(
         &mut self,
         src_addr: EthereumAddr,
-        aap_asset: AssetDefinition,
+        cap_asset: AssetDefinition,
         dst_addr: UserAddress,
         amount: u64,
     ) -> Result<(), CapeWalletError> {
         let mut state = self.lock().await;
 
-        let erc20_code = state.backend().get_wrapped_erc20_code(&aap_asset).await?;
+        let erc20_code = state.backend().get_wrapped_erc20_code(&cap_asset).await?;
         let pub_key = state.backend().get_public_key(&dst_addr).await?;
 
         let ro = RecordOpening::new(
             state.rng(),
             amount,
-            aap_asset,
+            cap_asset,
             pub_key,
             FreezeFlag::Unfrozen,
         );
@@ -157,7 +152,7 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
         &mut self,
         account: &UserAddress,
         dst_addr: EthereumAddr,
-        aap_asset: &AssetCode,
+        cap_asset: &AssetCode,
         amount: u64,
         fee: u64,
     ) -> Result<TransactionReceipt<CapeLedger>, CapeWalletError> {
@@ -175,7 +170,7 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
             // handy.
             .build_transfer(
                 account,
-                aap_asset,
+                cap_asset,
                 &[(account.clone(), amount)],
                 fee,
                 bound_data,

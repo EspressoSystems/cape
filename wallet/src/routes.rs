@@ -12,9 +12,12 @@ use cap_rust_sandbox::{
     universal_param::UNIVERSAL_PARAM,
 };
 use futures::{prelude::*, stream::iter};
-use jf_aap::{
-    keys::{AuditorPubKey, FreezerPubKey, UserPubKey},
-    structs::{AssetCode, AssetDefinition, AssetPolicy},
+use jf_cap::{
+    keys::{AuditorPubKey, FreezerPubKey, UserKeyPair, UserPubKey},
+    structs::{
+        AssetCode, AssetDefinition, AssetPolicy, FreezeFlag, ReceiverMemo, RecordCommitment,
+        RecordOpening,
+    },
     MerkleTree, TransactionVerifyingKey,
 };
 use key_set::{KeySet, VerifierKeySet};
@@ -25,7 +28,7 @@ use seahorse::{
     hd::KeyTree,
     loader::{Loader, LoaderMetadata},
     testing::MockLedger,
-    txn_builder::AssetInfo,
+    txn_builder::{AssetInfo, TransactionReceipt},
     WalletBackend, WalletStorage,
 };
 use serde::{Deserialize, Serialize};
@@ -294,6 +297,8 @@ pub fn wallet_error(source: CapeWalletError) -> tide::Error {
 
 // Create a wallet (if !existing) or open an existing one.
 pub async fn init_wallet(
+    rng: &mut ChaChaRng,
+    faucet_pub_key: UserPubKey,
     mnemonic: String,
     path: Option<PathBuf>,
     existing: bool,
@@ -317,11 +322,11 @@ pub async fn init_wallet(
 
     let verif_crs = VerifierKeySet {
         mint: TransactionVerifyingKey::Mint(
-            jf_aap::proof::mint::preprocess(&*UNIVERSAL_PARAM, CapeLedger::merkle_height())?.1,
+            jf_cap::proof::mint::preprocess(&*UNIVERSAL_PARAM, CapeLedger::merkle_height())?.1,
         ),
         xfr: KeySet::new(
             vec![TransactionVerifyingKey::Transfer(
-                jf_aap::proof::transfer::preprocess(
+                jf_cap::proof::transfer::preprocess(
                     &*UNIVERSAL_PARAM,
                     3,
                     3,
@@ -334,7 +339,7 @@ pub async fn init_wallet(
         .unwrap(),
         freeze: KeySet::new(
             vec![TransactionVerifyingKey::Freeze(
-                jf_aap::proof::freeze::preprocess(
+                jf_cap::proof::freeze::preprocess(
                     &*UNIVERSAL_PARAM,
                     2,
                     CapeLedger::merkle_height(),
@@ -345,14 +350,28 @@ pub async fn init_wallet(
         )
         .unwrap(),
     };
+
+    // Set up a faucet record.
+    let mut records = MerkleTree::new(CapeLedger::merkle_height()).unwrap();
+    let faucet_ro = RecordOpening::new(
+        rng,
+        1000,
+        AssetDefinition::native(),
+        faucet_pub_key,
+        FreezeFlag::Unfrozen,
+    );
+    records.push(RecordCommitment::from(&faucet_ro).to_field_element());
+    let faucet_memo = ReceiverMemo::from_ro(rng, &faucet_ro, &[]).unwrap();
+
     //TODO replace this mock backend with a connection to a real backend when available.
-    let ledger = Arc::new(Mutex::new(MockLedger::new(MockCapeNetwork::new(
+    let mut ledger = MockLedger::new(MockCapeNetwork::new(
         verif_crs,
-        MerkleTree::new(CapeLedger::merkle_height()).unwrap(),
-        vec![],
-    ))));
+        records,
+        vec![(faucet_memo, 0)],
+    ));
+    ledger.set_block_size(1).unwrap();
     let mut loader = Loader::from_mnemonic(mnemonic, true, path);
-    let mut backend = MockCapeBackend::new(ledger.clone(), &mut loader)?;
+    let mut backend = MockCapeBackend::new(Arc::new(Mutex::new(ledger)), &mut loader)?;
 
     if backend.storage().await.exists() != existing {
         return Err(server_error(CapeAPIError::OpenWallet {
@@ -403,6 +422,8 @@ pub async fn getmnemonic(rng: &mut ChaChaRng) -> Result<String, tide::Error> {
 
 pub async fn newwallet(
     bindings: &HashMap<String, RouteBinding>,
+    rng: &mut ChaChaRng,
+    faucet_key_pair: &UserKeyPair,
     wallet: &mut Option<Wallet>,
 ) -> Result<(), tide::Error> {
     let path = match bindings.get(":path") {
@@ -415,12 +436,14 @@ pub async fn newwallet(
     // with two wallets using the same file at the same time.
     *wallet = None;
 
-    *wallet = Some(init_wallet(mnemonic, path, false).await?);
+    *wallet = Some(init_wallet(rng, faucet_key_pair.pub_key(), mnemonic, path, false).await?);
     Ok(())
 }
 
 pub async fn openwallet(
     bindings: &HashMap<String, RouteBinding>,
+    rng: &mut ChaChaRng,
+    faucet_key_pair: &UserKeyPair,
     wallet: &mut Option<Wallet>,
 ) -> Result<(), tide::Error> {
     let path = match bindings.get(":path") {
@@ -433,7 +456,7 @@ pub async fn openwallet(
     // with two wallets using the same file at the same time.
     *wallet = None;
 
-    *wallet = Some(init_wallet(mnemonic, path, true).await?);
+    *wallet = Some(init_wallet(rng, faucet_key_pair.pub_key(), mnemonic, path, true).await?);
     Ok(())
 }
 
@@ -649,6 +672,28 @@ async fn wrap(
         .await?)
 }
 
+pub async fn send(
+    bindings: &HashMap<String, RouteBinding>,
+    wallet: &mut Option<Wallet>,
+) -> Result<TransactionReceipt<CapeLedger>, tide::Error> {
+    let wallet = require_wallet(wallet)?;
+
+    let src = bindings.get(":sender").unwrap().value.to::<UserAddress>()?;
+    let dst = bindings
+        .get(":recipient")
+        .unwrap()
+        .value
+        .to::<UserAddress>()?;
+    let asset = bindings.get(":asset").unwrap().value.to::<AssetCode>()?;
+    let amount = bindings.get(":amount").unwrap().value.as_u64()?;
+    let fee = bindings.get(":fee").unwrap().value.as_u64()?;
+
+    wallet
+        .transfer(&src.into(), &asset, &[(dst.into(), amount)], fee)
+        .await
+        .map_err(wallet_error)
+}
+
 pub async fn dispatch_url(
     req: tide::Request<WebState>,
     route_pattern: &str,
@@ -657,6 +702,7 @@ pub async fn dispatch_url(
     let segments = route_pattern.split_once('/').unwrap_or((route_pattern, ""));
     let state = req.state();
     let rng = &mut *state.rng.lock().await;
+    let faucet_key_pair = &state.faucet_key_pair;
     let wallet = &mut *state.wallet.lock().await;
     let key = ApiRouteKey::from_str(segments.0).expect("Unknown route");
     match key {
@@ -670,9 +716,15 @@ pub async fn dispatch_url(
         ApiRouteKey::mint => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::newasset => response(&req, newasset(bindings, wallet).await?),
         ApiRouteKey::newkey => response(&req, newkey(segments.1, wallet).await?),
-        ApiRouteKey::newwallet => response(&req, newwallet(bindings, wallet).await?),
-        ApiRouteKey::openwallet => response(&req, openwallet(bindings, wallet).await?),
-        ApiRouteKey::send => dummy_url_eval(route_pattern, bindings),
+        ApiRouteKey::newwallet => response(
+            &req,
+            newwallet(bindings, rng, faucet_key_pair, wallet).await?,
+        ),
+        ApiRouteKey::openwallet => response(
+            &req,
+            openwallet(bindings, rng, faucet_key_pair, wallet).await?,
+        ),
+        ApiRouteKey::send => response(&req, send(bindings, wallet).await?),
         ApiRouteKey::trace => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::transaction => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::unfreeze => dummy_url_eval(route_pattern, bindings),

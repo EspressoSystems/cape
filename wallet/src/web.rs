@@ -8,6 +8,7 @@ use async_std::{
     sync::{Arc, Mutex},
     task::{spawn, JoinHandle},
 };
+use jf_cap::keys::UserKeyPair;
 use net::server;
 use rand_chacha::ChaChaRng;
 use std::collections::hash_map::HashMap;
@@ -40,22 +41,18 @@ pub struct NodeOpt {
 
 /// Returns the project directory.
 fn project_path() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+    let dir = std::env::var("WALLET").unwrap_or_else(|_| {
+        println!(
+            "WALLET directory is not set. Using the default paths, ./public and ./api for asset \
+            and API paths, respectively. To use different paths, set the WALLET environment \
+            variable, or specify :assets and :api arguments."
+        );
+        String::from(".")
+    });
+    PathBuf::from(dir)
 }
 
-/// Returns "<repo>/public/" where <repo> is
-/// derived from the executable path assuming the executable is in
-/// two directory levels down and the project directory name
-/// can be derived from the executable name.
-///
-/// For example, if the executable path is
-/// ```text
-/// ~/tri/systems/system/examples/multi_machine/target/release/multi_machine
-/// ```
-/// then the asset path is
-/// ```text
-/// ~/tri/systems/system/examples/multi_machine/public/
-/// ```
+/// Returns the default path to the web directory.
 pub fn default_web_path() -> PathBuf {
     const ASSET_DIR: &str = "public";
     let dir = project_path();
@@ -75,6 +72,7 @@ pub struct WebState {
     pub(crate) api: toml::Value,
     pub(crate) wallet: Arc<Mutex<Option<Wallet>>>,
     pub(crate) rng: Arc<Mutex<ChaChaRng>>,
+    pub(crate) faucet_key_pair: UserKeyPair,
 }
 
 async fn form_demonstration(req: tide::Request<WebState>) -> Result<tide::Body, tide::Error> {
@@ -236,6 +234,16 @@ async fn populatefortest(req: tide::Request<WebState>) -> Result<tide::Response,
         wallet.generate_freeze_key().await.map_err(wallet_error)?;
     }
 
+    // Add the faucet key, so we get a balance of the native asset.
+    wallet
+        .add_user_key(req.state().faucet_key_pair.clone(), Default::default())
+        .await
+        .unwrap();
+    wallet
+        .await_key_scan(&req.state().faucet_key_pair.address())
+        .await
+        .unwrap();
+
     // Add a wrapped asset, and give it some nonzero balance.
     let erc20_code = Erc20Code(EthereumAddr([1; 20]));
     let sponsor_addr = EthereumAddr([2; 20]);
@@ -288,17 +296,19 @@ fn add_form_demonstration(web_server: &mut tide::Server<WebState>) {
 }
 
 pub fn init_server(
-    rng: ChaChaRng,
+    mut rng: ChaChaRng,
     api_path: PathBuf,
     web_path: PathBuf,
     port: u64,
 ) -> std::io::Result<JoinHandle<std::io::Result<()>>> {
     let api = crate::disco::load_messages(&api_path);
+    let faucet_key_pair = UserKeyPair::generate(&mut rng);
     let mut web_server = tide::with_state(WebState {
         web_path: web_path.clone(),
         api: api.clone(),
         wallet: Arc::new(Mutex::new(None)),
         rng: Arc::new(Mutex::new(rng)),
+        faucet_key_pair,
     });
     web_server
         .with(server::trace)

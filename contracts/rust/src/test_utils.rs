@@ -3,16 +3,17 @@ use crate::helpers::compare_merkle_root_from_contract_and_jf_tree;
 use crate::ledger::CapeLedger;
 use crate::types::TestRecordsMerkleTree;
 use crate::types::{field_to_u256, SimpleToken, TestCAPE};
+use ethers::prelude::TransactionReceipt;
 use ethers::prelude::{
     k256::ecdsa::SigningKey, Address, Http, Provider, SignerMiddleware, Wallet, H160, U256,
 };
-use jf_aap::keys::{UserKeyPair, UserPubKey};
-use jf_aap::structs::{
+use jf_cap::keys::{UserKeyPair, UserPubKey};
+use jf_cap::structs::{
     AssetDefinition, FeeInput, FreezeFlag, RecordCommitment, RecordOpening, TxnFeeInfo,
 };
-use jf_aap::testing_apis::universal_setup_for_test;
-use jf_aap::transfer::{TransferNote, TransferNoteInput};
-use jf_aap::{AccMemberWitness, MerkleTree};
+use jf_cap::testing_apis::universal_setup_for_test;
+use jf_cap::transfer::{TransferNote, TransferNoteInput};
+use jf_cap::{AccMemberWitness, MerkleTree};
 use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
 use reef::Ledger;
 use std::path::{Path, PathBuf};
@@ -134,10 +135,10 @@ pub fn generate_burn_tx(
     // 2 inputs: fee input record and wrapped asset record
     // 2 outputs: changed fee asset record, burn output record
     let xfr_prove_key =
-        jf_aap::proof::transfer::preprocess(&srs, 2, 2, CapeLedger::merkle_height())
+        jf_cap::proof::transfer::preprocess(&srs, 2, 2, CapeLedger::merkle_height())
             .unwrap()
             .0;
-    let valid_until = 2u64.pow(jf_aap::constants::MAX_TIMESTAMP_LEN as u32) - 1;
+    let valid_until = 2u64.pow(jf_cap::constants::MAX_TIMESTAMP_LEN as u32) - 1;
 
     let fee_input = FeeInput {
         ro: faucet_ro,
@@ -221,4 +222,19 @@ pub async fn compare_roots_records_test_cape_contract(
         should_be_equal,
         compare_merkle_root_from_contract_and_jf_tree(root_value_u256, root_fr254)
     );
+}
+
+pub trait PrintGas {
+    fn print_gas(self, prefix: &str) -> Self;
+}
+
+impl PrintGas for Option<TransactionReceipt> {
+    fn print_gas(self, prefix: &str) -> Self {
+        println!(
+            "{} gas used: {}",
+            prefix,
+            self.as_ref().unwrap().gas_used.unwrap()
+        );
+        self
+    }
 }

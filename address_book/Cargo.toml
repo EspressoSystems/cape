@@ -10,12 +10,17 @@ async-std = { version = "1.6.0", features = ["attributes"] }
 atomic_store = { git = "ssh://git@github.com/SpectrumXYZ/atomicstore.git" }
 bincode = "1.3.3"
 itertools = "0.10.1"
-jf-aap = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", rev = "eca7b7e85718c7770c24ad90dd34b8a07209a01b" }
+jf-cap = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/cap.git", rev = "cba0b2fc682606b0a118b320d41f718c525b4192" }
 net = { git = "ssh://git@github.com/SpectrumXYZ/net.git" }
+once_cell = "1"
 rand_chacha = "0.3.1"
+regex = "1"
 serde = { version = "1.0", features = ["derive"] }
 signal-hook = "0.3.13"
 snafu = { version = "0.6.10", features = ["backtraces"] }
 structopt = { version = "0.3", features = ["paw"] }
 surf = "2.3.2"
 tide = "0.16.0"
+
+
+# jf-aap = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish-apps.git", rev = "eca7b7e85718c7770c24ad90dd34b8a07209a01b" }

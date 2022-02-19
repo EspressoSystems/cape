@@ -5,7 +5,7 @@ use ark_poly::EvaluationDomain;
 use ark_poly::Radix2EvaluationDomain;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ethers::prelude::*;
-use jf_aap::{
+use jf_cap::{
     keys::{AuditorPubKey, CredIssuerPubKey, FreezerPubKey, UserPubKey},
     structs::{
         AssetCode, BlindFactor, FreezeFlag, InternalAssetCode, Nullifier, RecordCommitment,
@@ -163,17 +163,11 @@ pub fn u256_to_field<F: PrimeField>(v: U256) -> F {
 
 impl From<ark_ed_on_bn254::EdwardsAffine> for EdOnBN254Point {
     fn from(p: ark_ed_on_bn254::EdwardsAffine) -> Self {
-        if p.is_zero() {
-            // Solidity precompile have a different affine repr for Point of Infinity
-            Self {
-                x: U256::from(0),
-                y: U256::from(0),
-            }
-        } else {
-            Self {
-                x: U256::from_little_endian(&to_bytes!(p.x).unwrap()[..]),
-                y: U256::from_little_endian(&to_bytes!(p.y).unwrap()[..]),
-            }
+        // Even though solidity precompile for BN254 has a different Point of Infinity
+        // affine representation, we stick with arkwork's (0,1) for EdOnBN254
+        Self {
+            x: U256::from_little_endian(&to_bytes!(p.x).unwrap()[..]),
+            y: U256::from_little_endian(&to_bytes!(p.y).unwrap()[..]),
         }
     }
 }
@@ -326,11 +320,11 @@ jf_conversion_for_ed_on_bn254_new_type!(AuditorPubKey);
 jf_conversion_for_ed_on_bn254_new_type!(CredIssuerPubKey);
 jf_conversion_for_ed_on_bn254_new_type!(FreezerPubKey);
 jf_conversion_for_ed_on_bn254_new_type!(VerKey);
-type EncKeyAAP = EncKey<CurveParam>;
-jf_conversion_for_ed_on_bn254_new_type!(EncKeyAAP);
+type EncKeyCAP = EncKey<CurveParam>;
+jf_conversion_for_ed_on_bn254_new_type!(EncKeyCAP);
 
-impl From<jf_aap::structs::AssetPolicy> for AssetPolicy {
-    fn from(policy: jf_aap::structs::AssetPolicy) -> Self {
+impl From<jf_cap::structs::AssetPolicy> for AssetPolicy {
+    fn from(policy: jf_cap::structs::AssetPolicy) -> Self {
         Self {
             auditor_pk: policy.auditor_pub_key().clone().into(),
             cred_pk: policy.cred_issuer_pub_key().clone().into(),
@@ -341,9 +335,9 @@ impl From<jf_aap::structs::AssetPolicy> for AssetPolicy {
     }
 }
 
-impl From<AssetPolicy> for jf_aap::structs::AssetPolicy {
+impl From<AssetPolicy> for jf_cap::structs::AssetPolicy {
     fn from(policy_sol: AssetPolicy) -> Self {
-        jf_aap::structs::AssetPolicy::default()
+        jf_cap::structs::AssetPolicy::default()
             .set_auditor_pub_key(policy_sol.auditor_pk.into())
             .set_cred_issuer_pub_key(policy_sol.cred_pk.into())
             .set_freezer_pub_key(policy_sol.freezer_pk.into())
@@ -364,8 +358,8 @@ impl From<AssetPolicy> for jf_aap::structs::AssetPolicy {
     }
 }
 
-impl From<jf_aap::structs::AssetDefinition> for AssetDefinition {
-    fn from(def: jf_aap::structs::AssetDefinition) -> Self {
+impl From<jf_cap::structs::AssetDefinition> for AssetDefinition {
+    fn from(def: jf_cap::structs::AssetDefinition) -> Self {
         Self {
             code: def.code.generic_into::<AssetCodeSol>().0,
             policy: def.policy_ref().clone().into(),
@@ -373,7 +367,7 @@ impl From<jf_aap::structs::AssetDefinition> for AssetDefinition {
     }
 }
 
-impl From<AssetDefinition> for jf_aap::structs::AssetDefinition {
+impl From<AssetDefinition> for jf_cap::structs::AssetDefinition {
     fn from(def_sol: AssetDefinition) -> Self {
         Self::new(
             def_sol
@@ -386,8 +380,8 @@ impl From<AssetDefinition> for jf_aap::structs::AssetDefinition {
     }
 }
 
-impl From<jf_aap::structs::RecordOpening> for RecordOpening {
-    fn from(ro: jf_aap::structs::RecordOpening) -> Self {
+impl From<jf_cap::structs::RecordOpening> for RecordOpening {
+    fn from(ro: jf_cap::structs::RecordOpening) -> Self {
         Self {
             amount: ro.amount,
             asset_def: ro.asset_def.into(),
@@ -398,7 +392,7 @@ impl From<jf_aap::structs::RecordOpening> for RecordOpening {
     }
 }
 
-impl From<RecordOpening> for jf_aap::structs::RecordOpening {
+impl From<RecordOpening> for jf_cap::structs::RecordOpening {
     fn from(ro_sol: RecordOpening) -> Self {
         let pub_key = UserPubKey::new(ro_sol.user_addr.into(), aead::EncKey::default());
 
@@ -419,8 +413,8 @@ impl From<RecordOpening> for jf_aap::structs::RecordOpening {
     }
 }
 
-impl From<jf_aap::structs::AuditMemo> for AuditMemo {
-    fn from(memo: jf_aap::structs::AuditMemo) -> Self {
+impl From<jf_cap::structs::AuditMemo> for AuditMemo {
+    fn from(memo: jf_cap::structs::AuditMemo) -> Self {
         let scalars = memo.internal().clone().to_scalars();
         let ephemeral_key = EdOnBN254Point {
             x: field_to_u256(scalars[0]),
@@ -434,7 +428,7 @@ impl From<jf_aap::structs::AuditMemo> for AuditMemo {
     }
 }
 
-impl From<AuditMemo> for jf_aap::structs::AuditMemo {
+impl From<AuditMemo> for jf_cap::structs::AuditMemo {
     fn from(memo_sol: AuditMemo) -> Self {
         let mut scalars = vec![
             u256_to_field(memo_sol.ephemeral_key.x),
@@ -447,8 +441,8 @@ impl From<AuditMemo> for jf_aap::structs::AuditMemo {
     }
 }
 
-impl From<jf_aap::transfer::AuxInfo> for TransferAuxInfo {
-    fn from(aux: jf_aap::transfer::AuxInfo) -> Self {
+impl From<jf_cap::transfer::AuxInfo> for TransferAuxInfo {
+    fn from(aux: jf_cap::transfer::AuxInfo) -> Self {
         Self {
             merkle_root: aux.merkle_root.generic_into::<MerkleRootSol>().0,
             fee: aux.fee,
@@ -459,7 +453,7 @@ impl From<jf_aap::transfer::AuxInfo> for TransferAuxInfo {
     }
 }
 
-impl From<TransferAuxInfo> for jf_aap::transfer::AuxInfo {
+impl From<TransferAuxInfo> for jf_cap::transfer::AuxInfo {
     fn from(aux_sol: TransferAuxInfo) -> Self {
         Self {
             merkle_root: aux_sol
@@ -474,8 +468,8 @@ impl From<TransferAuxInfo> for jf_aap::transfer::AuxInfo {
     }
 }
 
-impl From<jf_aap::mint::MintAuxInfo> for MintAuxInfo {
-    fn from(aux: jf_aap::mint::MintAuxInfo) -> Self {
+impl From<jf_cap::mint::MintAuxInfo> for MintAuxInfo {
+    fn from(aux: jf_cap::mint::MintAuxInfo) -> Self {
         Self {
             merkle_root: aux.merkle_root.generic_into::<MerkleRootSol>().0,
             fee: aux.fee,
@@ -484,7 +478,7 @@ impl From<jf_aap::mint::MintAuxInfo> for MintAuxInfo {
     }
 }
 
-impl From<MintAuxInfo> for jf_aap::mint::MintAuxInfo {
+impl From<MintAuxInfo> for jf_cap::mint::MintAuxInfo {
     fn from(aux_sol: MintAuxInfo) -> Self {
         Self {
             merkle_root: aux_sol
@@ -497,8 +491,8 @@ impl From<MintAuxInfo> for jf_aap::mint::MintAuxInfo {
     }
 }
 
-impl From<jf_aap::freeze::FreezeAuxInfo> for FreezeAuxInfo {
-    fn from(aux: jf_aap::freeze::FreezeAuxInfo) -> Self {
+impl From<jf_cap::freeze::FreezeAuxInfo> for FreezeAuxInfo {
+    fn from(aux: jf_cap::freeze::FreezeAuxInfo) -> Self {
         Self {
             merkle_root: aux.merkle_root.generic_into::<MerkleRootSol>().0,
             fee: aux.fee,
@@ -507,7 +501,7 @@ impl From<jf_aap::freeze::FreezeAuxInfo> for FreezeAuxInfo {
     }
 }
 
-impl From<FreezeAuxInfo> for jf_aap::freeze::FreezeAuxInfo {
+impl From<FreezeAuxInfo> for jf_cap::freeze::FreezeAuxInfo {
     fn from(aux_sol: FreezeAuxInfo) -> Self {
         Self {
             merkle_root: aux_sol
@@ -632,8 +626,8 @@ impl From<PlonkProof> for Proof<Bn254> {
     }
 }
 
-impl From<jf_aap::transfer::TransferNote> for TransferNote {
-    fn from(note: jf_aap::transfer::TransferNote) -> Self {
+impl From<jf_cap::transfer::TransferNote> for TransferNote {
+    fn from(note: jf_cap::transfer::TransferNote) -> Self {
         let input_nullifiers: Vec<U256> = note
             .inputs_nullifiers
             .iter()
@@ -654,7 +648,7 @@ impl From<jf_aap::transfer::TransferNote> for TransferNote {
     }
 }
 
-impl From<TransferNote> for jf_aap::transfer::TransferNote {
+impl From<TransferNote> for jf_cap::transfer::TransferNote {
     fn from(note_sol: TransferNote) -> Self {
         let inputs_nullifiers = note_sol
             .input_nullifiers
@@ -676,8 +670,8 @@ impl From<TransferNote> for jf_aap::transfer::TransferNote {
     }
 }
 
-impl From<jf_aap::mint::MintNote> for MintNote {
-    fn from(note: jf_aap::mint::MintNote) -> Self {
+impl From<jf_cap::mint::MintNote> for MintNote {
+    fn from(note: jf_cap::mint::MintNote) -> Self {
         Self {
             input_nullifier: note.input_nullifier.generic_into::<NullifierSol>().0,
             chg_comm: note.chg_comm.generic_into::<RecordCommitmentSol>().0,
@@ -695,7 +689,7 @@ impl From<jf_aap::mint::MintNote> for MintNote {
     }
 }
 
-impl From<MintNote> for jf_aap::mint::MintNote {
+impl From<MintNote> for jf_cap::mint::MintNote {
     fn from(note_sol: MintNote) -> Self {
         Self {
             input_nullifier: note_sol
@@ -723,8 +717,8 @@ impl From<MintNote> for jf_aap::mint::MintNote {
     }
 }
 
-impl From<jf_aap::freeze::FreezeNote> for FreezeNote {
-    fn from(note: jf_aap::freeze::FreezeNote) -> Self {
+impl From<jf_cap::freeze::FreezeNote> for FreezeNote {
+    fn from(note: jf_cap::freeze::FreezeNote) -> Self {
         let input_nullifiers: Vec<U256> = note
             .input_nullifiers
             .iter()
@@ -744,7 +738,7 @@ impl From<jf_aap::freeze::FreezeNote> for FreezeNote {
     }
 }
 
-impl From<FreezeNote> for jf_aap::freeze::FreezeNote {
+impl From<FreezeNote> for jf_cap::freeze::FreezeNote {
     fn from(note_sol: FreezeNote) -> Self {
         let input_nullifiers = note_sol
             .input_nullifiers
@@ -765,8 +759,8 @@ impl From<FreezeNote> for jf_aap::freeze::FreezeNote {
     }
 }
 
-impl From<jf_aap::VerifyingKey> for VerifyingKey {
-    fn from(vk: jf_aap::VerifyingKey) -> Self {
+impl From<jf_cap::VerifyingKey> for VerifyingKey {
+    fn from(vk: jf_cap::VerifyingKey) -> Self {
         // scalars are organized as
         // - domain size, 1 element
         // - number of inputs, 1 element
@@ -819,7 +813,6 @@ impl From<jf_aap::VerifyingKey> for VerifyingKey {
     }
 }
 
-// TODO: remove this when PcsInfo visibility was changed back to private
 impl From<jf_plonk::testing_apis::PcsInfo<Bn254>> for PcsInfo {
     fn from(info: jf_plonk::testing_apis::PcsInfo<Bn254>) -> Self {
         let mut comm_scalars = vec![];

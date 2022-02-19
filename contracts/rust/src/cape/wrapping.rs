@@ -7,7 +7,7 @@ use crate::types as sol;
 use crate::types::{AssetCodeSol, GenericInto};
 use anyhow::Result;
 use ethers::prelude::Address;
-use jf_aap::structs::{AssetCode, AssetCodeSeed, RecordOpening};
+use jf_cap::structs::{AssetCode, AssetCodeSeed, RecordOpening};
 
 mod errors_when_calling_deposit_erc20 {
     use std::sync::Arc;
@@ -19,8 +19,8 @@ mod errors_when_calling_deposit_erc20 {
     use crate::types::TestCAPE;
     use anyhow::Result;
     use ethers::prelude::U256;
-    use jf_aap::keys::UserPubKey;
-    use jf_aap::structs::{AssetCode, AssetDefinition, AssetPolicy, FreezeFlag, RecordOpening};
+    use jf_cap::keys::UserPubKey;
+    use jf_cap::structs::{AssetCode, AssetDefinition, AssetPolicy, FreezeFlag, RecordOpening};
 
     enum WrongCallDepositErc20 {
         AssetTypeNotRegistered,

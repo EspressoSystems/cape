@@ -6,6 +6,8 @@ import "./libraries/EdOnBN254.sol";
 
 contract AssetRegistry {
     bytes13 public constant DOM_SEP_FOREIGN_ASSET = "FOREIGN_ASSET";
+    bytes14 public constant DOM_SEP_DOMESTIC_ASSET = "DOMESTIC_ASSET";
+    uint256 public constant CAP_NATIVE_ASSET_CODE = 1;
 
     mapping(bytes32 => address) public assets;
 
@@ -20,6 +22,15 @@ contract AssetRegistry {
         EdOnBN254.EdOnBN254Point freezerPk;
         uint256 revealMap;
         uint64 revealThreshold;
+    }
+
+    /// @notice Return the CAP-native asset definition
+    function nativeDomesticAsset() public pure returns (AssetDefinition memory assetDefinition) {
+        assetDefinition.code = CAP_NATIVE_ASSET_CODE;
+        // affine representation of zero point in arkwork is (0,1)
+        assetDefinition.policy.auditorPk.y = 1;
+        assetDefinition.policy.credPk.y = 1;
+        assetDefinition.policy.freezerPk.y = 1;
     }
 
     /// @notice Fetch the ERC-20 token address corresponding to the
@@ -71,7 +82,7 @@ contract AssetRegistry {
         uint256 assetDefinitionCode,
         address erc20Address,
         address sponsor
-    ) internal view {
+    ) internal pure {
         bytes memory description = _computeAssetDescription(erc20Address, sponsor);
         require(
             assetDefinitionCode ==
@@ -79,6 +90,29 @@ contract AssetRegistry {
                     bytes.concat(keccak256(bytes.concat(DOM_SEP_FOREIGN_ASSET, description)))
                 ),
             "Wrong foreign asset code"
+        );
+    }
+
+    /// @dev Checks if the asset definition code is correctly derived from the internal asset code.
+    /// @param assetDefinitionCode asset definition code
+    /// @param internalAssetCode internal asset code
+    function _checkDomesticAssetCode(uint256 assetDefinitionCode, uint256 internalAssetCode)
+        internal
+        pure
+    {
+        require(
+            assetDefinitionCode ==
+                BN254.fromLeBytesModOrder(
+                    bytes.concat(
+                        keccak256(
+                            bytes.concat(
+                                DOM_SEP_DOMESTIC_ASSET,
+                                bytes32(Utils.reverseEndianness(internalAssetCode))
+                            )
+                        )
+                    )
+                ),
+            "Wrong domestic asset code"
         );
     }
 

@@ -20,8 +20,12 @@ contract TestBN254 {
         return C.isInfinity(point);
     }
 
-    function negate(C.G1Point memory p) public pure returns (C.G1Point memory r) {
+    function negateG1(C.G1Point memory p) public pure returns (C.G1Point memory r) {
         return C.negate(p);
+    }
+
+    function negateFr(uint256 fr) public pure returns (uint256 res) {
+        return C.negate(fr);
     }
 
     function add(C.G1Point memory p1, C.G1Point memory p2) public view returns (C.G1Point memory) {

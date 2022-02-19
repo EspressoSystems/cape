@@ -1,18 +1,80 @@
+use async_std::path::{Path, PathBuf};
 use async_std::{
     sync::{Arc, RwLock},
-    task::{spawn, JoinHandle},
+    task::{sleep, spawn, JoinHandle},
 };
 use atomic_store::{
-    error::PersistenceError, load_store::BincodeLoadStore, AppendLog, AtomicStore,
-    AtomicStoreLoader,
+    error::PersistenceError, load_store::BincodeLoadStore, AtomicStore, AtomicStoreLoader,
 };
-use jf_aap::keys::{UserAddress, UserPubKey};
-use jf_aap::Signature;
+use jf_cap::keys::{UserAddress, UserPubKey};
+use jf_cap::Signature;
+use once_cell::sync::Lazy;
+use regex::Regex;
 use std::collections::HashMap;
 use std::env;
-use tide::{prelude::*, StatusCode};
+use std::time::Duration;
+use structopt::StructOpt;
+use tide::{log::LevelFilter, prelude::*, StatusCode};
 
-pub const DEFAULT_PORT: u16 = 50078u16;
+const ADDRESS_BOOK_STARTUP_RETRIES: usize = 8;
+
+pub static mut LOG_LEVEL: LevelFilter = LevelFilter::Info;
+
+#[derive(Debug, StructOpt)]
+#[structopt(
+    name = "Address Book",
+    about = "Server that provides a key/value store mapping user addresses to public keys"
+)]
+pub struct ServerOpt {
+    /// Whether to load from persisted state. Defaults to true.
+    ///
+    #[structopt(
+        long = "load_from_store",
+        short = "l",
+        parse(try_from_str),
+        default_value = "true"
+    )]
+    pub load_from_store: bool,
+
+    /// Path to persistence files.
+    ///
+    /// Persistence files will be nested under the specified directory
+    #[structopt(
+        long = "store_path",
+        short = "s",
+        default_value = ""      // See fn default_store_path().
+    )]
+    pub store_path: String,
+
+    /// Base URL. Defaults to http://0.0.0.0:50078.
+    #[structopt(long = "url", default_value = "http://0.0.0.0:50078")]
+    pub base_url: String,
+}
+
+pub fn address_book_port() -> Option<String> {
+    std::env::var("PORT").ok()
+}
+
+/// Returns the project directory.
+pub fn project_path() -> PathBuf {
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    path
+}
+
+/// Returns the default directory to store persistence files.
+pub fn default_store_path() -> PathBuf {
+    const STORE_DIR: &str = "src/store/address_book";
+    let dir = project_path();
+    [&dir, Path::new(STORE_DIR)].iter().collect()
+}
+
+/// Runs one and only one logger.
+///
+/// Accessing `LOG_LEVEL` is considered unsafe since it is a static mutable
+/// variable, but we need this to ensure that only one logger is running.
+static LOGGING: Lazy<()> = Lazy::new(|| unsafe {
+    tide::log::with_level(LOG_LEVEL);
+});
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct InsertPubKey {
@@ -23,23 +85,80 @@ pub struct InsertPubKey {
 type AddressKeyMap = HashMap<UserAddress, UserPubKey>;
 
 #[derive(Clone, Default)]
-struct ServerState {
-    map: Arc<RwLock<AddressKeyMap>>,
+pub struct ServerState {
+    pub map: Arc<RwLock<AddressKeyMap>>,
+}
+
+/// If PORT is set in the environment, derive a new base_url from
+/// the given one with the port from the environment.
+pub fn override_port_from_env(base_url: &str) -> String {
+    println!("base_url: {}", &base_url);
+    let override_url;
+    let url = if address_book_port().is_none() {
+        base_url
+    } else {
+        let override_port = address_book_port().unwrap();
+        let re = Regex::new(":[0-9]+").unwrap();
+        if re.is_match(base_url) {
+            // Replace the port from the base URL.
+            //    http://localhost:0123 -> http://localhost:0456
+            println!("{}", 1);
+            let colon_port = format!(":{}", override_port);
+            override_url = re.replace(base_url, colon_port);
+        } else {
+            // Add the port before the first single slash.
+            // This slash does not have a colon or slash preceeding it.
+            let re2 = Regex::new("(?P<z>[^:/])/").unwrap();
+            if re2.is_match(base_url) {
+                let port_slash = format!("$z:{}/", override_port);
+                println!("{}", 2);
+                override_url = re2.replace(base_url, port_slash);
+            } else {
+                // The base URL does not specify the port and does not
+                // have a slash after the protocol. Simply append
+                // a colon and the port.
+                println!("{}", 3);
+                override_url = format!("{}:{}", base_url, override_port).into()
+            }
+        }
+        override_url.as_ref()
+    };
+    println!("updated url: {}", url.to_string());
+    url.to_string()
 }
 
 pub async fn init_web_server(
+    log_level: LevelFilter,
     base_url: &str,
-    store: Option<String>,
+    _store_path: Option<&PathBuf>,
 ) -> std::io::Result<JoinHandle<std::io::Result<()>>> {
-    match store {
-        Some(store) => println!("Got: {}", store),
-        None => println!("Got none"),
-    };
-    tide::log::start();
+    // Accessing `LOG_LEVEL` is considered unsafe since it is a static mutable
+    // variable, but we need this to ensure that only one logger is running.
+    // This is the only place in the code that modifies this and this function
+    // is only called once at startup.
+    unsafe {
+        LOG_LEVEL = log_level;
+    }
+    Lazy::force(&LOGGING);
+    // TODO !corbett Initialize the ServerState from AtomicStore.
     let mut app = tide::with_state(ServerState::default());
     app.at("/insert_pubkey").post(insert_pubkey);
     app.at("/request_pubkey").post(request_pubkey);
-    Ok(spawn(app.listen(base_url.to_string())))
+    let url = override_port_from_env(base_url);
+    Ok(spawn(app.listen(url.to_string())))
+}
+
+pub async fn wait_for_server(base_url: &str) {
+    // Wait for the server to come up and start serving.
+    let mut backoff = Duration::from_millis(100);
+    for _ in 0..ADDRESS_BOOK_STARTUP_RETRIES {
+        if surf::connect(base_url.to_string()).send().await.is_ok() {
+            return;
+        }
+        sleep(backoff).await;
+        backoff *= 2;
+    }
+    panic!("Address Book did not start in {:?} milliseconds", backoff);
 }
 
 /// Lookup a user public key from a signed public key address. Fail with
@@ -58,8 +177,10 @@ fn verify_sig_and_get_pub_key(insert_request: InsertPubKey) -> Result<UserPubKey
 async fn insert_pubkey(mut req: tide::Request<ServerState>) -> Result<tide::Response, tide::Error> {
     let insert_request: InsertPubKey = net::server::request_body(&mut req).await?;
     let pub_key = verify_sig_and_get_pub_key(insert_request)?;
-    let mut hash_map = req.state().map.write().await;
-    hash_map.insert(pub_key.address(), pub_key.clone());
+    {
+        let mut hash_map = req.state().map.write().await;
+        hash_map.insert(pub_key.address(), pub_key.clone());
+    }
     Ok(tide::Response::new(StatusCode::Ok))
 }
 
@@ -83,46 +204,24 @@ async fn request_pubkey(
     }
 }
 
-fn write_store(address_key_map: BincodeLoadStore<AddressKeyMap>) {
+pub fn write_store(_address_key_map: AddressKeyMap) {
     let mut test_path = env::current_dir()
         .map_err(|e| PersistenceError::StdIoDirOpsError { source: e })
         .expect("Bad cwd");
     test_path.push("testing_tmp");
-    let mut store_loader =
+    let mut _store_loader =
         AtomicStoreLoader::create(test_path.as_path(), "append_log_test_empty_iterator")
             .expect("AtomicStoreLoader::create failed");
-    // let mut persisted_thing = AppendLog::create(
-    //     &mut store_loader,
-    //     //<BincodeLoadStore<AddressKeyMap>>::default(),
-    //     address_key_map,
-    //     "append_thing",
-    //     1024,
-    // )
-    // .expect("AppendLog::create failed");
-
-    // TODO write the AddressKeyMap
-    // let _location = persisted_thing
-    //     .store_resource(&address_key_map)
-    //     .expect("store_resource failed");
 }
 
-fn read_store(_address_key_map: BincodeLoadStore<AddressKeyMap>) {
+pub fn read_store(_address_key_map: BincodeLoadStore<AddressKeyMap>) {
     let mut test_path = env::current_dir()
         .map_err(|e| PersistenceError::StdIoDirOpsError { source: e })
         .expect("Bad cwd");
     test_path.push("testing_tmp");
-    // let mut store_loader =
-    //     AtomicStoreLoader::create(test_path.as_path(), "append_log_test_empty_iterator")
-    //         .expect("AtomicStoreLoader::create failed");
+    let store_loader =
+        AtomicStoreLoader::create(test_path.as_path(), "append_log_test_empty_iterator")
+            .expect("AtomicStoreLoader::create failed");
 
-    // let _atomic_store = AtomicStore::open(store_loader).expect("open failed");
-    // let mut persisted_thing = AppendLog::create(
-    //     &mut store_loader,
-    //     <BincodeLoadStore<AddressKeyMap>>::default(),
-    //     "append_thing",
-    //     1024,
-    // )
-    // .expect("AppendLog::create failed");
-
-    // TODO read the AddressKeyMap
+    let _atomic_store = AtomicStore::open(store_loader).expect("open failed");
 }

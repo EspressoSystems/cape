@@ -4,17 +4,17 @@ skinparam componentStyle rectangle
 component "Wallet/WebUI" as UI
 
 
-package "AAP" {
+package "CAP" {
     issue_asset -down- UI
     transfer_asset -down- UI
     freeze_record -down- UI
     trace_asset -down- UI
-    manage_keys_aap -down- UI
-    view_balances_aap -down- UI
-    view_txs_aap -down- UI
-    manage_address_book_aap -down- UI
+    manage_keys_cap -down- UI
+    view_balances_cap -down- UI
+    view_txs_cap -down- UI
+    manage_address_book_cap -down- UI
 }
-package "AAP <-> ETH" {
+package "CAP <-> ETH" {
     sponsor_asset_type -down- UI
     wrap -down- UI
     unwrap -down- UI
@@ -27,15 +27,15 @@ submit_tx -down- Relayer
 
 [Ethereum Query Service] as EQS
 interface get_mt_proof_asset_record
-interface get_txs_aap_since_block
-interface get_latest_aap_state
+interface get_txs_cap_since_block
+interface get_latest_cap_state
 interface get_plonk_verif_keys
 interface get_nullifiers
 get_nullifiers -down- EQS
 get_plonk_verif_keys -down- EQS
-get_txs_aap_since_block -down- EQS
+get_txs_cap_since_block -down- EQS
 get_mt_proof_asset_record -down- EQS
-get_latest_aap_state -down- EQS
+get_latest_cap_state -down- EQS
 
 ' [Ethereum Access Provider] as EAP
 
@@ -92,8 +92,8 @@ component ETHBlockchain {
 }
 
 Relayer -down-> submit_cape_block
-Relayer -down-> get_txs_aap_since_block
-Relayer -down-> get_latest_aap_state
+Relayer -down-> get_txs_cap_since_block
+Relayer -down-> get_latest_cap_state
 Relayer -down-> get_nullifiers
 Relayer -down-> get_plonk_verif_keys
 
@@ -110,10 +110,10 @@ UI -down-> push_memo
 UI -down-> deposit_erc20
 UI -down-> approve
 UI -down-> get_mt_proof_asset_record
-UI -down-> get_txs_aap_since_block
+UI -down-> get_txs_cap_since_block
 UI -down-> register_addr_and_enc_pub_key
 UI -down-> get_enc_pub_key_from_addr
-UI -down-> get_latest_aap_state
+UI -down-> get_latest_cap_state
 UI -down-> get_plonk_verif_keys
 UI -down..-> submit_cape_block: Optional \n ("Escape Hatch")
 UI -down-> get_cape_fee_record

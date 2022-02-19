@@ -1,7 +1,7 @@
 use cap_rust_sandbox::types as sol;
-use jf_aap::proof::{freeze, mint, transfer};
-use jf_aap::structs::NoteType;
-use jf_aap::testing_apis::universal_setup_for_test;
+use jf_cap::proof::{freeze, mint, transfer};
+use jf_cap::structs::NoteType;
+use jf_cap::testing_apis::universal_setup_for_test;
 use std::process::Command;
 use std::{fs::OpenOptions, io::prelude::*, path::PathBuf};
 

@@ -3,7 +3,7 @@
 use ark_serialize::*;
 use core::convert::TryFrom;
 use core::fmt::Debug;
-use jf_aap::{
+use jf_cap::{
     errors::TxnApiError,
     structs::{AssetDefinition, Nullifier, RecordCommitment, RecordOpening},
     transfer::TransferNote,
@@ -25,7 +25,7 @@ pub const CAPE_BURN_MAGIC_BYTES: &str = "TRICAPE burn";
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum CapeTransaction {
-    AAP(TransactionNote),
+    CAP(TransactionNote),
     Burn {
         xfr: Box<TransferNote>,
         ro: Box<RecordOpening>,
@@ -37,13 +37,13 @@ impl CapeTransaction {
         match self {
             CapeTransaction::Burn { xfr, .. } => xfr.inputs_nullifiers.clone(),
 
-            CapeTransaction::AAP(TransactionNote::Transfer(xfr)) => xfr.inputs_nullifiers.clone(),
+            CapeTransaction::CAP(TransactionNote::Transfer(xfr)) => xfr.inputs_nullifiers.clone(),
 
-            CapeTransaction::AAP(TransactionNote::Mint(mint)) => {
+            CapeTransaction::CAP(TransactionNote::Mint(mint)) => {
                 vec![mint.input_nullifier]
             }
 
-            CapeTransaction::AAP(TransactionNote::Freeze(freeze)) => {
+            CapeTransaction::CAP(TransactionNote::Freeze(freeze)) => {
                 freeze.input_nullifiers.clone()
             }
         }
@@ -61,7 +61,7 @@ impl CapeTransaction {
                 ret.remove(1); // remove the burnt record
                 ret
             }
-            CapeTransaction::AAP(note) => note.output_commitments(),
+            CapeTransaction::CAP(note) => note.output_commitments(),
         }
     }
 }
@@ -192,7 +192,7 @@ pub enum CapeValidationError {
         erc20_code: Erc20Code,
         sponsor: EthereumAddr,
     },
-    InvalidAAPDef {
+    InvalidCAPDef {
         asset_def: Box<AssetDefinition>,
     },
     UnregisteredErc20 {
@@ -300,7 +300,7 @@ pub fn is_erc20_asset_def_valid(
 }
 
 #[allow(unused_variables)]
-fn is_aap_asset_def_valid(def: &AssetDefinition) -> bool {
+fn is_cap_asset_def_valid(def: &AssetDefinition) -> bool {
     // NOTE: we assume that this gets checked by jellyfish's MintNote
     // validation
     true
@@ -461,9 +461,9 @@ impl CapeContractState {
 
                         // TODO: fee-collection records
                         let (vkey, merkle_root, new_records, note) = match t {
-                            CapeTransaction::AAP(TransactionNote::Mint(mint)) => {
-                                if !is_aap_asset_def_valid(&mint.mint_asset_def) {
-                                    return Err(CapeValidationError::InvalidAAPDef {
+                            CapeTransaction::CAP(TransactionNote::Mint(mint)) => {
+                                if !is_cap_asset_def_valid(&mint.mint_asset_def) {
+                                    return Err(CapeValidationError::InvalidCAPDef {
                                         asset_def: Box::new(mint.mint_asset_def.clone()),
                                     });
                                 }
@@ -545,7 +545,7 @@ impl CapeContractState {
                                 )
                             }
 
-                            CapeTransaction::AAP(TransactionNote::Transfer(note)) => {
+                            CapeTransaction::CAP(TransactionNote::Transfer(note)) => {
                                 let num_inputs = note.inputs_nullifiers.len();
                                 let num_outputs = note.output_commitments.len();
 
@@ -572,7 +572,7 @@ impl CapeContractState {
                                 )
                             }
 
-                            CapeTransaction::AAP(TransactionNote::Freeze(note)) => {
+                            CapeTransaction::CAP(TransactionNote::Freeze(note)) => {
                                 let num_inputs = note.input_nullifiers.len();
                                 let num_outputs = note.output_commitments.len();
 

@@ -8,9 +8,9 @@ use crate::types as sol;
 use crate::types::{GenericInto, MerkleRootSol};
 use anyhow::Result;
 use ethers::prelude::U256;
-use jf_aap::keys::UserPubKey;
-use jf_aap::utils::TxnsParams;
-use jf_aap::TransactionNote;
+use jf_cap::keys::UserPubKey;
+use jf_cap::utils::TxnsParams;
+use jf_cap::TransactionNote;
 use reef::Ledger;
 
 #[tokio::test]

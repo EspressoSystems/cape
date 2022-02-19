@@ -30,10 +30,12 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
     IPlonkVerifier private _verifier;
     uint256[] public pendingDeposits;
 
+    // NOTE: used for faucet in testnet only, removed for mainnet
+    address public deployer;
+    bool public faucetInitialized;
+
     bytes public constant CAPE_BURN_MAGIC_BYTES = "TRICAPE burn";
     uint256 public constant CAPE_BURN_MAGIC_BYTES_SIZE = 12;
-    bytes14 public constant DOM_SEP_DOMESTIC_ASSET = "DOMESTIC_ASSET";
-    uint256 public constant AAP_NATIVE_ASSET_CODE = 1;
     // In order to avoid the contract running out of gas if the queue is too large
     // we set the maximum number of pending deposits record commitments to process
     // when a new block is submitted. This is a temporary solution.
@@ -143,6 +145,34 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
         address verifierAddr
     ) RecordsMerkleTree(merkleTreeHeight) RootStore(nRoots) {
         _verifier = IPlonkVerifier(verifierAddr);
+
+        // NOTE: used for faucet in testnet only, removed for mainnet
+        deployer = msg.sender;
+    }
+
+    /// @notice Allocate native token faucet to a manager for testnet only
+    /// @param faucetManager public key of faucet manager for CAP native token (testnet only!)
+    function faucetSetupForTestnet(EdOnBN254.EdOnBN254Point memory faucetManager) public {
+        // faucet can only be set up once by the manager
+        require(msg.sender == deployer, "Only invocable by deployer");
+        require(!faucetInitialized, "Faucet already set up");
+
+        // allocate maximum possible amount of native CAP token to faucet manager on testnet
+        RecordOpening memory ro = RecordOpening(
+            type(uint64).max,
+            nativeDomesticAsset(),
+            faucetManager,
+            false,
+            0 // arbitrary blind factor
+        );
+        uint256[] memory recordCommitments = new uint256[](1);
+        recordCommitments[0] = _deriveRecordCommitment(ro);
+
+        // insert the record into record accumulator
+        _updateRecordsMerkleTree(recordCommitments);
+        _addRoot(_rootValue);
+
+        faucetInitialized = true;
     }
 
     /// @dev Publish an array of nullifiers
@@ -184,30 +214,15 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
         emit Erc20TokensDeposited(abi.encode(ro), erc20Address, msg.sender);
     }
 
-    /// @dev Checks if the asset definition code is correctly derived from the internal asset code.
-    /// @param assetDefinitionCode asset definition code
-    /// @param internalAssetCode internal asset code
-    function _checkDomesticAssetCode(uint256 assetDefinitionCode, uint256 internalAssetCode)
-        internal
-        view
-    {
-        require(
-            assetDefinitionCode ==
-                BN254.fromLeBytesModOrder(
-                    bytes.concat(
-                        keccak256(
-                            bytes.concat(
-                                DOM_SEP_DOMESTIC_ASSET,
-                                bytes32(Utils.reverseEndianness(internalAssetCode))
-                            )
-                        )
-                    )
-                ),
-            "Wrong domestic asset code"
-        );
+    /// @notice Submit a new block with extra data to the CAPE contract.
+    /// @param newBlock block to be processed by the CAPE contract.
+    /// @param extraData extra data to be stored in calldata, this data is ignored by the contract function.
+    // solhint-disable-next-line no-unused-vars
+    function submitCapeBlockWithMemos(CapeBlock memory newBlock, bytes calldata extraData) public {
+        submitCapeBlock(newBlock);
     }
 
-    /// @notice submit a new block to the CAPE contract. Transactions are validated and the blockchain state is updated. Moreover *BURN* transactions trigger the unwrapping of cape asset records into erc20 tokens.
+    /// @notice Submit a new block to the CAPE contract. Transactions are validated and the blockchain state is updated. Moreover *BURN* transactions trigger the unwrapping of cape asset records into erc20 tokens.
     /// @param newBlock block to be processed by the CAPE contract.
     function submitCapeBlock(CapeBlock memory newBlock) public nonReentrant {
         AccumulatingArray.Data memory commitments = AccumulatingArray.create(
@@ -475,7 +490,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
                 note.auditMemo.data.length
         );
         publicInput[0] = note.auxInfo.merkleRoot;
-        publicInput[1] = AAP_NATIVE_ASSET_CODE;
+        publicInput[1] = CAP_NATIVE_ASSET_CODE;
         publicInput[2] = note.auxInfo.validUntil;
         publicInput[3] = note.auxInfo.fee;
         {
@@ -550,7 +565,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
         // 9: see below; 8: asset policy; rest: audit memo
         publicInput = new uint256[](9 + 8 + 2 + note.auditMemo.data.length);
         publicInput[0] = note.auxInfo.merkleRoot;
-        publicInput[1] = AAP_NATIVE_ASSET_CODE;
+        publicInput[1] = CAP_NATIVE_ASSET_CODE;
         publicInput[2] = note.inputNullifier;
         publicInput[3] = note.auxInfo.fee;
         publicInput[4] = note.mintComm;
@@ -612,7 +627,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
             3 + note.inputNullifiers.length + note.outputCommitments.length
         );
         publicInput[0] = note.auxInfo.merkleRoot;
-        publicInput[1] = AAP_NATIVE_ASSET_CODE;
+        publicInput[1] = CAP_NATIVE_ASSET_CODE;
         publicInput[2] = note.auxInfo.fee;
         {
             uint256 idx = 3;

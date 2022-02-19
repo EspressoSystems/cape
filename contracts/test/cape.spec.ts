@@ -17,7 +17,7 @@ describe("CAPE", function () {
       });
 
       const TREE_HEIGHT = 24;
-      const N_ROOTS = 10;
+      const N_ROOTS = 1000;
       cape = await capeFactory.deploy(TREE_HEIGHT, N_ROOTS, plonkVerifier.address);
     });
 

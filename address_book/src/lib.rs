@@ -57,8 +57,7 @@ pub fn address_book_port() -> Option<String> {
 
 /// Returns the project directory.
 pub fn project_path() -> PathBuf {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    path
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
 }
 
 /// Returns the default directory to store persistence files.
@@ -140,7 +139,7 @@ pub async fn init_web_server(
     app.at("/insert_pubkey").post(insert_pubkey);
     app.at("/request_pubkey").post(request_pubkey);
     let url = override_port_from_env(base_url);
-    Ok(spawn(app.listen(url.to_string())))
+    Ok(spawn(app.listen(url)))
 }
 
 pub async fn wait_for_server(base_url: &str) {

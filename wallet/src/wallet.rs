@@ -1,10 +1,6 @@
 use async_std::sync::Arc;
 use async_trait::async_trait;
-use cap_rust_sandbox::{ledger::*, state::*};
-use ethers::{
-    core::k256::ecdsa::SigningKey,
-    prelude::{Http, Provider, SignerMiddleware, Wallet as EthWallet},
-};
+use cap_rust_sandbox::{deploy::EthMiddleware, ledger::*, state::*};
 use jf_cap::{
     keys::UserAddress,
     structs::{AssetCode, AssetDefinition, AssetPolicy, FreezeFlag, RecordOpening},
@@ -15,7 +11,6 @@ use seahorse::{
 };
 
 pub type CapeWalletError = WalletError<CapeLedger>;
-pub type EthMiddleware = SignerMiddleware<Provider<Http>, EthWallet<SigningKey>>;
 
 #[async_trait]
 pub trait CapeWalletBackend<'a>: WalletBackend<'a, CapeLedger> {

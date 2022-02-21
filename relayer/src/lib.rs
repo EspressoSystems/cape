@@ -1,6 +1,8 @@
 use async_std::task;
-use cap_rust_sandbox::{cape::CapeBlock, state::CapeTransaction, types::CAPE};
-use ethers::{core::k256::ecdsa::SigningKey, prelude::*};
+use cap_rust_sandbox::{
+    cape::CapeBlock, deploy::EthMiddleware, state::CapeTransaction, types::CAPE,
+};
+use ethers::prelude::*;
 use jf_cap::keys::UserPubKey;
 use net::server::{add_error_body, request_body, response};
 use serde::{Deserialize, Serialize};
@@ -40,15 +42,13 @@ impl net::Error for Error {
     }
 }
 
-type Middleware = SignerMiddleware<Provider<Http>, Wallet<SigningKey>>;
-
 fn server_error<E: Into<Error>>(err: E) -> tide::Error {
     net::server_error(err)
 }
 
 #[derive(Clone)]
 struct WebState {
-    contract: CAPE<Middleware>,
+    contract: CAPE<EthMiddleware>,
 }
 
 async fn submit_endpoint(mut req: tide::Request<WebState>) -> Result<tide::Response, tide::Error> {
@@ -64,7 +64,7 @@ async fn submit_endpoint(mut req: tide::Request<WebState>) -> Result<tide::Respo
 }
 
 async fn relay(
-    contract: &CAPE<Middleware>,
+    contract: &CAPE<EthMiddleware>,
     transaction: CapeTransaction,
 ) -> Result<TransactionReceipt, Error> {
     let miner = UserPubKey::default();
@@ -88,7 +88,7 @@ async fn relay(
 pub const DEFAULT_RELAYER_PORT: u16 = 50077u16;
 
 pub fn init_web_server(
-    contract: CAPE<Middleware>,
+    contract: CAPE<EthMiddleware>,
     port: String,
 ) -> task::JoinHandle<Result<(), std::io::Error>> {
     let mut web_server = tide::with_state(WebState { contract });
@@ -115,8 +115,12 @@ pub mod testing {
     use reef::Ledger;
     use std::time::Duration;
 
-    pub async fn deploy_test_contract_with_faucet(
-    ) -> (TestCAPE<Middleware>, UserKeyPair, RecordOpening, MerkleTree) {
+    pub async fn deploy_test_contract_with_faucet() -> (
+        TestCAPE<EthMiddleware>,
+        UserKeyPair,
+        RecordOpening,
+        MerkleTree,
+    ) {
         let cape_contract = deploy_cape_test().await;
         let (faucet_key_pair, faucet_record_opening) = create_faucet(&cape_contract).await;
         let mut records = MerkleTree::new(CapeLedger::merkle_height()).unwrap();
@@ -130,7 +134,7 @@ pub mod testing {
         )
     }
 
-    pub fn upcast_test_cape_to_cape(test_cape: TestCAPE<Middleware>) -> CAPE<Middleware> {
+    pub fn upcast_test_cape_to_cape(test_cape: TestCAPE<EthMiddleware>) -> CAPE<EthMiddleware> {
         CAPE::new(test_cape.address(), Arc::new(test_cape.client().clone()))
     }
 
@@ -156,7 +160,12 @@ pub mod testing {
     /// Start a relayer running a TestCAPE contract,
     pub async fn start_minimal_relayer_for_test(
         port: u64,
-    ) -> (TestCAPE<Middleware>, UserKeyPair, RecordOpening, MerkleTree) {
+    ) -> (
+        TestCAPE<EthMiddleware>,
+        UserKeyPair,
+        RecordOpening,
+        MerkleTree,
+    ) {
         let (contract, faucet, faucet_rec, records) = deploy_test_contract_with_faucet().await;
         init_web_server(upcast_test_cape_to_cape(contract.clone()), port.to_string());
         wait_for_server(port).await;

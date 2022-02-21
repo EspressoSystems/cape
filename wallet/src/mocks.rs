@@ -1,11 +1,13 @@
-use crate::wallet::{CapeWalletBackend, CapeWalletError, EthMiddleware};
+use crate::wallet::{CapeWalletBackend, CapeWalletError};
 use async_std::sync::{Mutex, MutexGuard};
 use async_trait::async_trait;
-use cap_rust_sandbox::{ledger::*, state::*, universal_param::UNIVERSAL_PARAM};
+use cap_rust_sandbox::{
+    deploy::EthMiddleware, ledger::*, state::*, universal_param::UNIVERSAL_PARAM,
+};
 use futures::stream::Stream;
 use itertools::izip;
 use jf_cap::{
-    keys::{UserAddress, UserPubKey},
+    keys::{UserAddress, UserKeyPair, UserPubKey},
     proof::{freeze::FreezeProvingKey, transfer::TransferProvingKey, UniversalParam},
     structs::{AssetDefinition, Nullifier, ReceiverMemo, RecordCommitment, RecordOpening},
     MerklePath, MerkleTree, Signature, TransactionNote,
@@ -256,8 +258,9 @@ impl MockCapeNetwork {
             .clone())
     }
 
-    pub fn register_user_key(&mut self, pub_key: &UserPubKey) -> Result<(), CapeWalletError> {
-        self.address_map.insert(pub_key.address(), pub_key.clone());
+    pub fn register_user_key(&mut self, key_pair: &UserKeyPair) -> Result<(), CapeWalletError> {
+        let pub_key = key_pair.pub_key();
+        self.address_map.insert(pub_key.address(), pub_key);
         Ok(())
     }
 
@@ -506,7 +509,7 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> MockCapeBackend<'a, Meta> {
         })
     }
 
-    pub async fn new_for_test(
+    pub fn new_for_test(
         ledger: Arc<Mutex<MockCapeLedger<'a>>>,
         storage: Arc<Mutex<AtomicWalletStorage<'a, CapeLedger, Meta>>>,
         key_stream: KeyTree,
@@ -555,13 +558,13 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
 
     async fn register_user_key(
         &mut self,
-        pub_key: &UserPubKey,
+        key_pair: &UserKeyPair,
     ) -> Result<(), WalletError<CapeLedger>> {
         self.ledger
             .lock()
             .await
             .network()
-            .register_user_key(pub_key)
+            .register_user_key(key_pair)
     }
 
     async fn get_nullifier_proof(
@@ -761,9 +764,7 @@ impl<'a> SystemUnderTest<'a> for CapeTest {
         key_stream: KeyTree,
         storage: Arc<Mutex<Self::MockStorage>>,
     ) -> Self::MockBackend {
-        MockCapeBackend::new_for_test(ledger, storage, key_stream)
-            .await
-            .unwrap()
+        MockCapeBackend::new_for_test(ledger, storage, key_stream).unwrap()
     }
 
     fn universal_param(&self) -> &'a UniversalParam {

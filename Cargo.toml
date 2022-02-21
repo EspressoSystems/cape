@@ -4,6 +4,7 @@ members = [
     "address_book",
     "contracts/rust",
     "doc/workflow",
+    "eqs",
     "relayer",
     "wallet",
 ]

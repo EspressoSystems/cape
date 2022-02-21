@@ -1,10 +1,6 @@
 use glob::glob;
 use std::{option_env, process::Command};
 
-fn find_abi_paths() -> glob::Paths {
-    glob(&format!("{}/abi/**/*.json", env!("CONTRACTS_DIR"))).unwrap()
-}
-
 fn find_sol_paths() -> glob::Paths {
     glob(&format!("{}/**/*.sol", env!("CONTRACTS_DIR"))).unwrap()
 }
@@ -15,10 +11,11 @@ fn main() {
         .output()
         .expect("failed to compile contracts");
 
-    let mut paths: Vec<_> = find_abi_paths().into_iter().collect();
-    if option_env!("CAPE_DONT_WATCH_SOL_FILES").is_none() {
-        paths.extend(find_sol_paths().into_iter());
-    }
+    let paths = if option_env!("CAPE_DONT_WATCH_SOL_FILES").is_none() {
+        find_sol_paths().into_iter().collect()
+    } else {
+        vec![]
+    };
 
     // Rerun this script (and recompile crate) if any abi files change.
     for entry in paths {

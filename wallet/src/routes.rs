@@ -299,7 +299,8 @@ pub fn wallet_error(source: CapeWalletError) -> tide::Error {
 pub async fn init_wallet(
     rng: &mut ChaChaRng,
     faucet_pub_key: UserPubKey,
-    mnemonic: String,
+    mnemonic: Option<String>,
+    password: String,
     path: Option<PathBuf>,
     existing: bool,
 ) -> Result<Wallet, tide::Error> {
@@ -370,7 +371,8 @@ pub async fn init_wallet(
         vec![(faucet_memo, 0)],
     ));
     ledger.set_block_size(1).unwrap();
-    let mut loader = Loader::from_mnemonic(mnemonic, true, path);
+
+    let mut loader = Loader::from_literal(mnemonic, password, path);
     let mut backend = MockCapeBackend::new(Arc::new(Mutex::new(ledger)), &mut loader)?;
 
     if backend.storage().await.exists() != existing {
@@ -431,12 +433,23 @@ pub async fn newwallet(
         None => None,
     };
     let mnemonic = bindings[":mnemonic"].value.as_string()?;
+    let password = bindings[":password"].value.as_string()?;
 
     // If we already have a wallet open, close it before opening a new one, otherwise we can end up
     // with two wallets using the same file at the same time.
     *wallet = None;
 
-    *wallet = Some(init_wallet(rng, faucet_key_pair.pub_key(), mnemonic, path, false).await?);
+    *wallet = Some(
+        init_wallet(
+            rng,
+            faucet_key_pair.pub_key(),
+            Some(mnemonic),
+            password,
+            path,
+            false,
+        )
+        .await?,
+    );
     Ok(())
 }
 
@@ -450,13 +463,13 @@ pub async fn openwallet(
         Some(binding) => Some(binding.value.as_path()?),
         None => None,
     };
-    let mnemonic = bindings[":mnemonic"].value.as_string()?;
+    let password = bindings[":password"].value.as_string()?;
 
     // If we already have a wallet open, close it before opening a new one, otherwise we can end up
     // with two wallets using the same file at the same time.
     *wallet = None;
 
-    *wallet = Some(init_wallet(rng, faucet_key_pair.pub_key(), mnemonic, path, true).await?);
+    *wallet = Some(init_wallet(rng, faucet_key_pair.pub_key(), None, password, path, true).await?);
     Ok(())
 }
 

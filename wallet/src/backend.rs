@@ -420,7 +420,7 @@ pub async fn create_test_network<'a>(
 }
 
 #[cfg(test)]
-pub mod test {
+mod test {
     use super::*;
     use crate::{
         mocks::{MockCapeNetwork, MockCapeWalletLoader},

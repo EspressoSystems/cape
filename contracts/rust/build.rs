@@ -1,5 +1,5 @@
 use glob::glob;
-use std::{env, process::Command};
+use std::{option_env, process::Command};
 
 fn find_abi_paths() -> glob::Paths {
     glob(&format!("{}/abi/**/*.json", env!("CONTRACTS_DIR"))).unwrap()

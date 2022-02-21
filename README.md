@@ -1,18 +1,19 @@
 # CAP on Ethereum
 
-<!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
+<!-- run `md-toc` inside the nix-shell to generate the table of contents -->
 
 **Table of Contents**
 
 - [CAP on Ethereum](#cap-on-ethereum)
   - [Obtaining the source code](#obtaining-the-source-code)
-  - [Dependencies](#dependencies)
+- [Environment](#environment)
   - [1. Install nix](#1-install-nix)
   - [2. Activate the nix environment](#2-activate-the-nix-environment)
   - [3. Verify installation](#3-verify-installation)
-  - [(Optional, but recommended) direnv](#optional-but-recommended-direnv)
-- [Development](#development)
-  - [Testing (Javascript)](#testing-javascript)
+  - [4. direnv (Optional, but recommended for development)](#4-direnv-optional-but-recommended-for-development)
+- [Build](#build)
+- [Develop](#develop)
+- [Test](#test)
   - [Testing against go-ethereum node](#testing-against-go-ethereum-node)
   - [Testing against hardhat node](#testing-against-hardhat-node)
     - [Separate hardhat node](#separate-hardhat-node)
@@ -32,31 +33,37 @@
   - [Python tools](#python-tools)
 - [Rinkeby](#rinkeby)
 - [Goerli](#goerli)
-- [Gas Reporter](#gas-reporter)
+- [Gas Usage](#gas-usage)
+  - [Gas Reporter](#gas-reporter)
+  - [Gas usage of block submissions](#gas-usage-of-block-submissions)
 - [CI](#ci)
   - [Nightly CI builds](#nightly-ci-builds)
 - [Documentation](#documentation)
   - [CAPE Contract specification](#cape-contract-specification)
 
-<!-- markdown-toc end -->
-
 ## Obtaining the source code
 
     git clone git@github.com:SpectrumXYZ/cape.git
 
-## Dependencies
+# Environment
 
 This project has a lot of dependencies. The only tested installation method is
 via the [nix](https://nixos.org) package manager.
 
-You also need access to the following git repos
+You also need access to the following currently private git repos
 
+- https://github.com/SpectrumXYZ/arbitrary-wrappers
+- https://github.com/SpectrumXYZ/atomic-store
+- https://github.com/SpectrumXYZ/cap
 - https://github.com/SpectrumXYZ/commit
 - https://github.com/SpectrumXYZ/curves
 - https://github.com/SpectrumXYZ/jellyfish-cap
+- https://github.com/SpectrumXYZ/key-set
+- https://github.com/SpectrumXYZ/net
 - https://github.com/SpectrumXYZ/reef
-- https://github.com/SpectrumXYZ/spectrum
-- https://github.com/SpectrumXYZ/tagged-base64
+- https://github.com/SpectrumXYZ/seahorse
+- https://github.com/SpectrumXYZ/universal-params
+- https://github.com/SpectrumXYZ/zerok-macros
 
 Ping Mat for access.
 
@@ -97,7 +104,7 @@ issue on github. M1 Macs need to have node@16 installed to avoid memory allocati
 
 Note that these tests use `cargo test --release` which is slower for compiling but then faster for executing.
 
-## (Optional, but recommended) direnv
+## 4. direnv (Optional, but recommended for development)
 
 To avoid manually activating the nix shell each time the
 [direnv](https://direnv.net/) shell extension can be used to activate the
@@ -118,7 +125,16 @@ run
     direnv deny
     nix-shell
 
-# Development
+# Build
+
+To build the project run
+
+    cargo build --release
+
+The `--release` flag is recommended because without it many cryptographic
+computations the project relies one become unbearably slow.
+
+# Develop
 
 To start the background services to support interactive development run the command
 
@@ -129,10 +145,10 @@ For the time being this is a `geth` node and a contract compilation watcher.
 To add additional processes add lines to `Procfile` and (if desired) scripts to
 run in the `./bin` directory.
 
-## Testing (Javascript)
+# Test
 
-We support running against a go-ethereum (`geth`) or hardhat node running on
-`localhost:8545`.
+An running ethereum node is needed to run the tests. We support running against
+a go-ethereum (`geth`) or hardhat node running on `localhost:8545`.
 
 The simplest way to run all the tests against a nodes is to use the scripts
 

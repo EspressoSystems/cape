@@ -7,11 +7,9 @@ fn find_abi_paths() -> glob::Paths {
 
 fn main() {
     // If no abi files exist, generate them. This enables "cargo build" in a fresh repo.
-    if find_abi_paths().peekable().peek().is_none() {
-        Command::new("build-abi")
-            .output()
-            .expect("failed to compile contracts");
-    }
+    Command::new("build-abi")
+        .output()
+        .expect("failed to compile contracts");
 
     // Rerun this script (and recompile crate) if any abi files change.
     for entry in find_abi_paths() {

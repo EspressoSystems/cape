@@ -23,7 +23,20 @@ use std::convert::TryInto;
 // The number of input wires of TurboPlonk.
 const GATE_WIDTH: usize = 4;
 
-abigen!(
+macro_rules! mark_deps {
+    ($($tname:expr, $path:expr, $derives:expr;)*) => {
+        $(const _: &[u8] = include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"),"/",$path));)*
+    }
+}
+
+macro_rules! abigen_and_mark_dep {
+    ($($tts:tt)*) => {
+        mark_deps!($($tts)*);
+        abigen!($($tts)*);
+    }
+}
+
+abigen_and_mark_dep!(
     AssetRegistry,
     "../abi/contracts/AssetRegistry.sol/AssetRegistry/abi.json",
     event_derives(serde::Deserialize, serde::Serialize);

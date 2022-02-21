@@ -28,6 +28,7 @@ jf-primitives = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jell
 jf-utils = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git"}
 markdown = "0.3"
 net = { git = "ssh://git@github.com/SpectrumXYZ/net.git" }
+rand = "0.8.4"
 pipe = { version = "0.4" }
 rand_chacha = "0.3.1"
 regex = "1.5.4"

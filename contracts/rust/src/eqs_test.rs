@@ -7,7 +7,7 @@ mod tests {
         ledger::CapeLedger,
         state::{erc20_asset_description, Erc20Code, EthereumAddr},
         test_utils::ContractsInfo,
-        types::{self as sol, GenericInto, MerkleRootSol},
+        types::{self as sol, GenericInto, MerkleRootSol, TestCAPEEvents},
     };
     use async_std::sync::Mutex;
     use ethers::prelude::{Middleware, U256};
@@ -94,7 +94,6 @@ mod tests {
                 drop(cape_contract);
 
                 while new_entry.len() > number_events {
-                    dbg!(new_entry[number_events].clone());
                     //get block from transaction hash
                     let (filter, meta) = new_entry[number_events].clone();
 
@@ -122,8 +121,6 @@ mod tests {
                         })
                         .collect_vec();
                     let input_rc = decoded_cape_block.get_list_of_input_record_commitments();
-                    //dbg!(input_rc);
-                    //TODO: actually use this data output
 
                     number_events += 1;
                 }
@@ -149,17 +146,43 @@ mod tests {
             }
         };
 
+        let events_listener = async {
+            let mut last_block = 0;
+            while last_block < 10 {
+                let cape_contract = cape_contract_lock.lock().await;
+
+                let new_event = cape_contract
+                    .events()
+                    .from_block(last_block as u64)
+                    .query_with_meta()
+                    .await
+                    .unwrap();
+
+                while new_event.len() > last_block {
+                    match &new_event[last_block] {
+                        //TODO: make this useful
+                        (TestCAPEEvents::BlockCommittedFilter(_), LogMeta) => {
+                            println!("block comm event")
+                        }
+                        (TestCAPEEvents::Erc20TokensDepositedFilter(_), LogMeta) => {
+                            println!("erc20 dep event")
+                        }
+                    }
+                    last_block += 1;
+                }
+            }
+        };
+
         let empty_block_submitter = async {
             let params = vec![];
-            let miner = UserPubKey::default();
             let mut blocks_submitted = 0;
             while blocks_submitted < 7 {
                 blocks_submitted += 1;
                 let cape_block =
                     CapeBlock::generate(params.clone(), vec![], miner.address()).unwrap();
-                cape_contract_lock
-                    .lock()
-                    .await
+
+                let cape_contract = cape_contract_lock.lock().await;
+                cape_contract
                     .submit_cape_block(cape_block.into())
                     .send()
                     .await
@@ -170,6 +193,19 @@ mod tests {
         };
 
         let erc_20_tokens_deposited_submitter = async {
+            //Test if events appear in order- submit empty block
+            let params = vec![];
+            let cape_block = CapeBlock::generate(params.clone(), vec![], miner.address()).unwrap();
+            let cape_contract_1 = cape_contract_lock.lock().await;
+            cape_contract_1
+                .submit_cape_block(cape_block.into())
+                .send()
+                .await
+                .unwrap()
+                .await
+                .unwrap();
+            drop(cape_contract_1);
+
             //Approve
             let cape_contract = cape_contract_lock.lock().await;
             let deposited_amount = 1000u64;
@@ -182,7 +218,6 @@ mod tests {
                 .unwrap()
                 .await
                 .unwrap();
-            dbg!("approved");
 
             // Sponsor asset type
             let rng_sponsor = &mut ark_std::test_rng();
@@ -199,7 +234,6 @@ mod tests {
                 AssetDefinition::new(asset_code, AssetPolicy::rand_for_test(rng_sponsor)).unwrap();
             let asset_def_sol = asset_def.clone().generic_into::<sol::AssetDefinition>();
 
-            println!("Sponsoring asset");
             contracts_info
                 .cape_contract_for_erc20_owner
                 .sponsor_cape_asset(contracts_info.erc20_token_address, asset_def_sol)
@@ -217,7 +251,6 @@ mod tests {
                 FreezeFlag::Unfrozen,
             );
             // We call the CAPE contract from the address that owns the ERC20 tokens
-            println!("Depositing tokens");
             contracts_info
                 .cape_contract_for_erc20_owner
                 .deposit_erc_20(
@@ -230,7 +263,6 @@ mod tests {
                 .await
                 .unwrap();
 
-            println!("Submitting block");
             // Submit to the contract
             cape_contract
                 .submit_cape_block(cape_block_erc20.into())
@@ -241,9 +273,10 @@ mod tests {
                 .await
                 .unwrap();
         };
-        let ((), (), (), ()) = futures::join!(
-            block_committed_event_listener,
-            erc_20_tokens_deposited_event_listener,
+        let ((), (), ()) = futures::join!(
+            //block_committed_event_listener,
+            //erc_20_tokens_deposited_event_listener,
+            events_listener,
             erc_20_tokens_deposited_submitter,
             empty_block_submitter
         );

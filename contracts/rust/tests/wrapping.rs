@@ -4,7 +4,7 @@ use cap_rust_sandbox::cape::CapeBlock;
 use cap_rust_sandbox::deploy::{deploy_cape_test, deploy_erc20_token};
 use cap_rust_sandbox::helpers::compare_merkle_root_from_contract_and_jf_tree;
 use cap_rust_sandbox::ledger::CapeLedger;
-use cap_rust_sandbox::state::{erc20_asset_description, Erc20Code, EthereumAddr};
+use cap_rust_sandbox::model::{erc20_asset_description, Erc20Code, EthereumAddr};
 use cap_rust_sandbox::test_utils::{check_erc20_token_balance, ContractsInfo};
 use cap_rust_sandbox::types::{self as sol, RecordCommitmentSol};
 use cap_rust_sandbox::types::{GenericInto, MerkleRootSol, RecordOpening as RecordOpeningSol};

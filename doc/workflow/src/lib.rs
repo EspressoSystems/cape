@@ -1,6 +1,6 @@
 //! This crate describes the workflow and interfaces of a CAPE contract deployed on Ethereum.
 
-use cap_rust_sandbox::state::{is_erc20_asset_def_valid, Erc20Code, EthereumAddr};
+use cap_rust_sandbox::model::{is_erc20_asset_def_valid, Erc20Code, EthereumAddr};
 use ethers::prelude::*;
 use itertools::Itertools;
 use jf_cap::keys::UserPubKey;

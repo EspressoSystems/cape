@@ -5,7 +5,7 @@ mod note_types;
 mod submit_block;
 mod wrapping;
 
-use crate::state::CapeTransaction;
+use crate::model::CapeModelTxn;
 use crate::types as sol;
 use anyhow::{anyhow, bail, Result};
 use ark_serialize::*;
@@ -195,7 +195,7 @@ impl CapeBlock {
     }
 
     pub fn from_cape_transactions(
-        transactions: Vec<CapeTransaction>,
+        transactions: Vec<CapeModelTxn>,
         miner: UserAddress,
     ) -> Result<Self> {
         let mut burned_ros = vec![];
@@ -203,8 +203,8 @@ impl CapeBlock {
 
         for tx in transactions {
             match tx {
-                CapeTransaction::CAP(note) => notes.push(note),
-                CapeTransaction::Burn { xfr, ro } => {
+                CapeModelTxn::CAP(note) => notes.push(note),
+                CapeModelTxn::Burn { xfr, ro } => {
                     notes.push(TransactionNote::from(*xfr));
                     burned_ros.push(*ro);
                 }

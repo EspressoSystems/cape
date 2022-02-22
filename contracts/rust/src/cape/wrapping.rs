@@ -2,7 +2,7 @@
 
 use crate::assertion::Matcher;
 use crate::deploy::deploy_cape_test;
-use crate::state::{erc20_asset_description, Erc20Code, EthereumAddr};
+use crate::model::{erc20_asset_description, Erc20Code, EthereumAddr};
 use crate::types as sol;
 use crate::types::{AssetCodeSol, GenericInto};
 use anyhow::Result;
@@ -14,7 +14,7 @@ mod errors_when_calling_deposit_erc20 {
 
     use super::*;
     use crate::deploy::{deploy_cape_test, deploy_erc20_token};
-    use crate::state::{erc20_asset_description, Erc20Code, EthereumAddr};
+    use crate::model::{erc20_asset_description, Erc20Code, EthereumAddr};
     use crate::types as sol;
     use crate::types::TestCAPE;
     use anyhow::Result;

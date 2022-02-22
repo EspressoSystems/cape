@@ -1,4 +1,4 @@
-use cap_rust_sandbox::state::{CapeContractState, CAPE_MERKLE_HEIGHT};
+use cap_rust_sandbox::model::{CapeContractState, CAPE_MERKLE_HEIGHT};
 use jf_cap::MerkleTree;
 use key_set::VerifierKeySet;
 

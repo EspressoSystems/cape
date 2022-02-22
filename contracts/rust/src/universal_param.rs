@@ -1,5 +1,5 @@
 #![deny(warnings)]
-use crate::state::CAPE_MERKLE_HEIGHT;
+use crate::model::CAPE_MERKLE_HEIGHT;
 use lazy_static::lazy_static;
 use rand_chacha::rand_core::SeedableRng;
 use rand_chacha::ChaChaRng;

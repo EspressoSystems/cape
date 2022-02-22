@@ -1,4 +1,4 @@
-use crate::state::*;
+use crate::model::*;
 use arbitrary::{Arbitrary, Unstructured};
 use arbitrary_wrappers::*;
 use commit::{Commitment, Committable, RawCommitmentBuilder};
@@ -91,7 +91,7 @@ impl TransactionKind for CapeTransactionKind {
 // in the next committed block.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum CapeTransition {
-    Transaction(CapeTransaction),
+    Transaction(CapeModelTxn),
     Wrap {
         erc20_code: Erc20Code,
         src_addr: EthereumAddr,
@@ -113,7 +113,7 @@ impl Transaction for CapeTransition {
     type Kind = CapeTransactionKind;
 
     fn cap(note: TransactionNote, _proofs: Vec<()>) -> Self {
-        Self::Transaction(CapeTransaction::CAP(note))
+        Self::Transaction(CapeModelTxn::CAP(note))
     }
 
     fn open_audit_memo(
@@ -122,8 +122,8 @@ impl Transaction for CapeTransition {
         keys: &HashMap<AuditorPubKey, AuditorKeyPair>,
     ) -> Result<AuditMemoOpening, AuditError> {
         match self {
-            Self::Transaction(CapeTransaction::CAP(note)) => note.open_audit_memo(assets, keys),
-            Self::Transaction(CapeTransaction::Burn { xfr, .. }) => {
+            Self::Transaction(CapeModelTxn::CAP(note)) => note.open_audit_memo(assets, keys),
+            Self::Transaction(CapeModelTxn::Burn { xfr, .. }) => {
                 cap::open_xfr_audit_memo(assets, keys, xfr)
             }
             _ => Err(AuditError::NoAuditMemos),
@@ -158,12 +158,12 @@ impl Transaction for CapeTransition {
 
     fn kind(&self) -> CapeTransactionKind {
         match self {
-            Self::Transaction(CapeTransaction::CAP(txn)) => match txn {
+            Self::Transaction(CapeModelTxn::CAP(txn)) => match txn {
                 TransactionNote::Transfer(..) => CapeTransactionKind::send(),
                 TransactionNote::Mint(..) => CapeTransactionKind::mint(),
                 TransactionNote::Freeze(..) => CapeTransactionKind::freeze(),
             },
-            Self::Transaction(CapeTransaction::Burn { .. }) => CapeTransactionKind::Burn,
+            Self::Transaction(CapeModelTxn::Burn { .. }) => CapeTransactionKind::Burn,
             Self::Wrap { .. } => CapeTransactionKind::Wrap,
         }
     }

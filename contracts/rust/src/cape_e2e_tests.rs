@@ -4,7 +4,7 @@ use crate::deploy::deploy_cape_test;
 use crate::{
     cape::*,
     ledger::CapeLedger,
-    state::{CapeContractState, CapeEthEffect, CapeEvent, CapeOperation, CapeTransaction},
+    model::{CapeContractState, CapeEthEffect, CapeEvent, CapeOperation, CapeTransaction},
     types::field_to_u256,
     types::{GenericInto, NullifierSol},
 };

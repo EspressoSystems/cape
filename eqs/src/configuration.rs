@@ -37,6 +37,15 @@ struct EQSOptions {
     /// Flag to reset persisted state.
     #[structopt(long = "reset_store_state")]
     reset_state_store: bool,
+
+    /// Polling frequency, in milliseconds, for commits to the contract.
+    #[structopt(long = "query_frequency")]
+    query_frequency: u64,
+
+    // Ethereum connection is specified by env variable.
+    /// Web service port .
+    #[structopt(long = "eqs_port")]
+    eqs_port: u16,
 }
 
 fn default_data_path() -> PathBuf {
@@ -114,8 +123,19 @@ pub(crate) fn verifier_keys() -> VerifierKeySet {
 }
 
 pub(crate) fn query_frequency() -> Duration {
-    // should be a command line or config option
-    Duration::from_millis(500)
+    let mut query_frequency = EQSOptions::from_args().query_frequency;
+    if query_frequency == 0 {
+        query_frequency = 500;
+    }
+    Duration::from_millis(query_frequency)
+}
+
+pub(crate) fn eqs_port() -> u16 {
+    let mut eqs_port = EQSOptions::from_args().eqs_port;
+    if eqs_port == 0 {
+        eqs_port = 50087u16;
+    }
+    eqs_port
 }
 
 // If we want EQS instances to provide authenticated identities in the future, for monitoring, reputation, etc...

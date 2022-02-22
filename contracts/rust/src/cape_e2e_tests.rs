@@ -4,7 +4,9 @@ use crate::deploy::deploy_cape_test;
 use crate::{
     cape::*,
     ledger::CapeLedger,
-    model::{CapeContractState, CapeEthEffect, CapeEvent, CapeOperation, CapeTransaction},
+    model::{
+        CapeContractState, CapeModelEthEffect, CapeModelEvent, CapeModelOperation, CapeModelTxn,
+    },
     types::field_to_u256,
     types::{GenericInto, NullifierSol},
 };
@@ -206,10 +208,12 @@ async fn test_2user_maybe_submit(should_submit: bool) -> Result<()> {
 
     let new_recs = txn1.output_commitments.to_vec();
 
-    let txn1_cape = CapeTransaction::CAP(TransactionNote::Transfer(Box::new(txn1)));
+    let txn1_cape = CapeModelTxn::CAP(TransactionNote::Transfer(Box::new(txn1)));
 
     let (new_state, effects) = validator
-        .submit_operations(vec![CapeOperation::SubmitBlock(vec![txn1_cape.clone()])])
+        .submit_operations(vec![CapeModelOperation::SubmitBlock(vec![
+            txn1_cape.clone()
+        ])])
         .unwrap();
 
     if let Some(contract) = contract.as_ref() {
@@ -231,7 +235,7 @@ async fn test_2user_maybe_submit(should_submit: bool) -> Result<()> {
     let now = Instant::now();
 
     assert_eq!(effects.len(), 1);
-    if let CapeEthEffect::Emit(CapeEvent::BlockCommitted {
+    if let CapeModelEthEffect::Emit(CapeModelEvent::BlockCommitted {
         wraps: wrapped_commitments,
         txns: filtered_txns,
     }) = effects[0].clone()

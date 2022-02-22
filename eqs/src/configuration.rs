@@ -12,14 +12,6 @@ use structopt::StructOpt;
     about = "Monitors for changes on the CAPE constract, provides query service for contract state"
 )]
 struct EQSOptions {
-    /// Path to eqs configuration file.
-    // #[structopt(long = "config", short = "c", default_value = "")]
-    // config: String,
-
-    // /// Flag to update config fields.
-    // #[structopt(long = "update_config_file")]
-    // update_config_file: bool,
-
     /// Path to assets including web server files.
     #[structopt(long = "assets", default_value = "")]
     pub web_path: String,
@@ -39,12 +31,12 @@ struct EQSOptions {
     reset_state_store: bool,
 
     /// Polling frequency, in milliseconds, for commits to the contract.
-    #[structopt(long = "query_frequency")]
+    #[structopt(long = "query_frequency", default_value = "500")]
     query_frequency: u64,
 
     // Ethereum connection is specified by env variable.
     /// Web service port .
-    #[structopt(long = "eqs_port")]
+    #[structopt(long = "eqs_port", default_value = "50087")]
     eqs_port: u16,
 }
 
@@ -123,19 +115,11 @@ pub(crate) fn verifier_keys() -> VerifierKeySet {
 }
 
 pub(crate) fn query_frequency() -> Duration {
-    let mut query_frequency = EQSOptions::from_args().query_frequency;
-    if query_frequency == 0 {
-        query_frequency = 500;
-    }
-    Duration::from_millis(query_frequency)
+    Duration::from_millis(EQSOptions::from_args().query_frequency)
 }
 
 pub(crate) fn eqs_port() -> u16 {
-    let mut eqs_port = EQSOptions::from_args().eqs_port;
-    if eqs_port == 0 {
-        eqs_port = 50087u16;
-    }
-    eqs_port
+    EQSOptions::from_args().eqs_port
 }
 
 // If we want EQS instances to provide authenticated identities in the future, for monitoring, reputation, etc...

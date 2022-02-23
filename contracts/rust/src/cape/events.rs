@@ -66,11 +66,9 @@ mod tests {
         .take(3)
         .collect_vec();
 
-        submit_cape_block_with_memos(
-            &connection.contract,
-            BlockWithMemos::new(cape_block.clone(), memos_with_sigs.clone()),
-        )
-        .await?;
+        let block_with_memos = BlockWithMemos::new(cape_block.clone(), memos_with_sigs.clone());
+
+        submit_cape_block_with_memos(&connection.contract, block_with_memos.clone()).await?;
 
         let events = connection
             .contract
@@ -81,12 +79,11 @@ mod tests {
 
         let (_, meta) = events[0].clone();
 
-        let BlockWithMemos { block, memos } = fetch_cape_block(&connection, meta.transaction_hash)
+        let fetched_block_with_memos = fetch_cape_block(&connection, meta.transaction_hash)
             .await?
             .unwrap();
 
-        assert_eq!(block, cape_block);
-        assert_eq!(memos, memos_with_sigs);
+        assert_eq!(fetched_block_with_memos, block_with_memos);
 
         Ok(())
     }

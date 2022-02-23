@@ -25,12 +25,8 @@ pub async fn fetch_cape_block(
     connection: &EthConnection,
     tx_hash: TxHash,
 ) -> Result<Option<BlockWithMemos>, Error> {
-    let EthConnection {
-        contract, provider, ..
-    } = connection;
-
     // Fetch Ethereum transaction that emitted event
-    let tx = if let Some(tx) = provider.get_transaction(tx_hash).await? {
+    let tx = if let Some(tx) = connection.provider.get_transaction(tx_hash).await? {
         tx
     } else {
         return Ok(None); // This probably means no tx with this hash found.
@@ -38,10 +34,11 @@ pub async fn fetch_cape_block(
 
     // Decode the calldata (tx.input) into the function input types
     let (decoded_calldata_block, fetched_memos_bytes) =
-        contract.decode::<(sol::CapeBlock, Bytes), _>("submitCapeBlockWithMemos", tx.input)?;
+        connection
+            .contract
+            .decode::<(sol::CapeBlock, Bytes), _>("submitCapeBlockWithMemos", tx.input)?;
 
     let decoded_cape_block = CapeBlock::from(decoded_calldata_block);
-
     let decoded_memos: BlockMemos =
         CanonicalDeserialize::deserialize(&fetched_memos_bytes.to_vec()[..])?;
 

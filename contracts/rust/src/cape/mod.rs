@@ -269,7 +269,7 @@ impl From<sol::CapeBlock> for CapeBlock {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct BlockWithMemos {
     pub block: CapeBlock,
     pub memos: BlockMemos,

@@ -231,7 +231,7 @@ PATH = ["mint/asset/:asset/amount/:amount/fee/:fee/minter/:minter/recipient/:rec
 ":minter" = "TaggedBase64"
 ":recipient" = "TaggedBase64"
 DOC = """
-Mint amount units of a given asset code controlled by the current wallet to the receiver. Returns a serialized receipt which can be used to track the transaction through the validation process.
+Mint amount units of a given asset code controlled by the current wallet to the recipient. Returns a serialized receipt which can be used to track the transaction through the validation process.
 """
 
 [route.freeze]

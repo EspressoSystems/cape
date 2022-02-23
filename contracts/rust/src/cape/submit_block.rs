@@ -19,6 +19,8 @@ use reef::Ledger;
 
 use super::{BlockMemos, BlockWithMemos};
 
+/// Fetch a cape block given the (Ethereum) tx hash of the tx in which the block
+/// was submitted.
 pub async fn fetch_cape_block(
     connection: &EthConnection,
     tx_hash: TxHash,

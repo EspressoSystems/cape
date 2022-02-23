@@ -19,6 +19,7 @@ jf-primitives = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jell
 key-set = { git = "ssh://git@github.com/SpectrumXYZ/key-set.git" }
 
 lazy_static = "1.4.0"
+markdown = "0.3"
 net = { git = "ssh://git@github.com/SpectrumXYZ/net.git" }
 rand_chacha = { version = "0.3.1", features = ["serde1"] }
 reef = { git = "ssh://git@github.com/SpectrumXYZ/reef.git" }
@@ -27,7 +28,10 @@ serde_derive = "1.0.118"
 serde_json = "1.0.61"
 snafu = { version = "0.7", features = ["backtraces"] }
 structopt = { version = "0.3" }
+strum = "0.20"
+strum_macros = "0.20.1"
 surf = { version = "2.3.2", optional = true }
+tagged-base64 = { git = "ssh://git@github.com/SpectrumXYZ/tagged-base64.git", branch = "main" }
 tide = "0.16.0"
 tide-websockets = "0.4.0"
 toml = "0.5"

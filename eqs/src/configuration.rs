@@ -12,13 +12,13 @@ use structopt::StructOpt;
     about = "Monitors for changes on the CAPE constract, provides query service for contract state"
 )]
 struct EQSOptions {
-    /// Path to eqs configuration file.
-    // #[structopt(long = "config", short = "c", default_value = "")]
-    // config: String,
+    /// Path to assets including web server files.
+    #[structopt(long = "assets", default_value = "")]
+    pub web_path: String,
 
-    // /// Flag to update config fields.
-    // #[structopt(long = "update_config_file")]
-    // update_config_file: bool,
+    /// Path to API specification and messages.
+    #[structopt(long = "api", default_value = "")]
+    pub api_path: String,
 
     /// Path to persistence files.
     ///
@@ -29,6 +29,15 @@ struct EQSOptions {
     /// Flag to reset persisted state.
     #[structopt(long = "reset_store_state")]
     reset_state_store: bool,
+
+    /// Polling frequency, in milliseconds, for commits to the contract.
+    #[structopt(long = "query_frequency", default_value = "500")]
+    query_frequency: u64,
+
+    // Ethereum connection is specified by env variable.
+    /// Web service port .
+    #[structopt(long = "eqs_port", default_value = "50087")]
+    eqs_port: u16,
 }
 
 fn default_data_path() -> PathBuf {
@@ -37,6 +46,29 @@ fn default_data_path() -> PathBuf {
     data_dir.push("tri");
     data_dir.push("cape_eqs");
     data_dir
+}
+
+pub(crate) fn web_path() -> PathBuf {
+    let web_path = EQSOptions::from_args().web_path;
+    if web_path.is_empty() {
+        let mut cur_dir = env::current_dir().unwrap_or_else(|_| PathBuf::from("./"));
+        cur_dir.push("local");
+        cur_dir
+    } else {
+        PathBuf::from(web_path)
+    }
+}
+
+pub(crate) fn api_path() -> PathBuf {
+    let api_path = EQSOptions::from_args().api_path;
+    if api_path.is_empty() {
+        let mut cur_dir = env::current_dir().unwrap_or_else(|_| PathBuf::from("./"));
+        cur_dir.push("api");
+        cur_dir.push("api.toml");
+        cur_dir
+    } else {
+        PathBuf::from(api_path)
+    }
 }
 
 /// Returns the path to stored persistence files.
@@ -83,8 +115,11 @@ pub(crate) fn verifier_keys() -> VerifierKeySet {
 }
 
 pub(crate) fn query_frequency() -> Duration {
-    // should be a command line or config option
-    Duration::from_millis(500)
+    Duration::from_millis(EQSOptions::from_args().query_frequency)
+}
+
+pub(crate) fn eqs_port() -> u16 {
+    EQSOptions::from_args().eqs_port
 }
 
 // If we want EQS instances to provide authenticated identities in the future, for monitoring, reputation, etc...

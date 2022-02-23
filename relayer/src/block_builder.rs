@@ -4,7 +4,7 @@ use crate::txn_queue::TxnQueue;
 
 use cap_rust_sandbox::{
     cape::CapeBlock,
-    state::{CapeContractState, CapeOperation},
+    model::{CapeContractState, CapeModelOperation},
 };
 
 use std::vec::Vec;
@@ -37,7 +37,7 @@ impl Builder {
             for txn in txns.into_iter() {
                 if let Ok((new_state, _effects)) = self
                     .state
-                    .submit_operations(vec![CapeOperation::SubmitBlock(vec![txn.clone()])])
+                    .submit_operations(vec![CapeModelOperation::SubmitBlock(vec![txn.clone()])])
                 {
                     self.state = new_state;
                     valid_txns.push(txn);

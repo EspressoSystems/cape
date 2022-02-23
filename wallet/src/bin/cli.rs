@@ -9,7 +9,7 @@ extern crate cape_wallet;
 use async_std::sync::Mutex;
 use cap_rust_sandbox::{
     ledger::CapeLedger,
-    state::{Erc20Code, EthereumAddr},
+    model::{Erc20Code, EthereumAddr},
 };
 use cape_wallet::{
     mocks::{MockCapeBackend, MockCapeNetwork},

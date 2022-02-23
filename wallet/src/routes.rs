@@ -8,7 +8,7 @@ use crate::{
 use async_std::sync::{Arc, Mutex};
 use cap_rust_sandbox::{
     ledger::CapeLedger,
-    state::{Erc20Code, EthereumAddr},
+    model::{Erc20Code, EthereumAddr},
     universal_param::UNIVERSAL_PARAM,
 };
 use futures::{prelude::*, stream::iter};

@@ -24,7 +24,7 @@ pub const CAPE_MERKLE_HEIGHT: u8 = 24 /*H*/;
 pub const CAPE_BURN_MAGIC_BYTES: &str = "TRICAPE burn";
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum CapeTransaction {
+pub enum CapeModelTxn {
     CAP(TransactionNote),
     Burn {
         xfr: Box<TransferNote>,
@@ -32,26 +32,24 @@ pub enum CapeTransaction {
     },
 }
 
-impl CapeTransaction {
+impl CapeModelTxn {
     pub fn nullifiers(&self) -> Vec<Nullifier> {
         match self {
-            CapeTransaction::Burn { xfr, .. } => xfr.inputs_nullifiers.clone(),
+            CapeModelTxn::Burn { xfr, .. } => xfr.inputs_nullifiers.clone(),
 
-            CapeTransaction::CAP(TransactionNote::Transfer(xfr)) => xfr.inputs_nullifiers.clone(),
+            CapeModelTxn::CAP(TransactionNote::Transfer(xfr)) => xfr.inputs_nullifiers.clone(),
 
-            CapeTransaction::CAP(TransactionNote::Mint(mint)) => {
+            CapeModelTxn::CAP(TransactionNote::Mint(mint)) => {
                 vec![mint.input_nullifier]
             }
 
-            CapeTransaction::CAP(TransactionNote::Freeze(freeze)) => {
-                freeze.input_nullifiers.clone()
-            }
+            CapeModelTxn::CAP(TransactionNote::Freeze(freeze)) => freeze.input_nullifiers.clone(),
         }
     }
 
     pub fn commitments(&self) -> Vec<RecordCommitment> {
         match self {
-            CapeTransaction::Burn { xfr, .. } => {
+            CapeModelTxn::Burn { xfr, .. } => {
                 // All valid burn transactions have at least two outputs.
                 //
                 // The first output is the fee change record, the second
@@ -61,7 +59,7 @@ impl CapeTransaction {
                 ret.remove(1); // remove the burnt record
                 ret
             }
-            CapeTransaction::CAP(note) => note.output_commitments(),
+            CapeModelTxn::CAP(note) => note.output_commitments(),
         }
     }
 }
@@ -139,8 +137,8 @@ impl From<Erc20Code> for ethers::prelude::Address {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum CapeOperation {
-    SubmitBlock(Vec<CapeTransaction>),
+pub enum CapeModelOperation {
+    SubmitBlock(Vec<CapeModelTxn>),
     RegisterErc20 {
         asset_def: Box<AssetDefinition>,
         erc20_code: Erc20Code,
@@ -154,20 +152,20 @@ pub enum CapeOperation {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum CapeEvent {
+pub enum CapeModelEvent {
     Erc20Deposited {
         erc20_code: Erc20Code,
         src_addr: EthereumAddr,
         ro: Box<RecordOpening>,
     },
     BlockCommitted {
-        txns: Vec<CapeTransaction>,
+        txns: Vec<CapeModelTxn>,
         wraps: Vec<RecordCommitment>,
     },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum CapeEthEffect {
+pub enum CapeModelEthEffect {
     ReceiveErc20 {
         erc20_code: Erc20Code,
         amount: u64,
@@ -181,7 +179,7 @@ pub enum CapeEthEffect {
         amount: u64,
         dst_addr: EthereumAddr,
     },
-    Emit(CapeEvent),
+    Emit(CapeModelEvent),
 }
 
 #[derive(Debug, Snafu, Serialize, Deserialize, Clone)]
@@ -355,8 +353,8 @@ impl CapeContractState {
 
     pub fn submit_operations(
         &self,
-        ops: Vec<CapeOperation>,
-    ) -> Result<(Self, Vec<CapeEthEffect>), CapeValidationError> {
+        ops: Vec<CapeModelOperation>,
+    ) -> Result<(Self, Vec<CapeModelEthEffect>), CapeValidationError> {
         let mut new_state: CapeContractState = self.clone();
         let mut effects = vec![];
 
@@ -364,7 +362,7 @@ impl CapeContractState {
 
         for o in ops {
             match o {
-                CapeOperation::RegisterErc20 {
+                CapeModelOperation::RegisterErc20 {
                     asset_def,
                     erc20_code,
                     sponsor_addr,
@@ -383,9 +381,9 @@ impl CapeContractState {
                     new_state
                         .erc20_registrar
                         .insert(*asset_def, (erc20_code.clone(), sponsor_addr));
-                    effects.push(CapeEthEffect::CheckErc20Exists { erc20_code });
+                    effects.push(CapeModelEthEffect::CheckErc20Exists { erc20_code });
                 }
-                CapeOperation::WrapErc20 {
+                CapeModelOperation::WrapErc20 {
                     erc20_code,
                     src_addr,
                     ro,
@@ -412,18 +410,18 @@ impl CapeContractState {
                         .erc20_deposited
                         .entry(erc20_code.clone())
                         .or_insert(0) += ro.amount as u128;
-                    effects.push(CapeEthEffect::ReceiveErc20 {
+                    effects.push(CapeModelEthEffect::ReceiveErc20 {
                         erc20_code: erc20_code.clone(),
                         amount: ro.amount,
                         src_addr: src_addr.clone(),
                     });
-                    effects.push(CapeEthEffect::Emit(CapeEvent::Erc20Deposited {
+                    effects.push(CapeModelEthEffect::Emit(CapeModelEvent::Erc20Deposited {
                         erc20_code,
                         src_addr,
                         ro,
                     }));
                 }
-                CapeOperation::SubmitBlock(txns) => {
+                CapeModelOperation::SubmitBlock(txns) => {
                     // Step 1: filter txns for those with nullifiers that
                     // aren't already published
                     let filtered_txns = txns
@@ -461,7 +459,7 @@ impl CapeContractState {
 
                         // TODO: fee-collection records
                         let (vkey, merkle_root, new_records, note) = match t {
-                            CapeTransaction::CAP(TransactionNote::Mint(mint)) => {
+                            CapeModelTxn::CAP(TransactionNote::Mint(mint)) => {
                                 if !is_cap_asset_def_valid(&mint.mint_asset_def) {
                                     return Err(CapeValidationError::InvalidCAPDef {
                                         asset_def: Box::new(mint.mint_asset_def.clone()),
@@ -476,7 +474,7 @@ impl CapeContractState {
                                 )
                             }
 
-                            CapeTransaction::Burn { xfr, ro } => {
+                            CapeModelTxn::Burn { xfr, ro } => {
                                 let num_inputs = xfr.inputs_nullifiers.len();
                                 let num_outputs = xfr.output_commitments.len();
 
@@ -516,7 +514,7 @@ impl CapeContractState {
                                     CapeValidationError::IncorrectBurnField { xfr: xfr.clone() }
                                 })?;
 
-                                effects.push(CapeEthEffect::SendErc20 {
+                                effects.push(CapeModelEthEffect::SendErc20 {
                                     erc20_code: erc20_code.clone(),
                                     amount: ro.amount,
                                     dst_addr,
@@ -545,7 +543,7 @@ impl CapeContractState {
                                 )
                             }
 
-                            CapeTransaction::CAP(TransactionNote::Transfer(note)) => {
+                            CapeModelTxn::CAP(TransactionNote::Transfer(note)) => {
                                 let num_inputs = note.inputs_nullifiers.len();
                                 let num_outputs = note.output_commitments.len();
 
@@ -572,7 +570,7 @@ impl CapeContractState {
                                 )
                             }
 
-                            CapeTransaction::CAP(TransactionNote::Freeze(note)) => {
+                            CapeModelTxn::CAP(TransactionNote::Freeze(note)) => {
                                 let num_inputs = note.input_nullifiers.len();
                                 let num_outputs = note.output_commitments.len();
 
@@ -660,7 +658,7 @@ impl CapeContractState {
                     new_state.ledger.record_merkle_commitment = record_merkle_commitment;
                     new_state.ledger.record_merkle_frontier = record_merkle_frontier;
 
-                    effects.push(CapeEthEffect::Emit(CapeEvent::BlockCommitted {
+                    effects.push(CapeModelEthEffect::Emit(CapeModelEvent::BlockCommitted {
                         wraps: wrapped_commitments,
                         txns: filtered_txns,
                     }))

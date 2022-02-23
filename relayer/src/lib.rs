@@ -1,7 +1,5 @@
 use async_std::task;
-use cap_rust_sandbox::{
-    cape::CapeBlock, deploy::EthMiddleware, state::CapeTransaction, types::CAPE,
-};
+use cap_rust_sandbox::{cape::CapeBlock, deploy::EthMiddleware, model::CapeModelTxn, types::CAPE};
 use ethers::prelude::*;
 use jf_cap::keys::UserPubKey;
 use net::server::{add_error_body, request_body, response};
@@ -65,7 +63,7 @@ async fn submit_endpoint(mut req: tide::Request<WebState>) -> Result<tide::Respo
 
 async fn relay(
     contract: &CAPE<EthMiddleware>,
-    transaction: CapeTransaction,
+    transaction: CapeModelTxn,
 ) -> Result<TransactionReceipt, Error> {
     let miner = UserPubKey::default();
 
@@ -181,7 +179,7 @@ mod test {
         cape::CAPEConstructorArgs,
         ethereum::{deploy, get_funded_client},
         ledger::CapeLedger,
-        state::CapeTransaction,
+        model::CapeModelTxn,
         test_utils::contract_abi_path,
         types::{GenericInto, CAPE},
     };
@@ -226,7 +224,7 @@ mod test {
         faucet_rec: RecordOpening,
         receiver: UserPubKey,
         records: &MerkleTree,
-    ) -> CapeTransaction {
+    ) -> CapeModelTxn {
         let srs = universal_setup_for_test(2usize.pow(16), rng).unwrap();
         let xfr_prove_key =
             jf_cap::proof::transfer::preprocess(&srs, 1, 2, CapeLedger::merkle_height())
@@ -253,7 +251,7 @@ mod test {
             TransferNote::generate_native(rng, inputs, &outputs, 1, valid_until, &xfr_prove_key)
                 .unwrap()
                 .0;
-        CapeTransaction::CAP(TransactionNote::Transfer(Box::new(note)))
+        CapeModelTxn::CAP(TransactionNote::Transfer(Box::new(note)))
     }
 
     #[async_std::test]

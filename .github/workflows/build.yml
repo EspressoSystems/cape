@@ -6,7 +6,7 @@ on:
       - main
   pull_request:
   schedule:
-    - cron: '0 1 * * 1'
+    - cron: "0 1 * * 1"
   workflow_dispatch:
 
 env:
@@ -61,7 +61,7 @@ jobs:
             ~/.cargo/git
             target
           # todo: add nix key, for example:  nix-instantiate shell.nix | sha256sum  | head -c 10
-          key: cape-v3-${{ hashFiles('Cargo.lock') }}
+          key: cape-v4-${{ hashFiles('Cargo.lock') }}
 
       - name: Linting
         run: nix-shell --run "prepend-timestamps lint-ci"

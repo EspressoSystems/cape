@@ -1,6 +1,6 @@
 use crate::cape::CAPEConstructorArgs;
 use crate::ethereum::{deploy, get_funded_client};
-use crate::state::CAPE_MERKLE_HEIGHT;
+use crate::model::CAPE_MERKLE_HEIGHT;
 use crate::test_utils::contract_abi_path;
 use crate::types::{
     AssetRegistry, GenericInto, Greeter, SimpleToken, TestBN254, TestCAPE, TestCapeTypes,

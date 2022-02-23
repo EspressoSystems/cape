@@ -3,9 +3,10 @@
 
 use async_std::sync::{Arc, Mutex};
 use async_std::task::sleep;
-use cape_wallet::backend::create_test_network;
 use cape_wallet::backend::CapeBackend;
 use cape_wallet::mocks::*;
+use cape_wallet::testing::create_test_network;
+use cape_wallet::testing::transfer_token;
 use cape_wallet::CapeWallet;
 use ethers::prelude::Address;
 use jf_cap::keys::UserAddress;
@@ -271,22 +272,7 @@ async fn main() {
             },
             recipient_pk,
         );
-        let txn = match sender
-            .transfer(
-                &sender_address,
-                asset,
-                &[(recipient_pk.address(), amount)],
-                fee,
-            )
-            .await
-        {
-            Ok(txn) => txn,
-            Err(err) => {
-                event!(Level::ERROR, "Error generating transfer: {}", err);
-                continue;
-            }
-        };
-        match sender.await_transaction(&txn).await {
+        match transfer_token(sender, recipient_pk.address(), amount, *asset, fee).await {
             Ok(status) => {
                 if !status.succeeded() {
                     // Transfers are allowed to fail. It can happen, for instance, if we get starved

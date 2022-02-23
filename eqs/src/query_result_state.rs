@@ -1,6 +1,8 @@
-use cap_rust_sandbox::state::{CapeContractState, CapeEvent, CAPE_MERKLE_HEIGHT};
+use cap_rust_sandbox::ledger::CapeLedger;
+use cap_rust_sandbox::state::{CapeContractState, CAPE_MERKLE_HEIGHT};
 use jf_cap::MerkleTree;
 use key_set::VerifierKeySet;
+use seahorse::events::LedgerEvent;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -9,7 +11,7 @@ pub struct QueryResultState {
     pub contract_state: CapeContractState,
 
     // accumulated list of CAPE events
-    pub events: Vec<CapeEvent>,
+    pub events: Vec<LedgerEvent<CapeLedger>>,
     // additional indexed data for queries
 }
 

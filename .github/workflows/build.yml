@@ -75,3 +75,56 @@ jobs:
 
       - name: Generate Docs
         run: nix-shell --run "prepend-timestamps make-doc"
+
+      - name: Build Wallet
+        run: nix-shell --run "cargo build -p cape_wallet --release"
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: wallet-webserver
+          path: |
+            target/release/web_server
+
+  docker:
+    runs-on: self-hosted
+    needs: build
+    steps:
+      - uses: actions/checkout@v2
+        name: Checkout Repository
+        with:
+          path: wallet-checkout
+
+      - uses: actions/download-artifact@v2
+        with:
+          name: wallet-webserver
+          path: wallet-checkout/target/release/
+
+      - name: Set linker/loader to not be nix
+        run: patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 wallet-checkout/target/release/web_server
+
+      - uses: docker/setup-buildx-action@v1
+        name: Setup Docker BuildKit (buildx)
+
+      - uses: docker/login-action@v1
+        name: Login to Github Container Repo
+        if: github.event_name != 'pull_request'
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/metadata-action@v3
+        name: Generate Docker Metadata
+        id: meta
+        with:
+          images: ghcr.io/SpectrumXYZ/cape/wallet
+
+      - uses: docker/build-push-action@v2
+        name: Build and Push Docker
+        with:
+          context: ./wallet-checkout/
+          file: ./Dockerfile
+          platforms: linux/amd64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}

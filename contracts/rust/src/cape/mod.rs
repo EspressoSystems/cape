@@ -13,13 +13,14 @@ use ethers::prelude::Address;
 use jf_cap::freeze::FreezeNote;
 use jf_cap::keys::UserAddress;
 use jf_cap::mint::MintNote;
-use jf_cap::structs::{RecordCommitment, RecordOpening};
+use jf_cap::structs::{ReceiverMemo, RecordCommitment, RecordOpening};
 use jf_cap::transfer::TransferNote;
-use jf_cap::TransactionNote;
+use jf_cap::{Signature, TransactionNote};
 use num_traits::{FromPrimitive, ToPrimitive};
 use std::str::from_utf8;
 
 pub const DOM_SEP_CAPE_BURN: &[u8] = b"TRICAPE burn";
+type BlockMemos = Vec<(Vec<ReceiverMemo>, Signature)>;
 
 /// Burning transaction structure for a single asset (with fee)
 #[derive(Debug, PartialEq, Eq, Hash, Clone, CanonicalSerialize, CanonicalDeserialize)]
@@ -265,6 +266,18 @@ impl From<sol::CapeBlock> for CapeBlock {
                 .map(|n| n.clone().into())
                 .collect(),
         }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct BlockWithMemos {
+    pub block: CapeBlock,
+    pub memos: BlockMemos,
+}
+
+impl BlockWithMemos {
+    pub fn new(block: CapeBlock, memos: BlockMemos) -> Self {
+        Self { block, memos }
     }
 }
 

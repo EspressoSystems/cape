@@ -92,4 +92,8 @@ contract TestCAPE is CAPE {
             pendingDeposits.push(100 + i);
         }
     }
+
+    function removeNullifier(uint256 nullifier) public {
+        nullifiers[nullifier] = false;
+    }
 }

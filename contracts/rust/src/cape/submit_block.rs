@@ -190,17 +190,6 @@ async fn helper_submit_block(
 
     // Now alter the transaction so that it is invalid, resubmit the block and check it is rejected
 
-    // We need to remove the nullifiers so that the block is rejected because the transaction is invalid and not because nullifiers are repeated
-    for tx in params.txns.clone() {
-        for nf in tx.nullifiers() {
-            contract
-                .remove_nullifier(nf.generic_into::<NullifierSol>().0)
-                .send()
-                .await?
-                .await?;
-        }
-    }
-
     let tx_note = params.txns[0].clone();
     let altered_tx_note = match tx_note {
         TransactionNote::Transfer(tx) => {
@@ -219,6 +208,15 @@ async fn helper_submit_block(
             TransactionNote::Freeze(altered_tx.clone())
         }
     };
+
+    // We need to remove the nullifiers so that the block is rejected because the transaction is invalid and not because nullifiers are repeated
+    let mut nullifiers = vec![];
+    for tx in params.txns.clone() {
+        for nf in tx.nullifiers() {
+            nullifiers.push(nf.generic_into::<NullifierSol>().0.clone());
+        }
+    }
+    contract.remove_nullifiers(nullifiers).send().await?.await?;
 
     let cape_block = CapeBlock::generate(vec![altered_tx_note], vec![], miner.address())?;
 

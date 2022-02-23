@@ -93,7 +93,9 @@ contract TestCAPE is CAPE {
         }
     }
 
-    function removeNullifier(uint256 nullifier) public {
-        nullifiers[nullifier] = false;
+    function removeNullifiers(uint256[] memory nullifiersInput) public {
+        for (uint256 i = 0; i < nullifiersInput.length; i++) {
+            nullifiers[nullifiersInput[i]] = false;
+        }
     }
 }

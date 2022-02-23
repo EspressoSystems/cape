@@ -222,7 +222,7 @@ async fn populatefortest(req: tide::Request<WebState>) -> Result<tide::Response,
         routes::{require_wallet, wallet_error},
         wallet::CapeWalletExt,
     };
-    use cap_rust_sandbox::state::{CapeOperation, Erc20Code, EthereumAddr};
+    use cap_rust_sandbox::model::{CapeModelOperation, Erc20Code, EthereumAddr};
 
     let wallet = &mut *req.state().wallet.lock().await;
     let wallet = require_wallet(wallet)?;
@@ -266,7 +266,7 @@ async fn populatefortest(req: tide::Request<WebState>) -> Result<tide::Response,
         let mut mock_ledger = guard.backend().ledger.lock().await;
         mock_ledger
             .network()
-            .submit_operations(vec![CapeOperation::SubmitBlock(vec![])])
+            .submit_operations(vec![CapeModelOperation::SubmitBlock(vec![])])
             .unwrap();
         mock_ledger.now()
     };

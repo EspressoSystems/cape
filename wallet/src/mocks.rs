@@ -2,7 +2,7 @@ use crate::wallet::{CapeWalletBackend, CapeWalletError};
 use async_std::sync::{Mutex, MutexGuard};
 use async_trait::async_trait;
 use cap_rust_sandbox::{
-    deploy::EthMiddleware, ledger::*, state::*, universal_param::UNIVERSAL_PARAM,
+    deploy::EthMiddleware, ledger::*, model::*, universal_param::UNIVERSAL_PARAM,
 };
 use futures::stream::Stream;
 use itertools::izip;
@@ -119,7 +119,7 @@ impl MockCapeNetwork {
         erc20_code: Erc20Code,
         sponsor_addr: EthereumAddr,
     ) -> Result<(), CapeValidationError> {
-        self.submit_operations(vec![CapeOperation::RegisterErc20 {
+        self.submit_operations(vec![CapeModelOperation::RegisterErc20 {
             asset_def: Box::new(asset_def),
             erc20_code,
             sponsor_addr,
@@ -132,7 +132,7 @@ impl MockCapeNetwork {
         src_addr: EthereumAddr,
         ro: RecordOpening,
     ) -> Result<(), CapeValidationError> {
-        self.submit_operations(vec![CapeOperation::WrapErc20 {
+        self.submit_operations(vec![CapeModelOperation::WrapErc20 {
             erc20_code,
             src_addr,
             ro: Box::new(ro),
@@ -273,12 +273,12 @@ impl MockCapeNetwork {
 
     pub fn submit_operations(
         &mut self,
-        ops: Vec<CapeOperation>,
+        ops: Vec<CapeModelOperation>,
     ) -> Result<(), CapeValidationError> {
         let (new_state, effects) = self.contract.submit_operations(ops)?;
         let mut events = vec![];
         for effect in effects {
-            if let CapeEthEffect::Emit(event) = effect {
+            if let CapeModelEthEffect::Emit(event) = effect {
                 events.push(event);
             } else {
                 //todo Simulate and validate the other ETH effects. If any effects fail, the
@@ -296,9 +296,9 @@ impl MockCapeNetwork {
         Ok(())
     }
 
-    fn handle_event(&mut self, event: CapeEvent) {
+    fn handle_event(&mut self, event: CapeModelEvent) {
         match event {
-            CapeEvent::BlockCommitted { txns, wraps } => {
+            CapeModelEvent::BlockCommitted { txns, wraps } => {
                 // Convert the transactions and wraps into CapeTransitions, and collect them all
                 // into a single block, in the order they were processed by the contract
                 // (transactions first, then wraps).
@@ -346,7 +346,7 @@ impl MockCapeNetwork {
                 self.block_height += 1;
             }
 
-            CapeEvent::Erc20Deposited {
+            CapeModelEvent::Erc20Deposited {
                 erc20_code,
                 src_addr,
                 ro,
@@ -369,12 +369,12 @@ impl<'a> MockNetwork<'a, CapeLedger> for MockCapeNetwork {
             .txns()
             .into_iter()
             .map(|txn| match txn {
-                CapeTransition::Transaction(txn) => CapeOperation::SubmitBlock(vec![txn]),
+                CapeTransition::Transaction(txn) => CapeModelOperation::SubmitBlock(vec![txn]),
                 CapeTransition::Wrap {
                     erc20_code,
                     src_addr,
                     ro,
-                } => CapeOperation::WrapErc20 {
+                } => CapeModelOperation::WrapErc20 {
                     erc20_code,
                     src_addr,
                     ro,
@@ -408,7 +408,7 @@ impl<'a> MockNetwork<'a, CapeLedger> for MockCapeNetwork {
 
         // Validate the new memos.
         match &txn.txn {
-            CapeTransition::Transaction(CapeTransaction::CAP(note)) => {
+            CapeTransition::Transaction(CapeModelTxn::CAP(note)) => {
                 if note.verify_receiver_memos_signature(&memos, &sig).is_err() {
                     return Err(CapeWalletError::Failed {
                         msg: String::from("invalid memos signature"),
@@ -420,7 +420,7 @@ impl<'a> MockNetwork<'a, CapeLedger> for MockCapeNetwork {
                     });
                 }
             }
-            CapeTransition::Transaction(CapeTransaction::Burn { xfr, .. }) => {
+            CapeTransition::Transaction(CapeModelTxn::Burn { xfr, .. }) => {
                 if TransactionNote::Transfer(Box::new(*xfr.clone()))
                     .verify_receiver_memos_signature(&memos, &sig)
                     .is_err()

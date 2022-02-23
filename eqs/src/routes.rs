@@ -2,7 +2,7 @@ use crate::api_server::WebState;
 use crate::route_parsing::*;
 use crate::QueryResultState;
 
-use cap_rust_sandbox::state::CapeLedgerState;
+use cap_rust_sandbox::model::CapeLedgerState;
 use jf_cap::structs::Nullifier;
 use net::server::response;
 use serde::{Deserialize, Serialize};

@@ -55,7 +55,7 @@ mod tests {
     use async_std::task::sleep;
     use cap_rust_sandbox::{
         ledger::CapeLedger,
-        state::{Erc20Code, EthereumAddr},
+        model::{Erc20Code, EthereumAddr},
     };
     use cape_wallet::{
         routes::{BalanceInfo, CapeAPIError, PubKey, WalletSummary},

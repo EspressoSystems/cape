@@ -1,5 +1,9 @@
 #![cfg_attr(debug_assertions, allow(dead_code))]
-use crate::test_utils::contract_abi_path;
+use crate::{
+    deploy::{deploy_cape_test_with_deployer, EthMiddleware},
+    test_utils::contract_abi_path,
+    types::{TestCAPE, CAPE},
+};
 use anyhow::Result;
 use async_recursion::async_recursion;
 use ethers::{
@@ -14,6 +18,43 @@ use ethers::{
 };
 
 use std::{convert::TryFrom, env, fs, path::Path, sync::Arc, time::Duration};
+
+/// Utility to interact with CAPE contract on Ethereum blockchain
+#[derive(Clone, Debug)]
+pub struct EthConnection {
+    pub provider: Provider<Http>,
+    pub client: Arc<EthMiddleware>,
+    pub contract: CAPE<EthMiddleware>,
+}
+
+impl EthConnection {
+    /// Deploy a test contract and connect to that
+    pub async fn for_test() -> Self {
+        let provider = get_provider();
+        let client = get_funded_client().await.unwrap();
+        let contract = deploy_cape_test_with_deployer(client.clone()).await;
+        Self::connect(provider, client, contract.address())
+    }
+
+    /// Connect to an existing contract at `contract_address`
+    pub fn connect(
+        provider: Provider<Http>,
+        client: Arc<EthMiddleware>,
+        contract_address: Address,
+    ) -> Self {
+        Self {
+            contract: CAPE::new(contract_address, client.clone()),
+            client,
+            provider,
+        }
+    }
+
+    /// Get a TestCAPE contract object for calling functions only available on
+    /// the test contact. Do not use this if connected to a real CAPE contract.
+    pub fn test_contract(&self) -> TestCAPE<EthMiddleware> {
+        TestCAPE::new(self.contract.address(), self.client.clone())
+    }
+}
 
 pub fn get_provider() -> Provider<Http> {
     let rpc_url = match env::var("RPC_URL") {

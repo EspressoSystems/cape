@@ -4,7 +4,7 @@ use cap_rust_sandbox::cape::CapeBlock;
 use cap_rust_sandbox::deploy::{deploy_cape_test, deploy_erc20_token};
 use cap_rust_sandbox::ethereum::get_funded_client;
 use cap_rust_sandbox::ledger::CapeLedger;
-use cap_rust_sandbox::state::{erc20_asset_description, Erc20Code, EthereumAddr};
+use cap_rust_sandbox::model::{erc20_asset_description, Erc20Code, EthereumAddr};
 use cap_rust_sandbox::test_utils::{
     check_erc20_token_balance, compare_roots_records_test_cape_contract, create_faucet,
     generate_burn_tx, ContractsInfo, PrintGas,

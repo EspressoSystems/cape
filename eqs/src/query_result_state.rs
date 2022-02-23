@@ -1,5 +1,5 @@
 use cap_rust_sandbox::ledger::CapeLedger;
-use cap_rust_sandbox::state::{CapeContractState, CAPE_MERKLE_HEIGHT};
+use cap_rust_sandbox::model::{CapeContractState, CAPE_MERKLE_HEIGHT};
 use jf_cap::MerkleTree;
 use key_set::VerifierKeySet;
 use seahorse::events::LedgerEvent;

@@ -148,7 +148,7 @@ mod tests {
 
         let events_listener = async {
             let mut last_block = 0;
-            while last_block < 10 {
+            while last_block < 9 {
                 let cape_contract = cape_contract_lock.lock().await;
 
                 let new_event = cape_contract
@@ -158,15 +158,41 @@ mod tests {
                     .await
                     .unwrap();
 
+                drop(cape_contract);
+
                 while new_event.len() > last_block {
-                    match &new_event[last_block] {
+                    let (filter, meta) = new_event[last_block].clone();
+
+                    match filter {
                         //TODO: make this useful
-                        (TestCAPEEvents::BlockCommittedFilter(_), LogMeta) => {
-                            println!("block comm event")
+                        TestCAPEEvents::BlockCommittedFilter(filter_inside) => {
+                            let provider = get_provider();
+
+                            // Fetch Ethereum transaction that emitted event
+                            let txs = provider
+                                .get_transaction(meta.transaction_hash)
+                                .await
+                                .unwrap();
+
+                            let decoded_calldata_block = cape_contract_lock
+                                .lock()
+                                .await
+                                .decode::<sol::CapeBlock, _>("submitCapeBlock", txs.unwrap().input)
+                                .unwrap();
+
+                            let decoded_cape_block = CapeBlock::from(decoded_calldata_block);
+
+                            let wraps = filter_inside
+                                .deposit_commitments
+                                .iter()
+                                .map(|&rc| {
+                                    rc.generic_into::<sol::RecordCommitmentSol>()
+                                        .generic_into::<RecordCommitment>()
+                                })
+                                .collect_vec();
+                            println!("here");
                         }
-                        (TestCAPEEvents::Erc20TokensDepositedFilter(_), LogMeta) => {
-                            println!("erc20 dep event")
-                        }
+                        TestCAPEEvents::Erc20TokensDepositedFilter(_) => {}
                     }
                     last_block += 1;
                 }

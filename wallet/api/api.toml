@@ -224,14 +224,14 @@ Sponsor or define an asset, depending on if an ERC20 code is given. Reports the 
 """
 
 [route.mint]
-PATH = ["mint/asset/:asset/amount/:amount/sendkey/:send_key/freezekey/:freeze_key/tracekey/:trace_key"]
+PATH = ["mint/asset/:asset/amount/:amount/fee/:fee/minter/:minter/recipient/:recipient"]
 ":asset" = "TaggedBase64"
 ":amount" = "Integer"
-":send_key" = "TaggedBase64"
-":freeze_key" = "TaggedBase64"
-":trace_key" = "TaggedBase64"
+":fee" = "Integer"
+":minter" = "TaggedBase64"
+":recipient" = "TaggedBase64"
 DOC = """
-Mint amount units of a given asset code controlled by the current wallet. Reports the asset code associated with the given keys. Keys are generated with *newkey*.
+Mint amount units of a given asset code controlled by the current wallet to the receiver. Returns a serialized receipt which can be used to track the transaction through the validation process.
 """
 
 [route.freeze]

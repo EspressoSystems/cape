@@ -672,6 +672,31 @@ async fn wrap(
         .await?)
 }
 
+async fn mint(
+    bindings: &HashMap<String, RouteBinding>,
+    wallet: &mut Option<Wallet>,
+) -> Result<TransactionReceipt<CapeLedger>, tide::Error> {
+    let wallet = require_wallet(wallet)?;
+
+    let asset = bindings.get(":asset").unwrap().value.to::<AssetCode>()?;
+    let amount = bindings.get(":amount").unwrap().value.as_u64()?;
+    let fee = bindings.get(":fee").unwrap().value.as_u64()?;
+    let minter = bindings
+        .get(":minter")
+        .unwrap()
+        .value
+        .to::<UserAddress>()?
+        .0;
+    let recipient = bindings
+        .get(":recipient")
+        .unwrap()
+        .value
+        .to::<UserAddress>()?
+        .0;
+
+    Ok(wallet.mint(&minter, fee, &asset, amount, recipient).await?)
+}
+
 pub async fn send(
     bindings: &HashMap<String, RouteBinding>,
     wallet: &mut Option<Wallet>,
@@ -713,7 +738,7 @@ pub async fn dispatch_url(
         ApiRouteKey::getinfo => response(&req, getinfo(wallet).await?),
         ApiRouteKey::getmnemonic => response(&req, getmnemonic(rng).await?),
         ApiRouteKey::importkey => dummy_url_eval(route_pattern, bindings),
-        ApiRouteKey::mint => dummy_url_eval(route_pattern, bindings),
+        ApiRouteKey::mint => response(&req, mint(bindings, wallet).await?),
         ApiRouteKey::newasset => response(&req, newasset(bindings, wallet).await?),
         ApiRouteKey::newkey => response(&req, newkey(segments.1, wallet).await?),
         ApiRouteKey::newwallet => response(

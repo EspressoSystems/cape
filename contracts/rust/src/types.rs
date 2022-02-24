@@ -20,87 +20,17 @@ use jf_primitives::{
 };
 use std::convert::TryInto;
 
+pub use crate::bindings::{
+    AssetDefinition, AssetPolicy, AssetRegistry, AuditMemo, BurnNote, CapeBlock, Challenges,
+    EdOnBN254Point, EvalData, EvalDomain, FreezeAuxInfo, FreezeNote, G1Point, G2Point, Greeter,
+    MintAuxInfo, MintNote, PcsInfo, PlonkProof, RecordOpening, SimpleToken, TestBN254, TestCAPE,
+    TestCAPEEvents, TestCapeTypes, TestEdOnBN254, TestPlonkVerifier, TestPolynomialEval,
+    TestRecordsMerkleTree, TestRescue, TestRootStore, TestTranscript, TestVerifyingKeys,
+    TranscriptData, TransferAuxInfo, TransferNote, VerifyingKey, CAPE,
+};
+
 // The number of input wires of TurboPlonk.
 const GATE_WIDTH: usize = 4;
-
-macro_rules! mark_deps {
-    ($($tname:expr, $path:expr, $derives:expr;)*) => {
-        $(const _: &[u8] = include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"),"/",$path));)*
-    }
-}
-
-macro_rules! abigen_and_mark_dep {
-    ($($tts:tt)*) => {
-        mark_deps!($($tts)*);
-        abigen!($($tts)*);
-    }
-}
-
-abigen_and_mark_dep!(
-    AssetRegistry,
-    "../abi/contracts/AssetRegistry.sol/AssetRegistry/abi.json",
-    event_derives(serde::Deserialize, serde::Serialize);
-
-    TestBN254,
-    "../abi/contracts/mocks/TestBN254.sol/TestBN254/abi.json",
-    event_derives(serde::Deserialize, serde::Serialize);
-
-    TestEdOnBN254,
-    "../abi/contracts/mocks/TestEdOnBN254.sol/TestEdOnBN254/abi.json",
-    event_derives(serde::Deserialize, serde::Serialize);
-
-    TestRecordsMerkleTree,
-    "../abi/contracts/mocks/TestRecordsMerkleTree.sol/TestRecordsMerkleTree/abi.json",
-    event_derives(serde::Deserialize, serde::Serialize);
-
-    TestRescue,
-    "../abi/contracts/mocks/TestRescue.sol/TestRescue/abi.json",
-    event_derives(serde::Deserialize, serde::Serialize);
-
-    TestRootStore,
-    "../abi/contracts/mocks/TestRootStore.sol/TestRootStore/abi.json",
-    event_derives(serde::Deserialize, serde::Serialize);
-
-    TestTranscript,
-    "../abi/contracts/mocks/TestTranscript.sol/TestTranscript/abi.json",
-    event_derives(serde::Deserialize, serde::Serialize);
-
-    TestPlonkVerifier,
-    "../abi/contracts/mocks/TestPlonkVerifier.sol/TestPlonkVerifier/abi.json",
-    event_derives(serde::Deserialize, serde::Serialize);
-
-    TestPolynomialEval,
-    "../abi/contracts/mocks/TestPolynomialEval.sol/TestPolynomialEval/abi.json",
-    event_derives(serde::Deserialize, serde::Serialize);
-
-    CAPE,
-    "../abi/contracts/CAPE.sol/CAPE/abi.json",
-    event_derives(serde::Deserialize, serde::Serialize);
-
-    PlonkVerifier,
-    "../abi/contracts/verifier/PlonkVerifier.sol/PlonkVerifier/abi.json",
-    event_derives(serde::Deserialize, serde::Serialize);
-
-    TestCapeTypes,
-    "../abi/contracts/mocks/TestCapeTypes.sol/TestCapeTypes/abi.json",
-    event_derives(serde::Deserialize, serde::Serialize);
-
-    TestCAPE,
-    "../abi/contracts/mocks/TestCAPE.sol/TestCAPE/abi.json",
-    event_derives(serde::Deserialize, serde::Serialize);
-
-    Greeter,
-    "../abi/contracts/Greeter.sol/Greeter/abi.json",
-    event_derives(serde::Deserialize, serde::Serialize);
-
-    TestVerifyingKeys,
-    "../abi/contracts/mocks/TestVerifyingKeys.sol/TestVerifyingKeys/abi.json",
-    event_derives(serde::Deserialize, serde::Serialize);
-
-    SimpleToken,
-    "../abi/contracts/SimpleToken.sol/SimpleToken/abi.json",
-    event_derives(serde::Deserialize, serde::Serialize);
-);
 
 impl From<ark_bn254::G1Affine> for G1Point {
     fn from(p: ark_bn254::G1Affine) -> Self {

@@ -756,7 +756,7 @@ impl From<jf_cap::VerifyingKey> for VerifyingKey {
     }
 }
 
-impl From<jf_plonk::testing_apis::PcsInfo<Bn254>> for crate::bindings::PcsInfo {
+impl From<jf_plonk::testing_apis::PcsInfo<Bn254>> for PcsInfo {
     fn from(info: jf_plonk::testing_apis::PcsInfo<Bn254>) -> Self {
         let mut comm_scalars = vec![];
         let mut comm_bases = vec![];

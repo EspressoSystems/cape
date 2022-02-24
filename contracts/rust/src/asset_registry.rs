@@ -6,7 +6,7 @@ use jf_cap::structs::{AssetCode, AssetDefinition, AssetPolicy};
 use crate::assertion::Matcher;
 use crate::deploy::deploy_test_asset_registry_contract;
 use crate::ethereum::get_funded_client;
-use crate::state::{erc20_asset_description, Erc20Code, EthereumAddr};
+use crate::model::{erc20_asset_description, Erc20Code, EthereumAddr};
 use crate::types::AssetRegistry;
 
 #[tokio::test]

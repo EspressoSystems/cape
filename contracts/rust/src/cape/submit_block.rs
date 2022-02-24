@@ -2,18 +2,68 @@
 
 use crate::assertion::Matcher;
 use crate::cape::CapeBlock;
-use crate::deploy::deploy_cape_test;
+use crate::deploy::{deploy_cape_test, EthMiddleware};
+use crate::ethereum::EthConnection;
 use crate::ledger::CapeLedger;
 use crate::test_utils::PrintGas;
-use crate::types as sol;
+use crate::types::{self as sol, CAPE};
 use crate::types::{GenericInto, MerkleRootSol, NullifierSol};
-use anyhow::Result;
-use ethers::prelude::U256;
+use anyhow::{Error, Result};
+use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
+use ethers::prelude::{Bytes, Middleware, TxHash, U256};
 use jf_cap::keys::UserPubKey;
 use jf_cap::structs::{AssetCodeSeed, InternalAssetCode};
 use jf_cap::utils::TxnsParams;
 use rand::Rng;
 use reef::Ledger;
+
+use super::{BlockMemos, BlockWithMemos};
+
+/// Fetch a cape block given the (Ethereum) tx hash of the tx in which the block
+/// was submitted.
+pub async fn fetch_cape_block(
+    connection: &EthConnection,
+    tx_hash: TxHash,
+) -> Result<Option<BlockWithMemos>, Error> {
+    // Fetch Ethereum transaction that emitted event
+    let tx = if let Some(tx) = connection.provider.get_transaction(tx_hash).await? {
+        tx
+    } else {
+        return Ok(None); // This probably means no tx with this hash found.
+    };
+
+    // Decode the calldata (tx.input) into the function input types
+    let (decoded_calldata_block, fetched_memos_bytes) =
+        connection
+            .contract
+            .decode::<(sol::CapeBlock, Bytes), _>("submitCapeBlockWithMemos", tx.input)?;
+
+    let decoded_cape_block = CapeBlock::from(decoded_calldata_block);
+    let decoded_memos: BlockMemos =
+        CanonicalDeserialize::deserialize(&fetched_memos_bytes.to_vec()[..])?;
+
+    Ok(Some(BlockWithMemos::new(decoded_cape_block, decoded_memos)))
+}
+
+pub async fn submit_cape_block_with_memos(
+    contract: &CAPE<EthMiddleware>,
+    block: BlockWithMemos,
+) -> Result<()> {
+    let mut memos_bytes: Vec<u8> = vec![];
+    block.memos.serialize(&mut memos_bytes).unwrap();
+
+    contract
+        .submit_cape_block_with_memos(block.block.clone().into(), memos_bytes.into())
+        .send()
+        .await?
+        .await?;
+
+    // It would be better to return the `PendingTransaction` (before the last
+    // .await?) so that the caller can monitor the transaction mining. However
+    // there are some challenges with the typechecker when doing so.
+
+    Ok(())
+}
 
 #[tokio::test]
 async fn test_compute_num_commitments() {

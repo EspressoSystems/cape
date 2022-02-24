@@ -55,7 +55,7 @@ mod tests {
     use async_std::task::sleep;
     use cap_rust_sandbox::{
         ledger::CapeLedger,
-        state::{Erc20Code, EthereumAddr},
+        model::{Erc20Code, EthereumAddr},
     };
     use cape_wallet::{
         routes::{BalanceInfo, CapeAPIError, PubKey, WalletSummary},
@@ -186,29 +186,45 @@ mod tests {
     async fn test_newwallet() {
         let server = TestServer::new().await;
         let mnemonic = server.get::<String>("getmnemonic").await.unwrap();
+        let password = "my-password";
 
         // Should fail if the mnemonic is invalid.
         server
             .get::<()>(&format!(
-                "newwallet/invalid-mnemonic/path/{}",
+                "newwallet/invalid-mnemonic/{}/path/{}",
+                password,
                 server.path()
             ))
             .await
             .expect_err("newwallet succeeded with an invalid mnemonic");
+
         // Should fail if the path is invalid.
         server
-            .get::<()>(&format!("newwallet/{}/path/invalid-path", mnemonic))
+            .get::<()>(&format!(
+                "newwallet/{}/{}/path/invalid-path",
+                mnemonic, password
+            ))
             .await
             .expect_err("newwallet succeeded with an invalid path");
 
         server
-            .get::<()>(&format!("newwallet/{}/path/{}", mnemonic, server.path()))
+            .get::<()>(&format!(
+                "newwallet/{}/{}/path/{}",
+                mnemonic,
+                password,
+                server.path()
+            ))
             .await
             .unwrap();
 
         // Should fail if the wallet already exists.
         server
-            .get::<()>(&format!("newwallet/{}/path/{}", mnemonic, server.path()))
+            .get::<()>(&format!(
+                "newwallet/{}/{}/path/{}",
+                mnemonic,
+                password,
+                server.path()
+            ))
             .await
             .expect_err("newwallet succeeded when a wallet already existed");
     }
@@ -220,42 +236,40 @@ mod tests {
         let server = TestServer::new().await;
         let mnemonic = server.get::<String>("getmnemonic").await.unwrap();
         println!("mnemonic: {}", mnemonic);
+        let password = "my-password";
 
         // Should fail if no wallet exists.
         server
-            .requires_wallet::<()>(&format!("openwallet/{}/path/{}", mnemonic, server.path()))
+            .requires_wallet::<()>(&format!("openwallet/{}/path/{}", password, server.path()))
             .await;
 
         // Now create a wallet so we can open it.
         server
-            .get::<()>(&format!("newwallet/{}/path/{}", mnemonic, server.path()))
+            .get::<()>(&format!(
+                "newwallet/{}/{}/path/{}",
+                mnemonic,
+                password,
+                server.path()
+            ))
             .await
             .unwrap();
         server
-            .get::<()>(&format!("openwallet/{}/path/{}", mnemonic, server.path()))
+            .get::<()>(&format!("openwallet/{}/path/{}", password, server.path()))
             .await
             .unwrap();
 
-        // Should fail if the mnemonic is invalid.
+        // Should fail if the password is incorrect.
         server
             .get::<()>(&format!(
-                "openwallet/invalid-mnemonic/path/{}",
+                "openwallet/invalid-password/path/{}",
                 server.path()
             ))
             .await
-            .expect_err("openwallet succeeded with an invalid mnemonic");
-        // Should fail if the mnemonic is incorrect.
-        server
-            .get::<()>(&format!(
-                "openwallet/{}/path/{}",
-                server.get::<String>("getmnemonic").await.unwrap(),
-                server.path()
-            ))
-            .await
-            .expect_err("openwallet succeeded with the wrong mnemonic");
+            .expect_err("openwallet succeeded with an invalid password");
+
         // Should fail if the path is invalid.
         server
-            .get::<()>(&format!("openwallet/{}/path/invalid-path", mnemonic))
+            .get::<()>(&format!("openwallet/{}/path/invalid-path", password))
             .await
             .expect_err("openwallet succeeded with an invalid path");
     }
@@ -272,7 +286,7 @@ mod tests {
         // Now open a wallet and close it.
         server
             .get::<()>(&format!(
-                "newwallet/{}/path/{}",
+                "newwallet/{}/my-password/path/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
                 server.path()
             ))
@@ -292,7 +306,7 @@ mod tests {
         // Now open a wallet and call getinfo.
         server
             .get::<()>(&format!(
-                "newwallet/{}/path/{}",
+                "newwallet/{}/my-password/path/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
                 server.path()
             ))
@@ -327,7 +341,7 @@ mod tests {
         // Now open a wallet and call getaddress.
         server
             .get::<()>(&format!(
-                "newwallet/{}/path/{}",
+                "newwallet/{}/my-password/path/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
                 server.path()
             ))
@@ -363,7 +377,7 @@ mod tests {
         // Now open a wallet.
         server
             .get::<()>(&format!(
-                "newwallet/{}/path/{}",
+                "newwallet/{}/my-password/path/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
                 server.path()
             ))
@@ -454,7 +468,7 @@ mod tests {
         // Now open a wallet.
         server
             .get::<()>(&format!(
-                "newwallet/{}/path/{}",
+                "newwallet/{}/my-password/path/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
                 server.path()
             ))
@@ -528,7 +542,7 @@ mod tests {
         // Now open a wallet.
         server
             .get::<()>(&format!(
-                "newwallet/{}/path/{}",
+                "newwallet/{}/my-password/path/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
                 server.path()
             ))
@@ -652,7 +666,7 @@ mod tests {
         let mut rng = ChaChaRng::from_seed([42u8; 32]);
         server
             .get::<()>(&format!(
-                "newwallet/{}/path/{}",
+                "newwallet/{}/my-password/path/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
                 server.path()
             ))
@@ -842,7 +856,7 @@ mod tests {
         let server = TestServer::new().await;
         server
             .get::<()>(&format!(
-                "newwallet/{}/path/{}",
+                "newwallet/{}/my-password/path/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
                 server.path()
             ))
@@ -916,7 +930,7 @@ mod tests {
         // Now open a wallet.
         server
             .get::<()>(&format!(
-                "newwallet/{}/path/{}",
+                "newwallet/{}/my-password/path/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
                 server.path()
             ))

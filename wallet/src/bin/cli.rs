@@ -9,7 +9,7 @@ extern crate cape_wallet;
 use async_std::sync::Mutex;
 use cap_rust_sandbox::{
     ledger::CapeLedger,
-    state::{Erc20Code, EthereumAddr},
+    model::{Erc20Code, EthereumAddr},
 };
 use cape_wallet::{
     mocks::{MockCapeBackend, MockCapeNetwork},
@@ -27,7 +27,7 @@ use reef::Ledger;
 use seahorse::{
     cli::*,
     io::SharedIO,
-    loader::{LoadMethod, LoaderMetadata, WalletLoader},
+    loader::{LoaderMetadata, WalletLoader},
     testing::MockLedger,
     WalletError,
 };
@@ -274,20 +274,6 @@ pub struct CapeArgs {
     #[structopt(short, long)]
     pub storage: Option<PathBuf>,
 
-    /// Store the contents of the wallet in plaintext.
-    ///
-    /// You will not require a password to access your wallet, and your wallet will not be protected
-    /// from malicious software that gains access to a device where you loaded your wallet.
-    ///
-    /// This option is only available when creating a new wallet. When loading an existing wallet, a
-    /// password will always be required if the wallet was created without the --unencrypted flag.
-    #[structopt(long)]
-    pub unencrypted: bool,
-
-    /// Load the wallet using a password and salt, rather than a mnemonic phrase.
-    #[structopt(long)]
-    pub password: bool,
-
     /// Create a new wallet and store it an a temporary location which will be deleted on exit.
     ///
     /// This option is mutually exclusive with --storage.
@@ -318,18 +304,6 @@ impl CLIArgs for CapeArgs {
             Some(SharedIO::std())
         } else {
             None
-        }
-    }
-
-    fn encrypted(&self) -> bool {
-        !self.unencrypted
-    }
-
-    fn load_method(&self) -> LoadMethod {
-        if self.password {
-            LoadMethod::Password
-        } else {
-            LoadMethod::Mnemonic
         }
     }
 
@@ -472,12 +446,6 @@ mod tests {
         }
         fn io(&self) -> Option<SharedIO> {
             Some(self.io.clone())
-        }
-        fn encrypted(&self) -> bool {
-            true
-        }
-        fn load_method(&self) -> LoadMethod {
-            LoadMethod::Mnemonic
         }
         fn use_tmp_storage(&self) -> bool {
             true

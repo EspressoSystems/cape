@@ -33,7 +33,7 @@ use key_set::VerifierKeySet;
 use net::client::parse_error_body;
 use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
 use reef::Ledger;
-use relayer::testing::start_minimal_relayer_for_test;
+use relayer::{testing::start_minimal_relayer_for_test, SubmitBody};
 use seahorse::{
     events::{EventIndex, EventSource, LedgerEvent},
     hd,
@@ -139,7 +139,11 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
             CapeTransition::Transaction(txn) => {
                 self.relayer
                     .post("submit")
-                    .body_json(txn)
+                    .body_json(&SubmitBody {
+                        transaction: txn.clone(),
+                        memos: memos.clone(),
+                        signature: sig.clone(),
+                    })
                     .map_err(|err| CapeWalletError::Failed {
                         msg: err.to_string(),
                     })?

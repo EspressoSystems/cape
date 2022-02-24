@@ -705,7 +705,7 @@ mod tests {
                 destination, invalid_eth_addr, 10, sponsored_asset
             ))
             .await
-            .expect_err("wrap succeeded with an invalid Ethereum addreee");
+            .expect_err("wrap succeeded with an invalid Ethereum address");
         server
             .get::<()>(&format!(
                 "wrap/destination/{}/ethaddress/{}/amount/{}/asset/{}",
@@ -731,32 +731,32 @@ mod tests {
         let description = TaggedBase64::new("DESC", &[3u8; 32]).unwrap();
         let amount = 10;
         let fee = 1;
-        let mut rng = ChaChaRng::from_seed([42u8; 32]);
+        let mut rng = ChaChaRng::from_seed([50u8; 32]);
 
-        // Open a wallet with some initial grants for the minter.
-        let minter_server = TestServer::new().await;
-        minter_server
+        // Open a wallet with some initial grants and keys.
+        let server = TestServer::new().await;
+        server
             .get::<()>(&format!(
-                "newwallet/{}/path/{}",
-                minter_server.get::<String>("getmnemonic").await.unwrap(),
-                minter_server.path()
+                "newwallet/{}/minter-password/path/{}",
+                server.get::<String>("getmnemonic").await.unwrap(),
+                server.path()
             ))
             .await
             .unwrap();
-        minter_server.get::<()>("populatefortest").await.unwrap();
+        server.get::<()>("populatefortest").await.unwrap();
 
         // Define an asset.
-        let asset = minter_server
+        let asset = server
             .get::<AssetDefinition>(&format!("newasset/description/{}", description))
             .await
             .unwrap()
             .code;
 
         // Get the address with non-zero balance of the native asset.
-        let info = minter_server.get::<WalletSummary>("getinfo").await.unwrap();
+        let info = server.get::<WalletSummary>("getinfo").await.unwrap();
         let mut minter_addr: Option<UserAddress> = None;
         for address in info.addresses {
-            if let BalanceInfo::Balance(1000) = minter_server
+            if let BalanceInfo::Balance(1000) = server
                 .get::<BalanceInfo>(&format!(
                     "getbalance/address/{}/asset/{}",
                     address,
@@ -771,20 +771,8 @@ mod tests {
         }
         let minter = minter_addr.unwrap();
 
-        // Open a wallet for the recipient.
-        let recipient_server = TestServer::new().await;
-        recipient_server
-            .get::<()>(&format!(
-                "newwallet/{}/path/{}",
-                recipient_server.get::<String>("getmnemonic").await.unwrap(),
-                recipient_server.path()
-            ))
-            .await
-            .unwrap();
-
-        // Create an address to receive the minted asset.
-        recipient_server.get::<PubKey>("newkey/send").await.unwrap();
-        let recipient: UserAddress = recipient_server
+        // Get an address to receive the minted asset.
+        let recipient: UserAddress = server
             .get::<WalletSummary>("getinfo")
             .await
             .unwrap()
@@ -796,30 +784,30 @@ mod tests {
         let invalid_asset = AssetDefinition::dummy();
         let invalid_minter = UserAddress::from(UserKeyPair::generate(&mut rng).address());
         let invalid_recipient = UserAddress::from(UserKeyPair::generate(&mut rng).address());
-        minter_server
-            .get::<()>(&format!(
+        server
+            .get::<TransactionReceipt<CapeLedger>>(&format!(
                 "mint/asset/{}/amount/{}/fee/{}/minter/{}/recipient/{}",
                 invalid_asset, amount, fee, minter, recipient
             ))
             .await
             .expect_err("mint succeeded with an invalid asset");
-        minter_server
-            .get::<()>(&format!(
+        server
+            .get::<TransactionReceipt<CapeLedger>>(&format!(
                 "mint/asset/{}/amount/{}/fee/{}/minter/{}/recipient/{}",
                 asset, amount, fee, invalid_minter, recipient
             ))
             .await
             .expect_err("mint succeeded with an invalid minter address");
-        minter_server
-            .get::<()>(&format!(
+        server
+            .get::<TransactionReceipt<CapeLedger>>(&format!(
                 "mint/asset/{}/amount/{}/fee/{}/minter/{}/recipient/{}",
                 asset, amount, fee, minter, invalid_recipient
             ))
             .await
-            .expect_err("mint succeeded with an invalid recipient addreee");
+            .expect_err("mint succeeded with an invalid recipient address");
 
         // mint should succeed with the correct information.
-        minter_server
+        server
             .get::<TransactionReceipt<CapeLedger>>(&format!(
                 "mint/asset/{}/amount/{}/fee/{}/minter/{}/recipient/{}",
                 asset, amount, fee, minter, recipient
@@ -828,26 +816,24 @@ mod tests {
             .unwrap();
 
         // Check the balances of the minted asset and the native asset.
-        retry(|| async {
-            recipient_server
+        assert_eq!(
+            server
                 .get::<BalanceInfo>(&format!("getbalance/address/{}/asset/{}", recipient, asset))
                 .await
-                .unwrap()
-                == BalanceInfo::Balance(amount)
-        })
-        .await;
-        retry(|| async {
-            minter_server
+                .unwrap(),
+            BalanceInfo::Balance(amount)
+        );
+        assert_eq!(
+            server
                 .get::<BalanceInfo>(&format!(
                     "getbalance/address/{}/asset/{}",
                     minter,
                     AssetCode::native()
                 ))
                 .await
-                .unwrap()
-                == BalanceInfo::Balance(1000 - fee)
-        })
-        .await;
+                .unwrap(),
+            BalanceInfo::Balance(1000 - fee)
+        );
     }
 
     #[async_std::test]

@@ -1,3 +1,5 @@
+#![deny(warnings)]
+
 use crate::{
     mocks::MockCapeLedger, mocks::MockCapeNetwork, testing::port, CapeWalletBackend,
     CapeWalletError,

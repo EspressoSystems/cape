@@ -422,29 +422,18 @@ pub async fn create_test_network<'a>(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{
-        mocks::{MockCapeNetwork, MockCapeWalletLoader},
-        testing::port,
-        CapeWallet, CapeWalletExt,
-    };
-    use address_book::{init_web_server, wait_for_server};
+    use crate::{mocks::MockCapeWalletLoader, CapeWallet, CapeWalletExt};
     use cap_rust_sandbox::{deploy::deploy_erc20_token, types::SimpleToken};
     use ethers::types::{TransactionRequest, U256};
     use jf_cap::{
-        keys::UserKeyPair,
         structs::{AssetCode, AssetPolicy},
         testing_apis::universal_setup_for_test,
-        TransactionVerifyingKey,
     };
-    use key_set::VerifierKeySet;
     use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
-    use reef::Ledger;
-    use relayer::testing::start_minimal_relayer_for_test;
     use seahorse::testing::await_transaction;
     use std::path::PathBuf;
     use std::time::Duration;
     use tempdir::TempDir;
-    use tide::log::LevelFilter;
 
     #[async_std::test]
     async fn test_transfer() {

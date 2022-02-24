@@ -645,6 +645,7 @@ mod tests {
 
     #[cfg(feature = "slow-tests")]
     #[async_std::test]
+    #[ignore] // TODO re-enable this test
     async fn test_cli_burn() {
         let mut t = CapeTest::default();
         let (ledger, key_streams) = create_cape_network(&mut t, &[1000, 1000, 1000]).await;

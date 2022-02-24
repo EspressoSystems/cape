@@ -816,14 +816,15 @@ mod tests {
             .unwrap();
 
         // Check the balances of the minted asset and the native asset.
-        assert_eq!(
+        retry(|| async {
             server
                 .get::<BalanceInfo>(&format!("getbalance/address/{}/asset/{}", recipient, asset))
                 .await
-                .unwrap(),
-            BalanceInfo::Balance(amount)
-        );
-        assert_eq!(
+                .unwrap()
+                == BalanceInfo::Balance(amount)
+        })
+        .await;
+        retry(|| async {
             server
                 .get::<BalanceInfo>(&format!(
                     "getbalance/address/{}/asset/{}",
@@ -831,9 +832,10 @@ mod tests {
                     AssetCode::native()
                 ))
                 .await
-                .unwrap(),
-            BalanceInfo::Balance(1000 - fee)
-        );
+                .unwrap()
+                == BalanceInfo::Balance(1000 - fee)
+        })
+        .await;
     }
 
     #[async_std::test]

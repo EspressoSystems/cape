@@ -4,7 +4,7 @@ use crate::{
     assertion::Matcher,
     deploy::deploy_cape_test_with_deployer,
     ethereum::get_funded_client,
-    state::CAPE_MERKLE_HEIGHT,
+    model::CAPE_MERKLE_HEIGHT,
     types::{field_to_u256, TestCAPE},
 };
 use anyhow::Result;

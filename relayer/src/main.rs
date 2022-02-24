@@ -7,7 +7,7 @@ use crate::configuration::{reset_state, store_path, verifier_keys};
 use crate::state_persistence::StatePersistence;
 use crate::txn_queue::TxnQueue;
 
-use cap_rust_sandbox::state::{CapeContractState, CAPE_MERKLE_HEIGHT};
+use cap_rust_sandbox::model::{CapeContractState, CAPE_MERKLE_HEIGHT};
 use jf_cap::MerkleTree;
 
 use async_std::sync::{Arc, RwLock};

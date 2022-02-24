@@ -1,4 +1,4 @@
-use cap_rust_sandbox::{state::CAPE_MERKLE_HEIGHT, universal_param::UNIVERSAL_PARAM};
+use cap_rust_sandbox::{model::CAPE_MERKLE_HEIGHT, universal_param::UNIVERSAL_PARAM};
 use jf_cap::keys::{UserAddress, UserKeyPair};
 use jf_cap::TransactionVerifyingKey;
 use key_set::{KeySet, VerifierKeySet};

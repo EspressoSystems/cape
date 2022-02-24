@@ -1,6 +1,6 @@
 use async_std::sync::Arc;
 use async_trait::async_trait;
-use cap_rust_sandbox::{deploy::EthMiddleware, ledger::*, state::*};
+use cap_rust_sandbox::{deploy::EthMiddleware, ledger::*, model::*};
 use jf_cap::{
     keys::UserAddress,
     structs::{AssetCode, AssetDefinition, AssetPolicy, FreezeFlag, RecordOpening},
@@ -200,7 +200,7 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
             history.kind = CapeTransactionKind::Burn;
         }
 
-        let txn = CapeTransition::Transaction(CapeTransaction::Burn {
+        let txn = CapeTransition::Transaction(CapeModelTxn::Burn {
             xfr: Box::new(xfr_info.note),
             ro: Box::new(txn_info.outputs[0].clone()),
         });

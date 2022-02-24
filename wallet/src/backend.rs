@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use cap_rust_sandbox::{
     deploy::EthMiddleware,
     ledger::{CapeLedger, CapeNullifierSet, CapeTransition},
-    state::{Erc20Code, EthereumAddr},
+    model::{Erc20Code, EthereumAddr},
     types::CAPE,
 };
 use ethers::{
@@ -342,30 +342,18 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{
-        mocks::{MockCapeNetwork, MockCapeWalletLoader},
-        testing::create_test_network,
-        testing::port,
-        CapeWallet, CapeWalletExt,
-    };
-    use address_book::{init_web_server, wait_for_server};
+    use crate::{mocks::MockCapeWalletLoader, CapeWallet, CapeWalletExt};
     use cap_rust_sandbox::{deploy::deploy_erc20_token, types::SimpleToken};
     use ethers::types::{TransactionRequest, U256};
     use jf_cap::{
-        keys::UserKeyPair,
         structs::{AssetCode, AssetPolicy},
         testing_apis::universal_setup_for_test,
-        TransactionVerifyingKey,
     };
-    use key_set::VerifierKeySet;
     use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
-    use reef::Ledger;
-    use relayer::testing::start_minimal_relayer_for_test;
     use seahorse::testing::await_transaction;
     use std::path::PathBuf;
     use std::time::Duration;
     use tempdir::TempDir;
-    use tide::log::LevelFilter;
 
     #[async_std::test]
     async fn test_transfer() {

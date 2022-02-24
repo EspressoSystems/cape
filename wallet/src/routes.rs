@@ -8,7 +8,7 @@ use crate::{
 use async_std::sync::{Arc, Mutex};
 use cap_rust_sandbox::{
     ledger::CapeLedger,
-    state::{Erc20Code, EthereumAddr},
+    model::{Erc20Code, EthereumAddr},
     universal_param::UNIVERSAL_PARAM,
 };
 use futures::{prelude::*, stream::iter};
@@ -299,7 +299,8 @@ pub fn wallet_error(source: CapeWalletError) -> tide::Error {
 pub async fn init_wallet(
     rng: &mut ChaChaRng,
     faucet_pub_key: UserPubKey,
-    mnemonic: String,
+    mnemonic: Option<String>,
+    password: String,
     path: Option<PathBuf>,
     existing: bool,
 ) -> Result<Wallet, tide::Error> {
@@ -370,7 +371,8 @@ pub async fn init_wallet(
         vec![(faucet_memo, 0)],
     ));
     ledger.set_block_size(1).unwrap();
-    let mut loader = Loader::from_mnemonic(mnemonic, true, path);
+
+    let mut loader = Loader::from_literal(mnemonic, password, path);
     let mut backend = MockCapeBackend::new(Arc::new(Mutex::new(ledger)), &mut loader)?;
 
     if backend.storage().await.exists() != existing {
@@ -431,12 +433,23 @@ pub async fn newwallet(
         None => None,
     };
     let mnemonic = bindings[":mnemonic"].value.as_string()?;
+    let password = bindings[":password"].value.as_string()?;
 
     // If we already have a wallet open, close it before opening a new one, otherwise we can end up
     // with two wallets using the same file at the same time.
     *wallet = None;
 
-    *wallet = Some(init_wallet(rng, faucet_key_pair.pub_key(), mnemonic, path, false).await?);
+    *wallet = Some(
+        init_wallet(
+            rng,
+            faucet_key_pair.pub_key(),
+            Some(mnemonic),
+            password,
+            path,
+            false,
+        )
+        .await?,
+    );
     Ok(())
 }
 
@@ -450,13 +463,13 @@ pub async fn openwallet(
         Some(binding) => Some(binding.value.as_path()?),
         None => None,
     };
-    let mnemonic = bindings[":mnemonic"].value.as_string()?;
+    let password = bindings[":password"].value.as_string()?;
 
     // If we already have a wallet open, close it before opening a new one, otherwise we can end up
     // with two wallets using the same file at the same time.
     *wallet = None;
 
-    *wallet = Some(init_wallet(rng, faucet_key_pair.pub_key(), mnemonic, path, true).await?);
+    *wallet = Some(init_wallet(rng, faucet_key_pair.pub_key(), None, password, path, true).await?);
     Ok(())
 }
 
@@ -672,6 +685,31 @@ async fn wrap(
         .await?)
 }
 
+async fn mint(
+    bindings: &HashMap<String, RouteBinding>,
+    wallet: &mut Option<Wallet>,
+) -> Result<TransactionReceipt<CapeLedger>, tide::Error> {
+    let wallet = require_wallet(wallet)?;
+
+    let asset = bindings.get(":asset").unwrap().value.to::<AssetCode>()?;
+    let amount = bindings.get(":amount").unwrap().value.as_u64()?;
+    let fee = bindings.get(":fee").unwrap().value.as_u64()?;
+    let minter = bindings
+        .get(":minter")
+        .unwrap()
+        .value
+        .to::<UserAddress>()?
+        .0;
+    let recipient = bindings
+        .get(":recipient")
+        .unwrap()
+        .value
+        .to::<UserAddress>()?
+        .0;
+
+    Ok(wallet.mint(&minter, fee, &asset, amount, recipient).await?)
+}
+
 pub async fn send(
     bindings: &HashMap<String, RouteBinding>,
     wallet: &mut Option<Wallet>,
@@ -713,7 +751,7 @@ pub async fn dispatch_url(
         ApiRouteKey::getinfo => response(&req, getinfo(wallet).await?),
         ApiRouteKey::getmnemonic => response(&req, getmnemonic(rng).await?),
         ApiRouteKey::importkey => dummy_url_eval(route_pattern, bindings),
-        ApiRouteKey::mint => dummy_url_eval(route_pattern, bindings),
+        ApiRouteKey::mint => response(&req, mint(bindings, wallet).await?),
         ApiRouteKey::newasset => response(&req, newasset(bindings, wallet).await?),
         ApiRouteKey::newkey => response(&req, newkey(segments.1, wallet).await?),
         ApiRouteKey::newwallet => response(

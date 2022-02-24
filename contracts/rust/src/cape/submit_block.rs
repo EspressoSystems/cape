@@ -165,6 +165,7 @@ async fn submit_block_test_helper(
             .await?
     );
 
+    // Set the root
     contract
         .add_root(root.generic_into::<MerkleRootSol>().0)
         .send()
@@ -186,9 +187,8 @@ async fn submit_block_test_helper(
             .await?
     );
 
-    let zero_rc = RecordCommitment::from_field_element(Fp256::zero());
-
     // Now alter the transaction so that it is invalid, resubmit the block and check it is rejected
+    let zero_rc = RecordCommitment::from_field_element(Fp256::zero());
 
     let tx_note = params.txns[0].clone();
     let altered_tx_note = match tx_note {
@@ -209,16 +209,17 @@ async fn submit_block_test_helper(
         }
     };
 
-    // We need to remove the nullifiers so that the block is rejected because the transaction is invalid and not because nullifiers are repeated
-    let mut nullifiers = vec![];
-    for tx in params.txns.clone() {
-        for nf in tx.nullifiers() {
-            nullifiers.push(nf.generic_into::<NullifierSol>().0.clone());
-        }
-    }
-    contract.remove_nullifiers(nullifiers).send().await?.await?;
+    // We redeploy the contract so that we start with a clean state.
+    let contract = deploy_cape_test().await;
 
     let cape_block = CapeBlock::generate(vec![altered_tx_note], vec![], miner.address())?;
+
+    // Set the root
+    contract
+        .add_root(root.generic_into::<MerkleRootSol>().0)
+        .send()
+        .await?
+        .await?;
 
     // Submit to the contract
     contract

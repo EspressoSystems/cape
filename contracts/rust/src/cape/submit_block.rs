@@ -134,7 +134,7 @@ async fn test_compute_num_commitments() {
     }
 }
 
-async fn helper_submit_block(
+async fn submit_block_test_helper(
     num_transfer_tx: usize,
     num_mint_tx: usize,
     num_freeze_tx: usize,
@@ -232,25 +232,25 @@ async fn helper_submit_block(
 
 #[tokio::test]
 async fn test_submit_block_with_transfer_tx() -> Result<()> {
-    helper_submit_block(1, 0, 0).await?;
+    submit_block_test_helper(1, 0, 0).await?;
     Ok(())
 }
 
 #[tokio::test]
 async fn test_submit_block_with_mint_tx() -> Result<()> {
-    helper_submit_block(0, 1, 0).await?;
+    submit_block_test_helper(0, 1, 0).await?;
     Ok(())
 }
 
 #[tokio::test]
 async fn test_submit_block_with_freeze_tx() -> Result<()> {
-    helper_submit_block(0, 0, 1).await?;
+    submit_block_test_helper(0, 0, 1).await?;
     Ok(())
 }
 
 #[tokio::test]
 async fn test_submit_block_with_three_txs_to_cape_contract() -> Result<()> {
-    helper_submit_block(1, 1, 1).await?;
+    submit_block_test_helper(1, 1, 1).await?;
     Ok(())
 }
 

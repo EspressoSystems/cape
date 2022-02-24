@@ -59,9 +59,6 @@ contract AssetRegistry {
     /// @param erc20Address An ERC-20 token address
     /// @param newAsset An asset type to be registered in the contract
     function sponsorCapeAsset(address erc20Address, AssetDefinition memory newAsset) public {
-        // TODO check if real token (figure out if this is necessary/useful):
-        //      the contract could still do whatever it wants even if it has
-        //      the right interface)
         require(erc20Address != address(0), "Bad asset address");
         require(!isCapeAssetRegistered(newAsset), "Asset already registered");
 

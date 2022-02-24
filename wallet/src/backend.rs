@@ -165,7 +165,7 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
 
         // The mock EQS is not connected to the real contract, so we have to update it by explicitly
         // passing it the submitted transaction. This should not fail, since the submission to the
-        // contract above succeded, and the mock EQS is supposed to be tracking the contract state.
+        // contract above succeeded, and the mock EQS is supposed to be tracking the contract state.
         self.mock_eqs.lock().await.submit(txn).unwrap();
 
         Ok(())

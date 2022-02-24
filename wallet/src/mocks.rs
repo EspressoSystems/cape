@@ -56,7 +56,7 @@ pub struct MockCapeNetwork {
     block_height: u64,
     records: MerkleTree,
     // When an ERC20 deposit is finalized during a block submission, the contract emits an event
-    // containing only the commitment of the new record. Therefore, to correllate these events with
+    // containing only the commitment of the new record. Therefore, to correlate these events with
     // the other information needed to reconstruct a CapeTransition::Wrap, the query service needs
     // to monitor the contracts Erc20Deposited events and keep track of the deposits which are
     // pending finalization.
@@ -281,7 +281,7 @@ impl MockCapeNetwork {
             if let CapeModelEthEffect::Emit(event) = effect {
                 events.push(event);
             } else {
-                //todo Simulate and validate the other ETH effects. If any effects fail, the
+                //TODO Simulate and validate the other ETH effects. If any effects fail, the
                 // whole transaction must be considered reverted with no visible effects.
             }
         }
@@ -670,7 +670,7 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
 }
 
 fn cape_to_wallet_err(err: CapeValidationError) -> WalletError<CapeLedger> {
-    //todo Convert CapeValidationError to WalletError in a better way. Maybe WalletError should be
+    //TODO Convert CapeValidationError to WalletError in a better way. Maybe WalletError should be
     // parameterized on the ledger type and there should be a ledger trait ValidationError.
     WalletError::Failed {
         msg: err.to_string(),

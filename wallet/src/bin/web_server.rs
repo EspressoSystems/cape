@@ -36,7 +36,7 @@ async fn main() -> Result<(), std::io::Error> {
     };
     println!("Web path: {:?}", web_path);
 
-    // Use something different than the default Spectrum port (60000 vs 50000).
+    // TODO Use something different than the default Spectrum port (60000 vs 50000).
     let port = std::env::var("PORT").unwrap_or_else(|_| String::from("60000"));
     init_server(
         ChaChaRng::from_entropy(),
@@ -106,8 +106,8 @@ mod tests {
             // Run a server in the background that is unique to this test. Note that the server task
             // is leaked: tide does not provide any mechanism for graceful programmatic shutdown, so
             // the server will continue running until the process is killed, even after the test
-            // ends. This is probably not so bad, since each test's server task should be idle once
-            // the test is over, and anyways I don't see a good way around it.
+            // ends. This is ok, since each test's server task should be idle once
+            // the test is over.
             init_server(
                 ChaChaRng::from_seed([42; 32]),
                 default_api_path(),
@@ -314,8 +314,6 @@ mod tests {
             .unwrap();
         let info = server.get::<WalletSummary>("getinfo").await.unwrap();
 
-        // The info is not very interesting before we add any keys or assets, but that's for another
-        // endpoint.
         assert_eq!(
             info,
             WalletSummary {

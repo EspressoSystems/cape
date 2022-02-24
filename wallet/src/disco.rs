@@ -4,7 +4,6 @@ use crate::{routes::check_api, web::WebState};
 use std::fs::read_to_string;
 use std::path::Path;
 
-/// Loads the message catalog or dies trying.
 pub fn load_messages(path: &Path) -> toml::Value {
     let messages = read_to_string(&path).unwrap_or_else(|_| panic!("Unable to read {:?}.", &path));
     let api: toml::Value =

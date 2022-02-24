@@ -23,7 +23,7 @@ markdown = "0.3"
 net = { git = "ssh://git@github.com/SpectrumXYZ/net.git" }
 rand_chacha = { version = "0.3.1", features = ["serde1"] }
 reef = { git = "ssh://git@github.com/SpectrumXYZ/reef.git" }
-seahorse = { git = "ssh://git@github.com/SpectrumXYZ/seahorse.git", rev = "fc47d4da9ab5a1de6777e835c818b45cd8370041", features = ["testing"] }
+seahorse = { git = "ssh://git@github.com/SpectrumXYZ/seahorse.git", rev = "735a0df1dbc7fd9719391a1dd53eb04861fcc256", features = ["testing"] }
 serde = { version = "1.0.123", features = ["derive", "rc"] }
 serde_derive = "1.0.118"
 serde_json = "1.0.61"

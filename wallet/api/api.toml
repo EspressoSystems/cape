@@ -59,19 +59,20 @@ PATH = ["getmnemonic"]
 DOC = "Generate a random mnemonic phrase."
 
 [route.newwallet]
-PATH = ["newwallet/:mnemonic", "newwallet/:mnemonic/path/:path"]
+PATH = ["newwallet/:mnemonic/:password", "newwallet/:mnemonic/:password/path/:path"]
+":password" = "Literal"
 ":path" = "TaggedBase64"
 ":mnemonic" = "Literal"
 DOC = """
-Creates and opens a new the wallet with the given mnemonic.
+Creates and opens a new the wallet with the given mnemonic and password.
 """
 
 [route.openwallet]
-PATH = ["openwallet/:mnemonic", "openwallet/:mnemonic/path/:path"]
+PATH = ["openwallet/:password", "openwallet/:password/path/:path"]
+":password" = "Literal"
 ":path" = "TaggedBase64"
-":mnemonic" = "Literal"
 DOC = """
-Open the wallet from local storage with the given mnemonic and path.
+Open the wallet from local storage with the given password and path.
 """
 
 [route.closewallet]

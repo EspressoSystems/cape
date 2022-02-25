@@ -122,7 +122,7 @@ pub async fn create_test_network<'a>(
 }
 
 #[derive(Debug)]
-enum OperationType {
+pub enum OperationType {
     Transfer,
     Freeze,
     Unfreeze,
@@ -142,9 +142,33 @@ impl Distribution<OperationType> for Standard {
     }
 }
 
-// pub async fn freeze_token(freezer, asset, ) {}
+pub async fn freeze_token<'a>(
+    freezer: &mut CapeWallet<'a, CapeBackend<'a, ()>>,
+    asset: &AssetCode,
+    amount: u64,
+    owner_address: UserAddress,
+) -> Result<TransactionStatus, CapeWalletError> {
+    let freeze_address = freezer.pub_keys().await[0].address();
+    let txn = freezer
+        .freeze(&freeze_address, 1, asset, amount, owner_address)
+        .await
+        .unwrap();
+    freezer.await_transaction(&txn).await
+}
 
-// pub async fn unfreeze_token() {}
+pub async fn unfreeze_token<'a>(
+    freezer: &mut CapeWallet<'a, CapeBackend<'a, ()>>,
+    asset: &AssetCode,
+    amount: u64,
+    owner_address: UserAddress,
+) -> Result<TransactionStatus, CapeWalletError> {
+    let unfreeze_address = freezer.pub_keys().await[0].address();
+    let txn = freezer
+        .unfreeze(&unfreeze_address, 1, asset, amount, owner_address)
+        .await
+        .unwrap();
+    freezer.await_transaction(&txn).await
+}
 
 pub async fn wrap_simple_token<'a>(
     wrapper: &mut CapeWallet<'a, CapeBackend<'a, ()>>,

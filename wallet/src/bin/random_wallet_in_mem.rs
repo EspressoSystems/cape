@@ -5,8 +5,9 @@ use async_std::sync::{Arc, Mutex};
 use async_std::task::sleep;
 use cape_wallet::backend::CapeBackend;
 use cape_wallet::mocks::*;
-use cape_wallet::testing::create_test_network;
-use cape_wallet::testing::transfer_token;
+use cape_wallet::testing::{
+    create_test_network, freeze_token, transfer_token, unfreeze_token, OperationType,
+};
 use cape_wallet::CapeWallet;
 use ethers::prelude::Address;
 use jf_cap::keys::UserAddress;
@@ -237,59 +238,101 @@ async fn main() {
     }
 
     loop {
-        let sender = wallets.choose_mut(&mut rng).unwrap();
-        let sender_address = wallet.pub_keys().await[0].address();
+        let operation: OperationType = rand::random();
 
-        let recipient_pk = public_keys.choose(&mut rng).unwrap();
-        // Can't choose weighted and check this because async lambda not allowed.
-        // There is probably a betterw way
-        if sender.pub_keys().await[0] == *recipient_pk {
-            continue;
-        }
+        match operation {
+            OperationType::Transfer => {
+                let sender = wallets.choose_mut(&mut rng).unwrap();
+                let sender_address = sender.pub_keys().await[0].address();
 
-        // Get a list of assets for which we have a non-zero balance.
-        let mut asset_balances = vec![];
-        for code in sender.assets().await.keys() {
-            if sender.balance(&sender_address, code).await > 0 {
-                asset_balances.push(*code);
-            }
-        }
-        // Randomly choose an asset type for the transfer.
-        let asset = asset_balances.choose(&mut rng).unwrap();
-        let amount = 1;
-        let fee = 1;
-
-        event!(
-            Level::INFO,
-            "transferring {} units of {} to user {}",
-            amount,
-            if *asset == AssetCode::native() {
-                String::from("the native asset")
-            } else if *asset == my_asset.code {
-                String::from("my asset")
-            } else {
-                asset.to_string()
-            },
-            recipient_pk,
-        );
-        match transfer_token(sender, recipient_pk.address(), amount, *asset, fee).await {
-            Ok(status) => {
-                if !status.succeeded() {
-                    // Transfers are allowed to fail. It can happen, for instance, if we get starved
-                    // out until our transfer becomes too old for the validators. Thus we make this
-                    // a warning, not an error.
-                    event!(Level::WARN, "transfer failed!");
+                let recipient_pk = public_keys.choose(&mut rng).unwrap();
+                // Can't choose weighted and check this because async lambda not allowed.
+                // There is probably a betterw way
+                if sender.pub_keys().await[0] == *recipient_pk {
+                    continue;
                 }
-                update_balances(
-                    &sender_address,
-                    &recipient_pk.address(),
+                // Get a list of assets for which we have a non-zero balance.
+                let mut asset_balances = vec![];
+                for code in sender.assets().await.keys() {
+                    if sender.balance(&sender_address, code).await > 0 {
+                        asset_balances.push(*code);
+                    }
+                }
+                // Randomly choose an asset type for the transfer.
+                let asset = asset_balances.choose(&mut rng).unwrap();
+                let amount = 1;
+                let fee = 1;
+
+                event!(
+                    Level::INFO,
+                    "transferring {} units of {} to user {}",
                     amount,
-                    asset,
-                    &mut balances,
-                )
+                    if *asset == AssetCode::native() {
+                        String::from("the native asset")
+                    } else if *asset == my_asset.code {
+                        String::from("my asset")
+                    } else {
+                        asset.to_string()
+                    },
+                    recipient_pk,
+                );
+                match transfer_token(sender, recipient_pk.address(), amount, *asset, fee).await {
+                    Ok(status) => {
+                        if !status.succeeded() {
+                            // Transfers are allowed to fail. It can happen, for instance, if we get starved
+                            // out until our transfer becomes too old for the validators. Thus we make this
+                            // a warning, not an error.
+                            event!(Level::WARN, "transfer failed!");
+                        }
+                        update_balances(
+                            &sender_address,
+                            &recipient_pk.address(),
+                            amount,
+                            asset,
+                            &mut balances,
+                        )
+                    }
+                    Err(err) => {
+                        event!(Level::ERROR, "error while waiting for transaction: {}", err);
+                    }
+                }
             }
-            Err(err) => {
-                event!(Level::ERROR, "error while waiting for transaction: {}", err);
+            OperationType::Freeze => {
+                let owner = wallets.choose(&mut rng).unwrap();
+                let owner_address = owner.pub_keys().await[0].address();
+                // move this to helper
+                let mut asset_balances = vec![];
+                for code in owner.assets().await.keys() {
+                    if owner.balance(&owner_address, code).await > 0 {
+                        asset_balances.push(*code);
+                    }
+                }
+                let asset = asset_balances.choose(&mut rng).unwrap();
+
+                let freezer = wallets.choose_mut(&mut rng).unwrap();
+                freeze_token(freezer, asset, 1, owner_address)
+                    .await
+                    .unwrap();
+            }
+            OperationType::Unfreeze => {
+                let owner = wallets.choose(&mut rng).unwrap();
+                let owner_address = owner.pub_keys().await[0].address();
+                // move this to helper
+                let mut asset_balances = vec![];
+                for code in owner.assets().await.keys() {
+                    if owner.balance(&owner_address, code).await > 0 {
+                        asset_balances.push(*code);
+                    }
+                }
+                let asset = asset_balances.choose(&mut rng).unwrap();
+
+                let unfreezer = wallets.choose_mut(&mut rng).unwrap();
+                unfreeze_token(unfreezer, asset, 1, owner_address)
+                    .await
+                    .unwrap();
+            }
+            _ => {
+                event!(Level::INFO, "Wrap and unwrap todo");
             }
         }
     }

@@ -326,15 +326,26 @@ pub async fn init_wallet(
             jf_cap::proof::mint::preprocess(&*UNIVERSAL_PARAM, CapeLedger::merkle_height())?.1,
         ),
         xfr: KeySet::new(
-            vec![TransactionVerifyingKey::Transfer(
-                jf_cap::proof::transfer::preprocess(
-                    &*UNIVERSAL_PARAM,
-                    3,
-                    3,
-                    CapeLedger::merkle_height(),
-                )?
-                .1,
-            )]
+            vec![
+                TransactionVerifyingKey::Transfer(
+                    jf_cap::proof::transfer::preprocess(
+                        &*UNIVERSAL_PARAM,
+                        2,
+                        2,
+                        CapeLedger::merkle_height(),
+                    )?
+                    .1,
+                ),
+                TransactionVerifyingKey::Transfer(
+                    jf_cap::proof::transfer::preprocess(
+                        &*UNIVERSAL_PARAM,
+                        3,
+                        3,
+                        CapeLedger::merkle_height(),
+                    )?
+                    .1,
+                ),
+            ]
             .into_iter(),
         )
         .unwrap(),
@@ -710,6 +721,27 @@ async fn mint(
     Ok(wallet.mint(&minter, fee, &asset, amount, recipient).await?)
 }
 
+async fn unwrap(
+    bindings: &HashMap<String, RouteBinding>,
+    wallet: &mut Option<Wallet>,
+) -> Result<TransactionReceipt<CapeLedger>, tide::Error> {
+    let wallet = require_wallet(wallet)?;
+
+    let source = bindings.get(":source").unwrap().value.to::<UserAddress>()?;
+    let eth_address = bindings
+        .get(":eth_address")
+        .unwrap()
+        .value
+        .to::<EthereumAddr>()?;
+    let asset = bindings.get(":asset").unwrap().value.to::<AssetCode>()?;
+    let amount = bindings.get(":amount").unwrap().value.as_u64()?;
+    let fee = bindings.get(":fee").unwrap().value.as_u64()?;
+
+    Ok(wallet
+        .burn(&source.into(), eth_address, &asset, amount, fee)
+        .await?)
+}
+
 pub async fn send(
     bindings: &HashMap<String, RouteBinding>,
     wallet: &mut Option<Wallet>,
@@ -766,7 +798,7 @@ pub async fn dispatch_url(
         ApiRouteKey::trace => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::transaction => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::unfreeze => dummy_url_eval(route_pattern, bindings),
-        ApiRouteKey::unwrap => dummy_url_eval(route_pattern, bindings),
+        ApiRouteKey::unwrap => response(&req, unwrap(bindings, wallet).await?),
         ApiRouteKey::wrap => response(&req, wrap(bindings, wallet).await?),
     }
 }

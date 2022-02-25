@@ -77,7 +77,6 @@ library Transcript {
         IPlonkVerifier.VerifyingKey memory verifyingKey,
         uint256[] memory publicInput
     ) internal pure {
-        // TODO: improve this code and avoid reverseEndianness
         uint64 sizeInBits = 254;
 
         // Fr field size in bits

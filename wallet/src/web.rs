@@ -8,7 +8,8 @@ use async_std::{
     sync::{Arc, Mutex},
     task::{spawn, JoinHandle},
 };
-use jf_cap::keys::UserKeyPair;
+use cap_rust_sandbox::model::EthereumAddr;
+use jf_cap::{keys::UserKeyPair, structs::AssetCode};
 use net::server;
 use rand_chacha::ChaChaRng;
 use std::collections::hash_map::HashMap;
@@ -17,6 +18,11 @@ use std::str::FromStr;
 use structopt::StructOpt;
 use tide::StatusCode;
 use tide_websockets::{WebSocket, WebSocketConnection};
+
+pub const DEFAULT_ETH_ADDR: EthereumAddr = EthereumAddr([2; 20]);
+pub const DEFAULT_WRAPPED_AMT: u64 = 1000;
+pub const DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR: u64 = 500;
+pub const DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR: u64 = 400;
 
 #[derive(Debug, StructOpt)]
 #[structopt(
@@ -222,7 +228,7 @@ async fn populatefortest(req: tide::Request<WebState>) -> Result<tide::Response,
         routes::{require_wallet, wallet_error},
         wallet::CapeWalletExt,
     };
-    use cap_rust_sandbox::model::{CapeModelOperation, Erc20Code, EthereumAddr};
+    use cap_rust_sandbox::model::Erc20Code;
 
     let wallet = &mut *req.state().wallet.lock().await;
     let wallet = require_wallet(wallet)?;
@@ -246,32 +252,34 @@ async fn populatefortest(req: tide::Request<WebState>) -> Result<tide::Response,
 
     // Add a wrapped asset, and give it some nonzero balance.
     let erc20_code = Erc20Code(EthereumAddr([1; 20]));
-    let sponsor_addr = EthereumAddr([2; 20]);
+    let sponsor_addr = DEFAULT_ETH_ADDR;
     let asset_def = wallet
         .sponsor(erc20_code, sponsor_addr.clone(), Default::default())
         .await
         .map_err(wallet_error)?;
+    let wrapped_asset_addr = wallet.pub_keys().await[0].address();
     wallet
         .wrap(
             sponsor_addr,
             asset_def,
-            wallet.pub_keys().await[0].address(),
-            1000,
+            wrapped_asset_addr.clone(),
+            DEFAULT_WRAPPED_AMT,
         )
         .await
         .map_err(wallet_error)?;
-    // Submit an empty block to force the wrap to be finalized.
-    let t = {
-        let guard = wallet.lock().await;
-        let mut mock_ledger = guard.backend().ledger.lock().await;
-        mock_ledger
-            .network()
-            .submit_operations(vec![CapeModelOperation::SubmitBlock(vec![])])
-            .unwrap();
-        mock_ledger.now()
-    };
-    // Wait for the wallet to process events corresponding to the wrapped asset.
-    wallet.sync(t).await.unwrap();
+
+    // Transfer some native asset from the faucet address to the address with
+    // the wrapped asset, so that it can be used for the unwrapping fee.
+    // The transfer also finalizes the wrap.
+    wallet
+        .transfer(
+            &req.state().faucet_key_pair.address(),
+            &AssetCode::native(),
+            &[(wrapped_asset_addr, DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR)],
+            1000 - DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR - DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR,
+        )
+        .await
+        .map_err(wallet_error)?;
 
     server::response(&req, ())
 }

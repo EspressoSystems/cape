@@ -129,22 +129,24 @@ Transfer amount units of the given asset from the sender to the recipient. Retur
 """
 
 [route.wrap]
-PATH = ["wrap/destination/:destination/ethaddress/:eth_address/amount/:amount/asset/:asset"]
+PATH = ["wrap/destination/:destination/ethaddress/:eth_address/asset/:asset/amount/:amount"]
 ":destination" = "TaggedBase64"
 ":eth_address" = "TaggedBase64"
-":amount" = "Integer"
 ":asset" = "TaggedBase64"
+":amount" = "Integer"
 DOC = """
 Wrap amount units of the given asset from the Ethereum address to the destination.
 """
 
 [route.unwrap]
-PATH = ["unwrap/asset/:asset/amount/:amount/erc20/:erc20"]
+PATH = ["unwrap/source/:source/ethaddress/:eth_address/asset/:asset/amount/:amount/fee/:fee"]
+":source" = "TaggedBase64"
+":eth_address" = "TaggedBase64"
 ":asset" = "TaggedBase64"
 ":amount" = "Integer"
-":erc20" = "TaggedBase64"
+":fee" = "Integer"
 DOC = """
-Unwrap amount units of the given asset into the given ERC-20 address. Returns a serialized receipt which can be used to track the transaction through the validation process.
+Unwrap amount units of the given asset from the source to the Ethereum address. Returns a serialized receipt which can be used to track the transaction through the validation process.
 """
 
 [route.newasset]

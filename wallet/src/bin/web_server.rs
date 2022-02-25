@@ -728,7 +728,7 @@ mod tests {
 
     #[async_std::test]
     #[traced_test]
-    async fn test_retry_mint() {
+    async fn test_mint() {
         // Set parameters.
         let description = TaggedBase64::new("DESC", &[3u8; 32]).unwrap();
         let amount = 10;
@@ -829,7 +829,7 @@ mod tests {
 
     #[async_std::test]
     #[traced_test]
-    async fn test_retry_unwrap() {
+    async fn test_unwrap() {
         // Set parameters.
         let eth_addr = DEFAULT_ETH_ADDR;
         let fee = 1;
@@ -933,7 +933,7 @@ mod tests {
 
     #[async_std::test]
     #[traced_test]
-    async fn test_retry_dummy_populate() {
+    async fn test_dummy_populate() {
         let server = TestServer::new().await;
         server
             .get::<()>(&format!(

@@ -344,6 +344,7 @@ mod tests {
         hd, io::Tee, persistence::AtomicWalletStorage, testing::cli_match::*,
         testing::SystemUnderTest, WalletBackend,
     };
+    use std::io::BufRead;
     use std::time::Instant;
 
     pub struct MockCapeCli;
@@ -491,9 +492,22 @@ mod tests {
         });
 
         // Wait for the CLI to start up and then return the input and output pipes.
-        let input = Tee::new(input);
+        let mut input = Tee::new(input);
         let mut output = Tee::new(output);
         wait_for_prompt(&mut output);
+
+        // Accept the generated mnemonic.
+        writeln!(input, "1").unwrap();
+        // Instead of a ">" prompt, the wallet will ask us to create a password, so
+        // `wait_for_prompt` doesn't work, we just need to consume a line of output.
+        output.read_line(&mut String::new()).unwrap();
+        // Create a password.
+        writeln!(input, "test-password").unwrap();
+        output.read_line(&mut String::new()).unwrap();
+        // Confirm password.
+        writeln!(input, "test-password").unwrap();
+        wait_for_prompt(&mut output);
+
         (input, output)
     }
 
@@ -652,16 +666,10 @@ mod tests {
         // Create wallets for sponsor, wrapper and receiver.
         let (mut sponsor_input, mut sponsor_output) =
             create_cape_wallet(ledger.clone(), key_streams[0].clone());
-        writeln!(sponsor_input, "1").unwrap();
-        wait_for_prompt(&mut sponsor_output);
         let (mut wrapper_input, mut wrapper_output) =
             create_cape_wallet(ledger.clone(), key_streams[1].clone());
-        writeln!(wrapper_input, "1").unwrap();
-        wait_for_prompt(&mut wrapper_output);
         let (mut receiver_input, mut receiver_output) =
             create_cape_wallet(ledger.clone(), key_streams[2].clone());
-        writeln!(receiver_input, "1").unwrap();
-        wait_for_prompt(&mut receiver_output);
 
         // Get the freezer and auditor keys for the sponsor, and the receiver's addresses.
         writeln!(sponsor_input, "gen_key freeze").unwrap();

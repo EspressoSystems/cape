@@ -2,7 +2,7 @@
 mod events;
 mod faucet;
 mod note_types;
-mod submit_block;
+pub mod submit_block;
 mod wrapping;
 
 use crate::model::CapeModelTxn;

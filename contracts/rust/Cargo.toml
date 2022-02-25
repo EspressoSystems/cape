@@ -64,3 +64,5 @@ proptest = "1.0.0"
 
 [build-dependencies]
 glob = "^0.3.0"
+ethers-solc = { git = "https://github.com/gakonst/ethers-rs" }
+ethers-contract-abigen = { git = "https://github.com/gakonst/ethers-rs" }

@@ -245,10 +245,8 @@ async fn populatefortest(req: tide::Request<WebState>) -> Result<tide::Response,
         .add_user_key(req.state().faucet_key_pair.clone(), Default::default())
         .await
         .unwrap();
-    wallet
-        .await_key_scan(&req.state().faucet_key_pair.address())
-        .await
-        .unwrap();
+    let faucet_addr = req.state().faucet_key_pair.address();
+    wallet.await_key_scan(&faucet_addr).await.unwrap();
 
     // Add a wrapped asset, and give it some nonzero balance.
     let erc20_code = Erc20Code(EthereumAddr([1; 20]));
@@ -258,10 +256,10 @@ async fn populatefortest(req: tide::Request<WebState>) -> Result<tide::Response,
         .await
         .map_err(wallet_error)?;
     let wrapped_asset_addr = wallet.pub_keys().await[0].address();
-    wallet
+    let _ = wallet
         .wrap(
             sponsor_addr,
-            asset_def,
+            asset_def.clone(),
             wrapped_asset_addr.clone(),
             DEFAULT_WRAPPED_AMT,
         )
@@ -271,17 +269,20 @@ async fn populatefortest(req: tide::Request<WebState>) -> Result<tide::Response,
     // Transfer some native asset from the faucet address to the address with
     // the wrapped asset, so that it can be used for the unwrapping fee.
     // The transfer also finalizes the wrap.
-    wallet
+    let receipt = wallet
         .transfer(
-            &req.state().faucet_key_pair.address(),
+            &faucet_addr,
             &AssetCode::native(),
-            &[(wrapped_asset_addr, DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR)],
+            &[(
+                wrapped_asset_addr.clone(),
+                DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR,
+            )],
             1000 - DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR - DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR,
         )
         .await
         .map_err(wallet_error)?;
 
-    server::response(&req, ())
+    server::response(&req, receipt)
 }
 
 async fn handle_web_socket(

@@ -728,7 +728,7 @@ mod tests {
 
     #[async_std::test]
     #[traced_test]
-    async fn test_mint() {
+    async fn test_retry_mint() {
         // Set parameters.
         let description = TaggedBase64::new("DESC", &[3u8; 32]).unwrap();
         let amount = 10;
@@ -745,7 +745,10 @@ mod tests {
             ))
             .await
             .unwrap();
-        server.get::<()>("populatefortest").await.unwrap();
+        let receipt = server
+            .get::<TransactionReceipt<CapeLedger>>("populatefortest")
+            .await
+            .unwrap();
 
         // Define an asset.
         let asset = server
@@ -754,24 +757,8 @@ mod tests {
             .unwrap()
             .code;
 
-        // Get the address with non-zero balance of the native asset.
-        let info = server.get::<WalletSummary>("getinfo").await.unwrap();
-        let mut minter_addr: Option<UserAddress> = None;
-        for address in info.addresses {
-            if let BalanceInfo::Balance(DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR) = server
-                .get::<BalanceInfo>(&format!(
-                    "getbalance/address/{}/asset/{}",
-                    address,
-                    AssetCode::native()
-                ))
-                .await
-                .unwrap()
-            {
-                minter_addr = Some(address);
-                break;
-            }
-        }
-        let minter = minter_addr.unwrap();
+        // Get the faucet address with non-zero balance of the native asset.
+        let minter: UserAddress = receipt.submitter.into();
 
         // Get an address to receive the minted asset.
         let recipient: UserAddress = server
@@ -842,7 +829,7 @@ mod tests {
 
     #[async_std::test]
     #[traced_test]
-    async fn test_unwrap() {
+    async fn test_retry_unwrap() {
         // Set parameters.
         let eth_addr = DEFAULT_ETH_ADDR;
         let fee = 1;
@@ -857,7 +844,10 @@ mod tests {
             ))
             .await
             .unwrap();
-        server.get::<()>("populatefortest").await.unwrap();
+        let _ = server
+            .get::<TransactionReceipt<CapeLedger>>("populatefortest")
+            .await
+            .unwrap();
 
         // Get the wrapped asset.
         let info = server.get::<WalletSummary>("getinfo").await.unwrap();
@@ -943,7 +933,7 @@ mod tests {
 
     #[async_std::test]
     #[traced_test]
-    async fn test_dummy_populate() {
+    async fn test_retry_dummy_populate() {
         let server = TestServer::new().await;
         server
             .get::<()>(&format!(
@@ -953,7 +943,10 @@ mod tests {
             ))
             .await
             .unwrap();
-        server.get::<()>("populatefortest").await.unwrap();
+        let _ = server
+            .get::<TransactionReceipt<CapeLedger>>("populatefortest")
+            .await
+            .unwrap();
 
         let info = server.get::<WalletSummary>("getinfo").await.unwrap();
         assert_eq!(info.addresses.len(), 3);
@@ -1028,7 +1021,10 @@ mod tests {
             .await
             .unwrap();
         // Populate the wallet with some dummy data so we have a balance of an asset to send.
-        server.get::<()>("populatefortest").await.unwrap();
+        server
+            .get::<TransactionReceipt<CapeLedger>>("populatefortest")
+            .await
+            .unwrap();
         let info = server.get::<WalletSummary>("getinfo").await.unwrap();
         // One of the wallet's addresses (the faucet address) should have a nonzero balance of the
         // native asset, and at least one should have a 0 balance. Get one of each so we can

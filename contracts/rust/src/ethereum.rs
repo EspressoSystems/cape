@@ -9,11 +9,10 @@ use async_recursion::async_recursion;
 use ethers::{
     abi::{Abi, Tokenize},
     contract::Contract,
-    core::k256::ecdsa::SigningKey,
     prelude::{
         artifacts::BytecodeObject, coins_bip39::English, Address, ContractFactory, Http,
         LocalWallet, Middleware, MnemonicBuilder, Provider, Signer, SignerMiddleware,
-        TransactionRequest, Wallet, U256,
+        TransactionRequest, U256,
     },
 };
 
@@ -65,8 +64,7 @@ pub fn get_provider() -> Provider<Http> {
     Provider::<Http>::try_from(rpc_url).expect("could not instantiate HTTP Provider")
 }
 
-pub async fn get_funded_client() -> Result<Arc<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>>
-{
+pub async fn get_funded_client() -> Result<Arc<EthMiddleware>> {
     let mut provider = get_provider();
     let chain_id = provider.get_chainid().await.unwrap().as_u64();
 

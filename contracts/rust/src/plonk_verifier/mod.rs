@@ -5,7 +5,7 @@ mod vk;
 
 use self::helpers::gen_plonk_proof_for_test;
 use crate::assertion::Matcher;
-use crate::deploy::deploy_test_plonk_verifier_contract;
+use crate::deploy::{deploy_test_plonk_verifier_contract, EthMiddleware};
 use crate::types::GenericInto;
 use crate::{
     ethereum::get_funded_client,
@@ -20,7 +20,6 @@ use ark_ff::{Field, Zero};
 use ark_poly::{EvaluationDomain, Radix2EvaluationDomain};
 use ark_std::rand::Rng;
 use ark_std::{test_rng, One, UniformRand};
-use ethers::core::k256::ecdsa::SigningKey;
 use ethers::prelude::*;
 use itertools::multiunzip;
 use jf_plonk::testing_apis::PcsInfo;
@@ -545,7 +544,7 @@ async fn test_proof_and_pub_inputs_validation() -> Result<()> {
 
     // bad path
     async fn test_bad_point_in_proof(
-        contract: &TestPlonkVerifier<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>,
+        contract: &TestPlonkVerifier<EthMiddleware>,
         vk_sol: &sol::VerifyingKey,
         pi_sol: &[U256],
         bad_proof: sol::PlonkProof,
@@ -564,7 +563,7 @@ async fn test_proof_and_pub_inputs_validation() -> Result<()> {
     }
 
     async fn test_bad_field_in_proof(
-        contract: &TestPlonkVerifier<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>,
+        contract: &TestPlonkVerifier<EthMiddleware>,
         vk_sol: &sol::VerifyingKey,
         pi_sol: &[U256],
         bad_proof: sol::PlonkProof,

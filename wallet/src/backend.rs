@@ -1,3 +1,5 @@
+#![deny(warnings)]
+
 use crate::{
     mocks::MockCapeLedger, mocks::MockCapeNetwork, testing::port, CapeWalletBackend,
     CapeWalletError,
@@ -31,12 +33,13 @@ use key_set::VerifierKeySet;
 use net::client::parse_error_body;
 use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
 use reef::Ledger;
-use relayer::testing::start_minimal_relayer_for_test;
+use relayer::{testing::start_minimal_relayer_for_test, SubmitBody};
 use seahorse::{
     events::{EventIndex, EventSource, LedgerEvent},
     hd,
     loader::WalletLoader,
     persistence::AtomicWalletStorage,
+    txn_builder::TransactionUID,
     WalletBackend, WalletState,
 };
 use serde::{de::DeserializeOwned, Serialize};
@@ -125,12 +128,22 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
         self.key_stream.clone()
     }
 
-    async fn submit(&mut self, txn: CapeTransition) -> Result<(), CapeWalletError> {
+    async fn submit(
+        &mut self,
+        txn: CapeTransition,
+        uid: TransactionUID<CapeLedger>,
+        memos: Vec<ReceiverMemo>,
+        sig: Signature,
+    ) -> Result<(), CapeWalletError> {
         match &txn {
             CapeTransition::Transaction(txn) => {
                 self.relayer
                     .post("submit")
-                    .body_json(txn)
+                    .body_json(&SubmitBody {
+                        transaction: txn.clone(),
+                        memos: memos.clone(),
+                        signature: sig.clone(),
+                    })
                     .map_err(|err| CapeWalletError::Failed {
                         msg: err.to_string(),
                     })?
@@ -140,33 +153,22 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
                         msg: format!("relayer error: {}", err),
                     })?;
             }
-            CapeTransition::Wrap {
-                ro,
-                erc20_code,
-                src_addr,
-            } => {
-                // Wraps don't go through the relayer, they go directly to the contract.
-                // TODO wraps shouldn't go through here at all, they should be submitted by the
-                // frontend using Metamask.
-                self.contract
-                    .deposit_erc_20((**ro).clone().into(), erc20_code.clone().into())
-                    .from(Address::from(src_addr.clone()))
-                    .send()
-                    .await
-                    .map_err(|err| CapeWalletError::Failed {
-                        msg: format!("error building CAPE::depositErc20 transaction: {}", err),
-                    })?
-                    .await
-                    .map_err(|err| CapeWalletError::Failed {
-                        msg: format!("error submitting CAPE::depositErc20 transaction: {}", err),
-                    })?;
+            CapeTransition::Wrap { .. } => {
+                return Err(CapeWalletError::Failed {
+                    msg: String::from(
+                        "invalid transaction type: wraps must be submitted using `wrap()`, not \
+                        `submit()`",
+                    ),
+                })
             }
         }
 
         // The mock EQS is not connected to the real contract, so we have to update it by explicitly
         // passing it the submitted transaction. This should not fail, since the submission to the
         // contract above succeeded, and the mock EQS is supposed to be tracking the contract state.
-        self.mock_eqs.lock().await.submit(txn).unwrap();
+        let mut mock_eqs = self.mock_eqs.lock().await;
+        mock_eqs.network().store_call_data(uid, memos, sig);
+        mock_eqs.submit(txn).unwrap();
 
         Ok(())
     }
@@ -260,19 +262,6 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
             }),
         }
     }
-
-    async fn post_memos(
-        &mut self,
-        block_id: u64,
-        txn_id: u64,
-        memos: Vec<ReceiverMemo>,
-        sig: Signature,
-    ) -> Result<(), CapeWalletError> {
-        self.mock_eqs
-            .lock()
-            .await
-            .post_memos(block_id, txn_id, memos, sig)
-    }
 }
 
 #[async_trait]
@@ -330,12 +319,33 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
         src_addr: EthereumAddr,
         ro: RecordOpening,
     ) -> Result<(), CapeWalletError> {
-        let txn = CapeTransition::Wrap {
-            ro: Box::new(ro),
-            erc20_code,
-            src_addr,
-        };
-        self.submit(txn).await
+        // Wraps don't go through the relayer, they go directly to the contract.
+        self.contract
+            .deposit_erc_20(ro.clone().into(), erc20_code.clone().into())
+            .from(Address::from(src_addr.clone()))
+            .send()
+            .await
+            .map_err(|err| CapeWalletError::Failed {
+                msg: format!("error building CAPE::depositErc20 transaction: {}", err),
+            })?
+            .await
+            .map_err(|err| CapeWalletError::Failed {
+                msg: format!("error submitting CAPE::depositErc20 transaction: {}", err),
+            })?;
+
+        // The mock EQS is not connected to the real contract, so we have to update it by explicitly
+        // passing it the submitted transaction. This should not fail, since the submission to the
+        // contract above succeded, and the mock EQS is supposed to be tracking the contract state.
+        let mut mock_eqs = self.mock_eqs.lock().await;
+        mock_eqs
+            .submit(CapeTransition::Wrap {
+                ro: Box::new(ro),
+                erc20_code,
+                src_addr,
+            })
+            .unwrap();
+
+        Ok(())
     }
 
     fn eth_client(&self) -> Result<Arc<EthMiddleware>, CapeWalletError> {

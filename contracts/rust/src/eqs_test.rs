@@ -236,6 +236,8 @@ mod tests {
                 let cape_contract = eth_connection.lock().await;
                 submit_cape_block_with_memos(&cape_contract.contract, block_with_memos.clone())
                     .await
+                    .unwrap()
+                    .await
                     .unwrap();
             }
         };

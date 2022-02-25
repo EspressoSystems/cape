@@ -882,7 +882,6 @@ mod tests {
             }
         }
         let source = source_addr.unwrap();
-        println!("source: {:?}", source);
 
         // unwrap should fail if any of the source, Ethereum address, and asset is invalid.
         let invalid_source = UserAddress::from(
@@ -922,14 +921,15 @@ mod tests {
             .unwrap();
 
         // Check the balances of the wrapped and native assets.
-        assert_eq!(
+        retry(|| async {
             server
                 .get::<BalanceInfo>(&format!("getbalance/address/{}/asset/{}", source, asset))
                 .await
-                .unwrap(),
-            BalanceInfo::Balance(0)
-        );
-        assert_eq!(
+                .unwrap()
+                == BalanceInfo::Balance(0)
+        })
+        .await;
+        retry(|| async {
             server
                 .get::<BalanceInfo>(&format!(
                     "getbalance/address/{}/asset/{}",
@@ -937,9 +937,10 @@ mod tests {
                     AssetCode::native()
                 ))
                 .await
-                .unwrap(),
-            BalanceInfo::Balance(DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR - fee)
-        );
+                .unwrap()
+                == BalanceInfo::Balance(DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR - fee)
+        })
+        .await;
     }
 
     #[async_std::test]

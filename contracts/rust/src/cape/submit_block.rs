@@ -8,12 +8,16 @@ use crate::ledger::CapeLedger;
 use crate::test_utils::PrintGas;
 use crate::types::{self as sol, CAPE};
 use crate::types::{GenericInto, MerkleRootSol, NullifierSol};
+
 use anyhow::{Error, Result};
+use ark_ff::Fp256;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ethers::prelude::{Bytes, Middleware, TxHash, U256};
 use jf_cap::keys::UserPubKey;
-use jf_cap::structs::{AssetCodeSeed, InternalAssetCode};
+use jf_cap::structs::{AssetCodeSeed, InternalAssetCode, RecordCommitment};
 use jf_cap::utils::TxnsParams;
+use jf_cap::TransactionNote;
+use num_traits::Zero;
 use rand::Rng;
 use reef::Ledger;
 
@@ -130,6 +134,127 @@ async fn test_compute_num_commitments() {
     }
 }
 
+async fn submit_block_test_helper(
+    num_transfer_tx: usize,
+    num_mint_tx: usize,
+    num_freeze_tx: usize,
+) -> Result<()> {
+    let contract = deploy_cape_test().await;
+
+    let rng = &mut ark_std::test_rng();
+
+    let params = TxnsParams::generate_txns(
+        rng,
+        num_transfer_tx,
+        num_mint_tx,
+        num_freeze_tx,
+        CapeLedger::merkle_height(),
+    );
+    let miner = UserPubKey::default();
+
+    let nf = params.txns[0].nullifiers()[0];
+    let root = params.txns[0].merkle_root();
+
+    let cape_block = CapeBlock::generate(params.txns.clone(), vec![], miner.address())?;
+
+    // Check that some nullifier is not yet inserted
+    assert!(
+        !contract
+            .nullifiers(nf.generic_into::<NullifierSol>().0)
+            .call()
+            .await?
+    );
+
+    // Set the root
+    contract
+        .add_root(root.generic_into::<MerkleRootSol>().0)
+        .send()
+        .await?
+        .await?;
+
+    // Submit to the contract
+    contract
+        .submit_cape_block(cape_block.into())
+        .send()
+        .await?
+        .await?;
+
+    // Check that now the nullifier has been inserted
+    assert!(
+        contract
+            .nullifiers(nf.generic_into::<NullifierSol>().0)
+            .call()
+            .await?
+    );
+
+    // Now alter the transaction so that it is invalid, resubmit the block and check it is rejected
+    let zero_rc = RecordCommitment::from_field_element(Fp256::zero());
+
+    let tx_note = params.txns[0].clone();
+    let altered_tx_note = match tx_note {
+        TransactionNote::Transfer(tx) => {
+            let mut altered_tx = tx.clone();
+            altered_tx.output_commitments[0] = zero_rc;
+            TransactionNote::Transfer(altered_tx.clone())
+        }
+        TransactionNote::Mint(tx) => {
+            let mut altered_tx = tx.clone();
+            altered_tx.mint_comm = zero_rc;
+            TransactionNote::Mint(altered_tx.clone())
+        }
+        TransactionNote::Freeze(tx) => {
+            let mut altered_tx = tx.clone();
+            altered_tx.output_commitments[0] = zero_rc;
+            TransactionNote::Freeze(altered_tx.clone())
+        }
+    };
+
+    // We redeploy the contract so that we start with a clean state.
+    let contract = deploy_cape_test().await;
+
+    let cape_block = CapeBlock::generate(vec![altered_tx_note], vec![], miner.address())?;
+
+    // Set the root
+    contract
+        .add_root(root.generic_into::<MerkleRootSol>().0)
+        .send()
+        .await?
+        .await?;
+
+    // Submit to the contract
+    contract
+        .submit_cape_block(cape_block.into())
+        .call()
+        .await
+        .should_revert_with_message("Cape: batch verify failed");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_submit_block_with_transfer_tx() -> Result<()> {
+    submit_block_test_helper(1, 0, 0).await?;
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_submit_block_with_mint_tx() -> Result<()> {
+    submit_block_test_helper(0, 1, 0).await?;
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_submit_block_with_freeze_tx() -> Result<()> {
+    submit_block_test_helper(0, 0, 1).await?;
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_submit_block_with_three_txs_to_cape_contract() -> Result<()> {
+    submit_block_test_helper(1, 1, 1).await?;
+    Ok(())
+}
+
 #[tokio::test]
 async fn test_submit_empty_block_to_cape_contract() -> Result<()> {
     let contract = deploy_cape_test().await;
@@ -152,62 +277,6 @@ async fn test_submit_empty_block_to_cape_contract() -> Result<()> {
     // The height is incremented anyways.
     assert_eq!(contract.block_height().call().await?, 1u64);
 
-    Ok(())
-}
-
-#[tokio::test]
-async fn test_submit_block_to_cape_contract() -> Result<()> {
-    let contract = deploy_cape_test().await;
-
-    // Create three transactions
-    let rng = &mut ark_std::test_rng();
-    let num_transfer_txn = 1;
-    let num_mint_txn = 1;
-    let num_freeze_txn = 1;
-    let params = TxnsParams::generate_txns(
-        rng,
-        num_transfer_txn,
-        num_mint_txn,
-        num_freeze_txn,
-        CapeLedger::merkle_height(),
-    );
-    let miner = UserPubKey::default();
-
-    let nf = params.txns[0].nullifiers()[0];
-    let root = params.txns[0].merkle_root();
-
-    // temporarily no burn txn yet.
-    let cape_block = CapeBlock::generate(params.txns, vec![], miner.address())?;
-
-    // Check that some nullifier is not yet inserted
-    assert!(
-        !contract
-            .nullifiers(nf.generic_into::<NullifierSol>().0)
-            .call()
-            .await?
-    );
-
-    contract
-        .add_root(root.generic_into::<MerkleRootSol>().0)
-        .send()
-        .await?
-        .await?;
-
-    // Submit to the contract
-    contract
-        .submit_cape_block(cape_block.into())
-        .send()
-        .await?
-        .await?
-        .print_gas("Submit transfer + mint + freeze");
-
-    // Check that now the nullifier has been inserted
-    assert!(
-        contract
-            .nullifiers(nf.generic_into::<NullifierSol>().0)
-            .call()
-            .await?
-    );
     Ok(())
 }
 

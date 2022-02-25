@@ -239,7 +239,6 @@ library BN254 {
     }
 
     function fromLeBytesModOrder(bytes memory leBytes) internal pure returns (uint256 ret) {
-        // TODO (optimization): Can likely be gas optimized by copying the first 31 bytes directly.
         for (uint256 i = 0; i < leBytes.length; i++) {
             ret = mulmod(ret, 256, R_MOD);
             ret = addmod(ret, uint256(uint8(leBytes[leBytes.length - 1 - i])), R_MOD);

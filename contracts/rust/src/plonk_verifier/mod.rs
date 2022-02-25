@@ -160,7 +160,6 @@ async fn test_prepare_pcs_info() -> Result<()> {
         field_to_u256(eval)
     );
 
-    // TODO: remove all intermediate steps test above?
     // end-to-end test prepare_pcs_info
     let extra_msg_sol = if let Some(msg) = extra_msg.clone() {
         Bytes::from(msg)

@@ -357,7 +357,7 @@ impl From<AssetPolicy> for jf_cap::structs::AssetPolicy {
             .set_reveal_threshold(policy_sol.reveal_threshold)
             .set_reveal_map_for_test({
                 let map_sol = policy_sol.reveal_map;
-                if map_sol >= U256::from(2).pow(12.into() /*TODO import from jellyfish?*/) {
+                if map_sol >= U256::from(2).pow(12.into()) {
                     panic!("Reveal map has more than 12 bits")
                 }
                 let bits: [bool; 12] = (0..12)

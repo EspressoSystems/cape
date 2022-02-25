@@ -699,21 +699,21 @@ mod tests {
         server
             .get::<()>(&format!(
                 "wrap/destination/{}/ethaddress/{}/asset/{}/amount/{}",
-                invalid_destination, sponsor_addr, 10, sponsored_asset
+                invalid_destination, sponsor_addr, sponsored_asset, 10
             ))
             .await
             .expect_err("wrap succeeded with an invalid user address");
         server
             .get::<()>(&format!(
                 "wrap/destination/{}/ethaddress/{}/asset/{}/amount/{}",
-                destination, invalid_eth_addr, 10, sponsored_asset
+                destination, invalid_eth_addr, sponsored_asset, 10
             ))
             .await
             .expect_err("wrap succeeded with an invalid Ethereum address");
         server
             .get::<()>(&format!(
                 "wrap/destination/{}/ethaddress/{}/asset/{}/amount/{}",
-                destination, sponsor_addr, 10, invalid_asset
+                destination, sponsor_addr, invalid_asset, 10
             ))
             .await
             .expect_err("wrap succeeded with an invalid asset");
@@ -722,7 +722,7 @@ mod tests {
         server
             .get::<()>(&format!(
                 "wrap/destination/{}/ethaddress/{}/asset/{}/amount/{}",
-                destination, sponsor_addr, 10, sponsored_asset
+                destination, sponsor_addr, sponsored_asset, 10
             ))
             .await
             .unwrap();
@@ -1039,7 +1039,7 @@ mod tests {
         let mut funded_account = None;
         let mut unfunded_account = None;
         for address in info.addresses {
-            if let BalanceInfo::Balance(1000) = server
+            if let BalanceInfo::Balance(DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR) = server
                 .get::<BalanceInfo>(&format!(
                     "getbalance/address/{}/asset/{}",
                     address,
@@ -1084,7 +1084,7 @@ mod tests {
 
         // Check that the balance was deducted from the sending account.
         assert_eq!(
-            BalanceInfo::Balance(899),
+            BalanceInfo::Balance(DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR - 101),
             server
                 .get::<BalanceInfo>(&format!(
                     "getbalance/address/{}/asset/{}",

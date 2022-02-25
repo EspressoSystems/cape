@@ -3,6 +3,7 @@ extern crate num_derive;
 
 pub mod assertion;
 mod asset_registry;
+pub mod bindings;
 mod bn254;
 pub mod cape;
 #[cfg(test)]

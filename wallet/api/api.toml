@@ -45,7 +45,7 @@ HEADING_DESCRIPTION = "Description"
 # TODO !corbett Among the words 'transfer', 'spend', and 'send', we use transfer more often, but send seems more specific and intuitive. Send is also shorter. Is spend better?
 # TODO !corbett Selective reveal interface is needed
 # TODO !corbett TaggedBase64 ends up being a catch-all for structured parameters and parameters that may include spaces. Do we need more specific types?
-# TOOD !corbett Document the prefix on all TaggedBase64 values.
+# TODO !corbett Document the prefix on all TaggedBase64 values.
 # TODO !corbett The caller never needs to type the parameter names, so should we add underscores for readability?
 # TODO !corbett Document errors.
 # TODO !corbett the toml reader alphabetizes the routes. Not ideal.

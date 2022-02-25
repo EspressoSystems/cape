@@ -75,6 +75,7 @@ mod tests {
         types::{GenericInto, MerkleRootSol, NullifierSol},
     };
     use ark_ff::Fp256;
+    use ethers::prelude::U256;
     use jf_cap::{
         keys::UserPubKey,
         structs::{AssetCodeSeed, InternalAssetCode, RecordCommitment},
@@ -82,7 +83,73 @@ mod tests {
         TransactionNote,
     };
     use num_traits::Zero;
+    use rand::Rng;
     use reef::Ledger;
+
+    #[tokio::test]
+    async fn test_compute_num_commitments() {
+        let contract = deploy_cape_test().await;
+        let rng = &mut ark_std::test_rng();
+
+        for _run in 0..10 {
+            let mut num_comms = 0;
+
+            let burn_notes = (0..rng.gen_range(0..2))
+                .map(|_| {
+                    let mut note = sol::BurnNote::default();
+                    let n = rng.gen_range(2..10); // burn notes must have a least 2 record commitments
+                    note.transfer_note.output_commitments = [U256::from(0)].repeat(n);
+                    // subtract one because the burn record commitment is not inserted
+                    num_comms += n - 1;
+                    note
+                })
+                .collect();
+
+            let transfer_notes = (0..rng.gen_range(0..2))
+                .map(|_| {
+                    let mut note = sol::TransferNote::default();
+                    let n = rng.gen_range(0..10);
+                    note.output_commitments = [U256::from(0)].repeat(n);
+                    num_comms += n;
+                    note
+                })
+                .collect();
+
+            let freeze_notes = (0..rng.gen_range(0..2))
+                .map(|_| {
+                    let mut note = sol::FreezeNote::default();
+                    let n = rng.gen_range(0..10);
+                    note.output_commitments = [U256::from(0)].repeat(n);
+                    num_comms += n;
+                    note
+                })
+                .collect();
+
+            let mint_notes = (0..rng.gen_range(0..2))
+                .map(|_| {
+                    num_comms += 2; // change and mint
+                    sol::MintNote::default()
+                })
+                .collect();
+
+            let cape_block = sol::CapeBlock {
+                transfer_notes,
+                mint_notes,
+                freeze_notes,
+                burn_notes,
+                note_types: vec![],
+                miner_addr: UserPubKey::default().address().into(),
+            };
+
+            let num_comms_sol = contract
+                .compute_num_commitments(cape_block)
+                .call()
+                .await
+                .unwrap();
+
+            assert_eq!(num_comms_sol, U256::from(num_comms));
+        }
+    }
 
     async fn submit_block_test_helper(
         num_transfer_tx: usize,

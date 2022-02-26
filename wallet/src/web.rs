@@ -279,7 +279,7 @@ async fn populatefortest(req: tide::Request<WebState>) -> Result<tide::Response,
         )
         .await
         .map_err(wallet_error)?;
-    await_transaction(&receipt, &wallet, &[]).await;
+    await_transaction(&receipt, wallet, &[]).await;
 
     server::response(&req, receipt)
 }

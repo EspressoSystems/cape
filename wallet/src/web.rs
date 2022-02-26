@@ -298,9 +298,18 @@ async fn populatefortest(req: tide::Request<WebState>) -> Result<tide::Response,
         )
         .await
         .map_err(wallet_error)?;
+
+    // Wait for transactions to complete.
     await_transaction(&receipt, wallet, &[]).await;
     retry(|| async {
         wallet.balance(&wrapped_asset_addr, &asset_def.code).await == DEFAULT_WRAPPED_AMT
+    })
+    .await;
+    retry(|| async {
+        wallet
+            .balance(&wrapped_asset_addr, &AssetCode::native())
+            .await
+            == DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR
     })
     .await;
 

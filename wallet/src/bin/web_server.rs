@@ -1021,7 +1021,7 @@ mod tests {
             .await
             .unwrap();
         // Populate the wallet with some dummy data so we have a balance of an asset to send.
-        server
+        let receipt = server
             .get::<TransactionReceipt<CapeLedger>>("populatefortest")
             .await
             .unwrap();
@@ -1031,10 +1031,9 @@ mod tests {
         // transfer from an account with non-zero balance to one with 0 balance. Note that in the
         // current setup, we can't easily transfer from one wallet to another, because each instance
         // of the server uses its own ledger. So we settle for an intra-wallet transfer.
-        let mut funded_account = None;
         let mut unfunded_account = None;
         for address in info.addresses {
-            if let BalanceInfo::Balance(DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR) = server
+            if let BalanceInfo::Balance(0) = server
                 .get::<BalanceInfo>(&format!(
                     "getbalance/address/{}/asset/{}",
                     address,
@@ -1043,12 +1042,11 @@ mod tests {
                 .await
                 .unwrap()
             {
-                funded_account = Some(address);
-            } else {
                 unfunded_account = Some(address);
+                break;
             }
         }
-        let src_address = funded_account.unwrap();
+        let src_address: UserAddress = receipt.submitter.into();
         let dst_address = unfunded_account.unwrap();
 
         // Make a transfer.

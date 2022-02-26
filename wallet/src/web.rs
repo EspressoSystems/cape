@@ -12,6 +12,7 @@ use cap_rust_sandbox::model::EthereumAddr;
 use jf_cap::{keys::UserKeyPair, structs::AssetCode};
 use net::server;
 use rand_chacha::ChaChaRng;
+use seahorse::testing::await_transaction;
 use std::collections::hash_map::HashMap;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
@@ -259,7 +260,7 @@ async fn populatefortest(req: tide::Request<WebState>) -> Result<tide::Response,
     let _ = wallet
         .wrap(
             sponsor_addr,
-            asset_def.clone(),
+            asset_def,
             wrapped_asset_addr.clone(),
             DEFAULT_WRAPPED_AMT,
         )
@@ -273,14 +274,12 @@ async fn populatefortest(req: tide::Request<WebState>) -> Result<tide::Response,
         .transfer(
             &faucet_addr,
             &AssetCode::native(),
-            &[(
-                wrapped_asset_addr.clone(),
-                DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR,
-            )],
+            &[(wrapped_asset_addr, DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR)],
             1000 - DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR - DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR,
         )
         .await
         .map_err(wallet_error)?;
+    await_transaction(&receipt, &wallet, &[]).await;
 
     server::response(&req, receipt)
 }

@@ -52,7 +52,6 @@ async fn main() -> Result<(), std::io::Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use async_std::task::sleep;
     use cap_rust_sandbox::{
         ledger::CapeLedger,
         model::{Erc20Code, EthereumAddr},
@@ -61,11 +60,10 @@ mod tests {
         routes::{BalanceInfo, CapeAPIError, PubKey, WalletSummary},
         testing::port,
         web::{
-            DEFAULT_ETH_ADDR, DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR,
+            retry, DEFAULT_ETH_ADDR, DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR,
             DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR, DEFAULT_WRAPPED_AMT,
         },
     };
-    use futures::Future;
     use jf_cap::{
         keys::UserKeyPair,
         structs::{AssetCode, AssetDefinition},
@@ -80,23 +78,10 @@ mod tests {
     use std::convert::TryInto;
     use std::fmt::Debug;
     use std::iter::once;
-    use std::time::Duration;
     use surf::Url;
     use tagged_base64::TaggedBase64;
     use tempdir::TempDir;
     use tracing_test::traced_test;
-
-    async fn retry<Fut: Future<Output = bool>>(f: impl Fn() -> Fut) {
-        let mut backoff = Duration::from_millis(100);
-        for _ in 0..10 {
-            if f().await {
-                return;
-            }
-            sleep(backoff).await;
-            backoff *= 2;
-        }
-        panic!("retry loop did not complete in {:?}", backoff);
-    }
 
     struct TestServer {
         client: surf::Client,

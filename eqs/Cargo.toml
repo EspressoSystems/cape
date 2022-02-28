@@ -14,16 +14,16 @@ dirs = "4.0"
 # may switch to `ethers = "0.6.2"` in the future; keeping this for compatibility for now
 ethers = { git = "https://github.com/gakonst/ethers-rs", branch = "master" }
 
-jf-cap = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/cap.git", rev = "cba0b2fc682606b0a118b320d41f718c525b4192" }
-jf-primitives = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git" }
-key-set = { git = "ssh://git@github.com/SpectrumXYZ/key-set.git" }
+jf-cap = { features=["std"], git = "ssh://git@github.com/EspressoSystems/cap.git", rev = "cba0b2fc682606b0a118b320d41f718c525b4192" }
+jf-primitives = { features=["std"], git = "ssh://git@github.com/EspressoSystems/jellyfish.git" }
+key-set = { git = "ssh://git@github.com/EspressoSystems/key-set.git" }
 
 lazy_static = "1.4.0"
 markdown = "0.3"
-net = { git = "ssh://git@github.com/SpectrumXYZ/net.git" }
+net = { git = "ssh://git@github.com/EspressoSystems/net.git" }
 rand_chacha = { version = "0.3.1", features = ["serde1"] }
-reef = { git = "ssh://git@github.com/SpectrumXYZ/reef.git" }
-seahorse = { git = "ssh://git@github.com/SpectrumXYZ/seahorse.git", rev = "1bbbd4772feacc16341a1e65f6cf4d3139624357", features = ["testing"] }
+reef = { git = "ssh://git@github.com/EspressoSystems/reef.git" }
+seahorse = { git = "ssh://git@github.com/EspressoSystems/seahorse.git", rev = "1bbbd4772feacc16341a1e65f6cf4d3139624357", features = ["testing"] }
 serde = { version = "1.0.123", features = ["derive", "rc"] }
 serde_derive = "1.0.118"
 serde_json = "1.0.61"
@@ -32,7 +32,7 @@ structopt = { version = "0.3" }
 strum = "0.20"
 strum_macros = "0.20.1"
 surf = { version = "2.3.2", optional = true }
-tagged-base64 = { git = "ssh://git@github.com/SpectrumXYZ/tagged-base64.git", branch = "main" }
+tagged-base64 = { git = "ssh://git@github.com/EspressoSystems/tagged-base64.git", branch = "main" }
 tide = "0.16.0"
 tide-websockets = "0.4.0"
 toml = "0.5"

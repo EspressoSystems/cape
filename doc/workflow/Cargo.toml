@@ -5,9 +5,9 @@ edition = "2018"
 
 [dependencies]
 cap-rust-sandbox = { path = "../../contracts/rust" }
-jf-utils = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git" }
-jf-rescue = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git" }
-jf-cap = { features = ["test_apis"], git = "ssh://git@github.com/SpectrumXYZ/cap.git", rev = "cba0b2fc682606b0a118b320d41f718c525b4192" }
+jf-utils = { features=["std"], git = "ssh://git@github.com/EspressoSystems/jellyfish.git" }
+jf-rescue = { features=["std"], git = "ssh://git@github.com/EspressoSystems/jellyfish.git" }
+jf-cap = { features = ["test_apis"], git = "ssh://git@github.com/EspressoSystems/cap.git", rev = "cba0b2fc682606b0a118b320d41f718c525b4192" }
 
 ethers = { git = "https://github.com/gakonst/ethers-rs", features = ["abigen"] }
 

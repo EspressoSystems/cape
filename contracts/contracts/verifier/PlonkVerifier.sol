@@ -293,7 +293,7 @@ contract PlonkVerifier is IPlonkVerifier {
     }
 
     /// @dev Compute components in [E]1 and [F]1 used for PolyComm opening verification
-    /// equivalent of JF's https://github.com/SpectrumXYZ/jellyfish/blob/main/plonk/src/proof_system/verifier.rs#L154-L170
+    /// equivalent of JF's https://github.com/EspressoSystems/jellyfish/blob/main/plonk/src/proof_system/verifier.rs#L154-L170
     /// caller allocates the memory fr commScalars and commBases
     /// requires Arrays of size 30.
     /// @param verifyingKey A verifier key

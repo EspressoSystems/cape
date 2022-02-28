@@ -298,4 +298,24 @@ contract RescueNonOptimized {
 
         return state[0];
     }
+
+    function commit(uint256[15] memory inputs) public view returns (uint256) {
+        uint256 a;
+        uint256 b;
+        uint256 c;
+        uint256 d;
+
+        for (uint256 i = 0; i < 5; i++) {
+            uint256[4] memory state = [
+                (a + inputs[3 * i + 0]) % _PRIME,
+                (b + inputs[3 * i + 1]) % _PRIME,
+                (c + inputs[3 * i + 2]) % _PRIME,
+                d % _PRIME
+            ];
+            state = _perm(state);
+            (a, b, c, d) = (state[0], state[1], state[2], state[3]);
+        }
+
+        return a % _PRIME;
+    }
 }

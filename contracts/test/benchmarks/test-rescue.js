@@ -29,7 +29,32 @@ describe("Rescue benchmarks", function () {
 
         let rescueOnly = rescueGasUsed - doNothingGasUsed;
 
+        const commitTx = await rescueContract.commit([
+          BigInt(10),
+          BigInt(15),
+          BigInt(20),
+          // toggle these two lines
+          // (BigInt(1)<<BigInt(256))-BigInt(1),
+          BigInt(0),
+          ////////
+          BigInt(0),
+          BigInt(0),
+          BigInt(0),
+          BigInt(0),
+          BigInt(0),
+          BigInt(0),
+          BigInt(0),
+          BigInt(0),
+          BigInt(0),
+          BigInt(0),
+          BigInt(0),
+        ]);
+        console.log(commitTx);
+        const commitTxReceipt = await commitTx.wait();
+        let commitGasUsed = commitTxReceipt.gasUsed;
         console.log("Rescue gas of ", contractName, ": ", rescueOnly);
+
+        expect(rescueOnly).to.be.equal(gas);
       });
     }
   });

@@ -14,4 +14,8 @@ contract TestRescue {
     ) public returns (uint256) {
         return RescueLib.hash(a, b, c);
     }
+
+    function commit(uint256[15] memory inputs) public returns (uint256) {
+        return RescueLib.commit(inputs);
+    }
 }

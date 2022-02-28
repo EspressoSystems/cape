@@ -726,8 +726,10 @@ mod tests {
             .unwrap();
     }
 
+    // Issue: https://github.com/EspressoSystems/cape/issues/600.
     #[async_std::test]
     #[traced_test]
+    #[ignore]
     async fn test_mint() {
         // Set parameters.
         let description = TaggedBase64::new("DESC", &[3u8; 32]).unwrap();
@@ -840,8 +842,10 @@ mod tests {
         .await;
     }
 
+    // Issue: https://github.com/EspressoSystems/cape/issues/600.
     #[async_std::test]
     #[traced_test]
+    #[ignore]
     async fn test_unwrap() {
         // Set parameters.
         let eth_addr = DEFAULT_ETH_ADDR;
@@ -1002,8 +1006,10 @@ mod tests {
         );
     }
 
+    // Issue: https://github.com/EspressoSystems/cape/issues/600.
     #[async_std::test]
     #[traced_test]
+    #[ignore]
     async fn test_send() {
         let server = TestServer::new().await;
         let mut rng = ChaChaRng::from_seed([1; 32]);

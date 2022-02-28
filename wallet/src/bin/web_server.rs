@@ -945,8 +945,10 @@ mod tests {
         .await;
     }
 
+    // Issue: https://github.com/EspressoSystems/cape/issues/600.
     #[async_std::test]
     #[traced_test]
+    #[ignore]
     async fn test_dummy_populate() {
         let server = TestServer::new().await;
         server

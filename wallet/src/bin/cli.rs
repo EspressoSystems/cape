@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 // The CAPE Wallet Frontend
 //
-// For now, this "frontend" is simply a comand-line read-eval-print loop which
+// For now, this "frontend" is simply a command-line read-eval-print loop which
 // allows the user to enter commands for a wallet interactively.
 //
 
@@ -621,7 +621,7 @@ mod tests {
     }
 
     // TODO !keyao Replace the use of `CliClient` with `CapeTest` and CLI matching helpers in
-    // Seahorse, simiar to `test_cli_burn`.
+    // Seahorse, similar to `test_cli_burn`.
     // Related issue: https://github.com/SpectrumXYZ/cape/issues/477.
     #[test]
     #[ignore]
@@ -638,7 +638,7 @@ mod tests {
     }
 
     // TODO !keyao Replace the use of `CliClient` with `CapeTest` and CLI matching helpers in
-    // Seahorse, simiar to `test_cli_burn`.
+    // Seahorse, similar to `test_cli_burn`.
     // Related issue: https://github.com/SpectrumXYZ/cape/issues/477.
     #[test]
     #[ignore]

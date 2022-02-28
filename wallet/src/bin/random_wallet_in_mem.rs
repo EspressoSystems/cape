@@ -51,7 +51,7 @@ struct Args {
 
     /// Spin up this many wallets to talk to eachother
     num_wallets: u64,
-    // TODO: How many transactions to do in Paralell
+    // TODO: How many transactions to do in Parallel
     // #[structopt(short, long)]
     // batch_size: Option<u64>,
 }

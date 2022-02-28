@@ -4,8 +4,6 @@ pragma solidity ^0.8.0;
 /// @title Configurable Anonymous Payments on Ethereum
 /// CAPE provides auditable anonymous payments on Ethereum.
 /// @author Translucence Research, Inc.
-/// @notice This is a notice.
-/// @dev Developers are awesome!
 
 import "hardhat/console.sol";
 

@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import "../libraries/Utils.sol";
 
 /// @notice Edward curve on BN254.
-/// This library only implements a serialization function that is consistend with
+/// This library only implements a serialization function that is consistent with
 /// Arkworks' format. It does not support any group operations.
 library EdOnBN254 {
     uint256 public constant P_MOD =

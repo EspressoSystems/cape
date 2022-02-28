@@ -21,7 +21,7 @@ pub enum ApiRouteKey {
     get_events_since,
 }
 
-/// Verifiy that every variant of enum ApiRouteKey is defined in api.toml
+/// Verify that every variant of enum ApiRouteKey is defined in api.toml
 // TODO !corbett Check all the other things that might fail after startup.
 pub fn check_api(api: toml::Value) -> bool {
     let mut missing_definition = false;

@@ -3,13 +3,19 @@
 
 use async_std::sync::{Arc, Mutex};
 use async_std::task::sleep;
+use cap_rust_sandbox::ethereum::get_provider;
 use cape_wallet::backend::CapeBackend;
 use cape_wallet::mocks::*;
 use cape_wallet::testing::{
-    create_test_network, freeze_token, transfer_token, unfreeze_token, OperationType,
+    burn_token, create_test_network, freeze_token, sponsor_simple_token, transfer_token,
+    unfreeze_token, wrap_simple_token, OperationType,
 };
 use cape_wallet::CapeWallet;
+use cape_wallet::CapeWalletExt;
 use ethers::prelude::Address;
+use ethers::providers::Middleware;
+use ethers::types::TransactionRequest;
+use ethers::types::U256;
 use jf_cap::keys::UserAddress;
 use jf_cap::keys::UserPubKey;
 use jf_cap::proof::UniversalParam;
@@ -147,6 +153,24 @@ async fn create_wallet<'a>(
     (wallet.generate_user_key(None).await.unwrap(), wallet)
 }
 
+async fn fund_eth_wallet<'a>(wallet: &mut CapeWallet<'a, CapeBackend<'a, ()>>) {
+    // Fund the Ethereum wallets for contract calls.
+    let provider = get_provider().interval(Duration::from_millis(100u64));
+    let accounts = provider.get_accounts().await.unwrap();
+    assert!(!accounts.is_empty());
+
+    let tx = TransactionRequest::new()
+        .to(Address::from(wallet.eth_address().await.unwrap()))
+        .value(ethers::utils::parse_ether(U256::from(1)).unwrap())
+        .from(accounts[0]);
+    provider
+        .send_transaction(tx, None)
+        .await
+        .unwrap()
+        .await
+        .unwrap();
+}
+
 fn update_balances(
     send_addr: &UserAddress,
     receiver_addr: &UserAddress,
@@ -220,6 +244,10 @@ async fn main() {
         }
         event!(Level::INFO, "minted custom asset");
     }
+
+    //sponsor some token
+    sponsor_simple_token(&mut wallet).await.unwrap();
+
     balances.insert(address.clone(), HashMap::new());
     balances.get_mut(&address).unwrap().insert(
         my_asset.code,
@@ -231,7 +259,9 @@ async fn main() {
 
     for _i in 0..(args.num_wallets) {
         // TODO send native asset from sender to all wallets.
-        let (k, w) = create_wallet(&mut rng, &universal_param, &network, &args.storage).await;
+        let (k, mut w) = create_wallet(&mut rng, &universal_param, &network, &args.storage).await;
+
+        fund_eth_wallet(&mut w).await;
 
         public_keys.push(k);
         wallets.push(w);
@@ -331,8 +361,18 @@ async fn main() {
                     .await
                     .unwrap();
             }
-            _ => {
-                event!(Level::INFO, "Wrap and unwrap todo");
+            OperationType::Wrap => {
+                let wrapper = wallets.choose_mut(&mut rng).unwrap();
+                let asset_def = wrapper
+                    .define_asset(&[], AssetPolicy::default())
+                    .await
+                    .expect("failed to define asset");
+                wrap_simple_token(wrapper, asset_def, 100).await.unwrap();
+            }
+            OperationType::Burn => {
+                let burner = wallets.choose_mut(&mut rng).unwrap();
+                let asset = burner.approved_assets().await[0].0.clone();
+                burn_token(burner, asset.clone(), 1).await.unwrap();
             }
         }
     }

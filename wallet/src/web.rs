@@ -246,6 +246,7 @@ async fn populatefortest(req: tide::Request<WebState>) -> Result<tide::Response,
         wallet::CapeWalletExt,
     };
     use cap_rust_sandbox::model::Erc20Code;
+    use jf_cap::structs::AssetDefinition;
 
     let wallet = &mut *req.state().wallet.lock().await;
     let wallet = require_wallet(wallet)?;
@@ -258,22 +259,43 @@ async fn populatefortest(req: tide::Request<WebState>) -> Result<tide::Response,
     }
 
     // Add the faucet key, so we get a balance of the native asset.
-    wallet
-        .add_user_key(req.state().faucet_key_pair.clone(), Default::default())
-        .await
-        .unwrap();
-    let faucet_addr = req.state().faucet_key_pair.address();
+    // Check before adding it to avoid the race condition.
+    let faucet_key_pair = req.state().faucet_key_pair.clone();
+    if !wallet.pub_keys().await.contains(&faucet_key_pair.pub_key()) {
+        wallet
+            .add_user_key(faucet_key_pair.clone(), Default::default())
+            .await
+            .unwrap();
+    }
+    let faucet_addr = faucet_key_pair.address();
     wallet.await_key_scan(&faucet_addr).await.unwrap();
 
     // Add a wrapped asset, and give it some nonzero balance.
-    let erc20_code = Erc20Code(EthereumAddr([1; 20]));
+    let mut erc20_code = Erc20Code(EthereumAddr([0; 20]));
     let sponsor_addr = DEFAULT_ETH_ADDR;
-    let asset_def = wallet
-        .sponsor(erc20_code, sponsor_addr.clone(), Default::default())
-        .await
-        .map_err(wallet_error)?;
+    let mut asset_def = AssetDefinition::dummy();
+    for i in 1..5 {
+        match wallet
+            .sponsor(erc20_code.clone(), sponsor_addr.clone(), Default::default())
+            .await
+        {
+            Ok(def) => {
+                asset_def = def;
+                break;
+            }
+            error => {
+                if i < 4 {
+                    // Try a different ERC20 token since the previous one may be already
+                    // registered in caes of a race condition.
+                    erc20_code = Erc20Code(EthereumAddr([i; 20]));
+                } else {
+                    error.map_err(wallet_error)?;
+                }
+            }
+        }
+    }
     let wrapped_asset_addr = wallet.pub_keys().await[0].address();
-    let _ = wallet
+    wallet
         .wrap(
             sponsor_addr,
             asset_def.clone(),
@@ -302,16 +324,13 @@ async fn populatefortest(req: tide::Request<WebState>) -> Result<tide::Response,
     // Wait for transactions to complete.
     await_transaction(&receipt, wallet, &[]).await;
     retry(|| async {
-        wallet.balance(&wrapped_asset_addr, &asset_def.code).await == DEFAULT_WRAPPED_AMT
-    })
-    .await;
-    retry(|| async {
         wallet
             .balance(&wrapped_asset_addr, &AssetCode::native())
             .await
-            == DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR
+            != 0
     })
     .await;
+    retry(|| async { wallet.balance(&wrapped_asset_addr, &asset_def.code).await != 0 }).await;
 
     server::response(&req, receipt)
 }

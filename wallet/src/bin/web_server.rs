@@ -713,7 +713,7 @@ mod tests {
 
     #[async_std::test]
     #[traced_test]
-    async fn test_mint() {
+    async fn retry_test_mint() {
         // Set parameters.
         let description = TaggedBase64::new("DESC", &[3u8; 32]).unwrap();
         let amount = 10;
@@ -829,7 +829,7 @@ mod tests {
             ))
             .await
             .unwrap();
-        let _ = server
+        server
             .get::<TransactionReceipt<CapeLedger>>("populatefortest")
             .await
             .unwrap();
@@ -918,7 +918,7 @@ mod tests {
 
     #[async_std::test]
     #[traced_test]
-    async fn test_dummy_populate() {
+    async fn retry_test_dummy_populate() {
         let server = TestServer::new().await;
         server
             .get::<()>(&format!(
@@ -928,7 +928,7 @@ mod tests {
             ))
             .await
             .unwrap();
-        let _ = server
+        server
             .get::<TransactionReceipt<CapeLedger>>("populatefortest")
             .await
             .unwrap();
@@ -982,7 +982,7 @@ mod tests {
 
     #[async_std::test]
     #[traced_test]
-    async fn test_send() {
+    async fn retry_test_send() {
         let server = TestServer::new().await;
         let mut rng = ChaChaRng::from_seed([1; 32]);
 
@@ -1061,8 +1061,7 @@ mod tests {
         .await;
 
         // Check that the balance was deducted from the sending account.
-        assert_eq!(
-            BalanceInfo::Balance(DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR - 101),
+        retry(|| async {
             server
                 .get::<BalanceInfo>(&format!(
                     "getbalance/address/{}/asset/{}",
@@ -1071,6 +1070,8 @@ mod tests {
                 ))
                 .await
                 .unwrap()
-        );
+                == BalanceInfo::Balance(DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR - 101)
+        })
+        .await;
     }
 }

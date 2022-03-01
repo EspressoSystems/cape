@@ -713,7 +713,7 @@ mod tests {
 
     #[async_std::test]
     #[traced_test]
-    async fn retry_test_mint() {
+    async fn test_mint() {
         // Set parameters.
         let description = TaggedBase64::new("DESC", &[3u8; 32]).unwrap();
         let amount = 10;
@@ -918,7 +918,7 @@ mod tests {
 
     #[async_std::test]
     #[traced_test]
-    async fn retry_test_dummy_populate() {
+    async fn test_dummy_populate() {
         let server = TestServer::new().await;
         server
             .get::<()>(&format!(
@@ -982,7 +982,7 @@ mod tests {
 
     #[async_std::test]
     #[traced_test]
-    async fn retry_test_send() {
+    async fn test_send() {
         let server = TestServer::new().await;
         let mut rng = ChaChaRng::from_seed([1; 32]);
 

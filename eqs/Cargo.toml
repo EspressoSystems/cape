@@ -14,7 +14,7 @@ dirs = "4.0"
 # may switch to `ethers = "0.6.2"` in the future; keeping this for compatibility for now
 ethers = { git = "https://github.com/gakonst/ethers-rs", branch = "master" }
 
-jf-cap = { features=["std"], git = "ssh://git@github.com/EspressoSystems/cap.git", rev = "cba0b2fc682606b0a118b320d41f718c525b4192" }
+jf-cap = { features=["std"], git = "ssh://git@github.com/EspressoSystems/cap.git", rev = "16ad157f96d2102d59206df0106fb341302180d3" }
 jf-primitives = { features=["std"], git = "ssh://git@github.com/EspressoSystems/jellyfish.git" }
 key-set = { git = "ssh://git@github.com/EspressoSystems/key-set.git" }
 
@@ -23,7 +23,7 @@ markdown = "0.3"
 net = { git = "ssh://git@github.com/EspressoSystems/net.git" }
 rand_chacha = { version = "0.3.1", features = ["serde1"] }
 reef = { git = "ssh://git@github.com/EspressoSystems/reef.git" }
-seahorse = { git = "ssh://git@github.com/EspressoSystems/seahorse.git", rev = "1bbbd4772feacc16341a1e65f6cf4d3139624357", features = ["testing"] }
+seahorse = { git = "ssh://git@github.com/EspressoSystems/seahorse.git", rev = "48aaed68d922b23e4a3d9f4e9dcc6d50185c3619", features = ["testing"] }
 serde = { version = "1.0.123", features = ["derive", "rc"] }
 serde_derive = "1.0.118"
 serde_json = "1.0.61"

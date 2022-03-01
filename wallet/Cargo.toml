@@ -21,7 +21,7 @@ ethers = { git = "https://github.com/gakonst/ethers-rs", branch = "master" }
 futures = "0.3.0"
 futures-util = "0.3.8"
 itertools = "0.10.1"
-jf-cap = { features = ["test_apis"], git = "ssh://git@github.com/EspressoSystems/cap.git", rev = "cba0b2fc682606b0a118b320d41f718c525b4192" }
+jf-cap = { features = ["test_apis"], git = "ssh://git@github.com/EspressoSystems/cap.git", rev = "16ad157f96d2102d59206df0106fb341302180d3" }
 key-set = { git = "ssh://git@github.com/EspressoSystems/key-set.git" }
 lazy_static = "1.4.0"
 jf-plonk = { features=["std"], git = "ssh://git@github.com/EspressoSystems/jellyfish.git" }
@@ -35,7 +35,7 @@ rand_chacha = "0.3.1"
 regex = "1.5.4"
 reef = { git = "ssh://git@github.com/EspressoSystems/reef.git" }
 relayer = { path = "../relayer", features = ["testing"] }
-seahorse = { git = "ssh://git@github.com/EspressoSystems/seahorse.git", rev = "db4ffe2ffaa192d1f4537eb61b910a9c10811d11", features = ["testing"] }
+seahorse = { git = "ssh://git@github.com/EspressoSystems/seahorse.git", rev = "48aaed68d922b23e4a3d9f4e9dcc6d50185c3619", features = ["testing"] }
 serde = { version = "1.0.123", features = ["derive", "rc"] }
 serde_derive = "1.0.118"
 serde_json = "1.0.61"

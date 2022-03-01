@@ -36,7 +36,7 @@ async fn main() -> Result<(), std::io::Error> {
     };
     println!("Web path: {:?}", web_path);
 
-    // Use something different than the default Spectrum port (60000 vs 50000).
+    // TODO Use something different than the default Spectrum port (60000 vs 50000).
     let port = std::env::var("PORT").unwrap_or_else(|_| String::from("60000"));
     init_server(
         ChaChaRng::from_entropy(),
@@ -60,6 +60,10 @@ mod tests {
     use cape_wallet::{
         routes::{BalanceInfo, CapeAPIError, PubKey, WalletSummary},
         testing::port,
+        web::{
+            DEFAULT_ETH_ADDR, DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR,
+            DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR, DEFAULT_WRAPPED_AMT,
+        },
     };
     use futures::Future;
     use jf_cap::{
@@ -106,8 +110,8 @@ mod tests {
             // Run a server in the background that is unique to this test. Note that the server task
             // is leaked: tide does not provide any mechanism for graceful programmatic shutdown, so
             // the server will continue running until the process is killed, even after the test
-            // ends. This is probably not so bad, since each test's server task should be idle once
-            // the test is over, and anyways I don't see a good way around it.
+            // ends. This is ok, since each test's server task should be idle once
+            // the test is over.
             init_server(
                 ChaChaRng::from_seed([42; 32]),
                 default_api_path(),
@@ -314,8 +318,6 @@ mod tests {
             .unwrap();
         let info = server.get::<WalletSummary>("getinfo").await.unwrap();
 
-        // The info is not very interesting before we add any keys or assets, but that's for another
-        // endpoint.
         assert_eq!(
             info,
             WalletSummary {
@@ -694,22 +696,22 @@ mod tests {
         let invalid_asset = AssetDefinition::dummy();
         server
             .get::<()>(&format!(
-                "wrap/destination/{}/ethaddress/{}/amount/{}/asset/{}",
-                invalid_destination, sponsor_addr, 10, sponsored_asset
+                "wrap/destination/{}/ethaddress/{}/asset/{}/amount/{}",
+                invalid_destination, sponsor_addr, sponsored_asset, 10
             ))
             .await
             .expect_err("wrap succeeded with an invalid user address");
         server
             .get::<()>(&format!(
-                "wrap/destination/{}/ethaddress/{}/amount/{}/asset/{}",
-                destination, invalid_eth_addr, 10, sponsored_asset
+                "wrap/destination/{}/ethaddress/{}/asset/{}/amount/{}",
+                destination, invalid_eth_addr, sponsored_asset, 10
             ))
             .await
             .expect_err("wrap succeeded with an invalid Ethereum address");
         server
             .get::<()>(&format!(
-                "wrap/destination/{}/ethaddress/{}/amount/{}/asset/{}",
-                destination, sponsor_addr, 10, invalid_asset
+                "wrap/destination/{}/ethaddress/{}/asset/{}/amount/{}",
+                destination, sponsor_addr, invalid_asset, 10
             ))
             .await
             .expect_err("wrap succeeded with an invalid asset");
@@ -717,15 +719,17 @@ mod tests {
         // wrap should succeed with the correct information.
         server
             .get::<()>(&format!(
-                "wrap/destination/{}/ethaddress/{}/amount/{}/asset/{}",
-                destination, sponsor_addr, 10, sponsored_asset
+                "wrap/destination/{}/ethaddress/{}/asset/{}/amount/{}",
+                destination, sponsor_addr, sponsored_asset, 10
             ))
             .await
             .unwrap();
     }
 
+    // Issue: https://github.com/EspressoSystems/cape/issues/600.
     #[async_std::test]
     #[traced_test]
+    #[ignore]
     async fn test_mint() {
         // Set parameters.
         let description = TaggedBase64::new("DESC", &[3u8; 32]).unwrap();
@@ -756,7 +760,7 @@ mod tests {
         let info = server.get::<WalletSummary>("getinfo").await.unwrap();
         let mut minter_addr: Option<UserAddress> = None;
         for address in info.addresses {
-            if let BalanceInfo::Balance(1000) = server
+            if let BalanceInfo::Balance(DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR) = server
                 .get::<BalanceInfo>(&format!(
                     "getbalance/address/{}/asset/{}",
                     address,
@@ -816,14 +820,15 @@ mod tests {
             .unwrap();
 
         // Check the balances of the minted asset and the native asset.
-        assert_eq!(
+        retry(|| async {
             server
                 .get::<BalanceInfo>(&format!("getbalance/address/{}/asset/{}", recipient, asset))
                 .await
-                .unwrap(),
-            BalanceInfo::Balance(amount)
-        );
-        assert_eq!(
+                .unwrap()
+                == BalanceInfo::Balance(amount)
+        })
+        .await;
+        retry(|| async {
             server
                 .get::<BalanceInfo>(&format!(
                     "getbalance/address/{}/asset/{}",
@@ -831,13 +836,119 @@ mod tests {
                     AssetCode::native()
                 ))
                 .await
-                .unwrap(),
-            BalanceInfo::Balance(1000 - fee)
-        );
+                .unwrap()
+                == BalanceInfo::Balance(DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR - fee)
+        })
+        .await;
     }
 
+    // Issue: https://github.com/EspressoSystems/cape/issues/600.
     #[async_std::test]
     #[traced_test]
+    #[ignore]
+    async fn test_unwrap() {
+        // Set parameters.
+        let eth_addr = DEFAULT_ETH_ADDR;
+        let fee = 1;
+
+        // Open a wallet with some wrapped and native assets.
+        let server = TestServer::new().await;
+        server
+            .get::<()>(&format!(
+                "newwallet/{}/minter-password/path/{}",
+                server.get::<String>("getmnemonic").await.unwrap(),
+                server.path()
+            ))
+            .await
+            .unwrap();
+        server.get::<()>("populatefortest").await.unwrap();
+
+        // Get the wrapped asset.
+        let info = server.get::<WalletSummary>("getinfo").await.unwrap();
+        let asset = if info.assets[0].asset.code == AssetCode::native() {
+            info.assets[1].asset.code
+        } else {
+            info.assets[0].asset.code
+        };
+
+        // Get the source address with the wrapped asset.
+        let mut source_addr: Option<UserAddress> = None;
+        for address in info.addresses {
+            if let BalanceInfo::Balance(DEFAULT_WRAPPED_AMT) = server
+                .get::<BalanceInfo>(&format!("getbalance/address/{}/asset/{}", address, asset))
+                .await
+                .unwrap()
+            {
+                source_addr = Some(address);
+                break;
+            }
+        }
+        let source = source_addr.unwrap();
+
+        // unwrap should fail if any of the source, Ethereum address, and asset is invalid.
+        let invalid_source = UserAddress::from(
+            UserKeyPair::generate(&mut ChaChaRng::from_seed([50u8; 32])).address(),
+        );
+        let invalid_eth_addr = Erc20Code(EthereumAddr([0u8; 20]));
+        let invalid_asset = AssetDefinition::dummy();
+        server
+            .get::<TransactionReceipt<CapeLedger>>(&format!(
+                "unwrap/source/{}/ethaddress/{}/asset/{}/amount/{}/fee/{}",
+                invalid_source, eth_addr, asset, DEFAULT_WRAPPED_AMT, 1
+            ))
+            .await
+            .expect_err("unwrap succeeded with an invalid source address");
+        server
+            .get::<TransactionReceipt<CapeLedger>>(&format!(
+                "unwrap/source/{}/ethaddress/{}/asset/{}/amount/{}/fee/{}",
+                source, invalid_eth_addr, asset, DEFAULT_WRAPPED_AMT, 1
+            ))
+            .await
+            .expect_err("unwrap succeeded with an invalid Ethereum address");
+        server
+            .get::<TransactionReceipt<CapeLedger>>(&format!(
+                "unwrap/source/{}/ethaddress/{}/asset/{}/amount/{}/fee/{}",
+                source, eth_addr, invalid_asset, DEFAULT_WRAPPED_AMT, 1
+            ))
+            .await
+            .expect_err("unwrap succeeded with an invalid asset");
+
+        // unwrap should succeed with the correct information.
+        server
+            .get::<TransactionReceipt<CapeLedger>>(&format!(
+                "unwrap/source/{}/ethaddress/{}/asset/{}/amount/{}/fee/{}",
+                source, eth_addr, asset, DEFAULT_WRAPPED_AMT, fee
+            ))
+            .await
+            .unwrap();
+
+        // Check the balances of the wrapped and native assets.
+        retry(|| async {
+            server
+                .get::<BalanceInfo>(&format!("getbalance/address/{}/asset/{}", source, asset))
+                .await
+                .unwrap()
+                == BalanceInfo::Balance(0)
+        })
+        .await;
+        retry(|| async {
+            server
+                .get::<BalanceInfo>(&format!(
+                    "getbalance/address/{}/asset/{}",
+                    source,
+                    AssetCode::native()
+                ))
+                .await
+                .unwrap()
+                == BalanceInfo::Balance(DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR - fee)
+        })
+        .await;
+    }
+
+    // Issue: https://github.com/EspressoSystems/cape/issues/600.
+    #[async_std::test]
+    #[traced_test]
+    #[ignore]
     async fn test_dummy_populate() {
         let server = TestServer::new().await;
         server
@@ -860,7 +971,7 @@ mod tests {
         // One of the addresses should have a non-zero balance of the native asset type.
         let mut found = false;
         for address in &info.addresses {
-            if let BalanceInfo::Balance(1000) = server
+            if let BalanceInfo::Balance(DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR) = server
                 .get::<BalanceInfo>(&format!(
                     "getbalance/address/{}/asset/{}",
                     address,
@@ -893,12 +1004,14 @@ mod tests {
                 ))
                 .await
                 .unwrap(),
-            BalanceInfo::Balance(1000)
+            BalanceInfo::Balance(DEFAULT_WRAPPED_AMT)
         );
     }
 
+    // Issue: https://github.com/EspressoSystems/cape/issues/600.
     #[async_std::test]
     #[traced_test]
+    #[ignore]
     async fn test_send() {
         let server = TestServer::new().await;
         let mut rng = ChaChaRng::from_seed([1; 32]);
@@ -933,7 +1046,7 @@ mod tests {
         let mut funded_account = None;
         let mut unfunded_account = None;
         for address in info.addresses {
-            if let BalanceInfo::Balance(1000) = server
+            if let BalanceInfo::Balance(DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR) = server
                 .get::<BalanceInfo>(&format!(
                     "getbalance/address/{}/asset/{}",
                     address,
@@ -978,7 +1091,7 @@ mod tests {
 
         // Check that the balance was deducted from the sending account.
         assert_eq!(
-            BalanceInfo::Balance(899),
+            BalanceInfo::Balance(DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR - 101),
             server
                 .get::<BalanceInfo>(&format!(
                     "getbalance/address/{}/asset/{}",

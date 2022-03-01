@@ -49,6 +49,7 @@ fn is_burn_txn(txn: &TransactionNote) -> bool {
 
 impl CapeBlock {
     // Refer to `validate_block()` in:
+    // TODO point to new repository
     // https://gitlab.com/translucence/crypto/jellyfish/-/blob/main/transactions/tests/examples.rs
     // Take a new block and remove the transactions that are not valid and update
     // the list of record openings corresponding to burn transactions accordingly.
@@ -61,6 +62,7 @@ impl CapeBlock {
     ) -> (CapeBlock, Vec<RecordOpening>) {
         // In order to avoid race conditions between block submitters (relayers or wallets), the CAPE contract
         // discards invalid transactions but keeps the valid ones (instead of rejecting the full block).
+        // TODO point to new repository
         // See https://gitlab.com/translucence/cap-on-ethereum/cape/-/issues/129 for more details.
 
         let mut filtered_block = CapeBlock {

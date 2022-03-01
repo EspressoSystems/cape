@@ -172,7 +172,7 @@ fn parse_route(
 /// Handle API requests defined in api.toml.
 ///
 /// This function duplicates the logic for deciding which route was requested. This
-/// is an unfortunate side-effect of defining the routes in an external file.
+/// implies defining the routes in an external file.
 // todo !corbett Convert the error feedback into HTML
 async fn entry_page(req: tide::Request<WebState>) -> Result<tide::Response, tide::Error> {
     match parse_route(&req) {
@@ -219,7 +219,7 @@ pub(crate) fn init_web_server(
                         if let Some(s) = v.as_str() {
                             Some(String::from(s))
                         } else {
-                            println!("Oops! Array element: {:?}", v);
+                            println!("Array element: {:?}", v);
                             None
                         }
                     })

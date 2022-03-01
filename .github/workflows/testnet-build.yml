@@ -12,7 +12,7 @@ jobs:
       fail-fast: true
     runs-on: self-hosted
     container:
-      image: ghcr.io/spectrumxyz/nix:main
+      image: ghcr.io/espressosystems/nix:main
       credentials:
          username: ancient123
          password: ${{ secrets.ORG_GITHUB_PAT }}

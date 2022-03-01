@@ -39,6 +39,7 @@
 - [CI](#ci)
   - [Nightly CI builds](#nightly-ci-builds)
 - [Documentation](#documentation)
+  - [CAP protocol specification](#cap-protocol-specification)
   - [CAPE Contract specification](#cape-contract-specification)
 
 ## Obtaining the source code
@@ -458,7 +459,15 @@ Based on a few successful test runs, the entire suite should consume roughly 0.0
 
 # Documentation
 
-Extracting documentation from the solidity source is done using a javascript
+## CAP protocol specification
+
+A formal specification of the Configurable Asset Policy protocol can be found at [`./doc/cap-specification.pdf`](./doc/cap-specification.pdf)
+
+## CAPE Contract specification
+
+A specification of the CAPE _smart contract logic_ written in Rust can be found at `./doc/workflow/lib.rs`.
+
+Extracting _API documentation_ from the solidity source is done using a javascript
 tool called `solidity-docgen`.
 
 To generate the documentation run
@@ -466,7 +475,3 @@ To generate the documentation run
     make-doc
 
 and observe the CLI output.
-
-## CAPE Contract specification
-
-A specification of the CAPE smart contract logic written in Rust can be found at `./doc/workflow/lib.rs`.

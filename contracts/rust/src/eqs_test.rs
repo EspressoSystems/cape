@@ -1,12 +1,11 @@
 #[cfg(test)]
 mod tests {
     use crate::{
-        assertion::EnsureMined,
         cape::{
             submit_block::{fetch_cape_block, submit_cape_block_with_memos},
             BlockWithMemos, CapeBlock,
         },
-        deploy::{deploy_cape_test, deploy_erc20_token},
+        deploy::deploy_erc20_token,
         ethereum::{get_provider, EthConnection},
         ledger::{CapeLedger, CapeTransition},
         model::{erc20_asset_description, Erc20Code, EthereumAddr},
@@ -21,7 +20,6 @@ mod tests {
         abi::AbiDecode,
         prelude::{Middleware, U256},
     };
-    use futures::FutureExt;
     use itertools::Itertools;
     use jf_cap::{
         keys::{UserKeyPair, UserPubKey},
@@ -37,25 +35,6 @@ mod tests {
     use rand_chacha::ChaChaRng;
     use reef::Ledger;
     use std::iter::repeat_with;
-
-    #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-    pub(crate) struct CAPEConstructorArgs {
-        height: u8,
-        n_roots: u64,
-    }
-
-    #[allow(dead_code)]
-    impl CAPEConstructorArgs {
-        pub(crate) fn new(height: u8, n_roots: u64) -> Self {
-            Self { height, n_roots }
-        }
-    }
-
-    impl From<CAPEConstructorArgs> for (u8, u64) {
-        fn from(args: CAPEConstructorArgs) -> (u8, u64) {
-            (args.height, args.n_roots)
-        }
-    }
 
     #[tokio::test]
     async fn eqs_test() -> anyhow::Result<()> {
@@ -119,7 +98,7 @@ mod tests {
 
         drop(cape_contract);
 
-        let block_committed_event_listener = async {
+        let _block_committed_event_listener = async {
             let mut number_events = 0;
             while number_events < 5 {
                 let cape_contract = eth_connection.lock().await.test_contract();
@@ -139,12 +118,12 @@ mod tests {
                     let provider = get_provider();
 
                     // Fetch Ethereum transaction that emitted event
-                    let tx = provider
+                    let _tx = provider
                         .get_transaction(meta.transaction_hash)
                         .await
                         .unwrap();
 
-                    let wraps = filter
+                    let _wraps = filter
                         .deposit_commitments
                         .iter()
                         .map(|&rc| {
@@ -158,7 +137,7 @@ mod tests {
             }
         };
 
-        let erc_20_tokens_deposited_event_listener = async {
+        let _erc_20_tokens_deposited_event_listener = async {
             let mut number_events = 0;
             while number_events < 1 {
                 let cape_contract = eth_connection.lock().await.test_contract();
@@ -200,19 +179,19 @@ mod tests {
                             let provider = get_provider();
 
                             // Fetch Ethereum transaction that emitted event
-                            let txs = provider
+                            let _txs = provider
                                 .get_transaction(meta.transaction_hash)
                                 .await
                                 .unwrap();
 
                             let connection = eth_connection.lock().await;
-                            let fetched_block_with_memos =
+                            let _fetched_block_with_memos =
                                 fetch_cape_block(&connection, meta.transaction_hash)
                                     .await
                                     .unwrap()
                                     .unwrap();
 
-                            let wraps = filter_data
+                            let _wraps = filter_data
                                 .deposit_commitments
                                 .iter()
                                 .map(|&rc| {
@@ -231,7 +210,7 @@ mod tests {
                                 filter_data.erc_20_token_address.to_fixed_bytes(),
                             ));
 
-                            let new_transition_wrap = CapeTransition::Wrap {
+                            let _new_transition_wrap = CapeTransition::Wrap {
                                 ro: Box::new(expected_ro),
                                 erc20_code,
                                 src_addr: EthereumAddr(filter_data.from.to_fixed_bytes()),
@@ -256,6 +235,8 @@ mod tests {
 
                 let cape_contract = eth_connection.lock().await;
                 submit_cape_block_with_memos(&cape_contract.contract, block_with_memos.clone())
+                    .await
+                    .unwrap()
                     .await
                     .unwrap();
             }

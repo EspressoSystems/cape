@@ -5,6 +5,7 @@ use ark_poly::EvaluationDomain;
 use ark_poly::Radix2EvaluationDomain;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ethers::prelude::*;
+use jf_cap::constants::REVEAL_MAP_LEN;
 use jf_cap::{
     keys::{AuditorPubKey, CredIssuerPubKey, FreezerPubKey, UserPubKey},
     structs::{
@@ -20,87 +21,17 @@ use jf_primitives::{
 };
 use std::convert::TryInto;
 
+pub use crate::bindings::{
+    AssetDefinition, AssetPolicy, AssetRegistry, AuditMemo, BurnNote, CapeBlock, Challenges,
+    EdOnBN254Point, EvalData, EvalDomain, FreezeAuxInfo, FreezeNote, G1Point, G2Point, Greeter,
+    MintAuxInfo, MintNote, PcsInfo, PlonkProof, RecordOpening, SimpleToken, TestBN254, TestCAPE,
+    TestCAPEEvents, TestCapeTypes, TestEdOnBN254, TestPlonkVerifier, TestPolynomialEval,
+    TestRecordsMerkleTree, TestRescue, TestRootStore, TestTranscript, TestVerifyingKeys,
+    TranscriptData, TransferAuxInfo, TransferNote, VerifyingKey, CAPE,
+};
+
 // The number of input wires of TurboPlonk.
 const GATE_WIDTH: usize = 4;
-
-macro_rules! mark_deps {
-    ($($tname:expr, $path:expr, $derives:expr;)*) => {
-        $(const _: &[u8] = include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"),"/",$path));)*
-    }
-}
-
-macro_rules! abigen_and_mark_dep {
-    ($($tts:tt)*) => {
-        mark_deps!($($tts)*);
-        abigen!($($tts)*);
-    }
-}
-
-abigen_and_mark_dep!(
-    AssetRegistry,
-    "../abi/contracts/AssetRegistry.sol/AssetRegistry/abi.json",
-    event_derives(serde::Deserialize, serde::Serialize);
-
-    TestBN254,
-    "../abi/contracts/mocks/TestBN254.sol/TestBN254/abi.json",
-    event_derives(serde::Deserialize, serde::Serialize);
-
-    TestEdOnBN254,
-    "../abi/contracts/mocks/TestEdOnBN254.sol/TestEdOnBN254/abi.json",
-    event_derives(serde::Deserialize, serde::Serialize);
-
-    TestRecordsMerkleTree,
-    "../abi/contracts/mocks/TestRecordsMerkleTree.sol/TestRecordsMerkleTree/abi.json",
-    event_derives(serde::Deserialize, serde::Serialize);
-
-    TestRescue,
-    "../abi/contracts/mocks/TestRescue.sol/TestRescue/abi.json",
-    event_derives(serde::Deserialize, serde::Serialize);
-
-    TestRootStore,
-    "../abi/contracts/mocks/TestRootStore.sol/TestRootStore/abi.json",
-    event_derives(serde::Deserialize, serde::Serialize);
-
-    TestTranscript,
-    "../abi/contracts/mocks/TestTranscript.sol/TestTranscript/abi.json",
-    event_derives(serde::Deserialize, serde::Serialize);
-
-    TestPlonkVerifier,
-    "../abi/contracts/mocks/TestPlonkVerifier.sol/TestPlonkVerifier/abi.json",
-    event_derives(serde::Deserialize, serde::Serialize);
-
-    TestPolynomialEval,
-    "../abi/contracts/mocks/TestPolynomialEval.sol/TestPolynomialEval/abi.json",
-    event_derives(serde::Deserialize, serde::Serialize);
-
-    CAPE,
-    "../abi/contracts/CAPE.sol/CAPE/abi.json",
-    event_derives(serde::Deserialize, serde::Serialize);
-
-    PlonkVerifier,
-    "../abi/contracts/verifier/PlonkVerifier.sol/PlonkVerifier/abi.json",
-    event_derives(serde::Deserialize, serde::Serialize);
-
-    TestCapeTypes,
-    "../abi/contracts/mocks/TestCapeTypes.sol/TestCapeTypes/abi.json",
-    event_derives(serde::Deserialize, serde::Serialize);
-
-    TestCAPE,
-    "../abi/contracts/mocks/TestCAPE.sol/TestCAPE/abi.json",
-    event_derives(serde::Deserialize, serde::Serialize);
-
-    Greeter,
-    "../abi/contracts/Greeter.sol/Greeter/abi.json",
-    event_derives(serde::Deserialize, serde::Serialize);
-
-    TestVerifyingKeys,
-    "../abi/contracts/mocks/TestVerifyingKeys.sol/TestVerifyingKeys/abi.json",
-    event_derives(serde::Deserialize, serde::Serialize);
-
-    SimpleToken,
-    "../abi/contracts/SimpleToken.sol/SimpleToken/abi.json",
-    event_derives(serde::Deserialize, serde::Serialize);
-);
 
 impl From<ark_bn254::G1Affine> for G1Point {
     fn from(p: ark_bn254::G1Affine) -> Self {
@@ -350,6 +281,8 @@ impl From<jf_cap::structs::AssetPolicy> for AssetPolicy {
 
 impl From<AssetPolicy> for jf_cap::structs::AssetPolicy {
     fn from(policy_sol: AssetPolicy) -> Self {
+        // Internal representation has two fields for pk (pk.x, pk.y), thus + 1 in length
+        const REVEAL_MAP_INTERNAL_LEN: usize = REVEAL_MAP_LEN + 1;
         jf_cap::structs::AssetPolicy::default()
             .set_auditor_pub_key(policy_sol.auditor_pk.into())
             .set_cred_issuer_pub_key(policy_sol.cred_pk.into())
@@ -357,11 +290,11 @@ impl From<AssetPolicy> for jf_cap::structs::AssetPolicy {
             .set_reveal_threshold(policy_sol.reveal_threshold)
             .set_reveal_map_for_test({
                 let map_sol = policy_sol.reveal_map;
-                if map_sol >= U256::from(2).pow(12.into() /*TODO import from jellyfish?*/) {
+                if map_sol >= U256::from(2u32.pow(REVEAL_MAP_INTERNAL_LEN as u32)) {
                     panic!("Reveal map has more than 12 bits")
                 }
-                let bits: [bool; 12] = (0..12)
-                    .map(|i| map_sol.bit(11 - i))
+                let bits: [bool; REVEAL_MAP_INTERNAL_LEN] = (0..REVEAL_MAP_INTERNAL_LEN)
+                    .map(|i| map_sol.bit(REVEAL_MAP_INTERNAL_LEN - 1 - i))
                     .collect::<Vec<_>>()
                     .try_into()
                     .unwrap();

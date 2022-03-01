@@ -9,11 +9,10 @@ use async_recursion::async_recursion;
 use ethers::{
     abi::{Abi, Tokenize},
     contract::Contract,
-    core::k256::ecdsa::SigningKey,
     prelude::{
         artifacts::BytecodeObject, coins_bip39::English, Address, ContractFactory, Http,
         LocalWallet, Middleware, MnemonicBuilder, Provider, Signer, SignerMiddleware,
-        TransactionRequest, Wallet, U256,
+        TransactionRequest, U256,
     },
 };
 
@@ -65,8 +64,7 @@ pub fn get_provider() -> Provider<Http> {
     Provider::<Http>::try_from(rpc_url).expect("could not instantiate HTTP Provider")
 }
 
-pub async fn get_funded_client() -> Result<Arc<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>>
-{
+pub async fn get_funded_client() -> Result<Arc<EthMiddleware>> {
     let mut provider = get_provider();
     let chain_id = provider.get_chainid().await.unwrap().as_u64();
 
@@ -118,7 +116,7 @@ async fn load_contract(path: &Path) -> Result<(Abi, BytecodeObject)> {
 
 async fn link_unlinked_libraries<M: 'static + Middleware>(
     bytecode: &mut BytecodeObject,
-    client: Arc<M>,
+    client: &Arc<M>,
 ) -> Result<()> {
     if bytecode.contains_fully_qualified_placeholder("contracts/libraries/RescueLib.sol:RescueLib")
     {
@@ -180,14 +178,9 @@ pub async fn deploy<M: 'static + Middleware, T: Tokenize>(
 ) -> Result<Contract<M>> {
     let (abi, mut bytecode) = load_contract(path).await?;
 
-    // TODO remove client clones, pass reference instead?
-    link_unlinked_libraries(&mut bytecode, client.clone()).await?;
+    link_unlinked_libraries(&mut bytecode, &client).await?;
     let factory = ContractFactory::new(abi.clone(), bytecode.into_bytes().unwrap(), client.clone());
 
-    let contract = factory
-        .deploy(constructor_args)?
-        .legacy() // XXX This is required!
-        .send()
-        .await?;
+    let contract = factory.deploy(constructor_args)?.legacy().send().await?;
     Ok(contract)
 }

@@ -44,7 +44,6 @@ contract PlonkVerifier is IPlonkVerifier {
         uint256 nextEvalPoint; // 0x40
         // the polynomial evaluation value
         uint256 eval; // 0x60
-        // TODO: deliberate on if two arrays is the best choice for `struct ScalarsAndBases` in JF.
         // scalars of poly comm for MSM
         uint256[] commScalars; // 0x80
         // bases of poly comm for MSM
@@ -69,7 +68,7 @@ contract PlonkVerifier is IPlonkVerifier {
 
     /// @dev Batch verify multiple TurboPlonk proofs.
     /// @param verifyingKeys An array of verifier keys
-    /// @param publicInputs A two-dimensional array of public inputs. *How is this obtained or constructed?*
+    /// @param publicInputs A two-dimensional array of public inputs.
     /// @param proofs An array of Plonk proofs
     /// @param extraTranscriptInitMsgs An array of bytes from
     /// transcript initialization messages
@@ -340,7 +339,6 @@ contract PlonkVerifier is IPlonkVerifier {
         uint256 v = chal.v;
         uint256 vBase = v;
 
-        // TODO: simplify the code into loops?
         // Add wire witness polynomial commitments.
         commScalars[20] = vBase;
         commBases[20] = proof.wire0;
@@ -398,8 +396,6 @@ contract PlonkVerifier is IPlonkVerifier {
         }
 
         // Add poly commitments to be evaluated at point `zeta * g`.
-        // TODO this bases is the same as commBases[0]
-        // consider merging those
         commScalars[29] = chal.u;
         commBases[29] = proof.prodPerm;
     }
@@ -570,7 +566,6 @@ contract PlonkVerifier is IPlonkVerifier {
         BN254.G1Point[] memory bases,
         uint256[] memory scalars
     ) internal pure {
-        // TODO: optimize this code
         uint256 firstScalar;
         uint256 secondScalar;
         uint256 rhs;
@@ -829,7 +824,7 @@ contract PlonkVerifier is IPlonkVerifier {
         scalars[16] = tmp2;
         bases[16] = proof.split1;
 
-        // thrid one is (1-zeta^n) zeta^2(n+2)
+        // third one is (1-zeta^n) zeta^2(n+2)
         assembly {
             tmp2 := mulmod(mload(add(scalars, mul(17, 0x20))), tmp, p)
         }

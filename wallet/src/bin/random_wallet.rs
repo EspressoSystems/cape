@@ -2,9 +2,9 @@
 #![deny(warnings)]
 
 use async_std::task::sleep;
-use cape_wallet::backend::create_test_network;
 use cape_wallet::backend::CapeBackend;
 use cape_wallet::mocks::*;
+use cape_wallet::testing::create_test_network;
 use cape_wallet::CapeWallet;
 use jf_cap::keys::UserKeyPair;
 use jf_cap::structs::AssetCode;

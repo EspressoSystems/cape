@@ -37,11 +37,7 @@ async fn main() -> std::io::Result<()> {
     let _api_handle = init_web_server(query_result_state.clone()).unwrap();
 
     // will replace with subscription in phase 3
-    let mut eth_poll = EthPolling {
-        query_result_state,
-        state_persistence,
-        last_updated_block_height: 0,
-    };
+    let mut eth_poll = EthPolling::new(query_result_state, state_persistence).await;
 
     // TODO: mechanism to signal for exit.
     loop {

@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use crate::deploy::deploy_test_bn254_contract;
+use crate::deploy::{deploy_test_bn254_contract, EthMiddleware};
 use crate::{
     assertion::Matcher,
     types::{field_to_u256, u256_to_field, G1Point, G2Point, TestBN254},
@@ -16,7 +16,6 @@ use ark_ff::{FpParameters, PrimeField};
 use ark_serialize::CanonicalSerialize;
 use ark_std::UniformRand;
 use ark_std::Zero;
-use ethers::core::k256::ecdsa::SigningKey;
 use ethers::prelude::*;
 use rand::RngCore;
 
@@ -210,10 +209,7 @@ async fn test_validate_g1_point() -> Result<()> {
     let p: G1Affine = G1Projective::rand(rng).into();
     contract.validate_g1_point(p.into()).call().await?;
 
-    async fn should_fail_validation(
-        contract: &TestBN254<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>,
-        bad_p: G1Point,
-    ) {
+    async fn should_fail_validation(contract: &TestBN254<EthMiddleware>, bad_p: G1Point) {
         contract
             .validate_g1_point(bad_p)
             .call()

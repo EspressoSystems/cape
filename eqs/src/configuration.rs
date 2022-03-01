@@ -9,7 +9,7 @@ use structopt::StructOpt;
 #[derive(Debug, StructOpt)]
 #[structopt(
     name = "CAPE Ethereum Query Server",
-    about = "Monitors for changes on the CAPE constract, provides query service for contract state"
+    about = "Monitors for changes on the CAPE contract, provides query service for contract state"
 )]
 struct EQSOptions {
     /// Path to assets including web server files.
@@ -87,7 +87,6 @@ pub(crate) fn reset_state() -> bool {
     EQSOptions::from_args().reset_state_store
 }
 
-// presumably, it's worth storing and verifying a hash of these, rather than downloading the keys from the chain.
 pub(crate) fn verifier_keys() -> VerifierKeySet {
     // Set up the validator.
     let univ_setup = &*UNIVERSAL_PARAM;

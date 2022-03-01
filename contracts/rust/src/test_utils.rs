@@ -1,12 +1,11 @@
 use crate::cape::{BurnNote, DOM_SEP_CAPE_BURN};
+use crate::deploy::EthMiddleware;
 use crate::helpers::compare_merkle_root_from_contract_and_jf_tree;
 use crate::ledger::CapeLedger;
 use crate::types::TestRecordsMerkleTree;
 use crate::types::{field_to_u256, SimpleToken, TestCAPE};
 use ethers::prelude::TransactionReceipt;
-use ethers::prelude::{
-    k256::ecdsa::SigningKey, Address, Http, Provider, SignerMiddleware, Wallet, H160, U256,
-};
+use ethers::prelude::{Address, H160, U256};
 use jf_cap::keys::{UserKeyPair, UserPubKey};
 use jf_cap::structs::{
     AssetDefinition, FeeInput, FreezeFlag, RecordCommitment, RecordOpening, TxnFeeInfo,
@@ -21,22 +20,19 @@ use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct ContractsInfo {
-    pub cape_contract: TestCAPE<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>,
-    pub erc20_token_contract: SimpleToken<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>,
-    pub cape_contract_for_erc20_owner:
-        TestCAPE<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>,
+    pub cape_contract: TestCAPE<EthMiddleware>,
+    pub erc20_token_contract: SimpleToken<EthMiddleware>,
+    pub cape_contract_for_erc20_owner: TestCAPE<EthMiddleware>,
     pub erc20_token_address: H160,
-    pub owner_of_erc20_tokens_client: SignerMiddleware<Provider<Http>, Wallet<SigningKey>>,
+    pub owner_of_erc20_tokens_client: EthMiddleware,
     pub owner_of_erc20_tokens_client_address: H160,
 }
 
 // TODO try to parametrize the struct with the trait M:Middleware
 impl ContractsInfo {
     pub async fn new(
-        cape_contract_ref: &TestCAPE<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>,
-        erc20_token_contract_ref: &SimpleToken<
-            SignerMiddleware<Provider<Http>, Wallet<SigningKey>>,
-        >,
+        cape_contract_ref: &TestCAPE<EthMiddleware>,
+        erc20_token_contract_ref: &SimpleToken<EthMiddleware>,
     ) -> Self {
         let cape_contract = cape_contract_ref.clone();
         let erc20_token_contract = erc20_token_contract_ref.clone();
@@ -63,9 +59,7 @@ impl ContractsInfo {
 
 /// Generates a user key pair that controls the faucet and call the contract for inserting a record commitment inside the merkle tree containing
 /// some native fee asset records.
-pub async fn create_faucet(
-    contract: &TestCAPE<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>,
-) -> (UserKeyPair, RecordOpening) {
+pub async fn create_faucet(contract: &TestCAPE<EthMiddleware>) -> (UserKeyPair, RecordOpening) {
     let mut rng = ChaChaRng::from_seed([42; 32]);
     let faucet_key_pair = UserKeyPair::generate(&mut rng);
     let faucet_rec = RecordOpening::new(
@@ -99,7 +93,7 @@ pub fn contract_abi_path(contract_name: &str) -> PathBuf {
 }
 
 pub async fn check_erc20_token_balance(
-    erc20_token_contract: &SimpleToken<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>,
+    erc20_token_contract: &SimpleToken<EthMiddleware>,
     user_eth_address: Address,
     expected_amount: U256,
 ) {
@@ -194,9 +188,7 @@ pub fn generate_burn_tx(
 
 pub async fn compare_roots_records_merkle_tree_contract(
     mt: &MerkleTree,
-    contract: &TestRecordsMerkleTree<
-        SignerMiddleware<Provider<Http>, Wallet<ethers::core::k256::ecdsa::SigningKey>>,
-    >,
+    contract: &TestRecordsMerkleTree<EthMiddleware>,
     should_be_equal: bool,
 ) {
     let root_fr254 = mt.commitment().root_value;
@@ -210,9 +202,7 @@ pub async fn compare_roots_records_merkle_tree_contract(
 
 pub async fn compare_roots_records_test_cape_contract(
     mt: &MerkleTree,
-    contract: &TestCAPE<
-        SignerMiddleware<Provider<Http>, Wallet<ethers::core::k256::ecdsa::SigningKey>>,
-    >,
+    contract: &TestCAPE<EthMiddleware>,
     should_be_equal: bool,
 ) {
     let root_fr254 = mt.commitment().root_value;

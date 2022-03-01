@@ -84,7 +84,7 @@ interface IPlonkVerifier {
 
     /// @dev Batch verify multiple TurboPlonk proofs.
     /// @param verifyingKeys An array of verifying keys
-    /// @param publicInputs A two-dimensional array of public inputs. **How does one create this parameter?**
+    /// @param publicInputs A two-dimensional array of public inputs.
     /// @param proofs An array of Plonk proofs
     /// @param extraTranscriptInitMsgs An array of bytes from
     /// transcript initialization messages

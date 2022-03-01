@@ -68,7 +68,7 @@ contract PlonkVerifier is IPlonkVerifier {
 
     /// @dev Batch verify multiple TurboPlonk proofs.
     /// @param verifyingKeys An array of verifier keys
-    /// @param publicInputs A two-dimensional array of public inputs. *How is this obtained or constructed?*
+    /// @param publicInputs A two-dimensional array of public inputs.
     /// @param proofs An array of Plonk proofs
     /// @param extraTranscriptInitMsgs An array of bytes from
     /// transcript initialization messages
@@ -824,7 +824,7 @@ contract PlonkVerifier is IPlonkVerifier {
         scalars[16] = tmp2;
         bases[16] = proof.split1;
 
-        // thrid one is (1-zeta^n) zeta^2(n+2)
+        // third one is (1-zeta^n) zeta^2(n+2)
         assembly {
             tmp2 := mulmod(mload(add(scalars, mul(17, 0x20))), tmp, p)
         }

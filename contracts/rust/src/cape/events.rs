@@ -68,7 +68,9 @@ mod tests {
 
         let block_with_memos = BlockWithMemos::new(cape_block.clone(), memos_with_sigs.clone());
 
-        submit_cape_block_with_memos(&connection.contract, block_with_memos.clone()).await?;
+        submit_cape_block_with_memos(&connection.contract, block_with_memos.clone())
+            .await?
+            .await?;
 
         let events = connection
             .contract

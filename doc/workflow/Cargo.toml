@@ -14,4 +14,4 @@ ethers = { git = "https://github.com/gakonst/ethers-rs", features = ["abigen"] }
 serde_json = "1.0.67"
 serde = { version = "1.0.124", features = ["derive"] }
 rand = "0.8.4"
-itertools = "0.10.1" # see Nathan M's comment: https://gitlab.com/translucence/cap-on-ethereum/cape/-/merge_requests/57#note_740626024
+itertools = "0.10.1"

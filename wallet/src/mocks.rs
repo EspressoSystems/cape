@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use cap_rust_sandbox::{
     deploy::EthMiddleware, ledger::*, model::*, universal_param::UNIVERSAL_PARAM,
 };
+use commit::Committable;
 use futures::stream::Stream;
 use itertools::izip;
 use jf_cap::{
@@ -25,7 +26,7 @@ use seahorse::{
     loader::WalletLoader,
     persistence::AtomicWalletStorage,
     testing,
-    txn_builder::{RecordDatabase, TransactionState},
+    txn_builder::{RecordDatabase, TransactionState, TransactionUID},
     WalletBackend, WalletError, WalletState,
 };
 use serde::{de::DeserializeOwned, Serialize};
@@ -51,19 +52,19 @@ struct CommittedTransaction {
 #[derive(Clone)]
 pub struct MockCapeNetwork {
     contract: CapeContractState,
+    call_data: HashMap<TransactionUID<CapeLedger>, (Vec<ReceiverMemo>, Signature)>,
 
     // Mock EQS and peripheral services
     block_height: u64,
     records: MerkleTree,
     // When an ERC20 deposit is finalized during a block submission, the contract emits an event
-    // containing only the commitment of the new record. Therefore, to correllate these events with
+    // containing only the commitment of the new record. Therefore, to correlate these events with
     // the other information needed to reconstruct a CapeTransition::Wrap, the query service needs
     // to monitor the contracts Erc20Deposited events and keep track of the deposits which are
     // pending finalization.
     pending_erc20_deposits:
         HashMap<RecordCommitment, (Erc20Code, EthereumAddr, Box<RecordOpening>)>,
-    query_service_events: MockEventSource<CapeLedger>,
-    memo_events: MockEventSource<CapeLedger>,
+    events: MockEventSource<CapeLedger>,
     txns: HashMap<(u64, u64), CommittedTransaction>,
     address_map: HashMap<UserAddress, UserPubKey>,
 }
@@ -76,11 +77,11 @@ impl MockCapeNetwork {
     ) -> Self {
         let mut ledger = Self {
             contract: CapeContractState::new(verif_crs, records.clone()),
+            call_data: Default::default(),
             block_height: 0,
             records,
             pending_erc20_deposits: Default::default(),
-            query_service_events: MockEventSource::new(EventSource::QueryService),
-            memo_events: MockEventSource::new(EventSource::BulletinBoard),
+            events: MockEventSource::new(EventSource::QueryService),
             txns: Default::default(),
             address_map: Default::default(),
         };
@@ -223,10 +224,7 @@ impl MockCapeNetwork {
         from: EventIndex,
         to: Option<EventIndex>,
     ) -> Pin<Box<dyn Stream<Item = (LedgerEvent<CapeLedger>, EventSource)> + Send>> {
-        Box::pin(futures::stream::select(
-            self.query_service_events.subscribe(from, to),
-            self.memo_events.subscribe(from, to),
-        ))
+        self.events.subscribe(from, to)
     }
 
     pub fn get_public_key(&self, address: &UserAddress) -> Result<UserPubKey, CapeWalletError> {
@@ -271,6 +269,15 @@ impl MockCapeNetwork {
         }
     }
 
+    pub fn store_call_data(
+        &mut self,
+        txn: TransactionUID<CapeLedger>,
+        memos: Vec<ReceiverMemo>,
+        sig: Signature,
+    ) {
+        self.call_data.insert(txn, (memos, sig));
+    }
+
     pub fn submit_operations(
         &mut self,
         ops: Vec<CapeModelOperation>,
@@ -281,7 +288,7 @@ impl MockCapeNetwork {
             if let CapeModelEthEffect::Emit(event) = effect {
                 events.push(event);
             } else {
-                //todo Simulate and validate the other ETH effects. If any effects fail, the
+                //TODO Simulate and validate the other ETH effects. If any effects fail, the
                 // whole transaction must be considered reverted with no visible effects.
             }
         }
@@ -339,10 +346,21 @@ impl MockCapeNetwork {
                 }
 
                 self.generate_event(LedgerEvent::Commit {
-                    block: CapeBlock::new(block),
+                    block: CapeBlock::new(block.clone()),
                     block_id: self.block_height,
                     state_comm: self.block_height + 1,
                 });
+
+                // The memos for this block should have already been posted in the calldata, so we
+                // can now generate the corresponding Memos events.
+                for (txn_id, txn) in block.into_iter().enumerate() {
+                    if let Some((memos, sig)) = self.call_data.remove(&TransactionUID(txn.commit()))
+                    {
+                        self.post_memos(self.block_height, txn_id as u64, memos, sig)
+                            .unwrap();
+                    }
+                }
+
                 self.block_height += 1;
             }
 
@@ -360,7 +378,7 @@ impl MockCapeNetwork {
 
 impl<'a> MockNetwork<'a, CapeLedger> for MockCapeNetwork {
     fn now(&self) -> EventIndex {
-        self.query_service_events.now() + self.memo_events.now()
+        self.events.now()
     }
 
     fn submit(&mut self, block: Block<CapeLedger>) -> Result<(), WalletError<CapeLedger>> {
@@ -469,13 +487,23 @@ impl<'a> MockNetwork<'a, CapeLedger> for MockCapeNetwork {
     }
 
     fn memos_source(&self) -> EventSource {
-        EventSource::BulletinBoard
+        EventSource::QueryService
     }
 
     fn generate_event(&mut self, event: LedgerEvent<CapeLedger>) {
-        match event {
-            LedgerEvent::Memos { .. } => self.memo_events.publish(event),
-            _ => self.query_service_events.publish(event),
+        self.events.publish(event)
+    }
+
+    fn event(
+        &self,
+        index: EventIndex,
+        source: EventSource,
+    ) -> Result<LedgerEvent<CapeLedger>, WalletError<CapeLedger>> {
+        match source {
+            EventSource::QueryService => self.events.get(index),
+            _ => Err(WalletError::Failed {
+                msg: String::from("invalid event source"),
+            }),
         }
     }
 }
@@ -605,21 +633,16 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
         self.key_stream.clone()
     }
 
-    async fn submit(&mut self, txn: CapeTransition) -> Result<(), WalletError<CapeLedger>> {
-        self.ledger.lock().await.submit(txn)
-    }
-
-    async fn post_memos(
+    async fn submit(
         &mut self,
-        block_id: u64,
-        txn_id: u64,
+        txn: CapeTransition,
+        uid: TransactionUID<CapeLedger>,
         memos: Vec<ReceiverMemo>,
         sig: Signature,
     ) -> Result<(), WalletError<CapeLedger>> {
-        self.ledger
-            .lock()
-            .await
-            .post_memos(block_id, txn_id, memos, sig)
+        let mut ledger = self.ledger.lock().await;
+        ledger.network().store_call_data(uid, memos, sig);
+        ledger.submit(txn)
     }
 }
 
@@ -670,7 +693,7 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
 }
 
 fn cape_to_wallet_err(err: CapeValidationError) -> WalletError<CapeLedger> {
-    //todo Convert CapeValidationError to WalletError in a better way. Maybe WalletError should be
+    //TODO Convert CapeValidationError to WalletError in a better way. Maybe WalletError should be
     // parameterized on the ledger type and there should be a ledger trait ValidationError.
     WalletError::Failed {
         msg: err.to_string(),

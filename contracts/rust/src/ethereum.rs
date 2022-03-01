@@ -116,7 +116,7 @@ async fn load_contract(path: &Path) -> Result<(Abi, BytecodeObject)> {
 
 async fn link_unlinked_libraries<M: 'static + Middleware>(
     bytecode: &mut BytecodeObject,
-    client: Arc<M>,
+    client: &Arc<M>,
 ) -> Result<()> {
     if bytecode.contains_fully_qualified_placeholder("contracts/libraries/RescueLib.sol:RescueLib")
     {
@@ -178,14 +178,9 @@ pub async fn deploy<M: 'static + Middleware, T: Tokenize>(
 ) -> Result<Contract<M>> {
     let (abi, mut bytecode) = load_contract(path).await?;
 
-    // TODO remove client clones, pass reference instead?
-    link_unlinked_libraries(&mut bytecode, client.clone()).await?;
+    link_unlinked_libraries(&mut bytecode, &client).await?;
     let factory = ContractFactory::new(abi.clone(), bytecode.into_bytes().unwrap(), client.clone());
 
-    let contract = factory
-        .deploy(constructor_args)?
-        .legacy() // XXX This is required!
-        .send()
-        .await?;
+    let contract = factory.deploy(constructor_args)?.legacy().send().await?;
     Ok(contract)
 }

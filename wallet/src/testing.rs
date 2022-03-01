@@ -176,10 +176,10 @@ pub async fn wrap_simple_token<'a>(
     wrapper_addr: &UserAddress,
     cape_asset: AssetDefinition,
     erc20_contract: &SimpleToken<EthMiddleware>,
+    contract_address: Address,
     amount: u64,
 ) -> Result<(), CapeWalletError> {
     let wrapper_eth_addr = wrapper.eth_address().await.unwrap();
-    let contract_address = erc20_contract.address();
 
     let total_native_balance = wrapper.balance(wrapper_addr, &AssetCode::native()).await;
     assert!(total_native_balance > 0);
@@ -218,7 +218,7 @@ pub async fn wrap_simple_token<'a>(
             wrapper_eth_addr.clone(),
             cape_asset.clone(),
             wrapper_addr.clone(),
-            100,
+            amount,
         )
         .await
         .unwrap();

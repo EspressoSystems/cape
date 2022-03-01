@@ -377,6 +377,7 @@ async fn main() {
                     &wrapper_key.address(),
                     asset_def,
                     &erc20_contract,
+                    network.contract_address,
                     100,
                 )
                 .await

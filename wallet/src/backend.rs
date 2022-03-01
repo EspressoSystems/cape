@@ -516,7 +516,6 @@ mod test {
         .await
         .unwrap();
         let mut wrapper = CapeWallet::new(wrapper_backend).await.unwrap();
-
         // Add the faucet key to the wrapper wallet, so that they have the native tokens they need
         // to pay the fee to transfer the wrapped tokens.
         wrapper
@@ -566,6 +565,7 @@ mod test {
             &wrapper_key.address(),
             cape_asset.clone(),
             &erc20_contract,
+            contract_address.clone(),
             100,
         )
         .await

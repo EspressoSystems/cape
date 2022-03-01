@@ -3,6 +3,7 @@
 
 use async_std::sync::{Arc, Mutex};
 use async_std::task::sleep;
+use cap_rust_sandbox::deploy::deploy_erc20_token;
 use cap_rust_sandbox::ethereum::get_provider;
 use cape_wallet::backend::CapeBackend;
 use cape_wallet::mocks::*;
@@ -246,7 +247,10 @@ async fn main() {
     }
 
     //sponsor some token
-    sponsor_simple_token(&mut wallet).await.unwrap();
+    let erc20_contract = deploy_erc20_token().await;
+    sponsor_simple_token(&mut wallet, &erc20_contract)
+        .await
+        .unwrap();
 
     balances.insert(address.clone(), HashMap::new());
     balances.get_mut(&address).unwrap().insert(
@@ -363,11 +367,20 @@ async fn main() {
             }
             OperationType::Wrap => {
                 let wrapper = wallets.choose_mut(&mut rng).unwrap();
+                let wrapper_key = wrapper.pub_keys().await[0].clone();
                 let asset_def = wrapper
                     .define_asset(&[], AssetPolicy::default())
                     .await
                     .expect("failed to define asset");
-                wrap_simple_token(wrapper, asset_def, 100).await.unwrap();
+                wrap_simple_token(
+                    wrapper,
+                    &wrapper_key.address(),
+                    asset_def,
+                    &erc20_contract,
+                    100,
+                )
+                .await
+                .unwrap();
             }
             OperationType::Burn => {
                 let burner = wallets.choose_mut(&mut rng).unwrap();

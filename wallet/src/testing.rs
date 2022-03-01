@@ -9,8 +9,9 @@ use crate::CapeWalletError;
 use address_book::init_web_server;
 use address_book::wait_for_server;
 use async_std::sync::{Arc, Mutex};
+use cap_rust_sandbox::deploy::EthMiddleware;
 use cap_rust_sandbox::ledger::CapeLedger;
-use cap_rust_sandbox::{deploy::deploy_erc20_token, types::SimpleToken};
+use cap_rust_sandbox::types::SimpleToken;
 use ethers::prelude::Address;
 use jf_cap::keys::UserAddress;
 use jf_cap::keys::UserKeyPair;
@@ -172,17 +173,15 @@ pub async fn unfreeze_token<'a>(
 
 pub async fn wrap_simple_token<'a>(
     wrapper: &mut CapeWallet<'a, CapeBackend<'a, ()>>,
+    wrapper_addr: &UserAddress,
     cape_asset: AssetDefinition,
+    erc20_contract: &SimpleToken<EthMiddleware>,
     amount: u64,
 ) -> Result<(), CapeWalletError> {
     let wrapper_eth_addr = wrapper.eth_address().await.unwrap();
-    let wrapper_key = wrapper.pub_keys().await[0].clone();
-    let erc20_contract = deploy_erc20_token().await;
     let contract_address = erc20_contract.address();
 
-    let total_native_balance = wrapper
-        .balance(&wrapper_key.address(), &AssetCode::native())
-        .await;
+    let total_native_balance = wrapper.balance(wrapper_addr, &AssetCode::native()).await;
     assert!(total_native_balance > 0);
     // Prepare to wrap: approve the transfer from the wrapper's ETH wallet to the CAPE contract.
     SimpleToken::new(
@@ -218,7 +217,7 @@ pub async fn wrap_simple_token<'a>(
         .wrap(
             wrapper_eth_addr.clone(),
             cape_asset.clone(),
-            wrapper_key.address(),
+            wrapper_addr.clone(),
             100,
         )
         .await
@@ -236,8 +235,8 @@ pub async fn wrap_simple_token<'a>(
 
 pub async fn sponsor_simple_token<'a>(
     sponsor: &mut CapeWallet<'a, CapeBackend<'a, ()>>,
-) -> Result<(), CapeWalletError> {
-    let erc20_contract = deploy_erc20_token().await;
+    erc20_contract: &SimpleToken<EthMiddleware>,
+) -> Result<AssetDefinition, CapeWalletError> {
     let sponsor_eth_addr = sponsor.eth_address().await.unwrap();
     sponsor
         .sponsor(
@@ -246,8 +245,6 @@ pub async fn sponsor_simple_token<'a>(
             AssetPolicy::default(),
         )
         .await
-        .unwrap();
-    Ok(())
 }
 
 pub async fn burn_token<'a>(

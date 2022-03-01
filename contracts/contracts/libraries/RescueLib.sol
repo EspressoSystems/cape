@@ -695,29 +695,33 @@ library RescueLib {
         o %= _PRIME;
     }
 
-    function commit(uint256[15] memory inputs) internal view returns (uint256) {
-        uint256 a = inputs[0];
-        uint256 b = inputs[1];
-        uint256 c = inputs[2];
+    function checkBounded(uint256[15] memory inputs) internal pure {
+        for (uint256 i = 0; i < inputs.length; ++i) {
+            require(inputs[i] < _PRIME, "inputs must be below _PRIME");
+        }
+    }
+
+    // Must be public so it doesn't get inlined into CAPE.sol and blow
+    // the size limit
+    function commit(uint256[15] memory inputs) public view returns (uint256) {
+        checkBounded(inputs);
+
+        uint256 a;
+        uint256 b;
+        uint256 c;
         uint256 d;
-        require(a < _PRIME, "inputs must be below _PRIME");
-        require(b < _PRIME, "inputs must be below _PRIME");
-        require(c < _PRIME, "inputs must be below _PRIME");
 
-        for (uint256 i = 1; i < 5; i++) {
-            require(inputs[3 * i + 0] < _PRIME, "inputs must be below _PRIME");
-            require(inputs[3 * i + 1] < _PRIME, "inputs must be below _PRIME");
-            require(inputs[3 * i + 2] < _PRIME, "inputs must be below _PRIME");
-            a += inputs[3 * i + 0];
-            b += inputs[3 * i + 1];
-            c += inputs[3 * i + 2];
+        for (uint256 i = 0; i < 5; i++) {
+            unchecked {
+                (a, b, c, d) = perm(
+                    (a + inputs[3 * i + 0]) % _PRIME,
+                    (b + inputs[3 * i + 1]) % _PRIME,
+                    (c + inputs[3 * i + 2]) % _PRIME,
+                    d
+                );
 
-            (a, b, c, d) = perm(a % _PRIME, b % _PRIME, c % _PRIME, d);
-
-            a %= _PRIME;
-            b %= _PRIME;
-            c %= _PRIME;
-            d %= _PRIME;
+                (a, b, c, d) = (a % _PRIME, b % _PRIME, c % _PRIME, d % _PRIME);
+            }
         }
 
         return a;

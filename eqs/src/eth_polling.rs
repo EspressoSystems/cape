@@ -2,11 +2,7 @@ use crate::query_result_state::QueryResultState;
 use crate::state_persistence::StatePersistence;
 
 use async_std::sync::{Arc, RwLock};
-use cap_rust_sandbox::{
-    deploy::EthMiddleware,
-    ethereum::EthConnection,
-    types::TestCAPE,
-};
+use cap_rust_sandbox::{deploy::EthMiddleware, ethereum::EthConnection, types::TestCAPE};
 
 pub(crate) struct EthPolling {
     pub query_result_state: Arc<RwLock<QueryResultState>>,
@@ -17,7 +13,10 @@ pub(crate) struct EthPolling {
 }
 
 impl EthPolling {
-    pub async fn new(query_result_state: Arc<RwLock<QueryResultState>>, state_persistence: StatePersistence) -> EthPolling {
+    pub async fn new(
+        query_result_state: Arc<RwLock<QueryResultState>>,
+        state_persistence: StatePersistence,
+    ) -> EthPolling {
         let connection = EthConnection::for_test().await;
         EthPolling {
             query_result_state,

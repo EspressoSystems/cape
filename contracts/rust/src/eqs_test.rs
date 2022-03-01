@@ -3,12 +3,12 @@ mod tests {
     use crate::{
         cape::{
             submit_block::{fetch_cape_block, submit_cape_block_with_memos},
-            BlockWithMemos, CapeBlock,
+            BlockWithMemos, CapeBlock, NoteType,
         },
         deploy::deploy_erc20_token,
         ethereum::{get_provider, EthConnection},
         ledger::{CapeLedger, CapeTransition},
-        model::{erc20_asset_description, Erc20Code, EthereumAddr},
+        model::{erc20_asset_description, CapeModelTxn, Erc20Code, EthereumAddr},
         test_utils::ContractsInfo,
         types::{
             self as sol, GenericInto, MerkleRootSol, RecordOpening as RecordOpeningSol,
@@ -29,12 +29,56 @@ mod tests {
             RecordOpening,
         },
         utils::TxnsParams,
-        KeyPair,
+        KeyPair, TransactionNote,
     };
     use rand::{RngCore, SeedableRng};
     use rand_chacha::ChaChaRng;
     use reef::Ledger;
     use std::iter::repeat_with;
+
+    fn cape_block_to_transactions(block: CapeBlock) -> Option<Vec<CapeModelTxn>> {
+        let note_types = block.note_types.into_iter();
+        let mut transfer_notes = block.transfer_notes.into_iter();
+        let mut mint_notes = block.mint_notes.into_iter();
+        let mut freeze_notes = block.freeze_notes.into_iter();
+        let mut burn_notes = block.burn_notes.into_iter();
+        let mut ret = vec![];
+        for nt in note_types {
+            match nt {
+                NoteType::Transfer => {
+                    ret.push(CapeModelTxn::CAP(TransactionNote::Transfer(Box::new(
+                        transfer_notes.next()?,
+                    ))));
+                }
+                NoteType::Mint => {
+                    ret.push(CapeModelTxn::CAP(TransactionNote::Mint(Box::new(
+                        mint_notes.next()?,
+                    ))));
+                }
+                NoteType::Freeze => {
+                    ret.push(CapeModelTxn::CAP(TransactionNote::Freeze(Box::new(
+                        freeze_notes.next()?,
+                    ))));
+                }
+                NoteType::Burn => {
+                    let burn_note = burn_notes.next()?;
+                    ret.push(CapeModelTxn::Burn {
+                        xfr: Box::new(burn_note.transfer_note),
+                        ro: Box::new(burn_note.burned_ro),
+                    });
+                }
+            }
+        }
+        if transfer_notes.next().is_some()
+            || mint_notes.next().is_some()
+            || freeze_notes.next().is_some()
+            || burn_notes.next().is_some()
+        {
+            None
+        } else {
+            Some(ret)
+        }
+    }
 
     #[tokio::test]
     async fn eqs_test() -> anyhow::Result<()> {
@@ -52,7 +96,8 @@ mod tests {
         );
         let miner = UserPubKey::default();
 
-        let cape_block_erc20 = CapeBlock::generate(params_erc20.txns, vec![], miner.address())?;
+        let cape_block_erc20 =
+            CapeBlock::generate(params_erc20.txns.clone(), vec![], miner.address())?;
 
         let params_empty =
             TxnsParams::generate_txns(&mut rng, 1, 0, 0, CapeLedger::merkle_height());
@@ -157,22 +202,22 @@ mod tests {
         };
 
         let events_listener = async {
-            let mut last_event = 0;
-            while last_event < 3 {
+            let mut last_event = 0u64;
+            while last_event < 100 {
                 let cape_contract = eth_connection.lock().await.test_contract();
 
                 let new_event = cape_contract
                     .events()
-                    .from_block(0u64)
+                    .from_block(last_event + 1)
                     .query_with_meta()
                     .await
                     .unwrap();
 
                 drop(cape_contract);
 
-                while new_event.len() > last_event {
-                    dbg!(new_event.clone());
-                    let (filter, meta) = new_event[last_event].clone();
+                for event in new_event {
+                    dbg!(event.clone());
+                    let (filter, meta) = event.clone();
 
                     match filter {
                         TestCAPEEvents::BlockCommittedFilter(filter_data) => {
@@ -182,14 +227,21 @@ mod tests {
                             let _txs = provider
                                 .get_transaction(meta.transaction_hash)
                                 .await
+                                .unwrap()
                                 .unwrap();
 
                             let connection = eth_connection.lock().await;
-                            let _fetched_block_with_memos =
+
+                            let fetched_block_with_memos =
                                 fetch_cape_block(&connection, meta.transaction_hash)
                                     .await
                                     .unwrap()
                                     .unwrap();
+
+                            dbg!(fetched_block_with_memos.block.note_types.clone());
+                            let transitions =
+                                cape_block_to_transactions(fetched_block_with_memos.block);
+                            dbg!(transitions);
 
                             let _wraps = filter_data
                                 .deposit_commitments
@@ -218,12 +270,12 @@ mod tests {
                             println!("erc20");
                         }
                     }
-                    last_event += 1;
+                    last_event = meta.block_number.as_u64();
                 }
             }
         };
 
-        let memos_block_submitter = async {
+        let _memos_block_submitter = async {
             let params = vec![];
             let mut blocks_submitted = 0;
             while blocks_submitted < 2 {
@@ -235,8 +287,6 @@ mod tests {
 
                 let cape_contract = eth_connection.lock().await;
                 submit_cape_block_with_memos(&cape_contract.contract, block_with_memos.clone())
-                    .await
-                    .unwrap()
                     .await
                     .unwrap();
             }
@@ -309,14 +359,15 @@ mod tests {
                 .unwrap()
                 .await
                 .unwrap();
+
             println!("erc done and submitted");
         };
-        let ((), (), ()) = futures::join!(
+        let ((), ()) = futures::join!(
             //block_committed_event_listener,
             //erc_20_tokens_deposited_event_listener,
             events_listener,
             erc_20_tokens_deposited_submitter,
-            memos_block_submitter
+            //_memos_block_submitter
         );
         Ok(())
     }

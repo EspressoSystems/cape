@@ -1,4 +1,4 @@
-use cap_rust_sandbox::ledger::CapeLedger;
+use cap_rust_sandbox::ledger::{CapeLedger, CapeTransition};
 use cap_rust_sandbox::model::{CapeContractState, CAPE_MERKLE_HEIGHT};
 use jf_cap::MerkleTree;
 use key_set::VerifierKeySet;
@@ -13,6 +13,7 @@ pub struct QueryResultState {
     // accumulated list of CAPE events
     pub events: Vec<LedgerEvent<CapeLedger>>,
     // additional indexed data for queries
+    pub pending_commit_event: Vec<CapeTransition>,
 }
 
 impl QueryResultState {
@@ -23,6 +24,7 @@ impl QueryResultState {
                 MerkleTree::new(CAPE_MERKLE_HEIGHT).unwrap(),
             ),
             events: Vec::new(),
+            pending_commit_event: Vec::new(),
         }
     }
 }

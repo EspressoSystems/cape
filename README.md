@@ -63,7 +63,6 @@ You also need access to the following currently private git repos
 - https://github.com/SpectrumXYZ/net
 - https://github.com/SpectrumXYZ/reef
 - https://github.com/SpectrumXYZ/seahorse
-- https://github.com/SpectrumXYZ/universal-params
 - https://github.com/SpectrumXYZ/zerok-macros
 
 Ping Mat for access.

@@ -1074,7 +1074,6 @@ dependencies = [
  "snafu 0.7.0",
  "strum_macros",
  "tokio",
- "universal-param",
  "zerok-macros",
 ]
 
@@ -1142,7 +1141,6 @@ dependencies = [
  "tracing-futures",
  "tracing-subscriber 0.2.25",
  "tracing-test",
- "universal-param",
 ]
 
 [[package]]

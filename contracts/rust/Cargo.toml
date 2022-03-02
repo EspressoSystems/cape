@@ -15,7 +15,6 @@ jf-rescue = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfis
 jf-utils = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git" }
 key-set = { git = "ssh://git@github.com/SpectrumXYZ/key-set.git" }
 reef = { git = "ssh://git@github.com/SpectrumXYZ/reef.git" }
-universal-param = { git = "ssh://git@github.com/SpectrumXYZ/universal-param.git" }
 zerok-macros = { git = "ssh://git@github.com/SpectrumXYZ/zerok-macros.git" }
 arbitrary = { version="1.0", features=["derive"] }
 arbitrary-wrappers = { git = "ssh://git@github.com/SpectrumXYZ/arbitrary-wrappers.git" }

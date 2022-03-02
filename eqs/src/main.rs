@@ -11,7 +11,7 @@ use cap_rust_sandbox::{
 };
 //use cap_rust_sandbox::ethereum::get_provider;
 use ethers::abi::AbiDecode;
-use jf_cap::{structs::RecordOpening, TransactionNote};
+use jf_cap::{structs::RecordOpening, MerkleTree, TransactionNote};
 use reef::traits::Block;
 use seahorse::events::LedgerEvent;
 
@@ -117,44 +117,110 @@ async fn main() -> std::io::Result<()> {
                                 .unwrap()
                                 .unwrap();
 
-                        let transitions =
+                        let model_txns =
                             cape_block_to_transactions(fetched_block_with_memos.block.clone())
                                 .unwrap();
 
-                        let txns = transitions
-                            .clone()
-                            .into_iter()
-                            .map(CapeTransition::Transaction)
-                            .collect::<Vec<_>>();
-
-                        for tx in transitions {
+                        for tx in &model_txns {
                             eth_poll
                                 .query_result_state
                                 .write()
                                 .await
                                 .pending_commit_event
-                                .push(CapeTransition::Transaction(tx));
+                                .push(CapeTransition::Transaction(tx.clone()));
                         }
 
-                        //set commitment/block id
+                        let transitions = model_txns
+                            .clone()
+                            .into_iter()
+                            .map(CapeTransition::Transaction)
+                            .collect::<Vec<_>>();
+
+                        //create/push LedgerEvent::Commit
                         eth_poll.query_result_state.write().await.events.push(
                             LedgerEvent::Commit {
-                                block: cap_rust_sandbox::ledger::CapeBlock::new(txns),
+                                block: cap_rust_sandbox::ledger::CapeBlock::new(transitions),
                                 block_id: meta.block_number.as_u64(),
-                                state_comm: eth_poll.last_updated_block_height,
+                                state_comm: meta.block_number.as_u64() + 1,
                             },
                         );
 
-                        let _memo_info = fetched_block_with_memos
+                        let input_record_commitment = fetched_block_with_memos
                             .block
-                            .get_list_of_input_record_commitments()
-                            .iter()
-                            .enumerate();
+                            .get_list_of_input_record_commitments();
 
-                        /*let new_memo_event = LedgerEvent::Memos{
-                            outputs: Vec<fetched_block_with_memos.memos, >
+                        let merkle_tree = MerkleTree::restore_from_frontier(
+                            eth_poll
+                                .query_result_state
+                                .read()
+                                .await
+                                .contract_state
+                                .ledger
+                                .record_merkle_commitment,
+                            &eth_poll
+                                .query_result_state
+                                .read()
+                                .await
+                                .contract_state
+                                .ledger
+                                .record_merkle_frontier,
+                        );
 
-                        }*/
+                        //add commitments to merkle tree
+                        let mut uids = Vec::new();
+                        let mut merkle_paths = Vec::new();
+                        if let Some(mut merkle_tree) = merkle_tree {
+                            for (_record_id, record_commitment) in
+                                input_record_commitment.iter().enumerate()
+                            {
+                                uids.push(merkle_tree.num_leaves());
+                                merkle_tree.push(record_commitment.to_field_element());
+                            }
+                            eth_poll
+                                .query_result_state
+                                .write()
+                                .await
+                                .contract_state
+                                .ledger
+                                .record_merkle_commitment = merkle_tree.commitment();
+                            eth_poll
+                                .query_result_state
+                                .write()
+                                .await
+                                .contract_state
+                                .ledger
+                                .record_merkle_frontier = merkle_tree.frontier();
+
+                            merkle_paths = uids
+                                .iter()
+                                .map(|uid| merkle_tree.get_leaf(*uid).expect_ok().unwrap().1.path)
+                                .collect::<Vec<_>>();
+                        }
+
+                        //create LedgerEvent::Memo
+                        let mut memo_events = Vec::new();
+                        fetched_block_with_memos.memos.iter().enumerate().for_each(
+                            |(txn_id, (txn_memo, _))| {
+                                let mut outputs = Vec::new();
+                                for (i, memo) in txn_memo.iter().enumerate() {
+                                    outputs.push((
+                                        memo.clone(),
+                                        input_record_commitment[i],
+                                        uids[i],
+                                        merkle_paths[i].clone(),
+                                    ));
+                                }
+                                let memo_event = LedgerEvent::Memos {
+                                    outputs,
+                                    transaction: Some((meta.block_number.as_u64(), txn_id as u64)),
+                                };
+                                memo_events.push(memo_event);
+                            },
+                        );
+
+                        for event in memo_events {
+                            eth_poll.query_result_state.write().await.events.push(event);
+                        }
                     }
 
                     TestCAPEEvents::Erc20TokensDepositedFilter(filter_data) => {

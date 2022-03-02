@@ -238,10 +238,17 @@ mod tests {
                                     .unwrap()
                                     .unwrap();
 
-                            dbg!(fetched_block_with_memos.block.note_types.clone());
-                            let transitions =
-                                cape_block_to_transactions(fetched_block_with_memos.block);
-                            dbg!(transitions);
+                            let _transitions =
+                                cape_block_to_transactions(fetched_block_with_memos.block.clone());
+
+                            let input_record_commitment = fetched_block_with_memos
+                                .block
+                                .get_list_of_input_record_commitments();
+                            for (_record_id, record_commitment) in
+                                input_record_commitment.iter().enumerate()
+                            {
+                                dbg!(record_commitment);
+                            }
 
                             let _wraps = filter_data
                                 .deposit_commitments

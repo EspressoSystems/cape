@@ -26,7 +26,7 @@ name = "address_book"
 version = "0.0.1"
 dependencies = [
  "async-std",
- "atomic_store 0.0.2 (git+ssh://git@github.com/SpectrumXYZ/atomicstore.git)",
+ "atomic_store 0.0.2 (git+ssh://git@github.com/EspressoSystems/atomicstore.git)",
  "bincode",
  "itertools 0.10.3",
  "jf-cap",
@@ -166,7 +166,21 @@ dependencies = [
 [[package]]
 name = "arbitrary-wrappers"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/arbitrary-wrappers.git#b24ab56c80575141f75766c24930924e3f9d1a27"
+source = "git+ssh://git@github.com/EspressoSystems/arbitrary-wrappers.git?rev=91a396e46283d6cae2c3d390d5d116087bdcc9eb#91a396e46283d6cae2c3d390d5d116087bdcc9eb"
+dependencies = [
+ "arbitrary",
+ "ark-std",
+ "itertools 0.10.3",
+ "jf-cap",
+ "rand_chacha 0.3.1",
+ "serde",
+ "zerok-macros",
+]
+
+[[package]]
+name = "arbitrary-wrappers"
+version = "0.1.0"
+source = "git+ssh://git@github.com/EspressoSystems/arbitrary-wrappers.git#91a396e46283d6cae2c3d390d5d116087bdcc9eb"
 dependencies = [
  "arbitrary",
  "ark-std",
@@ -698,7 +712,7 @@ dependencies = [
 [[package]]
 name = "atomic_store"
 version = "0.0.2"
-source = "git+ssh://git@github.com/SpectrumXYZ/atomicstore.git#9d832334d3839e16550c0bd1c59ca9535306fced"
+source = "git+ssh://git@github.com/EspressoSystems/atomicstore.git#9d832334d3839e16550c0bd1c59ca9535306fced"
 dependencies = [
  "ark-serialize",
  "bincode",
@@ -850,10 +864,22 @@ version = "0.20.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f5011ffc90248764d7005b0e10c7294f5aa1bd87d9dd7248f4ad475b347c294d"
 dependencies = [
- "funty",
+ "funty 1.1.0",
  "radium 0.6.2",
  "tap",
- "wyz",
+ "wyz 0.2.0",
+]
+
+[[package]]
+name = "bitvec"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1489fcb93a5bb47da0462ca93ad252ad6af2145cce58d10d46a83931ba9f016b"
+dependencies = [
+ "funty 2.0.0",
+ "radium 0.7.0",
+ "tap",
+ "wyz 0.5.0",
 ]
 
 [[package]]
@@ -979,9 +1005,9 @@ checksum = "a4a45a46ab1f2412e53d3a0ade76ffad2025804294569aae387231a0cd6e0899"
 
 [[package]]
 name = "byte-slice-cast"
-version = "1.2.0"
+version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1d30c751592b77c499e7bce34d99d67c2c11bdc0574e9a488ddade14150a4698"
+checksum = "87c5fdd0166095e1d463fc6cc01aa8ce547ad77a4e84d42eb6762b084e28067e"
 
 [[package]]
 name = "byte-tools"
@@ -1031,7 +1057,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "arbitrary",
- "arbitrary-wrappers",
+ "arbitrary-wrappers 0.1.0 (git+ssh://git@github.com/EspressoSystems/arbitrary-wrappers.git)",
  "ark-bn254",
  "ark-ec",
  "ark-ed-on-bn254",
@@ -1122,7 +1148,7 @@ dependencies = [
  "reef",
  "regex",
  "relayer",
- "seahorse 0.1.0 (git+ssh://git@github.com/SpectrumXYZ/seahorse.git?rev=db4ffe2ffaa192d1f4537eb61b910a9c10811d11)",
+ "seahorse",
  "serde",
  "serde_derive",
  "serde_json",
@@ -1132,7 +1158,7 @@ dependencies = [
  "strum",
  "strum_macros",
  "surf",
- "tagged-base64 0.1.0 (git+ssh://git@github.com/SpectrumXYZ/tagged-base64.git?branch=main)",
+ "tagged-base64 0.1.0 (git+ssh://git@github.com/EspressoSystems/tagged-base64.git?branch=main)",
  "tempdir",
  "tide",
  "tide-websockets",
@@ -1259,9 +1285,9 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "3.1.2"
+version = "3.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5177fac1ab67102d8989464efd043c6ff44191b1557ec1ddd489b4f7e1447e77"
+checksum = "86f8c0e2a6b902acc18214e24a6935cdaf8a8e34231913d4404dcaee659f65a1"
 dependencies = [
  "atty",
  "bitflags",
@@ -1378,12 +1404,12 @@ dependencies = [
 [[package]]
 name = "commit"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/commit.git?rev=f48cd52c59755eade0605111826eef3df6abdcf8#f48cd52c59755eade0605111826eef3df6abdcf8"
+source = "git+ssh://git@github.com/EspressoSystems/commit.git?rev=f48cd52c59755eade0605111826eef3df6abdcf8#f48cd52c59755eade0605111826eef3df6abdcf8"
 dependencies = [
  "arbitrary",
  "ark-serialize",
  "bitvec 0.20.1",
- "funty",
+ "funty 1.1.0",
  "generic-array 0.14.5",
  "hex",
  "serde",
@@ -2002,7 +2028,7 @@ dependencies = [
  "net",
  "rand_chacha 0.3.1",
  "reef",
- "seahorse 0.1.0 (git+ssh://git@github.com/SpectrumXYZ/seahorse.git?rev=1bbbd4772feacc16341a1e65f6cf4d3139624357)",
+ "seahorse",
  "serde",
  "serde_derive",
  "serde_json",
@@ -2011,7 +2037,7 @@ dependencies = [
  "strum",
  "strum_macros",
  "surf",
- "tagged-base64 0.1.0 (git+ssh://git@github.com/SpectrumXYZ/tagged-base64.git?branch=main)",
+ "tagged-base64 0.1.0 (git+ssh://git@github.com/EspressoSystems/tagged-base64.git?branch=main)",
  "tide",
  "tide-websockets",
  "toml",
@@ -2086,8 +2112,8 @@ dependencies = [
 
 [[package]]
 name = "ethabi"
-version = "16.0.0"
-source = "git+https://github.com/rust-ethereum/ethabi?branch=master#e161e688f1f567b25e829f62df053cf9bff1303a"
+version = "17.0.0"
+source = "git+https://github.com/rust-ethereum/ethabi?branch=master#7edf185125a9560d43bba0f84432a7cc874a5218"
 dependencies = [
  "ethereum-types",
  "hex",
@@ -2095,16 +2121,16 @@ dependencies = [
  "regex",
  "serde",
  "serde_json",
- "sha3 0.9.1",
+ "sha3 0.10.1",
  "thiserror",
  "uint",
 ]
 
 [[package]]
 name = "ethbloom"
-version = "0.11.1"
+version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bfb684ac8fa8f6c5759f788862bb22ec6fe3cb392f6bfd08e3c64b603661e3f8"
+checksum = "11da94e443c60508eb62cf256243a64da87304c2802ac2528847f79d750007ef"
 dependencies = [
  "crunchy",
  "fixed-hash",
@@ -2115,9 +2141,9 @@ dependencies = [
 
 [[package]]
 name = "ethereum-types"
-version = "0.12.1"
+version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "05136f7057fe789f06e6d41d07b34e6f70d8c86e5693b60f97aaa6553553bdaf"
+checksum = "b2827b94c556145446fcce834ca86b7abf0c39a805883fe20e72c5bfdb5a0dc6"
 dependencies = [
  "ethbloom",
  "fixed-hash",
@@ -2130,7 +2156,7 @@ dependencies = [
 [[package]]
 name = "ethers"
 version = "0.6.0"
-source = "git+https://github.com/gakonst/ethers-rs?branch=master#f5ef8149e5b6db42ab966491293055ec44ff9225"
+source = "git+https://github.com/gakonst/ethers-rs?branch=master#94e2d1b1223735ccb3804e1c22855ba93062cdb4"
 dependencies = [
  "ethers-addressbook 0.1.0 (git+https://github.com/gakonst/ethers-rs?branch=master)",
  "ethers-contract 0.6.0 (git+https://github.com/gakonst/ethers-rs?branch=master)",
@@ -2145,7 +2171,7 @@ dependencies = [
 [[package]]
 name = "ethers"
 version = "0.6.0"
-source = "git+https://github.com/gakonst/ethers-rs#f5ef8149e5b6db42ab966491293055ec44ff9225"
+source = "git+https://github.com/gakonst/ethers-rs#94e2d1b1223735ccb3804e1c22855ba93062cdb4"
 dependencies = [
  "ethers-addressbook 0.1.0 (git+https://github.com/gakonst/ethers-rs)",
  "ethers-contract 0.6.0 (git+https://github.com/gakonst/ethers-rs)",
@@ -2160,7 +2186,7 @@ dependencies = [
 [[package]]
 name = "ethers-addressbook"
 version = "0.1.0"
-source = "git+https://github.com/gakonst/ethers-rs?branch=master#f5ef8149e5b6db42ab966491293055ec44ff9225"
+source = "git+https://github.com/gakonst/ethers-rs?branch=master#94e2d1b1223735ccb3804e1c22855ba93062cdb4"
 dependencies = [
  "ethers-core 0.6.0 (git+https://github.com/gakonst/ethers-rs?branch=master)",
  "once_cell",
@@ -2171,7 +2197,7 @@ dependencies = [
 [[package]]
 name = "ethers-addressbook"
 version = "0.1.0"
-source = "git+https://github.com/gakonst/ethers-rs#f5ef8149e5b6db42ab966491293055ec44ff9225"
+source = "git+https://github.com/gakonst/ethers-rs#94e2d1b1223735ccb3804e1c22855ba93062cdb4"
 dependencies = [
  "ethers-core 0.6.0 (git+https://github.com/gakonst/ethers-rs)",
  "once_cell",
@@ -2182,7 +2208,7 @@ dependencies = [
 [[package]]
 name = "ethers-contract"
 version = "0.6.0"
-source = "git+https://github.com/gakonst/ethers-rs?branch=master#f5ef8149e5b6db42ab966491293055ec44ff9225"
+source = "git+https://github.com/gakonst/ethers-rs?branch=master#94e2d1b1223735ccb3804e1c22855ba93062cdb4"
 dependencies = [
  "ethers-contract-abigen 0.6.0 (git+https://github.com/gakonst/ethers-rs?branch=master)",
  "ethers-contract-derive 0.6.0 (git+https://github.com/gakonst/ethers-rs?branch=master)",
@@ -2200,7 +2226,7 @@ dependencies = [
 [[package]]
 name = "ethers-contract"
 version = "0.6.0"
-source = "git+https://github.com/gakonst/ethers-rs#f5ef8149e5b6db42ab966491293055ec44ff9225"
+source = "git+https://github.com/gakonst/ethers-rs#94e2d1b1223735ccb3804e1c22855ba93062cdb4"
 dependencies = [
  "ethers-contract-abigen 0.6.0 (git+https://github.com/gakonst/ethers-rs)",
  "ethers-contract-derive 0.6.0 (git+https://github.com/gakonst/ethers-rs)",
@@ -2218,7 +2244,7 @@ dependencies = [
 [[package]]
 name = "ethers-contract-abigen"
 version = "0.6.0"
-source = "git+https://github.com/gakonst/ethers-rs?branch=master#f5ef8149e5b6db42ab966491293055ec44ff9225"
+source = "git+https://github.com/gakonst/ethers-rs?branch=master#94e2d1b1223735ccb3804e1c22855ba93062cdb4"
 dependencies = [
  "Inflector",
  "cfg-if 1.0.0",
@@ -2241,7 +2267,7 @@ dependencies = [
 [[package]]
 name = "ethers-contract-abigen"
 version = "0.6.0"
-source = "git+https://github.com/gakonst/ethers-rs#f5ef8149e5b6db42ab966491293055ec44ff9225"
+source = "git+https://github.com/gakonst/ethers-rs#94e2d1b1223735ccb3804e1c22855ba93062cdb4"
 dependencies = [
  "Inflector",
  "cfg-if 1.0.0",
@@ -2264,7 +2290,7 @@ dependencies = [
 [[package]]
 name = "ethers-contract-derive"
 version = "0.6.0"
-source = "git+https://github.com/gakonst/ethers-rs?branch=master#f5ef8149e5b6db42ab966491293055ec44ff9225"
+source = "git+https://github.com/gakonst/ethers-rs?branch=master#94e2d1b1223735ccb3804e1c22855ba93062cdb4"
 dependencies = [
  "ethers-contract-abigen 0.6.0 (git+https://github.com/gakonst/ethers-rs?branch=master)",
  "ethers-core 0.6.0 (git+https://github.com/gakonst/ethers-rs?branch=master)",
@@ -2278,7 +2304,7 @@ dependencies = [
 [[package]]
 name = "ethers-contract-derive"
 version = "0.6.0"
-source = "git+https://github.com/gakonst/ethers-rs#f5ef8149e5b6db42ab966491293055ec44ff9225"
+source = "git+https://github.com/gakonst/ethers-rs#94e2d1b1223735ccb3804e1c22855ba93062cdb4"
 dependencies = [
  "ethers-contract-abigen 0.6.0 (git+https://github.com/gakonst/ethers-rs)",
  "ethers-core 0.6.0 (git+https://github.com/gakonst/ethers-rs)",
@@ -2292,7 +2318,7 @@ dependencies = [
 [[package]]
 name = "ethers-core"
 version = "0.6.0"
-source = "git+https://github.com/gakonst/ethers-rs?branch=master#f5ef8149e5b6db42ab966491293055ec44ff9225"
+source = "git+https://github.com/gakonst/ethers-rs?branch=master#94e2d1b1223735ccb3804e1c22855ba93062cdb4"
 dependencies = [
  "arrayvec 0.7.2",
  "bytes 1.1.0",
@@ -2320,7 +2346,7 @@ dependencies = [
 [[package]]
 name = "ethers-core"
 version = "0.6.0"
-source = "git+https://github.com/gakonst/ethers-rs#f5ef8149e5b6db42ab966491293055ec44ff9225"
+source = "git+https://github.com/gakonst/ethers-rs#94e2d1b1223735ccb3804e1c22855ba93062cdb4"
 dependencies = [
  "arrayvec 0.7.2",
  "bytes 1.1.0",
@@ -2348,7 +2374,7 @@ dependencies = [
 [[package]]
 name = "ethers-etherscan"
 version = "0.2.0"
-source = "git+https://github.com/gakonst/ethers-rs?branch=master#f5ef8149e5b6db42ab966491293055ec44ff9225"
+source = "git+https://github.com/gakonst/ethers-rs?branch=master#94e2d1b1223735ccb3804e1c22855ba93062cdb4"
 dependencies = [
  "ethers-core 0.6.0 (git+https://github.com/gakonst/ethers-rs?branch=master)",
  "ethers-solc 0.3.0 (git+https://github.com/gakonst/ethers-rs?branch=master)",
@@ -2362,7 +2388,7 @@ dependencies = [
 [[package]]
 name = "ethers-etherscan"
 version = "0.2.0"
-source = "git+https://github.com/gakonst/ethers-rs#f5ef8149e5b6db42ab966491293055ec44ff9225"
+source = "git+https://github.com/gakonst/ethers-rs#94e2d1b1223735ccb3804e1c22855ba93062cdb4"
 dependencies = [
  "ethers-core 0.6.0 (git+https://github.com/gakonst/ethers-rs)",
  "ethers-solc 0.3.0 (git+https://github.com/gakonst/ethers-rs)",
@@ -2376,7 +2402,7 @@ dependencies = [
 [[package]]
 name = "ethers-middleware"
 version = "0.6.0"
-source = "git+https://github.com/gakonst/ethers-rs?branch=master#f5ef8149e5b6db42ab966491293055ec44ff9225"
+source = "git+https://github.com/gakonst/ethers-rs?branch=master#94e2d1b1223735ccb3804e1c22855ba93062cdb4"
 dependencies = [
  "async-trait",
  "ethers-contract 0.6.0 (git+https://github.com/gakonst/ethers-rs?branch=master)",
@@ -2399,7 +2425,7 @@ dependencies = [
 [[package]]
 name = "ethers-middleware"
 version = "0.6.0"
-source = "git+https://github.com/gakonst/ethers-rs#f5ef8149e5b6db42ab966491293055ec44ff9225"
+source = "git+https://github.com/gakonst/ethers-rs#94e2d1b1223735ccb3804e1c22855ba93062cdb4"
 dependencies = [
  "async-trait",
  "ethers-contract 0.6.0 (git+https://github.com/gakonst/ethers-rs)",
@@ -2422,7 +2448,7 @@ dependencies = [
 [[package]]
 name = "ethers-providers"
 version = "0.6.0"
-source = "git+https://github.com/gakonst/ethers-rs?branch=master#f5ef8149e5b6db42ab966491293055ec44ff9225"
+source = "git+https://github.com/gakonst/ethers-rs?branch=master#94e2d1b1223735ccb3804e1c22855ba93062cdb4"
 dependencies = [
  "async-trait",
  "auto_impl",
@@ -2453,7 +2479,7 @@ dependencies = [
 [[package]]
 name = "ethers-providers"
 version = "0.6.0"
-source = "git+https://github.com/gakonst/ethers-rs#f5ef8149e5b6db42ab966491293055ec44ff9225"
+source = "git+https://github.com/gakonst/ethers-rs#94e2d1b1223735ccb3804e1c22855ba93062cdb4"
 dependencies = [
  "async-trait",
  "auto_impl",
@@ -2484,7 +2510,7 @@ dependencies = [
 [[package]]
 name = "ethers-signers"
 version = "0.6.0"
-source = "git+https://github.com/gakonst/ethers-rs?branch=master#f5ef8149e5b6db42ab966491293055ec44ff9225"
+source = "git+https://github.com/gakonst/ethers-rs?branch=master#94e2d1b1223735ccb3804e1c22855ba93062cdb4"
 dependencies = [
  "async-trait",
  "coins-bip32",
@@ -2505,7 +2531,7 @@ dependencies = [
 [[package]]
 name = "ethers-signers"
 version = "0.6.0"
-source = "git+https://github.com/gakonst/ethers-rs#f5ef8149e5b6db42ab966491293055ec44ff9225"
+source = "git+https://github.com/gakonst/ethers-rs#94e2d1b1223735ccb3804e1c22855ba93062cdb4"
 dependencies = [
  "async-trait",
  "coins-bip32",
@@ -2526,7 +2552,7 @@ dependencies = [
 [[package]]
 name = "ethers-solc"
 version = "0.3.0"
-source = "git+https://github.com/gakonst/ethers-rs?branch=master#f5ef8149e5b6db42ab966491293055ec44ff9225"
+source = "git+https://github.com/gakonst/ethers-rs?branch=master#94e2d1b1223735ccb3804e1c22855ba93062cdb4"
 dependencies = [
  "colored",
  "dunce",
@@ -2554,7 +2580,7 @@ dependencies = [
 [[package]]
 name = "ethers-solc"
 version = "0.3.0"
-source = "git+https://github.com/gakonst/ethers-rs#f5ef8149e5b6db42ab966491293055ec44ff9225"
+source = "git+https://github.com/gakonst/ethers-rs#94e2d1b1223735ccb3804e1c22855ba93062cdb4"
 dependencies = [
  "colored",
  "dunce",
@@ -2588,9 +2614,9 @@ checksum = "77f3309417938f28bf8228fcff79a4a37103981e3e186d2ccd19c74b38f4eb71"
 
 [[package]]
 name = "eyre"
-version = "0.6.6"
+version = "0.6.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bc225d8f637923fe585089fcf03e705c222131232d2c1fb622e84ecf725d0eb8"
+checksum = "9289ed2c0440a6536e65119725cf91fc2c6b5e513bfd2e36e1134d7cca6ca12f"
 dependencies = [
  "indenter",
  "once_cell",
@@ -2704,6 +2730,12 @@ name = "funty"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fed34cd105917e91daa4da6b3728c47b068749d6a62c59811f06ed2ac71d9da7"
+
+[[package]]
+name = "funty"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e6d5a32815ae3f33302d95fdcb2ce17862f8c65363dcfd29360480ba1001fc9c"
 
 [[package]]
 name = "futures"
@@ -3153,9 +3185,9 @@ dependencies = [
 
 [[package]]
 name = "impl-codec"
-version = "0.5.1"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "161ebdfec3c8e3b52bf61c4f3550a1eea4f9579d10dc1b936f3171ebdcd6c443"
+checksum = "ba6a270039626615617f3f36d15fc827041df3b78c439da2cadfa47455a77f2f"
 dependencies = [
  "parity-scale-codec",
 ]
@@ -3312,7 +3344,7 @@ checksum = "1aab8fc367588b89dcee83ab0fd66b72b50b72fa1904d7095045ace2b0c81c35"
 [[package]]
 name = "jf-cap"
 version = "0.0.1"
-source = "git+ssh://git@github.com/SpectrumXYZ/cap.git?rev=cba0b2fc682606b0a118b320d41f718c525b4192#cba0b2fc682606b0a118b320d41f718c525b4192"
+source = "git+ssh://git@github.com/EspressoSystems/cap.git?rev=16ad157f96d2102d59206df0106fb341302180d3#16ad157f96d2102d59206df0106fb341302180d3"
 dependencies = [
  "anyhow",
  "ark-bn254",
@@ -3348,7 +3380,7 @@ dependencies = [
 [[package]]
 name = "jf-plonk"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#9c438ec0f1c4add898dcaa52088a4342aeaed31a"
+source = "git+ssh://git@github.com/EspressoSystems/jellyfish.git#f8782d9837d5f65e91af50e810872a6a5bdd34f4"
 dependencies = [
  "ark-bls12-377",
  "ark-bls12-381",
@@ -3377,7 +3409,7 @@ dependencies = [
 [[package]]
 name = "jf-primitives"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#9c438ec0f1c4add898dcaa52088a4342aeaed31a"
+source = "git+ssh://git@github.com/EspressoSystems/jellyfish.git#f8782d9837d5f65e91af50e810872a6a5bdd34f4"
 dependencies = [
  "ark-ec",
  "ark-ff",
@@ -3399,7 +3431,7 @@ dependencies = [
 [[package]]
 name = "jf-rescue"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#9c438ec0f1c4add898dcaa52088a4342aeaed31a"
+source = "git+ssh://git@github.com/EspressoSystems/jellyfish.git#f8782d9837d5f65e91af50e810872a6a5bdd34f4"
 dependencies = [
  "ark-bls12-377",
  "ark-bls12-381",
@@ -3424,7 +3456,7 @@ dependencies = [
 [[package]]
 name = "jf-utils"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#9c438ec0f1c4add898dcaa52088a4342aeaed31a"
+source = "git+ssh://git@github.com/EspressoSystems/jellyfish.git#f8782d9837d5f65e91af50e810872a6a5bdd34f4"
 dependencies = [
  "anyhow",
  "ark-ec",
@@ -3435,13 +3467,14 @@ dependencies = [
  "jf-utils-derive",
  "serde",
  "sha2 0.10.2",
- "tagged-base64 0.1.0 (git+https://github.com/SpectrumXYZ/tagged-base64?branch=main)",
+ "snafu 0.7.0",
+ "tagged-base64 0.1.0 (git+https://github.com/EspressoSystems/tagged-base64?branch=main)",
 ]
 
 [[package]]
 name = "jf-utils-derive"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/jellyfish.git#9c438ec0f1c4add898dcaa52088a4342aeaed31a"
+source = "git+ssh://git@github.com/EspressoSystems/jellyfish.git#f8782d9837d5f65e91af50e810872a6a5bdd34f4"
 dependencies = [
  "ark-std",
  "quote",
@@ -3480,7 +3513,7 @@ checksum = "67c21572b4949434e4fc1e1978b99c5f77064153c59d998bf13ecd96fb5ecba7"
 [[package]]
 name = "key-set"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/key-set.git#6edb6e674e67c5b45e5506f1a6e0d561a46d6dbe"
+source = "git+ssh://git@github.com/EspressoSystems/key-set.git#45f278f0c094bd452a4c26525e21bbf1539ec55d"
 dependencies = [
  "ark-serialize",
  "bincode",
@@ -3724,7 +3757,7 @@ dependencies = [
 [[package]]
 name = "net"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/net.git#27269c9f13aa3817a38f744f23d4fbe4fd46d6bb"
+source = "git+ssh://git@github.com/EspressoSystems/net.git#a0d226cae70f4068343b2b8ab049bbb8f23b75ec"
 dependencies = [
  "ark-serialize",
  "ark-std",
@@ -3739,7 +3772,7 @@ dependencies = [
  "serde_json",
  "snafu 0.6.10",
  "surf",
- "tagged-base64 0.1.0 (git+ssh://git@github.com/SpectrumXYZ/tagged-base64.git?branch=main)",
+ "tagged-base64 0.1.0 (git+ssh://git@github.com/EspressoSystems/tagged-base64.git?branch=main)",
  "tide",
  "tracing",
 ]
@@ -3965,12 +3998,12 @@ dependencies = [
 
 [[package]]
 name = "parity-scale-codec"
-version = "2.3.1"
+version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "373b1a4c1338d9cd3d1fa53b3a11bdab5ab6bd80a20f7f7becd76953ae2be909"
+checksum = "2a7f3fcf5e45fc28b84dcdab6b983e77f197ec01f325a33f404ba6855afd1070"
 dependencies = [
  "arrayvec 0.7.2",
- "bitvec 0.20.1",
+ "bitvec 1.0.0",
  "byte-slice-cast",
  "impl-trait-for-tuples",
  "parity-scale-codec-derive",
@@ -3979,9 +4012,9 @@ dependencies = [
 
 [[package]]
 name = "parity-scale-codec-derive"
-version = "2.3.1"
+version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1557010476e0595c9b568d16dcfb81b93cdeb157612726f5170d31aa707bed27"
+checksum = "2c6e626dc84025ff56bf1476ed0e30d10c84d7f89a475ef46ebabee1095a8fba"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
@@ -4336,9 +4369,9 @@ checksum = "925383efa346730478fb4838dbe9137d2a47675ad789c546d150a6e1dd4ab31c"
 
 [[package]]
 name = "primitive-types"
-version = "0.10.1"
+version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "05e4722c697a58a99d5d06a08c30821d7c082a4632198de1eaa5a6c22ef42373"
+checksum = "e28720988bff275df1f51b171e1b2a18c30d194c4d2b61defdacecd625a5d94a"
 dependencies = [
  "fixed-hash",
  "impl-codec",
@@ -4466,6 +4499,12 @@ name = "radium"
 version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "643f8f41a8ebc4c5dc4515c82bb8abd397b527fc20fd681b7c011c2aee5d44fb"
+
+[[package]]
+name = "radium"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dc33ff2d4973d518d823d61aa239014831e521c75da58e3df4840d3f47749d09"
 
 [[package]]
 name = "radix_trie"
@@ -4635,9 +4674,9 @@ dependencies = [
 
 [[package]]
 name = "redox_syscall"
-version = "0.2.10"
+version = "0.2.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8383f39639269cde97d255a32bdb68c047337295414940c68bdd30c2e13203ff"
+checksum = "8380fe0152551244f0747b1bf41737e0f8a74f97a14ccefd1148187271634f3c"
 dependencies = [
  "bitflags",
 ]
@@ -4655,13 +4694,13 @@ dependencies = [
 [[package]]
 name = "reef"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/reef.git#277cb2317379238f3f6bdf083e05d00cb95be7a3"
+source = "git+ssh://git@github.com/EspressoSystems/reef.git#5f90af86b6f5bc0961c1b1421ef9db1dbfd458a6"
 dependencies = [
  "arbitrary",
- "arbitrary-wrappers",
+ "arbitrary-wrappers 0.1.0 (git+ssh://git@github.com/EspressoSystems/arbitrary-wrappers.git?rev=91a396e46283d6cae2c3d390d5d116087bdcc9eb)",
  "ark-serialize",
  "commit",
- "funty",
+ "funty 1.1.0",
  "itertools 0.10.3",
  "jf-cap",
  "serde",
@@ -5053,16 +5092,16 @@ dependencies = [
 [[package]]
 name = "seahorse"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/seahorse.git?rev=1bbbd4772feacc16341a1e65f6cf4d3139624357#1bbbd4772feacc16341a1e65f6cf4d3139624357"
+source = "git+ssh://git@github.com/EspressoSystems/seahorse.git?rev=48aaed68d922b23e4a3d9f4e9dcc6d50185c3619#48aaed68d922b23e4a3d9f4e9dcc6d50185c3619"
 dependencies = [
  "arbitrary",
- "arbitrary-wrappers",
+ "arbitrary-wrappers 0.1.0 (git+ssh://git@github.com/EspressoSystems/arbitrary-wrappers.git)",
  "ark-serialize",
  "ark-std",
  "async-scoped",
  "async-std",
  "async-trait",
- "atomic_store 0.0.2 (git+ssh://git@github.com/SpectrumXYZ/atomicstore.git)",
+ "atomic_store 0.0.2 (git+ssh://git@github.com/EspressoSystems/atomicstore.git)",
  "bincode",
  "chacha20",
  "chrono",
@@ -5091,55 +5130,7 @@ dependencies = [
  "strum",
  "strum_macros",
  "surf",
- "tagged-base64 0.1.0 (git+ssh://git@github.com/SpectrumXYZ/tagged-base64.git?branch=main)",
- "tempdir",
- "universal-param",
- "zeroize",
- "zerok-macros",
-]
-
-[[package]]
-name = "seahorse"
-version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/seahorse.git?rev=db4ffe2ffaa192d1f4537eb61b910a9c10811d11#db4ffe2ffaa192d1f4537eb61b910a9c10811d11"
-dependencies = [
- "arbitrary",
- "arbitrary-wrappers",
- "ark-serialize",
- "ark-std",
- "async-scoped",
- "async-std",
- "async-trait",
- "atomic_store 0.0.2 (git+ssh://git@github.com/SpectrumXYZ/atomicstore.git)",
- "bincode",
- "chacha20",
- "chrono",
- "commit",
- "futures",
- "generic-array 0.14.5",
- "hmac 0.11.0",
- "itertools 0.10.3",
- "jf-cap",
- "jf-utils",
- "key-set",
- "lazy_static",
- "mnemonic",
- "net",
- "pipe",
- "proptest 0.8.7",
- "rand_chacha 0.3.1",
- "reef",
- "regex",
- "rpassword",
- "rust-argon2",
- "rustyline",
- "serde",
- "sha3 0.9.1",
- "snafu 0.6.10",
- "strum",
- "strum_macros",
- "surf",
- "tagged-base64 0.1.0 (git+ssh://git@github.com/SpectrumXYZ/tagged-base64.git?branch=main)",
+ "tagged-base64 0.1.0 (git+ssh://git@github.com/EspressoSystems/tagged-base64.git?branch=main)",
  "tempdir",
  "universal-param",
  "zeroize",
@@ -5740,7 +5731,7 @@ source = "git+https://github.com/roynalnaruto/svm-rs#9b3627cfde2763fdc35afa9cbce
 dependencies = [
  "anyhow",
  "cfg-if 1.0.0",
- "clap 3.1.2",
+ "clap 3.1.3",
  "console 0.14.1",
  "dialoguer",
  "hex",
@@ -5787,13 +5778,14 @@ dependencies = [
 [[package]]
 name = "tagged-base64"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/tagged-base64.git?branch=main#0159640927e5e1bfeac431f121362c70f0ca7e94"
+source = "git+ssh://git@github.com/EspressoSystems/tagged-base64.git?branch=main#5295fafb4068c67e271b831a00cd80846a2fd512"
 dependencies = [
  "base64 0.13.0",
  "console_error_panic_hook",
  "crc-any",
  "futures-channel",
  "js-sys",
+ "structopt",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
@@ -5802,13 +5794,14 @@ dependencies = [
 [[package]]
 name = "tagged-base64"
 version = "0.1.0"
-source = "git+https://github.com/SpectrumXYZ/tagged-base64?branch=main#0159640927e5e1bfeac431f121362c70f0ca7e94"
+source = "git+https://github.com/EspressoSystems/tagged-base64?branch=main#5295fafb4068c67e271b831a00cd80846a2fd512"
 dependencies = [
  "base64 0.13.0",
  "console_error_panic_hook",
  "crc-any",
  "futures-channel",
  "js-sys",
+ "structopt",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
@@ -6348,7 +6341,7 @@ dependencies = [
 [[package]]
 name = "universal-param"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/universal-param.git#c4a2060480f15fad523ff784f513a27002935ab7"
+source = "git+ssh://git@github.com/EspressoSystems/universal-param.git#bdf5ccfea1d5f143546576599a5b9820a979a91a"
 dependencies = [
  "ark-serialize",
  "ark-std",
@@ -6753,6 +6746,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "85e60b0d1b5f99db2556934e21937020776a5d31520bf169e851ac44e6420214"
 
 [[package]]
+name = "wyz"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "30b31594f29d27036c383b53b59ed3476874d518f0efb151b27a4c275141390e"
+dependencies = [
+ "tap",
+]
+
+[[package]]
 name = "x25519-dalek"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6801,7 +6803,7 @@ dependencies = [
 [[package]]
 name = "zerok-macros"
 version = "0.1.0"
-source = "git+ssh://git@github.com/SpectrumXYZ/zerok-macros.git#0a9e9ca4ef8870bcd9a2373c00c4a697f704453a"
+source = "git+ssh://git@github.com/EspressoSystems/zerok-macros.git#0a9e9ca4ef8870bcd9a2373c00c4a697f704453a"
 dependencies = [
  "proc-macro2",
  "quote",

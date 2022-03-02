@@ -468,7 +468,7 @@ impl From<Proof<Bn254>> for PlonkProof {
         // (GATE_WIDTH + 1) * 2 scalar fields in poly_evals are  converted to base
         // fields.
         // NOTE: we reorder the points in proof a bit, please refer to
-        // https://github.com/SpectrumXYZ/jellyfish/blob/2a40d01c938cdcc716071af5a0dc9b3242181c2c/plonk/src/proof_system/structs.rs#L91
+        // https://github.com/EspressoSystems/jellyfish/blob/2a40d01c938cdcc716071af5a0dc9b3242181c2c/plonk/src/proof_system/structs.rs#L91
         const TURBO_PLONK_LEN: usize = (GATE_WIDTH + 1) * 2 * 2 + 2 * 3 + (GATE_WIDTH + 1) * 2;
         const NUM_G1_POINT: usize = 13;
         const NUM_EVAL: usize = 10;

@@ -7,18 +7,18 @@ edition = "2018"
 doctest = false
 
 [dependencies]
-commit = { git = "ssh://git@github.com/SpectrumXYZ/commit.git", rev = "f48cd52c59755eade0605111826eef3df6abdcf8" }
-jf-plonk = { features=["std", "test_apis"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git" }
-jf-primitives = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git" }
-jf-cap = { features = ["test_apis"], git = "ssh://git@github.com/SpectrumXYZ/cap.git", rev = "cba0b2fc682606b0a118b320d41f718c525b4192" }
-jf-rescue = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git" }
-jf-utils = { features=["std"], git = "ssh://git@github.com/SpectrumXYZ/jellyfish.git" }
-key-set = { git = "ssh://git@github.com/SpectrumXYZ/key-set.git" }
-reef = { git = "ssh://git@github.com/SpectrumXYZ/reef.git" }
-universal-param = { git = "ssh://git@github.com/SpectrumXYZ/universal-param.git" }
-zerok-macros = { git = "ssh://git@github.com/SpectrumXYZ/zerok-macros.git" }
+commit = { git = "ssh://git@github.com/EspressoSystems/commit.git", rev = "f48cd52c59755eade0605111826eef3df6abdcf8" }
+jf-plonk = { features=["std", "test_apis"], git = "ssh://git@github.com/EspressoSystems/jellyfish.git" }
+jf-primitives = { features=["std"], git = "ssh://git@github.com/EspressoSystems/jellyfish.git" }
+jf-cap = { features = ["test_apis"], git = "ssh://git@github.com/EspressoSystems/cap.git", rev = "16ad157f96d2102d59206df0106fb341302180d3" }
+jf-rescue = { features=["std"], git = "ssh://git@github.com/EspressoSystems/jellyfish.git" }
+jf-utils = { features=["std"], git = "ssh://git@github.com/EspressoSystems/jellyfish.git" }
+key-set = { git = "ssh://git@github.com/EspressoSystems/key-set.git" }
+reef = { git = "ssh://git@github.com/EspressoSystems/reef.git" }
+universal-param = { git = "ssh://git@github.com/EspressoSystems/universal-param.git" }
+zerok-macros = { git = "ssh://git@github.com/EspressoSystems/zerok-macros.git" }
 arbitrary = { version="1.0", features=["derive"] }
-arbitrary-wrappers = { git = "ssh://git@github.com/SpectrumXYZ/arbitrary-wrappers.git" }
+arbitrary-wrappers = { git = "ssh://git@github.com/EspressoSystems/arbitrary-wrappers.git" }
 
 # We need the legacy feature in order to avoid gas estimation issues. See https://github.com/gakonst/ethers-rs/issues/825
 ethers = { features=["legacy"], git = "https://github.com/gakonst/ethers-rs", branch = "master" }

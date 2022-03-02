@@ -44,7 +44,6 @@ contract PlonkVerifier is IPlonkVerifier {
         uint256 nextEvalPoint; // 0x40
         // the polynomial evaluation value
         uint256 eval; // 0x60
-        // TODO: deliberate on if two arrays is the best choice for `struct ScalarsAndBases` in JF.
         // scalars of poly comm for MSM
         uint256[] commScalars; // 0x80
         // bases of poly comm for MSM
@@ -294,7 +293,7 @@ contract PlonkVerifier is IPlonkVerifier {
     }
 
     /// @dev Compute components in [E]1 and [F]1 used for PolyComm opening verification
-    /// equivalent of JF's https://github.com/SpectrumXYZ/jellyfish/blob/main/plonk/src/proof_system/verifier.rs#L154-L170
+    /// equivalent of JF's https://github.com/EspressoSystems/jellyfish/blob/main/plonk/src/proof_system/verifier.rs#L154-L170
     /// caller allocates the memory fr commScalars and commBases
     /// requires Arrays of size 30.
     /// @param verifyingKey A verifier key
@@ -340,7 +339,6 @@ contract PlonkVerifier is IPlonkVerifier {
         uint256 v = chal.v;
         uint256 vBase = v;
 
-        // TODO: simplify the code into loops?
         // Add wire witness polynomial commitments.
         commScalars[20] = vBase;
         commBases[20] = proof.wire0;
@@ -398,8 +396,6 @@ contract PlonkVerifier is IPlonkVerifier {
         }
 
         // Add poly commitments to be evaluated at point `zeta * g`.
-        // TODO this bases is the same as commBases[0]
-        // consider merging those
         commScalars[29] = chal.u;
         commBases[29] = proof.prodPerm;
     }
@@ -570,7 +566,6 @@ contract PlonkVerifier is IPlonkVerifier {
         BN254.G1Point[] memory bases,
         uint256[] memory scalars
     ) internal pure {
-        // TODO: optimize this code
         uint256 firstScalar;
         uint256 secondScalar;
         uint256 rhs;

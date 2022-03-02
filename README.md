@@ -39,11 +39,12 @@
 - [CI](#ci)
   - [Nightly CI builds](#nightly-ci-builds)
 - [Documentation](#documentation)
+  - [CAP protocol specification](#cap-protocol-specification)
   - [CAPE Contract specification](#cape-contract-specification)
 
 ## Obtaining the source code
 
-    git clone git@github.com:SpectrumXYZ/cape.git
+    git clone git@github.com:EspressoSystems/cape.git
 
 # Environment
 
@@ -52,18 +53,18 @@ via the [nix](https://nixos.org) package manager.
 
 You also need access to the following currently private git repos
 
-- https://github.com/SpectrumXYZ/arbitrary-wrappers
-- https://github.com/SpectrumXYZ/atomic-store
-- https://github.com/SpectrumXYZ/cap
-- https://github.com/SpectrumXYZ/commit
-- https://github.com/SpectrumXYZ/curves
-- https://github.com/SpectrumXYZ/jellyfish-cap
-- https://github.com/SpectrumXYZ/key-set
-- https://github.com/SpectrumXYZ/net
-- https://github.com/SpectrumXYZ/reef
-- https://github.com/SpectrumXYZ/seahorse
-- https://github.com/SpectrumXYZ/universal-params
-- https://github.com/SpectrumXYZ/zerok-macros
+- https://github.com/EspressoSystems/arbitrary-wrappers
+- https://github.com/EspressoSystems/atomic-store
+- https://github.com/EspressoSystems/cap
+- https://github.com/EspressoSystems/commit
+- https://github.com/EspressoSystems/curves
+- https://github.com/EspressoSystems/jellyfish-cap
+- https://github.com/EspressoSystems/key-set
+- https://github.com/EspressoSystems/net
+- https://github.com/EspressoSystems/reef
+- https://github.com/EspressoSystems/seahorse
+- https://github.com/EspressoSystems/universal-params
+- https://github.com/EspressoSystems/zerok-macros
 
 Ping Mat for access.
 
@@ -458,7 +459,15 @@ Based on a few successful test runs, the entire suite should consume roughly 0.0
 
 # Documentation
 
-Extracting documentation from the solidity source is done using a javascript
+## CAP protocol specification
+
+A formal specification of the Configurable Asset Policy protocol can be found at [`./doc/cap-specification.pdf`](./doc/cap-specification.pdf)
+
+## CAPE Contract specification
+
+A specification of the CAPE _smart contract logic_ written in Rust can be found at `./doc/workflow/lib.rs`.
+
+Extracting _API documentation_ from the solidity source is done using a javascript
 tool called `solidity-docgen`.
 
 To generate the documentation run
@@ -466,7 +475,3 @@ To generate the documentation run
     make-doc
 
 and observe the CLI output.
-
-## CAPE Contract specification
-
-A specification of the CAPE smart contract logic written in Rust can be found at `./doc/workflow/lib.rs`.

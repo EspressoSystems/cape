@@ -5,6 +5,7 @@ use ark_poly::EvaluationDomain;
 use ark_poly::Radix2EvaluationDomain;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ethers::prelude::*;
+use jf_cap::constants::REVEAL_MAP_LEN;
 use jf_cap::{
     keys::{AuditorPubKey, CredIssuerPubKey, FreezerPubKey, UserPubKey},
     structs::{
@@ -26,7 +27,7 @@ pub use crate::bindings::{
     MintAuxInfo, MintNote, PcsInfo, PlonkProof, RecordOpening, SimpleToken, TestBN254, TestCAPE,
     TestCAPEEvents, TestCapeTypes, TestEdOnBN254, TestPlonkVerifier, TestPolynomialEval,
     TestRecordsMerkleTree, TestRescue, TestRootStore, TestTranscript, TestVerifyingKeys,
-    TranscriptData, TransferAuxInfo, TransferNote, VerifyingKey, CAPE,
+    TranscriptData, TransferAuxInfo, TransferNote, VerifyingKey, CAPE, ERC20,
 };
 
 // The number of input wires of TurboPlonk.
@@ -280,6 +281,8 @@ impl From<jf_cap::structs::AssetPolicy> for AssetPolicy {
 
 impl From<AssetPolicy> for jf_cap::structs::AssetPolicy {
     fn from(policy_sol: AssetPolicy) -> Self {
+        // Internal representation has two fields for pk (pk.x, pk.y), thus + 1 in length
+        const REVEAL_MAP_INTERNAL_LEN: usize = REVEAL_MAP_LEN + 1;
         jf_cap::structs::AssetPolicy::default()
             .set_auditor_pub_key(policy_sol.auditor_pk.into())
             .set_cred_issuer_pub_key(policy_sol.cred_pk.into())
@@ -287,11 +290,11 @@ impl From<AssetPolicy> for jf_cap::structs::AssetPolicy {
             .set_reveal_threshold(policy_sol.reveal_threshold)
             .set_reveal_map_for_test({
                 let map_sol = policy_sol.reveal_map;
-                if map_sol >= U256::from(2).pow(12.into() /*TODO import from jellyfish?*/) {
+                if map_sol >= U256::from(2u32.pow(REVEAL_MAP_INTERNAL_LEN as u32)) {
                     panic!("Reveal map has more than 12 bits")
                 }
-                let bits: [bool; 12] = (0..12)
-                    .map(|i| map_sol.bit(11 - i))
+                let bits: [bool; REVEAL_MAP_INTERNAL_LEN] = (0..REVEAL_MAP_INTERNAL_LEN)
+                    .map(|i| map_sol.bit(REVEAL_MAP_INTERNAL_LEN - 1 - i))
                     .collect::<Vec<_>>()
                     .try_into()
                     .unwrap();
@@ -465,7 +468,7 @@ impl From<Proof<Bn254>> for PlonkProof {
         // (GATE_WIDTH + 1) * 2 scalar fields in poly_evals are  converted to base
         // fields.
         // NOTE: we reorder the points in proof a bit, please refer to
-        // https://github.com/SpectrumXYZ/jellyfish/blob/2a40d01c938cdcc716071af5a0dc9b3242181c2c/plonk/src/proof_system/structs.rs#L91
+        // https://github.com/EspressoSystems/jellyfish/blob/2a40d01c938cdcc716071af5a0dc9b3242181c2c/plonk/src/proof_system/structs.rs#L91
         const TURBO_PLONK_LEN: usize = (GATE_WIDTH + 1) * 2 * 2 + 2 * 3 + (GATE_WIDTH + 1) * 2;
         const NUM_G1_POINT: usize = 13;
         const NUM_EVAL: usize = 10;

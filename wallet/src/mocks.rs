@@ -522,7 +522,7 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> MockCapeBackend<'a, Meta> {
         ledger: Arc<Mutex<MockCapeLedger<'a>>>,
         loader: &mut impl WalletLoader<CapeLedger, Meta = Meta>,
     ) -> Result<Self, WalletError<CapeLedger>> {
-        // Workaround for https://github.com/SpectrumXYZ/atomicstore/issues/2, which affects logs
+        // Workaround for https://github.com/EspressoSystems/atomicstore/issues/2, which affects logs
         // containing more than one entry in a file. We simply set the fill size small enough that
         // there will only ever be one entry per file.
         //

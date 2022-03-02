@@ -80,8 +80,8 @@ describe("Rescue benchmarks", function () {
 
         console.log("About to commit");
 
-        try {
-          const commitTx = await rescueContract.commit([
+        expect(
+          rescueContract.commit([
             BigInt(10),
             BigInt(15),
             BigInt(20),
@@ -97,12 +97,8 @@ describe("Rescue benchmarks", function () {
             BigInt(0),
             BigInt(0),
             BigInt(0),
-          ]);
-
-          expect(false).to.be.true;
-        } catch (e) {
-          expect(e.code).to.equal(ethers.utils.Logger.errors.UNPREDICTABLE_GAS_LIMIT);
-        }
+          ])
+        ).to.be.reverted;
       });
     }
   });

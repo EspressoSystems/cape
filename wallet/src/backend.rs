@@ -439,7 +439,7 @@ mod test {
         let receiver_key = receiver.generate_user_key(None).await.unwrap();
 
         // Transfer from sender to receiver.
-        transfer_token(
+        let txn = transfer_token(
             &mut sender,
             receiver_key.address(),
             2,
@@ -448,6 +448,7 @@ mod test {
         )
         .await
         .unwrap();
+        await_transaction(&txn, &sender, &[&receiver]).await;
         assert_eq!(
             sender
                 .balance(&sender_key.address(), &AssetCode::native())
@@ -463,7 +464,7 @@ mod test {
 
         // Transfer back, just to make sure the receiver is actually able to spend the records it
         // received.
-        transfer_token(
+        let txn = transfer_token(
             &mut receiver,
             sender_key.address(),
             1,
@@ -472,6 +473,7 @@ mod test {
         )
         .await
         .unwrap();
+        await_transaction(&txn, &receiver, &[&sender]).await;
         assert_eq!(
             sender
                 .balance(&sender_key.address(), &AssetCode::native())

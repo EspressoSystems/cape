@@ -84,8 +84,8 @@ pub struct CapState {
 
 pub async fn get_cap_state(query_result_state: &QueryResultState) -> Result<CapState, tide::Error> {
     Ok(CapState {
-        ledger: query_result_state.contract_state.ledger.clone(),
-        nullifiers: query_result_state.contract_state.nullifiers.clone(),
+        ledger: query_result_state.ledger_state.clone(),
+        nullifiers: query_result_state.nullifiers.clone(),
         num_events: query_result_state.events.len() as u64,
     })
 }

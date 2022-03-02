@@ -4,14 +4,14 @@ use crate::eth_polling::EthPolling;
 use crate::query_result_state::QueryResultState;
 use crate::state_persistence::StatePersistence;
 use cap_rust_sandbox::{
-    cape::{submit_block::fetch_cape_block, CapeBlock, NoteType},
+    cape::submit_block::fetch_cape_block,
     ledger::CapeTransition,
-    model::{CapeModelTxn, Erc20Code, EthereumAddr},
+    model::{Erc20Code, EthereumAddr},
     types::{RecordOpening as RecordOpeningSol, TestCAPEEvents},
 };
 //use cap_rust_sandbox::ethereum::get_provider;
 use ethers::abi::AbiDecode;
-use jf_cap::{structs::RecordOpening, MerkleTree, TransactionNote};
+use jf_cap::{structs::RecordOpening, MerkleTree};
 use reef::traits::Block;
 use seahorse::events::LedgerEvent;
 
@@ -29,50 +29,6 @@ mod query_result_state;
 mod route_parsing;
 mod routes;
 mod state_persistence;
-
-fn cape_block_to_transactions(block: CapeBlock) -> Option<Vec<CapeModelTxn>> {
-    let note_types = block.note_types.into_iter();
-    let mut transfer_notes = block.transfer_notes.into_iter();
-    let mut mint_notes = block.mint_notes.into_iter();
-    let mut freeze_notes = block.freeze_notes.into_iter();
-    let mut burn_notes = block.burn_notes.into_iter();
-    let mut ret = vec![];
-    for nt in note_types {
-        match nt {
-            NoteType::Transfer => {
-                ret.push(CapeModelTxn::CAP(TransactionNote::Transfer(Box::new(
-                    transfer_notes.next()?,
-                ))));
-            }
-            NoteType::Mint => {
-                ret.push(CapeModelTxn::CAP(TransactionNote::Mint(Box::new(
-                    mint_notes.next()?,
-                ))));
-            }
-            NoteType::Freeze => {
-                ret.push(CapeModelTxn::CAP(TransactionNote::Freeze(Box::new(
-                    freeze_notes.next()?,
-                ))));
-            }
-            NoteType::Burn => {
-                let burn_note = burn_notes.next()?;
-                ret.push(CapeModelTxn::Burn {
-                    xfr: Box::new(burn_note.transfer_note),
-                    ro: Box::new(burn_note.burned_ro),
-                });
-            }
-        }
-    }
-    if transfer_notes.next().is_some()
-        || mint_notes.next().is_some()
-        || freeze_notes.next().is_some()
-        || burn_notes.next().is_some()
-    {
-        None
-    } else {
-        Some(ret)
-    }
-}
 
 #[async_std::main]
 async fn main() -> std::io::Result<()> {
@@ -98,6 +54,7 @@ async fn main() -> std::io::Result<()> {
     loop {
         if let Ok(_height) = eth_poll.check().await {
             // do we want an idle/backoff on unchanged?
+            //select cape events
             let new_event = eth_poll
                 .contract
                 .events()
@@ -117,11 +74,15 @@ async fn main() -> std::io::Result<()> {
                                 .unwrap()
                                 .unwrap();
 
-                        let model_txns =
-                            cape_block_to_transactions(fetched_block_with_memos.block.clone())
-                                .unwrap();
+                        let model_txns = fetched_block_with_memos
+                            .block
+                            .clone()
+                            .into_cape_transactions()
+                            .unwrap()
+                            .0;
 
-                        for tx in &model_txns {
+                        //add transactions to QueryResultState pending commit
+                        for tx in model_txns.clone() {
                             eth_poll
                                 .query_result_state
                                 .write()
@@ -132,14 +93,32 @@ async fn main() -> std::io::Result<()> {
 
                         let transitions = model_txns
                             .clone()
+                            .clone()
                             .into_iter()
                             .map(CapeTransition::Transaction)
                             .collect::<Vec<_>>();
 
-                        //create/push LedgerEvent::Commit
+                        //push to state's pending commit event
+                        for trn in transitions {
+                            eth_poll
+                                .query_result_state
+                                .write()
+                                .await
+                                .pending_commit_event
+                                .push(trn);
+                        }
+
+                        let pending_commit = eth_poll
+                            .query_result_state
+                            .read()
+                            .await
+                            .pending_commit_event
+                            .clone();
+
+                        //create/push pending commit to QueryResultState events
                         eth_poll.query_result_state.write().await.events.push(
                             LedgerEvent::Commit {
-                                block: cap_rust_sandbox::ledger::CapeBlock::new(transitions),
+                                block: cap_rust_sandbox::ledger::CapeBlock::new(pending_commit),
                                 block_id: meta.block_number.as_u64(),
                                 state_comm: meta.block_number.as_u64() + 1,
                             },
@@ -154,15 +133,13 @@ async fn main() -> std::io::Result<()> {
                                 .query_result_state
                                 .read()
                                 .await
-                                .contract_state
-                                .ledger
+                                .ledger_state
                                 .record_merkle_commitment,
                             &eth_poll
                                 .query_result_state
                                 .read()
                                 .await
-                                .contract_state
-                                .ledger
+                                .ledger_state
                                 .record_merkle_frontier,
                         );
 
@@ -180,15 +157,13 @@ async fn main() -> std::io::Result<()> {
                                 .query_result_state
                                 .write()
                                 .await
-                                .contract_state
-                                .ledger
+                                .ledger_state
                                 .record_merkle_commitment = merkle_tree.commitment();
                             eth_poll
                                 .query_result_state
                                 .write()
                                 .await
-                                .contract_state
-                                .ledger
+                                .ledger_state
                                 .record_merkle_frontier = merkle_tree.frontier();
 
                             merkle_paths = uids
@@ -245,6 +220,7 @@ async fn main() -> std::io::Result<()> {
                             .push(new_transition_wrap);
                     }
                 }
+                //update here?
                 eth_poll.last_updated_block_height = meta.block_number.as_u64();
             }
         }

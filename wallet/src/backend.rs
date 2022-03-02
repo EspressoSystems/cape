@@ -1,17 +1,14 @@
 #![deny(warnings)]
 
-use crate::{
-    mocks::MockCapeLedger, mocks::MockCapeNetwork, testing::port, CapeWalletBackend,
-    CapeWalletError,
-};
-use address_book::{address_book_port, init_web_server, wait_for_server, InsertPubKey};
+use crate::{mocks::MockCapeLedger, CapeWalletBackend, CapeWalletError};
+use address_book::{address_book_port, InsertPubKey};
 use async_std::sync::{Arc, Mutex, MutexGuard};
 use async_trait::async_trait;
 use cap_rust_sandbox::{
     deploy::EthMiddleware,
     ledger::{CapeLedger, CapeNullifierSet, CapeTransition},
     model::{Erc20Code, EthereumAddr},
-    types::CAPE,
+    types::{CAPE, ERC20},
 };
 use ethers::{
     core::k256::ecdsa::SigningKey,
@@ -27,13 +24,11 @@ use jf_cap::{
     keys::{UserAddress, UserKeyPair, UserPubKey},
     proof::UniversalParam,
     structs::{AssetDefinition, Nullifier, ReceiverMemo, RecordOpening},
-    Signature, TransactionVerifyingKey,
+    Signature,
 };
-use key_set::VerifierKeySet;
 use net::client::parse_error_body;
 use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
-use reef::Ledger;
-use relayer::{testing::start_minimal_relayer_for_test, SubmitBody};
+use relayer::SubmitBody;
 use seahorse::{
     events::{EventIndex, EventSource, LedgerEvent},
     hd,
@@ -46,7 +41,6 @@ use serde::{de::DeserializeOwned, Serialize};
 use std::convert::{TryFrom, TryInto};
 use std::pin::Pin;
 use surf::Url;
-use tide::log::LevelFilter;
 
 fn get_provider() -> Provider<Http> {
     let rpc_url = match std::env::var("RPC_URL") {
@@ -319,6 +313,20 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
         src_addr: EthereumAddr,
         ro: RecordOpening,
     ) -> Result<(), CapeWalletError> {
+        // Before the contract can transfer from our account, in accordance with the ERC20 protocol,
+        // we have to approve the transfer.
+        ERC20::new(erc20_code.clone(), self.eth_client().unwrap())
+            .approve(self.contract.address(), ro.amount.into())
+            .send()
+            .await
+            .map_err(|err| CapeWalletError::Failed {
+                msg: format!("error building ERC20::approve transaction: {}", err),
+            })?
+            .await
+            .map_err(|err| CapeWalletError::Failed {
+                msg: format!("error submitting ERC20::approve transaction: {}", err),
+            })?;
+
         // Wraps don't go through the relayer, they go directly to the contract.
         self.contract
             .deposit_erc_20(ro.clone().into(), erc20_code.clone().into())
@@ -356,89 +364,16 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
     }
 }
 
-#[allow(clippy::needless_lifetimes)]
-pub async fn create_test_network<'a>(
-    rng: &mut ChaChaRng,
-    universal_param: &'a UniversalParam,
-) -> (UserKeyPair, Url, Address, Arc<Mutex<MockCapeLedger<'a>>>) {
-    init_web_server(LevelFilter::Error)
-        .await
-        .expect("Failed to run server.");
-    wait_for_server().await;
-
-    // Set up a network that includes a minimal relayer, connected to a real Ethereum
-    // blockchain, as well as a mock EQS which will track the blockchain in parallel, since we
-    // don't yet have a real EQS.
-    let relayer_port = port().await;
-    let (contract, sender_key, sender_rec, records) =
-        start_minimal_relayer_for_test(relayer_port).await;
-    let relayer_url = Url::parse(&format!("http://localhost:{}", relayer_port)).unwrap();
-    let sender_memo = ReceiverMemo::from_ro(rng, &sender_rec, &[]).unwrap();
-
-    let verif_crs = VerifierKeySet {
-        xfr: vec![
-            // For regular transfers, including non-native transfers
-            TransactionVerifyingKey::Transfer(
-                jf_cap::proof::transfer::preprocess(
-                    universal_param,
-                    2,
-                    3,
-                    CapeLedger::merkle_height(),
-                )
-                .unwrap()
-                .1,
-            ),
-            // For burns (which currently require exactly 2 inputs and outputs, but this is an
-            // artificial restriction which should be lifted)
-            TransactionVerifyingKey::Transfer(
-                jf_cap::proof::transfer::preprocess(
-                    universal_param,
-                    2,
-                    2,
-                    CapeLedger::merkle_height(),
-                )
-                .unwrap()
-                .1,
-            ),
-        ]
-        .into_iter()
-        .collect(),
-        freeze: vec![TransactionVerifyingKey::Freeze(
-            jf_cap::proof::freeze::preprocess(universal_param, 2, CapeLedger::merkle_height())
-                .unwrap()
-                .1,
-        )]
-        .into_iter()
-        .collect(),
-        mint: TransactionVerifyingKey::Mint(
-            jf_cap::proof::mint::preprocess(universal_param, CapeLedger::merkle_height())
-                .unwrap()
-                .1,
-        ),
-    };
-    let mut mock_eqs = MockCapeLedger::new(MockCapeNetwork::new(
-        verif_crs,
-        records,
-        vec![(sender_memo, 0)],
-    ));
-    mock_eqs.set_block_size(1).unwrap();
-    // The minimal test relayer does not block transactions, so the mock EQS shouldn't
-    // either.
-    let mock_eqs = Arc::new(Mutex::new(mock_eqs));
-
-    (sender_key, relayer_url, contract.address(), mock_eqs)
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{mocks::MockCapeWalletLoader, CapeWallet, CapeWalletExt};
-    use cap_rust_sandbox::{deploy::deploy_erc20_token, types::SimpleToken};
-    use ethers::types::{TransactionRequest, U256};
-    use jf_cap::{
-        structs::{AssetCode, AssetPolicy},
-        testing_apis::universal_setup_for_test,
+    use crate::testing::{
+        create_test_network, sponsor_simple_token, transfer_token, wrap_simple_token,
     };
+    use crate::{mocks::MockCapeWalletLoader, CapeWallet, CapeWalletExt};
+    use cap_rust_sandbox::deploy::deploy_erc20_token;
+    use ethers::types::{TransactionRequest, U256};
+    use jf_cap::{structs::AssetCode, testing_apis::universal_setup_for_test};
     use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
     use seahorse::testing::await_transaction;
     use std::path::PathBuf;
@@ -504,16 +439,15 @@ mod test {
         let receiver_key = receiver.generate_user_key(None).await.unwrap();
 
         // Transfer from sender to receiver.
-        let receipt = sender
-            .transfer(
-                &sender_key.address(),
-                &AssetCode::native(),
-                &[(receiver_key.address(), 2)],
-                1,
-            )
-            .await
-            .unwrap();
-        await_transaction(&receipt, &sender, &[&receiver]).await;
+        transfer_token(
+            &mut sender,
+            receiver_key.address(),
+            2,
+            AssetCode::native(),
+            1,
+        )
+        .await
+        .unwrap();
         assert_eq!(
             sender
                 .balance(&sender_key.address(), &AssetCode::native())
@@ -529,16 +463,15 @@ mod test {
 
         // Transfer back, just to make sure the receiver is actually able to spend the records it
         // received.
-        let receipt = receiver
-            .transfer(
-                &receiver_key.address(),
-                &AssetCode::native(),
-                &[(sender_key.address(), 1)],
-                1,
-            )
-            .await
-            .unwrap();
-        await_transaction(&receipt, &receiver, &[&sender]).await;
+        transfer_token(
+            &mut receiver,
+            sender_key.address(),
+            1,
+            AssetCode::native(),
+            1,
+        )
+        .await
+        .unwrap();
         assert_eq!(
             sender
                 .balance(&sender_key.address(), &AssetCode::native())
@@ -597,8 +530,6 @@ mod test {
         .await
         .unwrap();
         let mut wrapper = CapeWallet::new(wrapper_backend).await.unwrap();
-        let wrapper_eth_addr = wrapper.eth_address().await.unwrap();
-
         // Add the faucet key to the wrapper wallet, so that they have the native tokens they need
         // to pay the fee to transfer the wrapped tokens.
         wrapper
@@ -636,64 +567,22 @@ mod test {
                 .unwrap();
         }
 
-        // Sponsor a CAPE asset corresponding to an ERC20 token.
         let erc20_contract = deploy_erc20_token().await;
-        let cape_asset = sponsor
-            .sponsor(
-                erc20_contract.address().into(),
-                sponsor_eth_addr.clone(),
-                AssetPolicy::default(),
-            )
+
+        // Sponsor a CAPE asset corresponding to an ERC20 token.
+        let cape_asset = sponsor_simple_token(&mut sponsor, &erc20_contract)
             .await
             .unwrap();
 
-        // Prepare to wrap: approve the transfer from the wrapper's ETH wallet to the CAPE contract.
-        SimpleToken::new(
-            erc20_contract.address(),
-            wrapper.eth_client().await.unwrap(),
+        wrap_simple_token(
+            &mut wrapper,
+            &wrapper_key.address(),
+            cape_asset.clone(),
+            &erc20_contract,
+            100,
         )
-        .approve(contract_address, 100.into())
-        .send()
-        .await
-        .unwrap()
         .await
         .unwrap();
-
-        // Prepare to wrap: deposit some ERC20 tokens into the wrapper's ETH wallet.
-        erc20_contract
-            .transfer(wrapper_eth_addr.clone().into(), 100.into())
-            .send()
-            .await
-            .unwrap()
-            .await
-            .unwrap();
-        assert_eq!(
-            erc20_contract
-                .balance_of(wrapper_eth_addr.clone().into())
-                .call()
-                .await
-                .unwrap(),
-            100.into()
-        );
-
-        // Deposit some ERC20 into the CAPE contract.
-        wrapper
-            .wrap(
-                wrapper_eth_addr.clone().into(),
-                cape_asset.clone(),
-                wrapper_key.address(),
-                100,
-            )
-            .await
-            .unwrap();
-        assert_eq!(
-            erc20_contract
-                .balance_of(wrapper_eth_addr.clone().into())
-                .call()
-                .await
-                .unwrap(),
-            0.into()
-        );
 
         // To force the wrap to be processed, we need to submit a block of CAPE transactions. We'll
         // transfer some native tokens from `wrapper` to `sponsor`.

@@ -31,7 +31,7 @@ use rand_chacha::ChaChaRng;
 use reef::Ledger;
 use relayer::testing::start_minimal_relayer_for_test;
 use seahorse::testing::await_transaction;
-use seahorse::txn_builder::TransactionStatus;
+use seahorse::txn_builder::{TransactionReceipt, TransactionStatus};
 use surf::Url;
 use tide::log::LevelFilter;
 
@@ -261,9 +261,9 @@ pub async fn transfer_token<'a>(
     amount: u64,
     asset_code: AssetCode,
     fee: u64,
-) -> Result<TransactionStatus, CapeWalletError> {
+) -> Result<TransactionReceipt<CapeLedger>, CapeWalletError> {
     let sender_address = sender.pub_keys().await[0].address();
-    let txn = sender
+    sender
         .transfer(
             &sender_address,
             &asset_code,
@@ -271,6 +271,4 @@ pub async fn transfer_token<'a>(
             fee,
         )
         .await
-        .unwrap();
-    sender.await_transaction(&txn).await
 }

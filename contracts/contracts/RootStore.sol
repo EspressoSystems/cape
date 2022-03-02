@@ -16,7 +16,7 @@ contract RootStore {
 
         // Intially all roots are set to zero.
         // This value is such that no adversary can extend a branch from this root node.
-        // See proposition 2, page 48 of the AT-Spec document SpectrumXYZ/AT-spec@01f71ce
+        // See proposition 2, page 48 of the AT-Spec document EspressoSystems/AT-spec@01f71ce
     }
 
     /// @dev Add a root value. Only keep the latest nRoots ones.

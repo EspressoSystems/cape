@@ -622,7 +622,7 @@ mod tests {
 
     // TODO !keyao Replace the use of `CliClient` with `CapeTest` and CLI matching helpers in
     // Seahorse, similar to `test_cli_burn`.
-    // Related issue: https://github.com/SpectrumXYZ/cape/issues/477.
+    // Related issue: https://github.com/EspressoSystems/cape/issues/477.
     #[test]
     #[ignore]
     fn test_cli_sponsor() {
@@ -639,7 +639,7 @@ mod tests {
 
     // TODO !keyao Replace the use of `CliClient` with `CapeTest` and CLI matching helpers in
     // Seahorse, similar to `test_cli_burn`.
-    // Related issue: https://github.com/SpectrumXYZ/cape/issues/477.
+    // Related issue: https://github.com/EspressoSystems/cape/issues/477.
     #[test]
     #[ignore]
     fn test_cli_wrap() {

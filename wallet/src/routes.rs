@@ -28,7 +28,7 @@ use seahorse::{
     hd::KeyTree,
     loader::{Loader, LoaderMetadata},
     testing::MockLedger,
-    txn_builder::{AssetInfo, TransactionReceipt},
+    txn_builder::{AssetInfo, RecordInfo, TransactionReceipt},
     WalletBackend, WalletStorage,
 };
 use serde::{Deserialize, Serialize};
@@ -235,6 +235,7 @@ pub enum ApiRouteKey {
     unfreeze,
     unwrap,
     wrap,
+    getrecords,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -764,6 +765,11 @@ pub async fn send(
         .map_err(wallet_error)
 }
 
+pub async fn get_records(wallet: &mut Option<Wallet>) -> Result<Vec<RecordInfo>, tide::Error> {
+    let wallet = require_wallet(wallet)?;
+    Ok(wallet.records().await.collect::<Vec<_>>())
+}
+
 pub async fn dispatch_url(
     req: tide::Request<WebState>,
     route_pattern: &str,
@@ -800,6 +806,7 @@ pub async fn dispatch_url(
         ApiRouteKey::unfreeze => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::unwrap => response(&req, unwrap(bindings, wallet).await?),
         ApiRouteKey::wrap => response(&req, wrap(bindings, wallet).await?),
+        ApiRouteKey::getrecords => response(&req, get_records(wallet).await?),
     }
 }
 

@@ -18,8 +18,8 @@ use cape_wallet::testing::create_test_network;
 use cape_wallet::testing::get_burn_ammount;
 use cape_wallet::testing::OperationType;
 use cape_wallet::testing::{
-    burn_token, find_freezable_records, freeze_token, sponsor_simple_token, unfreeze_token,
-    wrap_simple_token,
+    burn_token, find_freezable_records, freeze_token, spawn_eqs, sponsor_simple_token,
+    unfreeze_token, wrap_simple_token,
 };
 use cape_wallet::CapeWallet;
 use jf_cap::keys::UserKeyPair;
@@ -116,9 +116,13 @@ async fn main() {
     // Everyone creates own relayer and EQS, not sure it works without EQS
     let (sender_key, relayer_url, contract_address, mock_eqs) =
         create_test_network(&mut rng, &universal_param).await;
+    // Spawn our own EQS since we have our own relayer and contract connection.
+    // TODO connect to an existing EQS.
+    let (eqs_url, _eqs_dir, _join_eqs) = spawn_eqs(contract_address).await;
     println!("Ledger Created");
     let backend = CapeBackend::new(
         &universal_param,
+        eqs_url,
         relayer_url.clone(),
         contract_address,
         None,

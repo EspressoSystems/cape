@@ -405,6 +405,9 @@ impl<'a> MockNetwork<'a, CapeLedger> for MockCapeNetwork {
                     src_addr,
                     ro,
                 },
+                CapeTransition::Faucet { .. } => {
+                    panic!("submitting a Faucet transaction from a wallet is not supported")
+                }
             })
             .collect();
 
@@ -630,7 +633,7 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
         let mut ledger = self.ledger.lock().await;
         ledger.network().store_call_data(
             info.uid.unwrap_or_else(|| TransactionUID(txn.hash())),
-            info.memos,
+            info.memos.into_iter().flatten().collect(),
             info.sig,
         );
         ledger.submit(txn)

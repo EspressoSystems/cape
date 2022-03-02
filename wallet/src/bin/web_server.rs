@@ -98,10 +98,10 @@ mod tests {
     use cape_wallet::{
         mocks::test_asset_signing_key,
         routes::{assets_path, CapeAPIError},
-        testing::port,
+        testing::{port, retry},
         ui::*,
         web::{
-            retry, DEFAULT_ETH_ADDR, DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR,
+            DEFAULT_ETH_ADDR, DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR,
             DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR, DEFAULT_WRAPPED_AMT,
         },
     };

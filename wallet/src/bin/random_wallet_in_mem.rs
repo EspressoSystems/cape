@@ -20,7 +20,7 @@ use cape_wallet::mocks::*;
 use cape_wallet::testing::get_burn_ammount;
 use cape_wallet::testing::{
     burn_token, create_test_network, find_freezable_records, freeze_token, fund_eth_wallet,
-    mint_token, retry_delay, sponsor_simple_token, transfer_token, unfreeze_token,
+    mint_token, retry_delay, spawn_eqs, sponsor_simple_token, transfer_token, unfreeze_token,
     wrap_simple_token, OperationType,
 };
 use cape_wallet::CapeWallet;
@@ -61,6 +61,7 @@ struct Args {
 
 struct NetworkInfo<'a> {
     sender_key: UserKeyPair,
+    eqs_url: Url,
     relayer_url: Url,
     contract_address: Address,
     mock_eqs: Arc<Mutex<MockCapeLedger<'a>>>,
@@ -77,16 +78,19 @@ async fn create_backend_and_sender_wallet<'a>(
         key: KeyTree::random(rng).0,
     };
 
-    let nework_tuple = create_test_network(rng, universal_param).await;
+    let network_tuple = create_test_network(rng, universal_param).await;
+    let (eqs_url, _eqs_dir, _join_eqs) = spawn_eqs(network_tuple.2).await;
     let network = NetworkInfo {
-        sender_key: nework_tuple.0,
-        relayer_url: nework_tuple.1,
-        contract_address: nework_tuple.2,
-        mock_eqs: nework_tuple.3,
+        sender_key: network_tuple.0,
+        eqs_url,
+        relayer_url: network_tuple.1,
+        contract_address: network_tuple.2,
+        mock_eqs: network_tuple.3,
     };
 
     let backend = CapeBackend::new(
         universal_param,
+        network.eqs_url.clone(),
         network.relayer_url.clone(),
         network.contract_address,
         None,
@@ -142,6 +146,7 @@ async fn create_wallet<'a>(
 
     let backend = CapeBackend::new(
         universal_param,
+        network.eqs_url.clone(),
         network.relayer_url.clone(),
         network.contract_address,
         None,

@@ -17,15 +17,17 @@ use address_book::init_web_server;
 use address_book::wait_for_server;
 use address_book::TransientFileStore;
 use async_std::sync::{Arc, Mutex};
-use async_std::task::sleep;
+use async_std::task::{sleep, spawn, JoinHandle};
 use cap_rust_sandbox::deploy::EthMiddleware;
 use cap_rust_sandbox::ethereum::get_provider;
 use cap_rust_sandbox::ledger::CapeLedger;
 use cap_rust_sandbox::types::SimpleToken;
+use eqs::{configuration::EQSOptions, run_eqs};
 use ethers::prelude::Address;
 use ethers::providers::Middleware;
 use ethers::types::TransactionRequest;
 use ethers::types::U256;
+use futures::Future;
 use jf_cap::keys::FreezerPubKey;
 use jf_cap::keys::UserAddress;
 use jf_cap::keys::UserKeyPair;
@@ -52,6 +54,7 @@ use seahorse::txn_builder::{TransactionReceipt, TransactionStatus};
 use std::collections::HashSet;
 use std::time::Duration;
 use surf::Url;
+use tempdir::TempDir;
 use tide::log::LevelFilter;
 use tracing::{event, Level};
 
@@ -73,7 +76,18 @@ pub async fn retry_delay() {
     sleep(Duration::from_secs(1)).await
 }
 
-#[allow(clippy::needless_lifetimes)]
+pub async fn retry<Fut: Future<Output = bool>>(f: impl Fn() -> Fut) {
+    let mut backoff = Duration::from_millis(100);
+    for _ in 0..10 {
+        if f().await {
+            return;
+        }
+        sleep(backoff).await;
+        backoff *= 2;
+    }
+    panic!("retry loop did not complete in {:?}", backoff);
+}
+
 pub async fn create_test_network<'a>(
     rng: &mut ChaChaRng,
     universal_param: &'a UniversalParam,
@@ -94,7 +108,18 @@ pub async fn create_test_network<'a>(
 
     let verif_crs = VerifierKeySet {
         xfr: vec![
-            // For regular transfers, including non-native transfers
+            // For native transfers
+            TransactionVerifyingKey::Transfer(
+                jf_cap::proof::transfer::preprocess(
+                    universal_param,
+                    1,
+                    2,
+                    CapeLedger::merkle_height(),
+                )
+                .unwrap()
+                .1,
+            ),
+            // For non-native transfers
             TransactionVerifyingKey::Transfer(
                 jf_cap::proof::transfer::preprocess(
                     universal_param,
@@ -178,6 +203,36 @@ pub async fn get_burn_ammount<'a>(
     } else {
         filtered[0].ro.amount
     }
+}
+
+pub async fn spawn_eqs(cape_address: Address) -> (Url, TempDir, JoinHandle<std::io::Result<()>>) {
+    let dir = TempDir::new("wallet_testing_eqs").unwrap();
+    let eqs_port = port().await;
+    let opt = EQSOptions {
+        web_path: String::new(),
+        api_path: [
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")),
+            std::path::Path::new("../eqs/api/api.toml"),
+        ]
+        .iter()
+        .collect::<std::path::PathBuf>()
+        .as_os_str()
+        .to_str()
+        .unwrap()
+        .to_string(),
+        store_path: dir.path().as_os_str().to_str().unwrap().to_owned(),
+        reset_store_state: true,
+        query_frequency: 500,
+        eqs_port: eqs_port as u16,
+        cape_address: Some(cape_address),
+        rpc_url: String::from("http://localhost:8545"),
+        temp_test_run: false,
+    };
+    let join = spawn(async move { run_eqs(&opt).await });
+    let url = Url::parse(&format!("http://localhost:{}", eqs_port)).unwrap();
+    retry(|| async { surf::connect(url.clone()).send().await.is_ok() }).await;
+
+    (url, dir, join)
 }
 
 #[derive(Debug)]

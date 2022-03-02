@@ -10,16 +10,16 @@ use crate::deploy::EthMiddleware;
 use crate::helpers::compare_merkle_root_from_contract_and_jf_tree;
 use crate::ledger::CapeLedger;
 use crate::types::TestRecordsMerkleTree;
-use crate::types::{field_to_u256, SimpleToken, TestCAPE};
+use crate::types::{SimpleToken, TestCAPE};
 use ethers::prelude::TransactionReceipt;
 use ethers::prelude::{Address, H160, U256};
 use jf_cap::keys::{UserKeyPair, UserPubKey};
 use jf_cap::structs::{
-    AssetDefinition, FeeInput, FreezeFlag, RecordCommitment, RecordOpening, TxnFeeInfo,
+    AssetDefinition, BlindFactor, FeeInput, FreezeFlag, RecordOpening, TxnFeeInfo,
 };
 use jf_cap::testing_apis::universal_setup_for_test;
 use jf_cap::transfer::{TransferNote, TransferNoteInput};
-use jf_cap::{AccMemberWitness, MerkleTree};
+use jf_cap::{AccMemberWitness, BaseField, MerkleTree};
 use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
 use reef::Ledger;
 use std::path::{Path, PathBuf};
@@ -69,22 +69,26 @@ impl ContractsInfo {
 pub async fn create_faucet(contract: &TestCAPE<EthMiddleware>) -> (UserKeyPair, RecordOpening) {
     let mut rng = ChaChaRng::from_seed([42; 32]);
     let faucet_key_pair = UserKeyPair::generate(&mut rng);
-    let faucet_rec = RecordOpening::new(
-        &mut rng,
-        u64::MAX / 2,
-        AssetDefinition::native(),
-        faucet_key_pair.pub_key(),
-        FreezeFlag::Unfrozen,
-    );
-    let faucet_comm = RecordCommitment::from(&faucet_rec);
     contract
-        .set_initial_record_commitments(vec![field_to_u256(faucet_comm.to_field_element())])
+        .faucet_setup_for_testnet(
+            faucet_key_pair.address().into(),
+            faucet_key_pair.pub_key().enc_key().into(),
+        )
         .send()
         .await
         .unwrap()
         .await
         .unwrap();
     assert_eq!(contract.get_num_leaves().call().await.unwrap(), 1.into());
+
+    // Duplicate the record opening created by the contract.
+    let faucet_rec = RecordOpening {
+        pub_key: faucet_key_pair.pub_key(),
+        asset_def: AssetDefinition::native(),
+        amount: u64::MAX / 2,
+        freeze_flag: FreezeFlag::Unfrozen,
+        blind: BlindFactor::from(BaseField::from(0)),
+    };
 
     (faucet_key_pair, faucet_rec)
 }

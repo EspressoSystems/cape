@@ -17,19 +17,16 @@ use crate::routes::{
 };
 use async_std::{
     sync::{Arc, Mutex},
-    task::{sleep, spawn, JoinHandle},
+    task::{spawn, JoinHandle},
 };
 use cap_rust_sandbox::model::EthereumAddr;
-use futures::Future;
 use jf_cap::{keys::UserKeyPair, structs::AssetCode};
 use net::server;
 use rand_chacha::ChaChaRng;
-use seahorse::testing::await_transaction;
 use std::collections::hash_map::HashMap;
 use std::fs::create_dir_all;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
-use std::time::Duration;
 use structopt::StructOpt;
 
 pub const DEFAULT_ETH_ADDR: EthereumAddr = EthereumAddr([2; 20]);
@@ -234,18 +231,6 @@ async fn entry_page(req: tide::Request<WebState>) -> Result<tide::Response, tide
     }
 }
 
-pub async fn retry<Fut: Future<Output = bool>>(f: impl Fn() -> Fut) {
-    let mut backoff = Duration::from_millis(100);
-    for _ in 0..10 {
-        if f().await {
-            return;
-        }
-        sleep(backoff).await;
-        backoff *= 2;
-    }
-    panic!("retry loop did not complete in {:?}", backoff);
-}
-
 /// Testing route handler which populates a wallet with dummy data.
 ///
 /// This route will modify the wallet by generating 2 of each kind of key (viewing, freezing, and
@@ -256,10 +241,12 @@ pub async fn retry<Fut: Future<Output = bool>>(f: impl Fn() -> Fut) {
 async fn populatefortest(req: tide::Request<WebState>) -> Result<tide::Response, tide::Error> {
     use crate::{
         routes::{require_wallet, wallet_error},
+        testing::retry,
         wallet::CapeWalletExt,
     };
     use cap_rust_sandbox::model::Erc20Code;
     use rand::{RngCore, SeedableRng};
+    use seahorse::testing::await_transaction;
 
     let wallet = &mut *req.state().wallet.lock().await;
     let wallet = require_wallet(wallet)?;

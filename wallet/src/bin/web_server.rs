@@ -73,7 +73,7 @@ mod tests {
     use net::{client, UserAddress};
     use seahorse::{
         hd::KeyTree,
-        txn_builder::{AssetInfo, TransactionReceipt},
+        txn_builder::{AssetInfo, RecordInfo, TransactionReceipt},
     };
     use serde::de::DeserializeOwned;
     use std::collections::hash_map::HashMap;
@@ -354,6 +354,31 @@ mod tests {
         // The result is not very interesting before we add any keys, but that's for another
         // endpoint.
         assert_eq!(addresses, vec![]);
+    }
+    #[async_std::test]
+    #[traced_test]
+    async fn test_getrecords() {
+        let server = TestServer::new().await;
+
+        // Should fail if a wallet is not already open.
+        server
+            .requires_wallet::<Vec<UserAddress>>("getrecords")
+            .await;
+
+        // Now open a wallet and call getaddress.
+        server
+            .get::<()>(&format!(
+                "newwallet/{}/my-password/path/{}",
+                server.get::<String>("getmnemonic").await.unwrap(),
+                server.path()
+            ))
+            .await
+            .unwrap();
+        let records = server.get::<Vec<RecordInfo>>("getrecords").await.unwrap();
+
+        // The result is not very interesting before we add any keys, but that's for another
+        // endpoint.
+        assert_eq!(records, vec![]);
     }
 
     #[async_std::test]

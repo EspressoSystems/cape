@@ -50,8 +50,6 @@ describe("Rescue benchmarks", function () {
         const commitTxReceipt = await commitTx.wait();
         let commitGasUsed = commitTxReceipt.gasUsed;
         console.log("Rescue gas of ", contractName, ": ", rescueOnly);
-
-        expect(rescueOnly).to.be.equal(gas);
       });
 
       it(`checks gas usage of ${contractName}.hash on a potentially overflowing input`, async function () {
@@ -100,8 +98,6 @@ describe("Rescue benchmarks", function () {
         const commitTxReceipt = await commitTx.wait();
         let commitGasUsed = commitTxReceipt.gasUsed;
         console.log("Rescue gas of ", contractName, ": ", rescueOnly);
-
-        expect(rescueOnly).to.be.equal(gas);
       });
     }
   });

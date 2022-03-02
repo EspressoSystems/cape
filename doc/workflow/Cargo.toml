@@ -7,9 +7,9 @@ license = "GPL-3.0-or-later"
 
 [dependencies]
 cap-rust-sandbox = { path = "../../contracts/rust" }
-jf-utils = { features=["std"], git = "ssh://git@github.com/EspressoSystems/jellyfish.git" }
-jf-rescue = { features=["std"], git = "ssh://git@github.com/EspressoSystems/jellyfish.git" }
-jf-cap = { features = ["test_apis"], git = "ssh://git@github.com/EspressoSystems/cap.git", rev = "16ad157f96d2102d59206df0106fb341302180d3" }
+jf-utils = { features=["std"], git = "https://github.com/EspressoSystems/jellyfish.git" }
+jf-rescue = { features=["std"], git = "https://github.com/EspressoSystems/jellyfish.git" }
+jf-cap = { features = ["test_apis"], git = "https://github.com/EspressoSystems/cap.git", tag = "0.0.1" }
 
 ethers = { git = "https://github.com/gakonst/ethers-rs", features = ["abigen"] }
 

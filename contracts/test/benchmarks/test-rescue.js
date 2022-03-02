@@ -52,7 +52,7 @@ describe("Rescue benchmarks", function () {
         console.log("Rescue gas of ", contractName, ": ", rescueOnly);
       });
 
-      it(`checks gas usage of ${contractName}.hash on a potentially overflowing input`, async function () {
+      it(`checks gas usage of ${contractName}.commit on a potentially overflowing input`, async function () {
         const libraries = {};
         if (contractName == "TestRescue") {
           let rescueLib = await (await ethers.getContractFactory("RescueLib")).deploy();
@@ -70,6 +70,7 @@ describe("Rescue benchmarks", function () {
         const doNothingTx = await rescueContract.doNothing();
         const doNothingtxReceipt = await doNothingTx.wait();
         let doNothingGasUsed = doNothingtxReceipt.gasUsed;
+        console.log("About to hash");
 
         const rescueTx = await rescueContract.hash(10, 15, 20);
         const rescueTxReceipt = await rescueTx.wait();
@@ -77,27 +78,31 @@ describe("Rescue benchmarks", function () {
 
         let rescueOnly = rescueGasUsed - doNothingGasUsed;
 
-        const commitTx = await rescueContract.commit([
-          BigInt(10),
-          BigInt(15),
-          BigInt(20),
-          (BigInt(1) << BigInt(256)) - BigInt(1),
-          BigInt(0),
-          BigInt(0),
-          BigInt(0),
-          BigInt(0),
-          BigInt(0),
-          BigInt(0),
-          BigInt(0),
-          BigInt(0),
-          BigInt(0),
-          BigInt(0),
-          BigInt(0),
-        ]);
-        console.log(commitTx);
-        const commitTxReceipt = await commitTx.wait();
-        let commitGasUsed = commitTxReceipt.gasUsed;
-        console.log("Rescue gas of ", contractName, ": ", rescueOnly);
+        console.log("About to commit");
+
+        try {
+          const commitTx = await rescueContract.commit([
+            BigInt(10),
+            BigInt(15),
+            BigInt(20),
+            (BigInt(1) << BigInt(256)) - BigInt(1),
+            BigInt(0),
+            BigInt(0),
+            BigInt(0),
+            BigInt(0),
+            BigInt(0),
+            BigInt(0),
+            BigInt(0),
+            BigInt(0),
+            BigInt(0),
+            BigInt(0),
+            BigInt(0),
+          ]);
+
+          expect(false).to.be.true;
+        } catch (e) {
+          expect(e.code).to.equal(ethers.utils.Logger.errors.UNPREDICTABLE_GAS_LIMIT);
+        }
       });
     }
   });

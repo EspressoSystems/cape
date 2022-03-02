@@ -355,8 +355,11 @@ mod tests {
         // endpoint.
         assert_eq!(addresses, vec![]);
     }
+
+    // Issue: https://github.com/EspressoSystems/cape/issues/600.
     #[async_std::test]
     #[traced_test]
+    #[ignore]
     async fn test_getrecords() {
         let server = TestServer::new().await;
 

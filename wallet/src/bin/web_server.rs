@@ -365,7 +365,7 @@ mod tests {
             .requires_wallet::<Vec<UserAddress>>("getrecords")
             .await;
 
-        // Now open a wallet and call getaddress.
+        // Now open a wallet populate it and call getrecords.
         server
             .get::<()>(&format!(
                 "newwallet/{}/my-password/path/{}",
@@ -374,9 +374,30 @@ mod tests {
             ))
             .await
             .unwrap();
-        let records = server.get::<Vec<RecordInfo>>("getrecords").await.unwrap();
+        server.get::<()>("populatefortest").await.unwrap();
 
-        assert_eq!(records, vec![]);
+        let records = server.get::<Vec<RecordInfo>>("getrecords").await.unwrap();
+        let info = server.get::<WalletSummary>("getinfo").await.unwrap();
+
+        // get the wrapped asset
+        let asset = if info.assets[0].asset.code == AssetCode::native() {
+            info.assets[1].asset.code
+        } else {
+            info.assets[0].asset.code
+        };
+        // populate for test should create 3 records
+        assert_eq!(records.len(), 3);
+
+        let ro1 = &records[0].ro;
+        let ro2 = &records[1].ro;
+        let ro3 = &records[2].ro;
+
+        assert_eq!(ro1.amount, DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR);
+        assert_eq!(ro1.asset_def.code, AssetCode::native());
+        assert_eq!(ro2.amount, DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR);
+        assert_eq!(ro2.asset_def.code, AssetCode::native());
+        assert_eq!(ro3.amount, DEFAULT_WRAPPED_AMT);
+        assert_eq!(ro3.asset_def.code, asset);
     }
 
     #[async_std::test]

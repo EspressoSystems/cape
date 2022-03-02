@@ -27,7 +27,7 @@ pub use crate::bindings::{
     MintAuxInfo, MintNote, PcsInfo, PlonkProof, RecordOpening, SimpleToken, TestBN254, TestCAPE,
     TestCAPEEvents, TestCapeTypes, TestEdOnBN254, TestPlonkVerifier, TestPolynomialEval,
     TestRecordsMerkleTree, TestRescue, TestRootStore, TestTranscript, TestVerifyingKeys,
-    TranscriptData, TransferAuxInfo, TransferNote, VerifyingKey, CAPE,
+    TranscriptData, TransferAuxInfo, TransferNote, VerifyingKey, CAPE, ERC20,
 };
 
 // The number of input wires of TurboPlonk.

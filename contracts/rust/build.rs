@@ -35,6 +35,10 @@ fn main() {
         &format!("{}/artifacts/contracts", env!("CONTRACTS_DIR")),
         ".json",
     )
+    .chain(find_paths(
+        &format!("{}/artifacts/@openzeppelin", env!("CONTRACTS_DIR")),
+        "ERC20.json",
+    ))
     .map(|path| path.unwrap())
     .filter(|path| !path.to_str().unwrap().ends_with(".dbg.json"))
     .collect();

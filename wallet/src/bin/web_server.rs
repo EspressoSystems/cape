@@ -376,8 +376,6 @@ mod tests {
             .unwrap();
         let records = server.get::<Vec<RecordInfo>>("getrecords").await.unwrap();
 
-        // The result is not very interesting before we add any keys, but that's for another
-        // endpoint.
         assert_eq!(records, vec![]);
     }
 

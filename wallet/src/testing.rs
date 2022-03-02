@@ -176,24 +176,12 @@ pub async fn wrap_simple_token<'a>(
     wrapper_addr: &UserAddress,
     cape_asset: AssetDefinition,
     erc20_contract: &SimpleToken<EthMiddleware>,
-    contract_address: Address,
     amount: u64,
 ) -> Result<(), CapeWalletError> {
     let wrapper_eth_addr = wrapper.eth_address().await.unwrap();
 
     let total_native_balance = wrapper.balance(wrapper_addr, &AssetCode::native()).await;
     assert!(total_native_balance > 0);
-    // Prepare to wrap: approve the transfer from the wrapper's ETH wallet to the CAPE contract.
-    SimpleToken::new(
-        erc20_contract.address(),
-        wrapper.eth_client().await.unwrap(),
-    )
-    .approve(contract_address, amount.into())
-    .send()
-    .await
-    .unwrap()
-    .await
-    .unwrap();
 
     // Prepare to wrap: deposit some ERC20 tokens into the wrapper's ETH wallet.
     erc20_contract

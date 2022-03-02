@@ -95,6 +95,12 @@ DOC = """
 Get all balances for the current wallet, all the balances for a given address, or the balance for a given address and asset type.
 """
 
+[route.getrecords]
+PATH = ["getrecords"]
+DOC = """
+Get all records related to the current wallet.
+"""
+
 [route.getinfo]
 PATH = ["getinfo", "getinfo/address", "getinfo/key", "getinfo/asset", "getinfo/asset/:asset", "getinfo/freezekey", "getinfo/sendkey", "getinfo/tracekey"]
 DOC = """

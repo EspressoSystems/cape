@@ -1,3 +1,4 @@
+#[warn(unused_imports)]
 pub mod backend;
 pub mod cli_client;
 pub mod disco;

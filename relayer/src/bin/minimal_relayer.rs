@@ -1,3 +1,4 @@
+#[warn(unused_imports)]
 use cap_rust_sandbox::types::CAPE;
 use coins_bip39::English;
 use ethers::prelude::*;

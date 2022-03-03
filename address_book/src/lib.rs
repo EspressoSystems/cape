@@ -1,3 +1,4 @@
+#[warn(unused_imports)]
 use async_std::{
     sync::{Arc, RwLock},
     task::{sleep, spawn, JoinHandle},

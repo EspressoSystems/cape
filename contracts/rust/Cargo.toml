@@ -58,9 +58,6 @@ git = "https://github.com/arkworks-rs/poly-commit/"
 rev = "cafc05e39692bbc5c383990063ad851f0b94a553"
 default-features = false
 
-[dev-dependencies]
-proptest = "1.0.0"
-
 [build-dependencies]
 glob = "^0.3.0"
 ethers-solc = { git = "https://github.com/gakonst/ethers-rs" }

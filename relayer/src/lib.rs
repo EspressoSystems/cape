@@ -1,3 +1,4 @@
+#[warn(unused_imports)]
 use async_std::task;
 use cap_rust_sandbox::{
     cape::{submit_block::submit_cape_block_with_memos, BlockWithMemos, CapeBlock},

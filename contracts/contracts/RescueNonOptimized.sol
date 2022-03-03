@@ -298,4 +298,28 @@ contract RescueNonOptimized {
 
         return state[0];
     }
+
+    function commit(uint256[15] memory inputs) public returns (uint256) {
+        uint256 a = inputs[0];
+        uint256 b = inputs[1];
+        uint256 c = inputs[2];
+        uint256 d;
+        require(a < _PRIME, "inputs must be below _PRIME");
+        require(b < _PRIME, "inputs must be below _PRIME");
+        require(c < _PRIME, "inputs must be below _PRIME");
+
+        for (uint256 i = 0; i < 5; i++) {
+            require(inputs[3 * i + 0] < _PRIME, "inputs must be below _PRIME");
+            require(inputs[3 * i + 1] < _PRIME, "inputs must be below _PRIME");
+            require(inputs[3 * i + 2] < _PRIME, "inputs must be below _PRIME");
+            a += inputs[3 * i + 0];
+            b += inputs[3 * i + 1];
+            c += inputs[3 * i + 2];
+            uint256[4] memory state = [a % _PRIME, b % _PRIME, c % _PRIME, d % _PRIME];
+            state = _perm(state);
+            (a, b, c, d) = (state[0], state[1], state[2], state[3]);
+        }
+
+        return a % _PRIME;
+    }
 }

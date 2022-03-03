@@ -39,6 +39,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 use structopt::StructOpt;
 
+/// Implementation of the [seahorse] [CLI] interface for CAPE.
 pub struct CapeCli;
 
 impl<'a> CLI<'a> for CapeCli {
@@ -112,8 +113,10 @@ impl<'a> CLIInput<'a, CapeCli> for Erc20Code {
     }
 }
 
+/// The instantiation of [seahorse::Wallet] for CAPE used by the CLI.
 type CapeWallet<'a> = seahorse::Wallet<'a, MockCapeBackend<'a, LoaderMetadata>, CapeLedger>;
 
+/// Implementation of the `sponsor` command for the CAPE wallet CLI.
 #[allow(clippy::too_many_arguments)]
 async fn cli_sponsor<'a>(
     io: &mut SharedIO,
@@ -174,6 +177,7 @@ async fn cli_sponsor<'a>(
     }
 }
 
+/// Implementation of the `wrap` command for the CAPE wallet CLI.
 async fn cli_wrap<'a>(
     io: &mut SharedIO,
     wallet: &mut CapeWallet<'_>,
@@ -192,6 +196,7 @@ async fn cli_wrap<'a>(
     }
 }
 
+/// Implementation of the `burn` command for the CAPE wallet CLI.
 #[allow(clippy::too_many_arguments)]
 async fn cli_burn<'a>(
     io: &mut SharedIO,
@@ -209,6 +214,10 @@ async fn cli_burn<'a>(
     finish_transaction::<CapeCli>(io, wallet, res, wait, "burned").await;
 }
 
+/// The collection of CLI commands which are specific to CAPE.
+///
+/// These commands are not part of the generic [seahorse::cli], but they are added to the CAPE CLI
+/// via the [CLI::extra_commands] trait method.
 fn cape_specific_cli_commands<'a>() -> Vec<Command<'a, CapeCli>> {
     vec![
         command!(
@@ -259,6 +268,7 @@ fn cape_specific_cli_commands<'a>() -> Vec<Command<'a, CapeCli>> {
     ]
 }
 
+/// Command line arguments for the CAPE wallet CLI.
 #[derive(StructOpt)]
 pub struct CapeArgs {
     /// Generate keys for a wallet, do not run the REPL.

@@ -84,13 +84,10 @@ impl CliClient {
     /// Issue a command to the wallet identified by `wallet`.
     ///
     /// The command string will be preprocessed by replacing each occurrence of `$var` in the
-    /// command with the value of the variable `var`. See [output] for how variables can be bound to
-    /// values using named capture groups in regexes.
+    /// command with the value of the variable `var`. See [CliClient::output] for how variables can
+    /// be bound to values using named capture groups in regexes.
     ///
-    /// If `wallet` refers to a wallet that has not yet been created, a new one will be created. The
-    /// [TestState] always starts off with one wallet, index 0, which gets an initial grant of 2^32
-    /// native tokens. So `command(0, "command")` will not load a new wallet. But the first time
-    /// `command(1, "command")` is called, it will block until wallet 1 is created.
+    /// If `wallet` refers to a wallet that has not yet been created, a new one will be created.
     pub fn command(&mut self, id: usize, command: impl AsRef<str>) -> Result<&mut Self, String> {
         let command = self.substitute(command)?;
         let wallet = self

@@ -37,7 +37,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
     // In order to avoid the contract running out of gas if the queue is too large
     // we set the maximum number of pending deposits record commitments to process
     // when a new block is submitted. This is a temporary solution.
-    // See https://github.com/SpectrumXYZ/cape/issues/400
+    // See https://github.com/EspressoSystems/cape/issues/400
     uint256 public constant MAX_NUM_PENDING_DEPOSIT = 10;
 
     event BlockCommitted(uint64 indexed height, uint256[] depositCommitments);

@@ -73,7 +73,7 @@ mod tests {
     use net::{client, UserAddress};
     use seahorse::{
         hd::KeyTree,
-        txn_builder::{AssetInfo, TransactionReceipt},
+        txn_builder::{AssetInfo, RecordInfo, TransactionReceipt},
     };
     use serde::de::DeserializeOwned;
     use std::collections::hash_map::HashMap;
@@ -354,6 +354,53 @@ mod tests {
         // The result is not very interesting before we add any keys, but that's for another
         // endpoint.
         assert_eq!(addresses, vec![]);
+    }
+
+    // Issue: https://github.com/EspressoSystems/cape/issues/600.
+    #[async_std::test]
+    #[traced_test]
+    #[ignore]
+    async fn test_getrecords() {
+        let server = TestServer::new().await;
+
+        // Should fail if a wallet is not already open.
+        server
+            .requires_wallet::<Vec<UserAddress>>("getrecords")
+            .await;
+
+        // Now open a wallet populate it and call getrecords.
+        server
+            .get::<()>(&format!(
+                "newwallet/{}/my-password/path/{}",
+                server.get::<String>("getmnemonic").await.unwrap(),
+                server.path()
+            ))
+            .await
+            .unwrap();
+        server.get::<()>("populatefortest").await.unwrap();
+
+        let records = server.get::<Vec<RecordInfo>>("getrecords").await.unwrap();
+        let info = server.get::<WalletSummary>("getinfo").await.unwrap();
+
+        // get the wrapped asset
+        let asset = if info.assets[0].asset.code == AssetCode::native() {
+            info.assets[1].asset.code
+        } else {
+            info.assets[0].asset.code
+        };
+        // populate for test should create 3 records
+        assert_eq!(records.len(), 3);
+
+        let ro1 = &records[0].ro;
+        let ro2 = &records[1].ro;
+        let ro3 = &records[2].ro;
+
+        assert_eq!(ro1.amount, DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR);
+        assert_eq!(ro1.asset_def.code, AssetCode::native());
+        assert_eq!(ro2.amount, DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR);
+        assert_eq!(ro2.asset_def.code, AssetCode::native());
+        assert_eq!(ro3.amount, DEFAULT_WRAPPED_AMT);
+        assert_eq!(ro3.asset_def.code, asset);
     }
 
     #[async_std::test]

@@ -43,7 +43,7 @@ mod tests {
             .await?;
 
         // XXX Adapted from seahorse
-        // https://github.com/SpectrumXYZ/seahorse/blob/ace20bc5f1bcf5b88ca0562799b8e80e6c52e933/src/persistence.rs#L574
+        // https://github.com/EspressoSystems/seahorse/blob/ace20bc5f1bcf5b88ca0562799b8e80e6c52e933/src/persistence.rs#L574
         // Generate some memos with default UserKeyPair
         let key_pair = UserKeyPair::default();
         let memos_with_sigs = repeat_with(|| {

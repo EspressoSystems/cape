@@ -1,3 +1,4 @@
+use crate::configuration::EQSOptions;
 use crate::query_result_state::QueryResultState;
 use crate::state_persistence::StatePersistence;
 
@@ -11,29 +12,82 @@ use cap_rust_sandbox::{
     types::{RecordOpening as RecordOpeningSol, TestCAPE, TestCAPEEvents},
 };
 use ethers::abi::AbiDecode;
+use ethers::prelude::{
+    coins_bip39::English, Http, LocalWallet, MnemonicBuilder, Provider, SignerMiddleware,
+};
 use jf_cap::{structs::RecordOpening, MerkleTree};
 use reef::traits::Block;
 use seahorse::events::LedgerEvent;
+
 pub(crate) struct EthPolling {
     pub query_result_state: Arc<RwLock<QueryResultState>>,
     pub state_persistence: StatePersistence,
     pub last_updated_block_height: u64,
-    pub contract: TestCAPE<EthMiddleware>,
     pub connection: EthConnection,
 }
 
 impl EthPolling {
     pub async fn new(
+        opt: &EQSOptions,
         query_result_state: Arc<RwLock<QueryResultState>>,
         state_persistence: StatePersistence,
     ) -> EthPolling {
-        let connection = EthConnection::for_test().await;
+        if opt.temp_test_run() {
+            return EthPolling {
+                query_result_state,
+                state_persistence,
+                last_updated_block_height: 0u64,
+                connection: EthConnection::for_test().await,
+            };
+        }
+
+        let (connection, last_updated_block_height) = if let Some(contract_address) =
+            opt.cape_address()
+        {
+            let mut state_updater = query_result_state.write().await;
+            let last_updated_block_height = state_updater.last_updated_block_height;
+
+            if state_updater.contract_address.is_none()
+                && state_updater.last_updated_block_height > 0
+            {
+                panic!(
+                    "Persisted state is malformed! Run again with --reset_store_state to repair"
+                );
+            }
+
+            if state_updater.contract_address.is_none() {
+                state_updater.contract_address = Some(contract_address);
+            }
+
+            if state_updater.contract_address.unwrap() != contract_address {
+                panic!("The specified persisted state was generated for a different contract.");
+            }
+
+            let provider = Provider::<Http>::try_from(opt.rpc_url())
+                .expect("could not instantiate Ethereum HTTP Provider");
+            let wallet = if opt.mnemonic().is_empty() {
+                LocalWallet::new(&mut rand::thread_rng())
+            } else {
+                MnemonicBuilder::<English>::default()
+                    .phrase(opt.mnemonic())
+                    .build()
+                    .expect("could not open wallet for EQS")
+            };
+            let client = Arc::new(SignerMiddleware::new(provider.clone(), wallet));
+
+            (
+                EthConnection::connect(provider, client, contract_address),
+                last_updated_block_height,
+            )
+        } else {
+            panic!("Invocation Error! Address required unless launched for testing");
+        };
+
         EthPolling {
             query_result_state,
             state_persistence,
-            last_updated_block_height: 0,
-            contract: connection.test_contract(),
-            connection, // replace with EthConnection::connect()
+            last_updated_block_height,
+            connection,
         }
     }
 
@@ -47,6 +101,7 @@ impl EthPolling {
             self.state_persistence.store_latest_state(&*updated_state);
             //select cape events
             let new_event = self
+                .connection
                 .contract
                 .events()
                 .from_block(new_updated_block_height)

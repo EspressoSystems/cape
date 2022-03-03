@@ -1100,7 +1100,6 @@ dependencies = [
  "snafu 0.7.0",
  "strum_macros",
  "tokio",
- "universal-param",
  "zerok-macros",
 ]
 
@@ -1168,7 +1167,6 @@ dependencies = [
  "tracing-futures",
  "tracing-subscriber 0.2.25",
  "tracing-test",
- "universal-param",
 ]
 
 [[package]]
@@ -2026,6 +2024,7 @@ dependencies = [
  "lazy_static",
  "markdown",
  "net",
+ "rand 0.8.5",
  "rand_chacha 0.3.1",
  "reef",
  "seahorse",

@@ -1,6 +1,6 @@
 use crate::api_server::WebState;
+use crate::query_result_state::QueryResultState;
 use crate::route_parsing::*;
-use crate::QueryResultState;
 
 use cap_rust_sandbox::ledger::CapeLedger;
 use cap_rust_sandbox::model::CapeLedgerState;

@@ -15,7 +15,6 @@ jf-rescue = { features=["std"], git = "ssh://git@github.com/EspressoSystems/jell
 jf-utils = { features=["std"], git = "ssh://git@github.com/EspressoSystems/jellyfish.git" }
 key-set = { git = "ssh://git@github.com/EspressoSystems/key-set.git" }
 reef = { git = "ssh://git@github.com/EspressoSystems/reef.git" }
-universal-param = { git = "ssh://git@github.com/EspressoSystems/universal-param.git" }
 zerok-macros = { git = "ssh://git@github.com/EspressoSystems/zerok-macros.git" }
 arbitrary = { version="1.0", features=["derive"] }
 arbitrary-wrappers = { git = "ssh://git@github.com/EspressoSystems/arbitrary-wrappers.git" }

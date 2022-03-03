@@ -63,7 +63,6 @@ You also need access to the following currently private git repos
 - https://github.com/EspressoSystems/net
 - https://github.com/EspressoSystems/reef
 - https://github.com/EspressoSystems/seahorse
-- https://github.com/EspressoSystems/universal-params
 - https://github.com/EspressoSystems/zerok-macros
 
 Ping Mat for access.

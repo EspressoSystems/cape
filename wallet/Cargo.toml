@@ -54,7 +54,6 @@ tracing = "0.1.26"
 tracing-distributed = "0.3.1"
 tracing-futures = "0.2"
 tracing-subscriber = "0.2.19"
-universal-param = { git = "ssh://git@github.com/EspressoSystems/universal-param.git" }
 
 [dev-dependencies]
 tempdir = "0.3.7"

@@ -87,6 +87,12 @@ DOC = """
 Get the addresses for the current wallet.
 """
 
+[route.lastusedkeystore]
+PATH = ["lastusedkeystore"]
+DOC = """
+Get the last used wallet's path.
+"""
+
 [route.getbalance]
 PATH = ["getbalance/all", "getbalance/address/:address", "getbalance/address/:address/asset/:asset"]
 ":address" = "TaggedBase64"

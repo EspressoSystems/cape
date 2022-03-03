@@ -236,6 +236,7 @@ pub enum ApiRouteKey {
     unwrap,
     wrap,
     getrecords,
+    lastusedkeystore,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -770,6 +771,10 @@ pub async fn get_records(wallet: &mut Option<Wallet>) -> Result<Vec<RecordInfo>,
     Ok(wallet.records().await.collect::<Vec<_>>())
 }
 
+pub async fn get_last_keystore() -> Result<String, tide::Error> {
+    Ok("".to_string())
+}
+
 pub async fn dispatch_url(
     req: tide::Request<WebState>,
     route_pattern: &str,
@@ -807,6 +812,7 @@ pub async fn dispatch_url(
         ApiRouteKey::unwrap => response(&req, unwrap(bindings, wallet).await?),
         ApiRouteKey::wrap => response(&req, wrap(bindings, wallet).await?),
         ApiRouteKey::getrecords => response(&req, get_records(wallet).await?),
+        ApiRouteKey::lastusedkeystore => response(&req, get_last_keystore().await?),
     }
 }
 

@@ -14,10 +14,9 @@ use jf_cap::{
     MerklePath, MerkleTree, Signature, TransactionNote,
 };
 use key_set::{OrderByOutputs, ProverKeySet, SizedKey, VerifierKeySet};
-use lazy_static::lazy_static;
 use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
 use reef::{
-    traits::{Block as _, Ledger as _, Transaction as _},
+    traits::{Block as _, Transaction as _},
     Block,
 };
 use seahorse::{
@@ -522,7 +521,7 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> MockCapeBackend<'a, Meta> {
         ledger: Arc<Mutex<MockCapeLedger<'a>>>,
         loader: &mut impl WalletLoader<CapeLedger, Meta = Meta>,
     ) -> Result<Self, WalletError<CapeLedger>> {
-        // Workaround for https://github.com/SpectrumXYZ/atomicstore/issues/2, which affects logs
+        // Workaround for https://github.com/EspressoSystems/atomicstore/issues/2, which affects logs
         // containing more than one entry in a file. We simply set the fill size small enough that
         // there will only ever be one entry per file.
         //
@@ -744,13 +743,6 @@ impl Default for CapeTest {
     }
 }
 
-lazy_static! {
-    static ref CAPE_UNIVERSAL_PARAM: UniversalParam = universal_param::get(
-        &mut ChaChaRng::from_seed([1u8; 32]),
-        CapeLedger::merkle_height()
-    );
-}
-
 #[async_trait]
 impl<'a> SystemUnderTest<'a> for CapeTest {
     type Ledger = CapeLedger;
@@ -791,7 +783,7 @@ impl<'a> SystemUnderTest<'a> for CapeTest {
     }
 
     fn universal_param(&self) -> &'a UniversalParam {
-        &*CAPE_UNIVERSAL_PARAM
+        &*UNIVERSAL_PARAM
     }
 }
 

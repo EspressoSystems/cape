@@ -76,6 +76,14 @@ jobs:
       - name: Generate Docs
         run: nix-shell --run "prepend-timestamps make-doc"
 
+      - name: Deploy Docs
+        uses: peaceiris/actions-gh-pages@v3
+        if: ${{ github.ref == 'refs/heads/main' }}
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./doc/mdbook/book/
+          cname: cape.docs.espressosys.com
+
       - name: Build Wallet
         run: nix-shell --run "cargo build -p cape_wallet --release"
 

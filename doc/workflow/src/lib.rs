@@ -265,7 +265,7 @@ impl CapeContract {
             self.height,
         );
 
-        // We allow empty blocks. See discussion https://github.com/SpectrumXYZ/cape/issues/156
+        // We allow empty blocks. See discussion https://github.com/EspressoSystems/cape/issues/156
         // Summary:
         // * Empty blocks allow to flush the queue of asset records to be inserted into the merkle tree after some call to wrap/faucet
         // * As the block height is our proxy for time it looks desirable to be able to create new blocks even though no new transactions are produced

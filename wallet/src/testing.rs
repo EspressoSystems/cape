@@ -31,7 +31,7 @@ use rand_chacha::ChaChaRng;
 use reef::Ledger;
 use relayer::testing::start_minimal_relayer_for_test;
 use seahorse::testing::await_transaction;
-use seahorse::txn_builder::TransactionStatus;
+use seahorse::txn_builder::{TransactionReceipt, TransactionStatus};
 use surf::Url;
 use tide::log::LevelFilter;
 
@@ -176,24 +176,12 @@ pub async fn wrap_simple_token<'a>(
     wrapper_addr: &UserAddress,
     cape_asset: AssetDefinition,
     erc20_contract: &SimpleToken<EthMiddleware>,
-    contract_address: Address,
     amount: u64,
 ) -> Result<(), CapeWalletError> {
     let wrapper_eth_addr = wrapper.eth_address().await.unwrap();
 
     let total_native_balance = wrapper.balance(wrapper_addr, &AssetCode::native()).await;
     assert!(total_native_balance > 0);
-    // Prepare to wrap: approve the transfer from the wrapper's ETH wallet to the CAPE contract.
-    SimpleToken::new(
-        erc20_contract.address(),
-        wrapper.eth_client().await.unwrap(),
-    )
-    .approve(contract_address, amount.into())
-    .send()
-    .await
-    .unwrap()
-    .await
-    .unwrap();
 
     // Prepare to wrap: deposit some ERC20 tokens into the wrapper's ETH wallet.
     erc20_contract
@@ -273,9 +261,9 @@ pub async fn transfer_token<'a>(
     amount: u64,
     asset_code: AssetCode,
     fee: u64,
-) -> Result<TransactionStatus, CapeWalletError> {
+) -> Result<TransactionReceipt<CapeLedger>, CapeWalletError> {
     let sender_address = sender.pub_keys().await[0].address();
-    let txn = sender
+    sender
         .transfer(
             &sender_address,
             &asset_code,
@@ -283,6 +271,4 @@ pub async fn transfer_token<'a>(
             fee,
         )
         .await
-        .unwrap();
-    sender.await_transaction(&txn).await
 }

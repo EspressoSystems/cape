@@ -1,4 +1,4 @@
-use crate::configuration::{api_path, eqs_port, web_path};
+use crate::configuration::EQSOptions;
 use crate::errors::EQSNetError;
 use crate::query_result_state::QueryResultState;
 use crate::route_parsing::{RouteBinding, UrlSegmentType, UrlSegmentValue};
@@ -193,12 +193,13 @@ async fn entry_page(req: tide::Request<WebState>) -> Result<tide::Response, tide
 /// The wallet uses the PORT env variable, making that unsuitable for the EQS
 
 pub(crate) fn init_web_server(
+    opt: &EQSOptions,
     query_result_state: Arc<RwLock<QueryResultState>>,
 ) -> Result<task::JoinHandle<Result<(), std::io::Error>>, tide::Error> {
-    let api = crate::disco::load_messages(&api_path());
+    let api = crate::disco::load_messages(&opt.api_path());
     let mut web_server = tide::with_state(WebState {
         query_result_state,
-        web_path: web_path(),
+        web_path: opt.web_path(),
         api: api.clone(),
     });
     web_server
@@ -233,7 +234,7 @@ pub(crate) fn init_web_server(
         });
     }
 
-    let port = eqs_port().to_string();
+    let port = opt.eqs_port().to_string();
     let addr = format!("0.0.0.0:{}", port);
     let join_handle = async_std::task::spawn(web_server.listen(addr));
     Ok(join_handle)

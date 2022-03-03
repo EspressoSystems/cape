@@ -311,23 +311,28 @@ async fn main() {
                     recipient_pk,
                 );
                 match transfer_token(sender, recipient_pk.address(), amount, *asset, fee).await {
-                    Ok(status) => {
-                        if !status.succeeded() {
-                            // Transfers are allowed to fail. It can happen, for instance, if we get starved
-                            // out until our transfer becomes too old for the validators. Thus we make this
-                            // a warning, not an error.
-                            event!(Level::WARN, "transfer failed!");
+                    Ok(txn) => match sender.await_transaction(&txn).await {
+                        Ok(status) => {
+                            if !status.succeeded() {
+                                // Transfers are allowed to fail. It can happen, for instance, if we
+                                // get starved out until our transfer becomes too old for the
+                                // validators. Thus we make this a warning, not an error.
+                                event!(Level::WARN, "transfer failed!");
+                            }
+                            update_balances(
+                                &sender_address,
+                                &recipient_pk.address(),
+                                amount,
+                                asset,
+                                &mut balances,
+                            )
                         }
-                        update_balances(
-                            &sender_address,
-                            &recipient_pk.address(),
-                            amount,
-                            asset,
-                            &mut balances,
-                        )
-                    }
+                        Err(err) => {
+                            event!(Level::ERROR, "error while waiting for transaction: {}", err);
+                        }
+                    },
                     Err(err) => {
-                        event!(Level::ERROR, "error while waiting for transaction: {}", err);
+                        event!(Level::ERROR, "error while building transaction: {}", err);
                     }
                 }
             }
@@ -377,7 +382,6 @@ async fn main() {
                     &wrapper_key.address(),
                     asset_def,
                     &erc20_contract,
-                    network.contract_address,
                     100,
                 )
                 .await

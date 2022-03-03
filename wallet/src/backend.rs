@@ -8,7 +8,7 @@ use cap_rust_sandbox::{
     deploy::EthMiddleware,
     ledger::{CapeLedger, CapeNullifierSet, CapeTransition},
     model::{Erc20Code, EthereumAddr},
-    types::CAPE,
+    types::{CAPE, ERC20},
 };
 use ethers::{
     core::k256::ecdsa::SigningKey,
@@ -313,6 +313,20 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
         src_addr: EthereumAddr,
         ro: RecordOpening,
     ) -> Result<(), CapeWalletError> {
+        // Before the contract can transfer from our account, in accordance with the ERC20 protocol,
+        // we have to approve the transfer.
+        ERC20::new(erc20_code.clone(), self.eth_client().unwrap())
+            .approve(self.contract.address(), ro.amount.into())
+            .send()
+            .await
+            .map_err(|err| CapeWalletError::Failed {
+                msg: format!("error building ERC20::approve transaction: {}", err),
+            })?
+            .await
+            .map_err(|err| CapeWalletError::Failed {
+                msg: format!("error submitting ERC20::approve transaction: {}", err),
+            })?;
+
         // Wraps don't go through the relayer, they go directly to the contract.
         self.contract
             .deposit_erc_20(ro.clone().into(), erc20_code.clone().into())
@@ -425,7 +439,7 @@ mod test {
         let receiver_key = receiver.generate_user_key(None).await.unwrap();
 
         // Transfer from sender to receiver.
-        transfer_token(
+        let txn = transfer_token(
             &mut sender,
             receiver_key.address(),
             2,
@@ -434,6 +448,7 @@ mod test {
         )
         .await
         .unwrap();
+        await_transaction(&txn, &sender, &[&receiver]).await;
         assert_eq!(
             sender
                 .balance(&sender_key.address(), &AssetCode::native())
@@ -449,7 +464,7 @@ mod test {
 
         // Transfer back, just to make sure the receiver is actually able to spend the records it
         // received.
-        transfer_token(
+        let txn = transfer_token(
             &mut receiver,
             sender_key.address(),
             1,
@@ -458,6 +473,7 @@ mod test {
         )
         .await
         .unwrap();
+        await_transaction(&txn, &receiver, &[&sender]).await;
         assert_eq!(
             sender
                 .balance(&sender_key.address(), &AssetCode::native())
@@ -565,7 +581,6 @@ mod test {
             &wrapper_key.address(),
             cape_asset.clone(),
             &erc20_contract,
-            contract_address.clone(),
             100,
         )
         .await

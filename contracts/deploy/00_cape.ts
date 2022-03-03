@@ -27,11 +27,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const treeDepth = 24;
   const nRoots = 1000;
 
-  // Faucet manager wallet public key: USERPUBKEY~uc8DIUZc8j7P01_QiXGYjg_KDDIpuJ1y3bfWjQ3ByyggAAAAAAAAAFezuiSZRdTqt2V8lesbMyY6-QUKuLG-QXIAXZnYUoAbyw
+  // Faucet manager wallet public key: USERPUBKEY~RQtOX72Af9P9nxNKyZZXjQEN1j3FC02tyg8cXgHinasgAAAAAAAAAHvbhTwmXsaZJ6pSsjJQeDNpoD1Dp65tt5njNUbJkxNugQ
   // address generation code:
   // ```rust
   // use ark_std::str::FromStr;
-  // let result = "USERPUBKEY~uc8DIUZc8j7P01_QiXGYjg_KDDIpuJ1y3bfWjQ3ByyggAAAAAAAAAFezuiSZRdTqt2V8lesbMyY6-QUKuLG-QXIAXZnYUoAbyw";
+  // let result = "USERPUBKEY~RQtOX72Af9P9nxNKyZZXjQEN1j3FC02tyg8cXgHinasgAAAAAAAAAHvbhTwmXsaZJ6pSsjJQeDNpoD1Dp65tt5njNUbJkxNugQ";
   // let pk = UserPubKey::from_str(&result).unwrap_or_default();
   // ark_std::eprintln!(
   //     "x: {}, y: {}",
@@ -40,8 +40,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   // );
   // ```
   const faucetManager = {
-    x: BigNumber.from("0x28CBC10D8DD6B7DD729DB829320CCA0F8E987189D05FD3CF3EF25C462103CFB9"),
-    y: BigNumber.from("0x0B9F465C2530B75A937FDF0B5AD4EF76D0A939E9B5F5F36C4A9BF6279EBC19F0"),
+    x: BigNumber.from("0x2B9DE2015E1C0FCAAD4D0BC53DD60D018D5796C94A139FFDD37F80BD5F4E0B45"),
+    y: BigNumber.from("0x22E38BAE576E313A11DE2BE09569830F3F7BF414592BA32812D82857947400CC"),
   };
 
   await deploy("CAPE", {

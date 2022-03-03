@@ -1,8 +1,5 @@
 # API and messages
 #
-# Work-in-progress based on
-# https://www.notion.so/translucence/Query-service-v1-API-sketch-203581e934334ff48f639d4fd523668d
-#
 # TOML specification: https://github.com/kezhuw/toml-spec
 
 [meta]
@@ -15,16 +12,16 @@ HTML_TOP = """
 <html lang='en'>
   <head>
     <meta charset='utf-8'>
-    <title>Spectrum CAPE Web Help</title>
+    <title>Espresso Systems CAPE Web Help</title>
     <link rel='stylesheet' href='public/css/style.css'>
     <script src='public/js/script.js'></script>
   </head>
   <body>
     <div><img src='public/media/Horizontal02.png'
-              alt='Spectrum Logo'
+              alt='Espresso Systems Logo'
               height='115'/></div>
-    <h1>Spectrum CAPE Web Interface</h1>
-    <p>The Spectrum CAPE Web Inteface provides a way to create and interact with a local wallet that can be used to build, submit, and track transactions, as well as creating and managing new types of assets.</p>
+    <h1>Espresso Systems CAPE Web Interface</h1>
+    <p>The Espresso Systems CAPE Web Inteface provides a way to create and interact with a local wallet that can be used to build, submit, and track transactions, as well as creating and managing new types of assets.</p>
 """
 
 HTML_BOTTOM = """
@@ -35,24 +32,6 @@ HTML_BOTTOM = """
 HEADING_ROUTES = "Routes"
 HEADING_PARAMETERS = "Parameters"
 HEADING_DESCRIPTION = "Description"
-
-# TODO !corbett How do transaction notifications work in CAPE?
-# TODO !corbett Where do fees fit in? Do we need fees in more places?
-# TODO !corbett Need a better way to send the password than in the URL.
-# TODO !corbett Consider increasing the syntaxtic distance between freeze and unfreeze. Two letters isn't much and easy to mess up with copy/paste or not reading slowly enough.
-# TODO !corbett getinfo isn't the only entry point for getting information. How do we make it consistent?
-# TODO !corbett several entries have 'get' as a prefix. Some don't. It's unclear whether 'get' is useful.
-# TODO !corbett Among the words 'transfer', 'spend', and 'send', we use transfer more often, but send seems more specific and intuitive. Send is also shorter. Is spend better?
-# TODO !corbett Selective reveal interface is needed
-# TODO !corbett TaggedBase64 ends up being a catch-all for structured parameters and parameters that may include spaces. Do we need more specific types?
-# TODO !corbett Document the prefix on all TaggedBase64 values.
-# TODO !corbett The caller never needs to type the parameter names, so should we add underscores for readability?
-# TODO !corbett Document errors.
-# TODO !corbett the toml reader alphabetizes the routes. Not ideal.
-# TODO !corbett the toml reader alphabetizes the parameters. Also not ideal.
-# TODO !corbett How do we lookup existing asset definitions?
-# TODO !corbett How do we generate a one-time receiving address?
-# TODO !corbett Better way to specify optional elements to avoid combinatorial explosion. See newasset for an example.
 
 [route.getmnemonic]
 PATH = ["getmnemonic"]

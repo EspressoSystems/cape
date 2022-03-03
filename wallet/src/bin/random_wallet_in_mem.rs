@@ -1,4 +1,9 @@
 // A wallet that generates random transactions, for testing purposes.
+// This test is for testing a bunch of wallets in the same process doing random transactions.
+// It allows us to mock parts of the backend like the EQS, until it is ready for use.
+//
+// This test is still a work in progrogress.  See: https://github.com/EspressoSystems/cape/issues/649
+// for everything left before it works properly.
 #![deny(warnings)]
 
 use async_std::sync::{Arc, Mutex};
@@ -37,12 +42,6 @@ use tracing::{event, Level};
 
 #[derive(StructOpt)]
 struct Args {
-    /// Path to a private key file to use for the wallet.
-    ///
-    /// If not given, new keys are generated randomly.
-    // #[structopt(short, long)]
-    // key_path: Option<PathBuf>,
-
     /// Seed for random number generation.
     #[structopt(short, long)]
     seed: Option<u64>,
@@ -50,11 +49,8 @@ struct Args {
     /// Path to a saved wallet, or a new directory where this wallet will be saved.
     storage: PathBuf,
 
-    /// Spin up this many wallets to talk to eachother
+    /// Spin up this many wallets to talk to each other
     num_wallets: u64,
-    // TODO: How many transactions to do in Parallel
-    // #[structopt(short, long)]
-    // batch_size: Option<u64>,
 }
 
 struct NetworkInfo<'a> {
@@ -262,7 +258,7 @@ async fn main() {
     let mut public_keys = vec![];
 
     for _i in 0..(args.num_wallets) {
-        // TODO send native asset from sender to all wallets.
+        // TODO: Send all wallets some native asset https://github.com/EspressoSystems/cape/issues/650.
         let (k, mut w) = create_wallet(&mut rng, &universal_param, &network, &args.storage).await;
 
         fund_eth_wallet(&mut w).await;

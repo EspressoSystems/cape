@@ -45,7 +45,7 @@ impl QueryResultState {
             verifier_keys,
             last_updated_block_height: 0,
             contract_address: None,
-          
+
             events: Vec::new(),
             pending_commit_event: Vec::new(),
 

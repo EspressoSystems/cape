@@ -5,11 +5,10 @@ use crate::state_persistence::StatePersistence;
 use async_std::sync::{Arc, RwLock};
 use cap_rust_sandbox::{
     cape::submit_block::fetch_cape_block,
-    deploy::EthMiddleware,
     ethereum::EthConnection,
     ledger::CapeTransition,
     model::{Erc20Code, EthereumAddr},
-    types::{RecordOpening as RecordOpeningSol, TestCAPE, TestCAPEEvents},
+    types::{CAPEEvents, RecordOpening as RecordOpeningSol},
 };
 use ethers::abi::AbiDecode;
 use ethers::prelude::{
@@ -41,47 +40,46 @@ impl EthPolling {
             };
         }
 
-        let (connection, last_updated_block_height) = if let Some(contract_address) =
-            opt.cape_address()
-        {
-            let mut state_updater = query_result_state.write().await;
-            let last_updated_block_height = state_updater.last_updated_block_height;
+        let (connection, last_updated_block_height) =
+            if let Some(contract_address) = opt.cape_address() {
+                let mut state_updater = query_result_state.write().await;
+                let last_updated_block_height = state_updater.last_updated_block_height;
 
-            if state_updater.contract_address.is_none()
-                && state_updater.last_updated_block_height > 0
-            {
-                panic!(
+                if state_updater.contract_address.is_none()
+                    && state_updater.last_updated_block_height > 0
+                {
+                    panic!(
                     "Persisted state is malformed! Run again with --reset_store_state to repair"
                 );
-            }
+                }
 
-            if state_updater.contract_address.is_none() {
-                state_updater.contract_address = Some(contract_address);
-            }
+                if state_updater.contract_address.is_none() {
+                    state_updater.contract_address = Some(contract_address);
+                }
 
-            if state_updater.contract_address.unwrap() != contract_address {
-                panic!("The specified persisted state was generated for a different contract.");
-            }
+                if state_updater.contract_address.unwrap() != contract_address {
+                    panic!("The specified persisted state was generated for a different contract.");
+                }
 
-            let provider = Provider::<Http>::try_from(opt.rpc_url())
-                .expect("could not instantiate Ethereum HTTP Provider");
-            let wallet = if opt.mnemonic().is_empty() {
-                LocalWallet::new(&mut rand::thread_rng())
+                let provider = Provider::<Http>::try_from(opt.rpc_url())
+                    .expect("could not instantiate Ethereum HTTP Provider");
+                let wallet = if opt.mnemonic().is_empty() {
+                    LocalWallet::new(&mut rand::thread_rng())
+                } else {
+                    MnemonicBuilder::<English>::default()
+                        .phrase(opt.mnemonic())
+                        .build()
+                        .expect("could not open wallet for EQS")
+                };
+                let client = Arc::new(SignerMiddleware::new(provider.clone(), wallet));
+
+                (
+                    EthConnection::connect(provider, client, contract_address),
+                    last_updated_block_height,
+                )
             } else {
-                MnemonicBuilder::<English>::default()
-                    .phrase(opt.mnemonic())
-                    .build()
-                    .expect("could not open wallet for EQS")
+                panic!("Invocation Error! Address required unless launched for testing");
             };
-            let client = Arc::new(SignerMiddleware::new(provider.clone(), wallet));
-
-            (
-                EthConnection::connect(provider, client, contract_address),
-                last_updated_block_height,
-            )
-        } else {
-            panic!("Invocation Error! Address required unless launched for testing");
-        };
 
         EthPolling {
             query_result_state,
@@ -113,7 +111,7 @@ impl EthPolling {
                 let (filter, meta) = event.clone();
 
                 match filter {
-                    TestCAPEEvents::BlockCommittedFilter(_) => {
+                    CAPEEvents::BlockCommittedFilter(_) => {
                         let fetched_block_with_memos =
                             fetch_cape_block(&self.connection, meta.transaction_hash)
                                 .await
@@ -241,7 +239,7 @@ impl EthPolling {
                         }
                     }
 
-                    TestCAPEEvents::Erc20TokensDepositedFilter(filter_data) => {
+                    CAPEEvents::Erc20TokensDepositedFilter(filter_data) => {
                         let ro_bytes = filter_data.ro_bytes.clone();
                         let ro_sol: RecordOpeningSol = AbiDecode::decode(ro_bytes).unwrap();
                         let expected_ro = RecordOpening::from(ro_sol);

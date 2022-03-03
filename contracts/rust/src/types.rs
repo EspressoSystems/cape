@@ -22,10 +22,10 @@ use jf_primitives::{
 use std::convert::TryInto;
 
 pub use crate::bindings::{
-    AssetDefinition, AssetPolicy, AssetRegistry, AuditMemo, BurnNote, CapeBlock, Challenges,
-    EdOnBN254Point, EvalData, EvalDomain, FreezeAuxInfo, FreezeNote, G1Point, G2Point, Greeter,
-    MintAuxInfo, MintNote, PcsInfo, PlonkProof, RecordOpening, SimpleToken, TestBN254, TestCAPE,
-    TestCAPEEvents, TestCapeTypes, TestEdOnBN254, TestPlonkVerifier, TestPolynomialEval,
+    AssetDefinition, AssetPolicy, AssetRegistry, AuditMemo, BurnNote, CAPEEvents, CapeBlock,
+    Challenges, EdOnBN254Point, EvalData, EvalDomain, FreezeAuxInfo, FreezeNote, G1Point, G2Point,
+    Greeter, MintAuxInfo, MintNote, PcsInfo, PlonkProof, RecordOpening, SimpleToken, TestBN254,
+    TestCAPE, TestCAPEEvents, TestCapeTypes, TestEdOnBN254, TestPlonkVerifier, TestPolynomialEval,
     TestRecordsMerkleTree, TestRescue, TestRootStore, TestTranscript, TestVerifyingKeys,
     TranscriptData, TransferAuxInfo, TransferNote, VerifyingKey, CAPE, ERC20,
 };

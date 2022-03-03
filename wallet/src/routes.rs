@@ -41,7 +41,6 @@ use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, EnumIter, EnumString};
 use tagged_base64::TaggedBase64;
 use tide::StatusCode;
-use tide_websockets::WebSocketConnection;
 
 #[derive(Debug, Snafu, Serialize, Deserialize)]
 #[snafu(module(error))]
@@ -247,7 +246,6 @@ pub enum PubKey {
 }
 
 /// Verifiy that every variant of enum ApiRouteKey is defined in api.toml
-// TODO !corbett Check all the other things that might fail after startup.
 pub fn check_api(api: toml::Value) -> bool {
     let mut missing_definition = false;
     for key in ApiRouteKey::iter() {
@@ -376,7 +374,6 @@ pub async fn init_wallet(
     records.push(RecordCommitment::from(&faucet_ro).to_field_element());
     let faucet_memo = ReceiverMemo::from_ro(rng, &faucet_ro, &[]).unwrap();
 
-    //TODO replace this mock backend with a connection to a real backend when available.
     let mut ledger = MockLedger::new(MockCapeNetwork::new(
         verif_crs,
         records,
@@ -807,25 +804,5 @@ pub async fn dispatch_url(
         ApiRouteKey::unwrap => response(&req, unwrap(bindings, wallet).await?),
         ApiRouteKey::wrap => response(&req, wrap(bindings, wallet).await?),
         ApiRouteKey::getrecords => response(&req, get_records(wallet).await?),
-    }
-}
-
-pub async fn dispatch_web_socket(
-    _req: tide::Request<WebState>,
-    _conn: WebSocketConnection,
-    route_pattern: &str,
-    _bindings: &HashMap<String, RouteBinding>,
-) -> Result<(), tide::Error> {
-    let first_segment = route_pattern
-        .split_once('/')
-        .unwrap_or((route_pattern, ""))
-        .0;
-    let key = ApiRouteKey::from_str(first_segment).expect("Unknown route");
-    match key {
-        // ApiRouteKey::subscribe => subscribe(req, conn, bindings).await,
-        _ => Err(tide::Error::from_str(
-            StatusCode::InternalServerError,
-            "server called dispatch_web_socket with an unsupported route",
-        )),
     }
 }

@@ -286,9 +286,6 @@ impl MockCapeNetwork {
         for effect in effects {
             if let CapeModelEthEffect::Emit(event) = effect {
                 events.push(event);
-            } else {
-                //TODO Simulate and validate the other ETH effects. If any effects fail, the
-                // whole transaction must be considered reverted with no visible effects.
             }
         }
 
@@ -521,14 +518,7 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> MockCapeBackend<'a, Meta> {
         ledger: Arc<Mutex<MockCapeLedger<'a>>>,
         loader: &mut impl WalletLoader<CapeLedger, Meta = Meta>,
     ) -> Result<Self, WalletError<CapeLedger>> {
-        // Workaround for https://github.com/EspressoSystems/atomicstore/issues/2, which affects logs
-        // containing more than one entry in a file. We simply set the fill size small enough that
-        // there will only ever be one entry per file.
-        //
-        // Note that this issue only effects CAPE (not the Spectrum wallet, which uses the same
-        // storage implementation) because the CAPE wallet state is much smaller than the Spectrum
-        // wallet state due to the CapeLedger types not doing lightweight validation.
-        let storage = AtomicWalletStorage::new(loader, 128)?;
+        let storage = AtomicWalletStorage::new(loader, 1024)?;
         Ok(Self {
             key_stream: storage.key_stream(),
             storage: Arc::new(Mutex::new(storage)),

@@ -279,7 +279,7 @@ pub struct CapeArgs {
 
     /// Path to a saved wallet, or a new directory where this wallet will be saved.
     ///
-    /// If not given, the wallet will be stored in ~/.translucence/wallet. If a wallet already
+    /// If not given, the wallet will be stored in ~/.espresso/cape/wallet. If a wallet already
     /// exists there, it will be loaded. Otherwise, a new wallet will be created.
     #[structopt(short, long)]
     pub storage: Option<PathBuf>,

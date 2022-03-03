@@ -1,5 +1,6 @@
 use cap_rust_sandbox::ledger::{CapeLedger, CommittedCapeTransition};
 use cap_rust_sandbox::model::{CapeLedgerState, CapeRecordMerkleHistory, CAPE_MERKLE_HEIGHT};
+use ethers::prelude::Address;
 use jf_cap::structs::Nullifier;
 use jf_cap::MerkleTree;
 use key_set::VerifierKeySet;
@@ -13,6 +14,8 @@ pub struct QueryResultState {
     pub ledger_state: CapeLedgerState,
     pub nullifiers: HashSet<Nullifier>,
     pub verifier_keys: VerifierKeySet,
+    pub last_updated_block_height: u64,
+    pub contract_address: Option<Address>,
 
     // accumulated list of CAPE events
     pub events: Vec<LedgerEvent<CapeLedger>>,
@@ -36,9 +39,10 @@ impl QueryResultState {
                     Self::RECORD_ROOT_HISTORY_SIZE,
                 )),
             },
-            verifier_keys,
             nullifiers: HashSet::new(),
-
+            verifier_keys,
+            last_updated_block_height: 0,
+            contract_address: None,
             events: Vec::new(),
 
             transaction_by_id: HashMap::new(),

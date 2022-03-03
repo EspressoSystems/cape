@@ -21,6 +21,7 @@ key-set = { git = "ssh://git@github.com/EspressoSystems/key-set.git" }
 lazy_static = "1.4.0"
 markdown = "0.3"
 net = { git = "ssh://git@github.com/EspressoSystems/net.git" }
+rand = "0.8.4"
 rand_chacha = { version = "0.3.1", features = ["serde1"] }
 reef = { git = "ssh://git@github.com/EspressoSystems/reef.git" }
 seahorse = { git = "ssh://git@github.com/EspressoSystems/seahorse.git", rev = "48aaed68d922b23e4a3d9f4e9dcc6d50185c3619", features = ["testing"] }

@@ -281,9 +281,9 @@ pub struct CapeContractState {
 pub fn erc20_asset_description(erc20_code: &Erc20Code, sponsor: &EthereumAddr) -> Vec<u8> {
     [
         "TRICAPE ERC20".as_bytes(),
-        &(erc20_code.0).0.to_vec(),
+        (erc20_code.0).0.as_ref(),
         "sponsored by".as_bytes(),
-        &sponsor.0.to_vec(),
+        sponsor.0.as_ref(),
     ]
     .concat()
 }

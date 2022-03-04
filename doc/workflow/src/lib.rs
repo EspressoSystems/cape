@@ -437,9 +437,6 @@ mod test {
 
         // 2. user: invoke ERC20's approve (on-L1-chain)
         //
-        // NOTE: it's probably a good idea to add u64 overflow check at UI level so that
-        // users won't deposit more than u64::MAX, since our CAPE code base are dealing with amount
-        // in `u64` whereas Solidity is dealing with `U256`.
         let deposit_amount = U256::from(1000);
         usdc_contract.approve(cape_contract.address(), deposit_amount);
 

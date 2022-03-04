@@ -123,21 +123,21 @@ async fn cli_sponsor<'a>(
     wallet: &mut CapeWallet<'_>,
     erc20_code: Erc20Code,
     sponsor_addr: EthereumAddr,
-    auditor: Option<AuditorPubKey>,
+    viewer: Option<AuditorPubKey>,
     freezer: Option<FreezerPubKey>,
-    trace_amount: Option<bool>,
-    trace_address: Option<bool>,
-    trace_blind: Option<bool>,
-    reveal_threshold: Option<u64>,
+    view_amount: Option<bool>,
+    view_address: Option<bool>,
+    view_blind: Option<bool>,
+    viewing_threshold: Option<u64>,
 ) {
     let mut policy = AssetPolicy::default();
-    if let Some(auditor) = auditor {
-        policy = policy.set_auditor_pub_key(auditor);
+    if let Some(viewer) = viewer {
+        policy = policy.set_auditor_pub_key(viewer);
     }
     if let Some(freezer) = freezer {
         policy = policy.set_freezer_pub_key(freezer);
     }
-    if Some(true) == trace_amount {
+    if Some(true) == view_amount {
         policy = match policy.reveal_amount() {
             Ok(policy) => policy,
             Err(err) => {
@@ -146,7 +146,7 @@ async fn cli_sponsor<'a>(
             }
         }
     }
-    if Some(true) == trace_address {
+    if Some(true) == view_address {
         policy = match policy.reveal_user_address() {
             Ok(policy) => policy,
             Err(err) => {
@@ -155,7 +155,7 @@ async fn cli_sponsor<'a>(
             }
         }
     }
-    if Some(true) == trace_blind {
+    if Some(true) == view_blind {
         policy = match policy.reveal_blinding_factor() {
             Ok(policy) => policy,
             Err(err) => {
@@ -164,8 +164,8 @@ async fn cli_sponsor<'a>(
             }
         }
     }
-    if let Some(reveal_threshold) = reveal_threshold {
-        policy = policy.set_reveal_threshold(reveal_threshold);
+    if let Some(viewing_threshold) = viewing_threshold {
+        policy = policy.set_reveal_threshold(viewing_threshold);
     }
     match wallet.sponsor(erc20_code, sponsor_addr, policy).await {
         Ok(def) => {
@@ -228,13 +228,13 @@ fn cape_specific_cli_commands<'a>() -> Vec<Command<'a, CapeCli>> {
              wallet,
              erc20_code: Erc20Code,
              sponsor_addr: EthereumAddr;
-             auditor: Option<AuditorPubKey>,
+             viewer: Option<AuditorPubKey>,
              freezer: Option<FreezerPubKey>,
-             trace_amount: Option<bool>,
-             trace_address: Option<bool>,
-             trace_blind: Option<bool>,
-             reveal_threshold: Option<u64>| {
-                cli_sponsor(io, wallet, erc20_code, sponsor_addr, auditor, freezer, trace_amount, trace_address, trace_blind, reveal_threshold).await;
+             view_amount: Option<bool>,
+             view_address: Option<bool>,
+             view_blind: Option<bool>,
+             viewing_threshold: Option<u64>| {
+                cli_sponsor(io, wallet, erc20_code, sponsor_addr, viewer, freezer, view_amount, view_address, view_blind, viewing_threshold).await;
             }
         ),
         command!(
@@ -386,13 +386,13 @@ mod tests {
                      wallet,
                      erc20_code: Erc20Code,
                      sponsor_addr: EthereumAddr;
-                     auditor: Option<AuditorPubKey>,
+                     viewer: Option<AuditorPubKey>,
                      freezer: Option<FreezerPubKey>,
-                     trace_amount: Option<bool>,
-                     trace_address: Option<bool>,
-                     trace_blind: Option<bool>,
-                     reveal_threshold: Option<u64>| {
-                        cli_sponsor(io, wallet, erc20_code, sponsor_addr, auditor, freezer, trace_amount, trace_address, trace_blind, reveal_threshold).await;
+                     view_amount: Option<bool>,
+                     view_address: Option<bool>,
+                     view_blind: Option<bool>,
+                     viewing_threshold: Option<u64>| {
+                        cli_sponsor(io, wallet, erc20_code, sponsor_addr, viewer, freezer, view_amount, view_address, view_blind, viewing_threshold).await;
                     }
                 ),
                 command!(
@@ -544,13 +544,13 @@ mod tests {
         let erc20_code = Erc20Code(EthereumAddr([1u8; 20]));
 
         t
-            // Generate freezer and auditor keys.
-            .command(0, "gen_key freeze")?
+            // Generate freezing and viewing keys.
+            .command(0, "gen_key freezing")?
             .output("(?P<freezer>FREEZEPUBKEY~.*)")?
-            .command(0, "gen_key audit")?
-            .output("(?P<auditor>AUDPUBKEY~.*)")?
+            .command(0, "gen_key viewing")?
+            .output("(?P<viewer>AUDPUBKEY~.*)")?
             // Sponsor an asset with all policy attributes specified.
-            .command(0, format!("sponsor {} {} auditor=$auditor freezer=$freezer trace_amount=true trace_address=true trace_blind=true reveal_threshold=10", erc20_code, sponsor_addr))?
+            .command(0, format!("sponsor {} {} viewer=$viewer freezer=$freezer view_amount=true view_address=true view_blind=true viewing_threshold=10", erc20_code, sponsor_addr))?
             .output(format!("(?P<asset_def>ASSET_DEF~.*)"))?;
 
         Ok(())
@@ -567,18 +567,18 @@ mod tests {
             // Sponsor an asset with the default policy.
             .command(0, format!("sponsor {} {}", erc20_code, sponsor_addr))?
             .output(format!("(?P<asset_default>ASSET_DEF~.*)"))?
-            // Sponsor a non-auditable asset with a freezer key.
-            .command(0, "gen_key freeze")?
+            // Sponsor an unviewable asset with a freezer key.
+            .command(0, "gen_key freezing")?
             .output("(?P<freezer>FREEZEPUBKEY~.*)")?
             .command(0, format!("sponsor {} {} freezer=$freezer", erc20_code, sponsor_addr))?
-            .output(format!("(?P<asset_non_auditable>ASSET_DEF~.*)"))?
-            // Sponsor an auditable asset without a freezer key.
-            .command(0, "gen_key audit")?
-            .output("(?P<auditor>AUDPUBKEY~.*)")?
-            .command(0, format!("sponsor {} {} auditor=$auditor trace_amount=true trace_address=true trace_blind=true reveal_threshold=10", erc20_code, sponsor_addr))?
-            .output(format!("(?P<asset_auditable>ASSET_DEF~.*)"))?
-            // Should fail to sponsor an auditable asset without a given auditor key.
-            .command(0, format!("sponsor {} {} trace_amount=true trace_address=true trace_blind=true reveal_threshold=10", erc20_code, sponsor_addr))?
+            .output(format!("(?P<asset_unviewable>ASSET_DEF~.*)"))?
+            // Sponsor a viewable asset without a freezer key.
+            .command(0, "gen_key viewing")?
+            .output("(?P<viewer>AUDPUBKEY~.*)")?
+            .command(0, format!("sponsor {} {} viewer=$viewer view_amount=true view_address=true view_blind=true viewing_threshold=10", erc20_code, sponsor_addr))?
+            .output(format!("(?P<asset_viewable>ASSET_DEF~.*)"))?
+            // Should fail to sponsor an viewable asset without a given viewing key.
+            .command(0, format!("sponsor {} {} view_amount=true view_address=true view_blind=true viewing_threshold=10", erc20_code, sponsor_addr))?
             .output(format!("Invalid policy: Invalid parameters: Cannot reveal amount to dummy AuditorPublicKey"))?;
 
         Ok(())
@@ -681,14 +681,14 @@ mod tests {
         let (mut receiver_input, mut receiver_output) =
             create_cape_wallet(ledger.clone(), key_streams[2].clone());
 
-        // Get the freezer and auditor keys for the sponsor, and the receiver's addresses.
-        writeln!(sponsor_input, "gen_key freeze").unwrap();
-        let freezer_key =
-            match_output(&mut sponsor_output, &["(?P<freezekey>FREEZEPUBKEY~.*)"]).get("freezekey");
-        writeln!(sponsor_input, "gen_key audit").unwrap();
-        let auditor_key =
-            match_output(&mut sponsor_output, &["(?P<audkey>AUDPUBKEY~.*)"]).get("audkey");
-        writeln!(receiver_input, "gen_key spend scan_from=start wait=true").unwrap();
+        // Get the freezing and viewing keys for the sponsor, and the receiver's addresses.
+        writeln!(sponsor_input, "gen_key freezing").unwrap();
+        let freezing_key =
+            match_output(&mut sponsor_output, &["(?P<freezing>FREEZEPUBKEY~.*)"]).get("freezing");
+        writeln!(sponsor_input, "gen_key viewing").unwrap();
+        let viewing_key =
+            match_output(&mut sponsor_output, &["(?P<viewing>AUDPUBKEY~.*)"]).get("viewing");
+        writeln!(receiver_input, "gen_key spending scan_from=start wait=true").unwrap();
         let receiver_addr = match_output(&mut receiver_output, &["(?P<addr>ADDR~.*)"]).get("addr");
         writeln!(receiver_input, "balance 0").unwrap();
         match_output(&mut receiver_output, &[format!("{} 1000", receiver_addr)]);
@@ -696,7 +696,7 @@ mod tests {
         // Sponsor and wrap an asset.
         let erc20_code = Erc20Code(EthereumAddr([1u8; 20]));
         let sponsor_eth_addr = EthereumAddr([2u8; 20]);
-        writeln!(sponsor_input, "sponsor {} {} freezer={} auditor={} trace_amount=true trace_address=true trace_blind=true reveal_threshold=10", erc20_code, sponsor_eth_addr, freezer_key, auditor_key).unwrap();
+        writeln!(sponsor_input, "sponsor {} {} freezer={} viewer={} view_amount=true view_address=true view_blind=true viewing_threshold=10", erc20_code, sponsor_eth_addr, freezing_key, viewing_key).unwrap();
         let asset_def =
             match_output(&mut sponsor_output, &["(?P<asset_def>ASSET_DEF~.*)"]).get("asset_def");
         let wrapper_eth_addr = EthereumAddr([3u8; 20]);

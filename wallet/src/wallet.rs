@@ -1,3 +1,5 @@
+//! Instantiation of [seahorse::Wallet] for CAPE.
+
 use async_std::sync::Arc;
 use async_trait::async_trait;
 use cap_rust_sandbox::{deploy::EthMiddleware, ledger::*, model::*};

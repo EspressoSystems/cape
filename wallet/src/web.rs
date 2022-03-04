@@ -1,4 +1,10 @@
-// Copyright © 2021 Translucence Research, Inc. All rights reserved.
+// Copyright © 2021 Espresso Systems, Inc. All rights reserved.
+
+//! # Wallet server library
+//! 
+//! This module provides functions and types needed to run the wallet web server. It includes
+//! configuration options, request parsing, and the main web server entrypoint. The implementation
+//! of the actual routes is defined in [crate::routes].
 
 use crate::routes::{
     dispatch_url, CapeAPIError, RouteBinding, UrlSegmentType, UrlSegmentValue, Wallet,
@@ -21,6 +27,7 @@ pub const DEFAULT_WRAPPED_AMT: u64 = 1000;
 pub const DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR: u64 = 500;
 pub const DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR: u64 = 400;
 
+/// Server configuration with command line parsing support.
 #[derive(Debug, StructOpt)]
 #[structopt(
     name = "Wallet Web API",
@@ -69,6 +76,7 @@ pub fn default_api_path() -> PathBuf {
     [&dir, Path::new(API_FILE)].iter().collect()
 }
 
+/// State maintained by the server, used to handle requests.
 #[derive(Clone)]
 pub struct WebState {
     pub(crate) api: toml::Value,
@@ -207,6 +215,12 @@ async fn entry_page(req: tide::Request<WebState>) -> Result<tide::Response, tide
     }
 }
 
+/// Testing route handler which populates a wallet with dummy data.
+/// 
+/// This route will modify the wallet by generating 2 of each kind of key (viewing, freezing, and
+/// sending), adding the faucet key to the wallet so that the wallet owns a large amount of CAPE fee
+/// tokens, transfer some of the fee tokens to another one of its addresses, and sponsor and wrap an
+/// ERC-20 asset for that same address.
 #[cfg(any(test, feature = "testing"))]
 async fn populatefortest(req: tide::Request<WebState>) -> Result<tide::Response, tide::Error> {
     use crate::{
@@ -269,6 +283,14 @@ async fn populatefortest(req: tide::Request<WebState>) -> Result<tide::Response,
     server::response(&req, ())
 }
 
+/// Start the CAPE wallet server.
+/// 
+/// The server runs on `localhost` at the specified port. A new task is spawned to run the server,
+/// and a handle to the task is returned. Waiting on the handle will join the task; dropping the
+/// handle will detach the task.
+/// 
+/// Note that there is currently no way to stop the server task once started, other than killing the
+/// entire process. This is a limitation of the Tide server framework.
 pub fn init_server(
     mut rng: ChaChaRng,
     api_path: PathBuf,

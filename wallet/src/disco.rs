@@ -1,4 +1,5 @@
 // Copyright © 2021 Translucence Research, Inc. All rights reserved.
+//! Configurable API loading.
 
 use crate::{routes::check_api, web::WebState};
 use std::fs::read_to_string;

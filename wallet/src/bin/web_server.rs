@@ -1,4 +1,38 @@
-// Copyright © 2021 Translucence Research, Inc. All rights reserved.
+// Copyright © 2021 Espresso Systems, Inc. All rights reserved.
+
+//! # The CAPE Wallet Server
+//!
+//! One of two main entrypoints to the wallet (the other being the CLI) this executable provides a
+//! web server which exposes wallet functionality via an HTTP interface. It is primarily intended
+//! to be run in a Docker container and used as the backend for the CAPE wallet GUI.
+//! 
+//! ## Usage
+//! 
+//! ### Running in Docker
+//! ```
+//! docker run -it -p 60000:60000  ghcr.io/espressosystems/cape/wallet:main
+//! ```
+//!
+//! The `-p 60000:60000` option binds the port 60000 in the Docker container (where the web server
+//! is hosted) to the port 60000 on the host. You can change which port on `localhost` hosts the
+//! server by changing the first number, e.g. `-p 42000:60000`.
+//! 
+//! ### Building and running locally
+//! ```
+//! cargo run --release -p cape_wallet --bin web_server -- [options]
+//! ```
+//! 
+//! You can use `--help` to see a list of the possible values for `[options]`.
+//! 
+//! Once started, the web server will serve an HTTP API at `localhost:60000`. You can override the
+//! default port by setting the `PORT` environment variable. The endpoints are documented in
+//! `api/api.toml`.
+//! 
+//! ## Development
+//! 
+//! This executable file only defines the main function to process command line arguments and start
+//! the web server. Most of the functionality, such as API interpretation, request parsing, and
+//! route handling, is defined in the [cape_wallet] crate.
 
 use cape_wallet::web::{default_api_path, default_web_path, init_server, NodeOpt};
 use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
@@ -36,7 +70,8 @@ async fn main() -> Result<(), std::io::Error> {
     };
     println!("Web path: {:?}", web_path);
 
-    // TODO Use something different than the default Spectrum port (60000 vs 50000).
+    // We use 60000 by default, chosen because it differs from the default ports for the EQS and the
+    // Espresso query service.
     let port = std::env::var("PORT").unwrap_or_else(|_| String::from("60000"));
     init_server(
         ChaChaRng::from_entropy(),

@@ -1,3 +1,6 @@
+//! Testing utility for the CLI.
+//!
+//! DEPRECATED: DO NOT USE THIS IN NEW CODE.
 #![allow(dead_code)]
 
 use escargot::CargoBuild;

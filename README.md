@@ -1,6 +1,8 @@
 # CAP on Ethereum
 
-**WARNING:** This software is provided "as is" and its security has not been audited externally. Use at your own risk.
+**DISCLAIMER:** This software is provided "as is" and still needs to go through an exhaustive security analysis. Use at your own risk.
+
+---
 
 <!-- run `md-toc` inside the nix-shell to generate the table of contents -->
 

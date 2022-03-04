@@ -10,6 +10,7 @@ async-std = { version = "1.10.0", features = ["unstable", "attributes", "tokio1"
 atomic_store = { version="0.0.2", registry="translucence" }
 bincode = "1.3.3"
 cap-rust-sandbox = { path = "../contracts/rust" }
+commit = { git = "ssh://git@github.com/EspressoSystems/commit.git", rev = "f48cd52c59755eade0605111826eef3df6abdcf8" }
 dirs = "4.0"
 # may switch to `ethers = "0.6.2"` in the future; keeping this for compatibility for now
 ethers = { git = "https://github.com/gakonst/ethers-rs", branch = "master" }

@@ -1,5 +1,6 @@
 use cap_rust_sandbox::ledger::{CapeLedger, CapeTransition, CommittedCapeTransition};
 use cap_rust_sandbox::model::{CapeLedgerState, CapeRecordMerkleHistory, CAPE_MERKLE_HEIGHT};
+use commit::Commitment;
 use ethers::prelude::Address;
 use jf_cap::structs::Nullifier;
 use jf_cap::MerkleTree;
@@ -20,11 +21,9 @@ pub struct QueryResultState {
     // accumulated list of CAPE events
     pub events: Vec<LedgerEvent<CapeLedger>>,
 
-    pub pending_commit_event: Vec<CapeTransition>,
-
     // additional indexed data for queries
     pub transaction_by_id: HashMap<(u64, u64), CommittedCapeTransition>,
-    pub transaction_by_hash: HashMap<(u64, u64), CommittedCapeTransition>,
+    pub transaction_id_by_hash: HashMap<Commitment<CapeTransition>, (u64, u64)>,
 }
 
 impl QueryResultState {
@@ -47,10 +46,9 @@ impl QueryResultState {
             contract_address: None,
 
             events: Vec::new(),
-            pending_commit_event: Vec::new(),
 
             transaction_by_id: HashMap::new(),
-            transaction_by_hash: HashMap::new(),
+            transaction_id_by_hash: HashMap::new(),
         }
     }
 }

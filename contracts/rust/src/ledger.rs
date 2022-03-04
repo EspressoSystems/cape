@@ -5,7 +5,7 @@ use commit::{Commitment, Committable, RawCommitmentBuilder};
 use jf_cap::{
     keys::{AuditorKeyPair, AuditorPubKey},
     structs::{AssetCode, AssetDefinition, Nullifier, RecordCommitment, RecordOpening},
-    Signature, TransactionNote,
+    TransactionNote,
 };
 use reef::{cap, traits::*, AuditError, AuditMemoOpening};
 use serde::{Deserialize, Serialize};
@@ -175,8 +175,6 @@ impl Transaction for CapeTransition {
 pub struct CommittedCapeTransition {
     pub block_id: u64,
     pub txn_id: u64,
-    pub txn_kind: CapeTransactionKind,
-    pub signing_key: Signature,
     pub outputs: Vec<u64>,
     pub transition: CapeTransition,
 }

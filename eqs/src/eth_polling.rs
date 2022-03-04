@@ -10,6 +10,7 @@ use cap_rust_sandbox::{
     model::{Erc20Code, EthereumAddr},
     types::{CAPEEvents, RecordOpening as RecordOpeningSol},
 };
+use core::mem;
 use ethers::abi::AbiDecode;
 use ethers::prelude::{
     coins_bip39::English, Http, LocalWallet, MnemonicBuilder, Provider, SignerMiddleware,
@@ -22,6 +23,8 @@ pub(crate) struct EthPolling {
     pub query_result_state: Arc<RwLock<QueryResultState>>,
     pub state_persistence: StatePersistence,
     pub last_updated_block_height: u64,
+    pub pending_commit_event: Vec<CapeTransition>,
+
     pub connection: EthConnection,
 }
 
@@ -36,55 +39,58 @@ impl EthPolling {
                 query_result_state,
                 state_persistence,
                 last_updated_block_height: 0u64,
+                pending_commit_event: Vec::new(),
                 connection: EthConnection::for_test().await,
             };
         }
 
-        let (connection, last_updated_block_height) =
-            if let Some(contract_address) = opt.cape_address() {
-                let mut state_updater = query_result_state.write().await;
-                let last_updated_block_height = state_updater.last_updated_block_height;
+        let (connection, last_updated_block_height) = if let Some(contract_address) =
+            opt.cape_address()
+        {
+            let mut state_updater = query_result_state.write().await;
+            let last_updated_block_height = state_updater.last_updated_block_height;
 
-                if state_updater.contract_address.is_none()
-                    && state_updater.last_updated_block_height > 0
-                {
-                    panic!(
+            if state_updater.contract_address.is_none()
+                && state_updater.last_updated_block_height > 0
+            {
+                panic!(
                     "Persisted state is malformed! Run again with --reset_store_state to repair"
                 );
-                }
+            }
 
-                if state_updater.contract_address.is_none() {
-                    state_updater.contract_address = Some(contract_address);
-                }
-
-                if state_updater.contract_address.unwrap() != contract_address {
+            if let Some(persisted_contract_address) = state_updater.contract_address {
+                if persisted_contract_address != contract_address {
                     panic!("The specified persisted state was generated for a different contract.");
                 }
-
-                let provider = Provider::<Http>::try_from(opt.rpc_url())
-                    .expect("could not instantiate Ethereum HTTP Provider");
-                let wallet = if opt.mnemonic().is_empty() {
-                    LocalWallet::new(&mut rand::thread_rng())
-                } else {
-                    MnemonicBuilder::<English>::default()
-                        .phrase(opt.mnemonic())
-                        .build()
-                        .expect("could not open wallet for EQS")
-                };
-                let client = Arc::new(SignerMiddleware::new(provider.clone(), wallet));
-
-                (
-                    EthConnection::connect(provider, client, contract_address),
-                    last_updated_block_height,
-                )
             } else {
-                panic!("Invocation Error! Address required unless launched for testing");
+                state_updater.contract_address = Some(contract_address);
+            }
+
+            let provider = Provider::<Http>::try_from(opt.rpc_url())
+                .expect("could not instantiate Ethereum HTTP Provider");
+            let wallet = if opt.mnemonic().is_empty() {
+                LocalWallet::new(&mut rand::thread_rng())
+            } else {
+                MnemonicBuilder::<English>::default()
+                    .phrase(opt.mnemonic())
+                    .build()
+                    .expect("could not open wallet for EQS")
             };
+            let client = Arc::new(SignerMiddleware::new(provider.clone(), wallet));
+
+            (
+                EthConnection::connect(provider, client, contract_address),
+                last_updated_block_height,
+            )
+        } else {
+            panic!("Invocation Error! Address required unless launched for testing");
+        };
 
         EthPolling {
             query_result_state,
             state_persistence,
             last_updated_block_height,
+            pending_commit_event: Vec::new(),
             connection,
         }
     }
@@ -127,15 +133,11 @@ impl EthPolling {
 
                         //add transactions to QueryResultState pending commit
                         for tx in model_txns.clone() {
-                            self.query_result_state
-                                .write()
-                                .await
-                                .pending_commit_event
+                            self.pending_commit_event
                                 .push(CapeTransition::Transaction(tx.clone()));
                         }
 
                         let transitions = model_txns
-                            .clone()
                             .clone()
                             .into_iter()
                             .map(CapeTransition::Transaction)
@@ -143,19 +145,10 @@ impl EthPolling {
 
                         //push to state's pending commit event
                         for trn in transitions {
-                            self.query_result_state
-                                .write()
-                                .await
-                                .pending_commit_event
-                                .push(trn);
+                            self.pending_commit_event.push(trn);
                         }
 
-                        let pending_commit = self
-                            .query_result_state
-                            .read()
-                            .await
-                            .pending_commit_event
-                            .clone();
+                        let pending_commit = mem::take(&mut self.pending_commit_event);
 
                         //create/push pending commit to QueryResultState events
                         self.query_result_state
@@ -253,11 +246,7 @@ impl EthPolling {
                             erc20_code,
                             src_addr: EthereumAddr(filter_data.from.to_fixed_bytes()),
                         };
-                        self.query_result_state
-                            .write()
-                            .await
-                            .pending_commit_event
-                            .push(new_transition_wrap);
+                        self.pending_commit_event.push(new_transition_wrap);
                     }
                 }
             }

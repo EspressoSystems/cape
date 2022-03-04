@@ -2016,6 +2016,7 @@ dependencies = [
  "atomic_store 0.0.2 (registry+https://dl.cloudsmith.io/basic/translucence/tl/cargo/index.git)",
  "bincode",
  "cap-rust-sandbox",
+ "commit",
  "dirs",
  "ethers 0.6.0 (git+https://github.com/gakonst/ethers-rs?branch=master)",
  "jf-cap",

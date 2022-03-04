@@ -1,4 +1,5 @@
 // Copyright © 2021 Translucence Research, Inc. All rights reserved.
+//! Web server endpoint handlers.
 
 use crate::{
     mocks::{MockCapeBackend, MockCapeNetwork},

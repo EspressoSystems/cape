@@ -1,9 +1,26 @@
-////////////////////////////////////////////////////////////////////////////////
-// The CAPE Wallet Frontend
-//
-// For now, this "frontend" is simply a command-line read-eval-print loop which
-// allows the user to enter commands for a wallet interactively.
-//
+// Copyright © 2021 Espresso Systems, Inc. All rights reserved.
+
+//! # The CAPE Wallet CLI
+//!
+//! One of two main entrypoints to the wallet (the other being the web server) this executable
+//! provides a command-line read-eval-print loop which allows the user to enter commands for a wallet
+//! interactively.
+//!
+//! It instantiates the generic [seahorse::cli] in order to provide most of the functionality. It
+//! then extends the generic CLI with additional CAPE-specific commands.
+//!
+//! ## Usage
+//! ```
+//! cargo run --release -p cape_wallet --bin cli -- [options]
+//! ```
+//!
+//! You can use `--help` to see a list of the possible values for `[options]`. A particularly useful
+//! option is `--storage PATH`, which sets the location the wallet will use to store keystore files.
+//! This allows you to have multiple wallets in different directories.
+//!
+//! When you run the CLI, you will be prompted to create or open a wallet. Once you have an open
+//! wallet, you will get the REPL prompt, `>`. Now you can type `help` to view a list of commands
+//! you can execute.
 
 extern crate cape_wallet;
 use async_std::sync::Mutex;

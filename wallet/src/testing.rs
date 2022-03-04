@@ -1,5 +1,5 @@
-// Utilities for writing wallet tests
-// #![deny(warnings)]
+//! Utilities for writing wallet tests
+#![deny(warnings)]
 
 use crate::backend::CapeBackend;
 use crate::mocks::*;

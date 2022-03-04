@@ -1,3 +1,5 @@
+//! Test-only implementation of the [reef] ledger abstraction for CAPE.
+
 use crate::wallet::{CapeWalletBackend, CapeWalletError};
 use async_std::sync::{Mutex, MutexGuard};
 use async_trait::async_trait;

@@ -81,25 +81,25 @@ Get all records related to the current wallet.
 """
 
 [route.getinfo]
-PATH = ["getinfo", "getinfo/address", "getinfo/key", "getinfo/asset", "getinfo/asset/:asset", "getinfo/freezekey", "getinfo/sendkey", "getinfo/tracekey"]
+PATH = ["getinfo", "getinfo/address", "getinfo/key", "getinfo/asset", "getinfo/asset/:asset", "getinfo/freezing_key", "getinfo/sending_key", "getinfo/viewing_key"]
 DOC = """
 Get the addresses, public keys, and asset types for the current wallet.
 """
 
 [route.newkey]
-PATH = ["newkey/send", "newkey/trace", "newkey/freeze"]
+PATH = ["newkey/sending", "newkey/viewing", "newkey/freezing"]
 DOC = """
 Generate and return a key of the given type.
 """
 
 [route.importkey]
-PATH = ["importkey/freeze/:freeze", "importkey/send/:send", "importkey/send/:send/:index", "importkey/trace/:trace" ]
-":freeze" = "TaggedBase64"
-":send" = "TaggedBase64"
+PATH = ["importkey/freezing/:freezing", "importkey/sending/:sending", "importkey/sending/:sending/:index", "importkey/viewing/:viewing" ]
+":freezing" = "TaggedBase64"
+":sending" = "TaggedBase64"
 ":index" = "Integer"
-":trace" = "TaggedBase64"
+":viewing" = "TaggedBase64"
 DOC = """
-Import the given key into the current wallet. For transfer (send) keys, the optional scan index give a block index at which to begin scanning. If omitted, the entire ledger is scanned for transactions using the key.
+Import the given key into the current wallet. For sending keys, the optional scan index give a block index at which to begin scanning. If omitted, the entire ledger is scanned for transactions using the key.
 """
 
 [route.send]
@@ -137,76 +137,76 @@ Unwrap amount units of the given asset from the source to the Ethereum address. 
 [route.newasset]
 PATH = [
   # `symbol` may be added as a parameter in the future but it's not used for now.
-  # Only if `tracekey` is given, can `traceamount`, `traceaddress` and `revealthreshold` be specified.
+  # Only if `viewing_key` is given, can `view_amount`, `view_address` and `viewing_threshold` be specified.
 
   # Paths for asset sponsor.
-  "newasset/erc20/:erc20/sponsor/:sponsor/freezekey/:freeze_key/tracekey/:trace_key/traceamount/:trace_amount/traceaddress/:trace_address/revealthreshold/:reveal_threshold",
-  "newasset/erc20/:erc20/sponsor/:sponsor/freezekey/:freeze_key/tracekey/:trace_key/traceamount/:trace_amount/traceaddress/:trace_address",
-  "newasset/erc20/:erc20/sponsor/:sponsor/freezekey/:freeze_key/tracekey/:trace_key/traceamount/:trace_amount/revealthreshold/:reveal_threshold",
-  "newasset/erc20/:erc20/sponsor/:sponsor/freezekey/:freeze_key/tracekey/:trace_key/traceamount/:trace_amount",
-  "newasset/erc20/:erc20/sponsor/:sponsor/freezekey/:freeze_key/tracekey/:trace_key/traceaddress/:trace_address/revealthreshold/:reveal_threshold",
-  "newasset/erc20/:erc20/sponsor/:sponsor/freezekey/:freeze_key/tracekey/:trace_key/traceaddress/:trace_address",
-  "newasset/erc20/:erc20/sponsor/:sponsor/freezekey/:freeze_key/tracekey/:trace_key/revealthreshold/:reveal_threshold",
-  "newasset/erc20/:erc20/sponsor/:sponsor/freezekey/:freeze_key/tracekey/:trace_key",
-  "newasset/erc20/:erc20/sponsor/:sponsor/freezekey/:freeze_key",
-  "newasset/erc20/:erc20/sponsor/:sponsor/tracekey/:trace_key/traceamount/:trace_amount/traceaddress/:trace_address/revealthreshold/:reveal_threshold",
-  "newasset/erc20/:erc20/sponsor/:sponsor/tracekey/:trace_key/traceamount/:trace_amount/traceaddress/:trace_address",
-  "newasset/erc20/:erc20/sponsor/:sponsor/tracekey/:trace_key/traceamount/:trace_amount/revealthreshold/:reveal_threshold",
-  "newasset/erc20/:erc20/sponsor/:sponsor/tracekey/:trace_key/traceamount/:trace_amount",
-  "newasset/erc20/:erc20/sponsor/:sponsor/tracekey/:trace_key/traceaddress/:trace_address/revealthreshold/:reveal_threshold",
-  "newasset/erc20/:erc20/sponsor/:sponsor/tracekey/:trace_key/traceaddress/:trace_address",
-  "newasset/erc20/:erc20/sponsor/:sponsor/tracekey/:trace_key/revealthreshold/:reveal_threshold",
-  "newasset/erc20/:erc20/sponsor/:sponsor/tracekey/:trace_key",
+  "newasset/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address/viewing_threshold/:viewing_threshold",
+  "newasset/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address",
+  "newasset/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/viewing_threshold/:viewing_threshold",
+  "newasset/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount",
+  "newasset/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_address/:view_address/viewing_threshold/:viewing_threshold",
+  "newasset/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_address/:view_address",
+  "newasset/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/viewing_threshold/:viewing_threshold",
+  "newasset/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key",
+  "newasset/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key",
+  "newasset/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address/viewing_threshold/:viewing_threshold",
+  "newasset/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address",
+  "newasset/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_amount/:view_amount/viewing_threshold/:viewing_threshold",
+  "newasset/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_amount/:view_amount",
+  "newasset/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_address/:view_address/viewing_threshold/:viewing_threshold",
+  "newasset/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_address/:view_address",
+  "newasset/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/viewing_threshold/:viewing_threshold",
+  "newasset/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key",
   "newasset/erc20/:erc20/sponsor/:sponsor",
 
   # Paths for asset definition with a given description.
-  "newasset/description/:description/freezekey/:freeze_key/tracekey/:trace_key/traceamount/:trace_amount/traceaddress/:trace_address/revealthreshold/:reveal_threshold",
-  "newasset/description/:description/freezekey/:freeze_key/tracekey/:trace_key/traceamount/:trace_amount/traceaddress/:trace_address",
-  "newasset/description/:description/freezekey/:freeze_key/tracekey/:trace_key/traceamount/:trace_amount/revealthreshold/:reveal_threshold",
-  "newasset/description/:description/freezekey/:freeze_key/tracekey/:trace_key/traceamount/:trace_amount",
-  "newasset/description/:description/freezekey/:freeze_key/tracekey/:trace_key/traceaddress/:trace_address/revealthreshold/:reveal_threshold",
-  "newasset/description/:description/freezekey/:freeze_key/tracekey/:trace_key/traceaddress/:trace_address",
-  "newasset/description/:description/freezekey/:freeze_key/tracekey/:trace_key/revealthreshold/:reveal_threshold",
-  "newasset/description/:description/freezekey/:freeze_key/tracekey/:trace_key",
-  "newasset/description/:description/freezekey/:freeze_key",
-  "newasset/description/:description/tracekey/:trace_key/traceamount/:trace_amount/traceaddress/:trace_address/revealthreshold/:reveal_threshold",
-  "newasset/description/:description/tracekey/:trace_key/traceamount/:trace_amount/traceaddress/:trace_address",
-  "newasset/description/:description/tracekey/:trace_key/traceamount/:trace_amount/revealthreshold/:reveal_threshold",
-  "newasset/description/:description/tracekey/:trace_key/traceamount/:trace_amount",
-  "newasset/description/:description/tracekey/:trace_key/traceaddress/:trace_address/revealthreshold/:reveal_threshold",
-  "newasset/description/:description/tracekey/:trace_key/traceaddress/:trace_address",
-  "newasset/description/:description/tracekey/:trace_key/revealthreshold/:reveal_threshold",
-  "newasset/description/:description/tracekey/:trace_key",
+  "newasset/description/:description/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address/viewing_threshold/:viewing_threshold",
+  "newasset/description/:description/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address",
+  "newasset/description/:description/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/viewing_threshold/:viewing_threshold",
+  "newasset/description/:description/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount",
+  "newasset/description/:description/freezing_key/:freezing_key/viewing_key/:viewing_key/view_address/:view_address/viewing_threshold/:viewing_threshold",
+  "newasset/description/:description/freezing_key/:freezing_key/viewing_key/:viewing_key/view_address/:view_address",
+  "newasset/description/:description/freezing_key/:freezing_key/viewing_key/:viewing_key/viewing_threshold/:viewing_threshold",
+  "newasset/description/:description/freezing_key/:freezing_key/viewing_key/:viewing_key",
+  "newasset/description/:description/freezing_key/:freezing_key",
+  "newasset/description/:description/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address/viewing_threshold/:viewing_threshold",
+  "newasset/description/:description/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address",
+  "newasset/description/:description/viewing_key/:viewing_key/view_amount/:view_amount/viewing_threshold/:viewing_threshold",
+  "newasset/description/:description/viewing_key/:viewing_key/view_amount/:view_amount",
+  "newasset/description/:description/viewing_key/:viewing_key/view_address/:view_address/viewing_threshold/:viewing_threshold",
+  "newasset/description/:description/viewing_key/:viewing_key/view_address/:view_address",
+  "newasset/description/:description/viewing_key/:viewing_key/viewing_threshold/:viewing_threshold",
+  "newasset/description/:description/viewing_key/:viewing_key",
   "newasset/description/:description",
 
   # Paths for asset definition without a given description.
-  "newasset/freezekey/:freeze_key/tracekey/:trace_key/traceamount/:trace_amount/traceaddress/:trace_address/revealthreshold/:reveal_threshold",
-  "newasset/freezekey/:freeze_key/tracekey/:trace_key/traceamount/:trace_amount/traceaddress/:trace_address",
-  "newasset/freezekey/:freeze_key/tracekey/:trace_key/traceamount/:trace_amount/revealthreshold/:reveal_threshold",
-  "newasset/freezekey/:freeze_key/tracekey/:trace_key/traceamount/:trace_amount",
-  "newasset/freezekey/:freeze_key/tracekey/:trace_key/traceaddress/:trace_address/revealthreshold/:reveal_threshold",
-  "newasset/freezekey/:freeze_key/tracekey/:trace_key/traceaddress/:trace_address",
-  "newasset/freezekey/:freeze_key/tracekey/:trace_key/revealthreshold/:reveal_threshold",
-  "newasset/freezekey/:freeze_key/tracekey/:trace_key",
-  "newasset/freezekey/:freeze_key",
-  "newasset/tracekey/:trace_key/traceamount/:trace_amount/traceaddress/:trace_address/revealthreshold/:reveal_threshold",
-  "newasset/tracekey/:trace_key/traceamount/:trace_amount/traceaddress/:trace_address",
-  "newasset/tracekey/:trace_key/traceamount/:trace_amount/revealthreshold/:reveal_threshold",
-  "newasset/tracekey/:trace_key/traceamount/:trace_amount",
-  "newasset/tracekey/:trace_key/traceaddress/:trace_address/revealthreshold/:reveal_threshold",
-  "newasset/tracekey/:trace_key/traceaddress/:trace_address",
-  "newasset/tracekey/:trace_key/revealthreshold/:reveal_threshold",
-  "newasset/tracekey/:trace_key",
+  "newasset/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address/viewing_threshold/:viewing_threshold",
+  "newasset/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address",
+  "newasset/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/viewing_threshold/:viewing_threshold",
+  "newasset/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount",
+  "newasset/freezing_key/:freezing_key/viewing_key/:viewing_key/view_address/:view_address/viewing_threshold/:viewing_threshold",
+  "newasset/freezing_key/:freezing_key/viewing_key/:viewing_key/view_address/:view_address",
+  "newasset/freezing_key/:freezing_key/viewing_key/:viewing_key/viewing_threshold/:viewing_threshold",
+  "newasset/freezing_key/:freezing_key/viewing_key/:viewing_key",
+  "newasset/freezing_key/:freezing_key",
+  "newasset/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address/viewing_threshold/:viewing_threshold",
+  "newasset/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address",
+  "newasset/viewing_key/:viewing_key/view_amount/:view_amount/viewing_threshold/:viewing_threshold",
+  "newasset/viewing_key/:viewing_key/view_amount/:view_amount",
+  "newasset/viewing_key/:viewing_key/view_address/:view_address/viewing_threshold/:viewing_threshold",
+  "newasset/viewing_key/:viewing_key/view_address/:view_address",
+  "newasset/viewing_key/:viewing_key/viewing_threshold/:viewing_threshold",
+  "newasset/viewing_key/:viewing_key",
   "newasset",
 ]
 ":erc20" = "TaggedBase64"
 ":description" = "TaggedBase64"
 ":sponsor" = "TaggedBase64"
-":freeze_key" = "TaggedBase64"
-":trace_key" = "TaggedBase64"
-":trace_amount" = "Boolean"
-":trace_address" = "Boolean"
-":reveal_threshold" = "Integer"
+":freezing_key" = "TaggedBase64"
+":viewing_key" = "TaggedBase64"
+":view_amount" = "Boolean"
+":view_address" = "Boolean"
+":viewing_threshold" = "Integer"
 DOC = """
 Sponsor or define an asset, depending on if an ERC20 code is given. Reports the asset definition.
 """
@@ -242,12 +242,12 @@ DOC = """
 Unfreeze the asset associated with the given address and asset type. Assumes the asset was defined with a freezing key. 
 """
 
-[route.trace]
-PATH = ["trace/:asset", "trace/key/:key"]
+[route.view]
+PATH = ["view/:asset", "view/key/:key"]
 ":asset" = "TaggedBase64"
 ":key" = "TaggedBase64"
 DOC = """
-Trace the given asset or trace the asset associated with the given tracing key.
+View the given asset or view the asset associated with the given viewing key.
 """
 
 [route.transaction]

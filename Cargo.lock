@@ -1146,7 +1146,7 @@ dependencies = [
  "reef",
  "regex",
  "relayer",
- "seahorse 0.1.0 (git+ssh://git@github.com/EspressoSystems/seahorse.git)",
+ "seahorse",
  "serde",
  "serde_derive",
  "serde_json",
@@ -2025,7 +2025,7 @@ dependencies = [
  "net",
  "rand_chacha 0.3.1",
  "reef",
- "seahorse 0.1.0 (git+ssh://git@github.com/EspressoSystems/seahorse.git?rev=48aaed68d922b23e4a3d9f4e9dcc6d50185c3619)",
+ "seahorse",
  "serde",
  "serde_derive",
  "serde_json",
@@ -5042,55 +5042,7 @@ dependencies = [
 [[package]]
 name = "seahorse"
 version = "0.1.0"
-source = "git+ssh://git@github.com/EspressoSystems/seahorse.git?rev=48aaed68d922b23e4a3d9f4e9dcc6d50185c3619#48aaed68d922b23e4a3d9f4e9dcc6d50185c3619"
-dependencies = [
- "arbitrary",
- "arbitrary-wrappers 0.1.0 (git+ssh://git@github.com/EspressoSystems/arbitrary-wrappers.git)",
- "ark-serialize",
- "ark-std",
- "async-scoped",
- "async-std",
- "async-trait",
- "atomic_store 0.0.2 (git+ssh://git@github.com/EspressoSystems/atomicstore.git)",
- "bincode",
- "chacha20",
- "chrono",
- "commit",
- "futures",
- "generic-array 0.14.5",
- "hmac 0.11.0",
- "itertools 0.10.3",
- "jf-cap",
- "jf-utils",
- "key-set",
- "lazy_static",
- "mnemonic",
- "net",
- "pipe",
- "proptest",
- "rand_chacha 0.3.1",
- "reef",
- "regex",
- "rpassword",
- "rust-argon2",
- "rustyline",
- "serde",
- "sha3 0.9.1",
- "snafu 0.6.10",
- "strum",
- "strum_macros",
- "surf",
- "tagged-base64 0.1.0 (git+ssh://git@github.com/EspressoSystems/tagged-base64.git?branch=main)",
- "tempdir",
- "universal-param",
- "zeroize",
- "zerok-macros",
-]
-
-[[package]]
-name = "seahorse"
-version = "0.1.0"
-source = "git+ssh://git@github.com/EspressoSystems/seahorse.git#dd66563691995cb075a968aba2aef5e2a2fc24ba"
+source = "git+ssh://git@github.com/EspressoSystems/seahorse.git#bcc4e9dfd29a1bec15ea5f996ef928971f9c5aaa"
 dependencies = [
  "arbitrary",
  "arbitrary-wrappers 0.1.0 (git+ssh://git@github.com/EspressoSystems/arbitrary-wrappers.git)",
@@ -6333,18 +6285,6 @@ checksum = "9f214e8f697e925001e66ec2c6e37a4ef93f0f78c2eed7814394e10c62025b05"
 dependencies = [
  "generic-array 0.14.5",
  "subtle",
-]
-
-[[package]]
-name = "universal-param"
-version = "0.1.0"
-source = "git+ssh://git@github.com/EspressoSystems/universal-param.git#bdf5ccfea1d5f143546576599a5b9820a979a91a"
-dependencies = [
- "ark-serialize",
- "ark-std",
- "itertools 0.10.3",
- "jf-cap",
- "rand_chacha 0.3.1",
 ]
 
 [[package]]

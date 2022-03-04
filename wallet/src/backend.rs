@@ -1,3 +1,4 @@
+//! An implementation of [seahorse::WalletBackend] for CAPE.
 #![deny(warnings)]
 
 use crate::{mocks::MockCapeLedger, CapeWalletBackend, CapeWalletError};

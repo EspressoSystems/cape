@@ -36,7 +36,7 @@ async fn main() -> Result<(), std::io::Error> {
     };
     println!("Web path: {:?}", web_path);
 
-    // TODO Use something different than the default Spectrum port (60000 vs 50000).
+    // TODO Use something different than the default port (60000 vs 50000).
     let port = std::env::var("PORT").unwrap_or_else(|_| String::from("60000"));
     init_server(
         ChaChaRng::from_entropy(),

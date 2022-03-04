@@ -28,8 +28,8 @@ use seahorse::{
     hd::KeyTree,
     loader::{Loader, LoaderMetadata},
     testing::MockLedger,
-    txn_builder::{AssetInfo, RecordInfo, TransactionReceipt},
-    WalletBackend, WalletStorage,
+    txn_builder::{RecordInfo, TransactionReceipt},
+    AssetInfo, WalletBackend, WalletStorage,
 };
 use serde::{Deserialize, Serialize};
 use snafu::Snafu;
@@ -401,16 +401,12 @@ pub async fn init_wallet(
 }
 
 async fn known_assets(wallet: &Wallet) -> HashMap<AssetCode, AssetInfo> {
-    let mut assets = wallet.assets().await;
-
-    // There is always one asset we know about, even if we don't have any in our wallet: the native
-    // asset. Make sure this gets added to the list of known assets.
-    assets.insert(
-        AssetCode::native(),
-        AssetInfo::from(AssetDefinition::native()),
-    );
-
-    assets
+    wallet
+        .assets()
+        .await
+        .into_iter()
+        .map(|asset| (asset.definition.code, asset))
+        .collect()
 }
 
 pub fn require_wallet(wallet: &mut Option<Wallet>) -> Result<&mut Wallet, tide::Error> {
@@ -653,7 +649,7 @@ async fn newasset(
         Some(erc20_code) => {
             let erc20_code = erc20_code.value.to::<Erc20Code>()?;
             let sponsor_address = bindings
-                .get(":issuer")
+                .get(":sponsor")
                 .unwrap()
                 .value
                 .to::<EthereumAddr>()?;

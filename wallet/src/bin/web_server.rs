@@ -73,7 +73,8 @@ mod tests {
     use net::{client, UserAddress};
     use seahorse::{
         hd::KeyTree,
-        txn_builder::{AssetInfo, RecordInfo, TransactionReceipt},
+        txn_builder::{RecordInfo, TransactionReceipt},
+        AssetInfo,
     };
     use serde::de::DeserializeOwned;
     use std::collections::hash_map::HashMap;
@@ -383,10 +384,10 @@ mod tests {
         let info = server.get::<WalletSummary>("getinfo").await.unwrap();
 
         // get the wrapped asset
-        let asset = if info.assets[0].asset.code == AssetCode::native() {
-            info.assets[1].asset.code
+        let asset = if info.assets[0].definition.code == AssetCode::native() {
+            info.assets[1].definition.code
         } else {
-            info.assets[0].asset.code
+            info.assets[0].definition.code
         };
         // populate for test should create 3 records
         assert_eq!(records.len(), 3);
@@ -577,7 +578,7 @@ mod tests {
         // Should fail if a wallet is not already open.
         server
             .requires_wallet::<AssetDefinition>(&format!(
-                "newasset/erc20/{}/issuer/{}/traceamount/{}/traceaddress/{}/revealthreshold/{}",
+                "newasset/erc20/{}/sponsor/{}/traceamount/{}/traceaddress/{}/revealthreshold/{}",
                 erc20_code, sponsor_addr, trace_amount, trace_address, reveal_threshold
             ))
             .await;
@@ -608,7 +609,7 @@ mod tests {
         // newasset should return a sponsored asset with the correct policy if an ERC20 code is given.
         let sponsored_asset = server
             .get::<AssetDefinition>(&format!(
-                "newasset/erc20/{}/issuer/{}/freezekey/{}/tracekey/{}/traceamount/{}/traceaddress/{}/revealthreshold/{}",
+                "newasset/erc20/{}/sponsor/{}/freezekey/{}/tracekey/{}/traceamount/{}/traceaddress/{}/revealthreshold/{}",
                 erc20_code, sponsor_addr, freeze_key, audit_key, trace_amount, trace_address, reveal_threshold
             ))
             .await
@@ -651,7 +652,7 @@ mod tests {
         // newasset should return an asset with the default freezer public key if it's not given.
         let sponsored_asset = server
                 .get::<AssetDefinition>(&format!(
-                    "newasset/erc20/{}/issuer/{}/tracekey/{}/traceamount/{}/traceaddress/{}/revealthreshold/{}",
+                    "newasset/erc20/{}/sponsor/{}/tracekey/{}/traceamount/{}/traceaddress/{}/revealthreshold/{}",
                     erc20_code, sponsor_addr, audit_key, trace_amount, trace_address, reveal_threshold
                 ))
                 .await
@@ -670,7 +671,7 @@ mod tests {
         // auditor public key isn't given.
         let sponsored_asset = server
             .get::<AssetDefinition>(&format!(
-                "newasset/erc20/{}/issuer/{}/freezekey/{}",
+                "newasset/erc20/{}/sponsor/{}/freezekey/{}",
                 erc20_code, sponsor_addr, freeze_key
             ))
             .await
@@ -687,7 +688,7 @@ mod tests {
         // newasset should return an asset with no reveal threshold if it's not given.
         let sponsored_asset = server
                 .get::<AssetDefinition>(&format!(
-                    "newasset/erc20/{}/issuer/{}/freezekey/{}/tracekey/{}/traceamount/{}/traceaddress/{}",
+                    "newasset/erc20/{}/sponsor/{}/freezekey/{}/tracekey/{}/traceamount/{}/traceaddress/{}",
                     erc20_code, sponsor_addr, freeze_key, audit_key, trace_amount, trace_address
                 ))
                 .await
@@ -725,7 +726,7 @@ mod tests {
         // Sponsor an asset.
         let sponsored_asset = server
             .get::<AssetDefinition>(&format!(
-                "newasset/erc20/{}/issuer/{}",
+                "newasset/erc20/{}/sponsor/{}",
                 erc20_code, sponsor_addr
             ))
             .await
@@ -912,10 +913,10 @@ mod tests {
 
         // Get the wrapped asset.
         let info = server.get::<WalletSummary>("getinfo").await.unwrap();
-        let asset = if info.assets[0].asset.code == AssetCode::native() {
-            info.assets[1].asset.code
+        let asset = if info.assets[0].definition.code == AssetCode::native() {
+            info.assets[1].definition.code
         } else {
-            info.assets[0].asset.code
+            info.assets[0].definition.code
         };
 
         // Get the source address with the wrapped asset.
@@ -1037,10 +1038,10 @@ mod tests {
         // One of the wallet's two assets is the native asset, and the other is the wrapped asset
         // for which we have a nonzero balance, but the order depends on the hash of the wrapped
         // asset code, which is non-deterministic, so we check both.
-        let wrapped_asset = if info.assets[0].asset.code == AssetCode::native() {
-            info.assets[1].asset.code
+        let wrapped_asset = if info.assets[0].definition.code == AssetCode::native() {
+            info.assets[1].definition.code
         } else {
-            info.assets[0].asset.code
+            info.assets[0].definition.code
         };
         assert_ne!(wrapped_asset, AssetCode::native());
         assert_eq!(

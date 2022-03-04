@@ -25,7 +25,7 @@ use seahorse::{
     loader::WalletLoader,
     persistence::AtomicWalletStorage,
     testing,
-    txn_builder::{RecordDatabase, TransactionState, TransactionUID},
+    txn_builder::{RecordDatabase, TransactionInfo, TransactionState, TransactionUID},
     WalletBackend, WalletError, WalletState,
 };
 use serde::{de::DeserializeOwned, Serialize};
@@ -210,11 +210,10 @@ impl MockCapeNetwork {
             },
             key_scans: Default::default(),
             key_state: Default::default(),
-            auditable_assets: Default::default(),
+            assets: Default::default(),
             audit_keys: Default::default(),
             freeze_keys: Default::default(),
             user_keys: Default::default(),
-            defined_assets: Default::default(),
         })
     }
 
@@ -635,12 +634,14 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
     async fn submit(
         &mut self,
         txn: CapeTransition,
-        uid: TransactionUID<CapeLedger>,
-        memos: Vec<ReceiverMemo>,
-        sig: Signature,
+        info: TransactionInfo<CapeLedger>,
     ) -> Result<(), WalletError<CapeLedger>> {
         let mut ledger = self.ledger.lock().await;
-        ledger.network().store_call_data(uid, memos, sig);
+        ledger.network().store_call_data(
+            info.uid.unwrap_or_else(|| TransactionUID(txn.hash())),
+            info.memos,
+            info.sig,
+        );
         ledger.submit(txn)
     }
 }

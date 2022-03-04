@@ -287,9 +287,13 @@ async fn main() {
                 }
                 // Get a list of assets for which we have a non-zero balance.
                 let mut asset_balances = vec![];
-                for code in sender.assets().await.keys() {
-                    if sender.balance(&sender_address, code).await > 0 {
-                        asset_balances.push(*code);
+                for asset in sender.assets().await {
+                    if sender
+                        .balance(&sender_address, &asset.definition.code)
+                        .await
+                        > 0
+                    {
+                        asset_balances.push(asset.definition.code);
                     }
                 }
                 // Randomly choose an asset type for the transfer.
@@ -341,9 +345,9 @@ async fn main() {
                 let owner_address = owner.pub_keys().await[0].address();
                 // move this to helper
                 let mut asset_balances = vec![];
-                for code in owner.assets().await.keys() {
-                    if owner.balance(&owner_address, code).await > 0 {
-                        asset_balances.push(*code);
+                for asset in owner.assets().await {
+                    if owner.balance(&owner_address, &asset.definition.code).await > 0 {
+                        asset_balances.push(asset.definition.code);
                     }
                 }
                 let asset = asset_balances.choose(&mut rng).unwrap();
@@ -358,9 +362,9 @@ async fn main() {
                 let owner_address = owner.pub_keys().await[0].address();
                 // move this to helper
                 let mut asset_balances = vec![];
-                for code in owner.assets().await.keys() {
-                    if owner.balance(&owner_address, code).await > 0 {
-                        asset_balances.push(*code);
+                for asset in owner.assets().await {
+                    if owner.balance(&owner_address, &asset.definition.code).await > 0 {
+                        asset_balances.push(asset.definition.code);
                     }
                 }
                 let asset = asset_balances.choose(&mut rng).unwrap();

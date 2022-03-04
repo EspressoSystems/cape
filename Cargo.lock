@@ -1071,6 +1071,7 @@ dependencies = [
  "async-trait",
  "bincode",
  "commit",
+ "espresso-macros",
  "ethers 0.6.0 (git+https://github.com/gakonst/ethers-rs?branch=master)",
  "ethers-contract 0.6.0 (git+https://github.com/gakonst/ethers-rs?branch=master)",
  "ethers-contract-abigen 0.6.0 (git+https://github.com/gakonst/ethers-rs)",
@@ -1099,7 +1100,6 @@ dependencies = [
  "snafu 0.7.0",
  "strum_macros",
  "tokio",
- "zerok-macros",
 ]
 
 [[package]]
@@ -2083,6 +2083,16 @@ dependencies = [
  "once_cell",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "espresso-macros"
+version = "0.1.0"
+source = "git+ssh://git@github.com/EspressoSystems/espresso-macros.git#9e0b0258c99757c567676c4dd92f1501db0cf580"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]

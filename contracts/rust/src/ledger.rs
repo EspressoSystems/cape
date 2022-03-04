@@ -2,6 +2,7 @@ use crate::model::*;
 use arbitrary::{Arbitrary, Unstructured};
 use arbitrary_wrappers::*;
 use commit::{Commitment, Committable, RawCommitmentBuilder};
+use espresso_macros::ser_test;
 use jf_cap::{
     keys::{AuditorKeyPair, AuditorPubKey},
     structs::{AssetCode, AssetDefinition, Nullifier, RecordCommitment, RecordOpening},
@@ -12,7 +13,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::iter::repeat;
-use zerok_macros::ser_test;
 
 // A representation of an unauthenticated sparse set of nullifiers (it is "authenticated" by
 // querying the ultimate source of truth, the CAPE smart contract). The HashMap maps any nullifier

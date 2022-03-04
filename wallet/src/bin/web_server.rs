@@ -70,7 +70,6 @@ async fn main() -> Result<(), std::io::Error> {
     };
     println!("Web path: {:?}", web_path);
 
-
     // We use 60000 by default, chosen because it differs from the default ports for the EQS and the
     // Espresso query service.
     let port = std::env::var("PORT").unwrap_or_else(|_| String::from("60000"));

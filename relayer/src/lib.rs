@@ -1,3 +1,7 @@
+//! The Relayer is the component of the system that collects transactions from end users and submit them to the CAPE contract.
+//! The current implementation is a simplified version where the Relayer only forwards a single transaction at a time.
+//! Moreover the Relayer currently does not validate the transaction on its own. If the transaction is invalid it will be rejected
+//! by the CAPE contract.
 #[warn(unused_imports)]
 use async_std::task;
 use cap_rust_sandbox::{
@@ -77,7 +81,11 @@ async fn submit_endpoint(mut req: tide::Request<WebState>) -> Result<tide::Respo
         .map_err(server_error)?;
     response(&req, ret)
 }
-
+/// This function implements the core logic of the relayer
+/// * `contract` -  CAPE contract instance to submit the block information to
+/// * `transaction` - CAPE transaction from a user
+/// * `memos` - list of memos corresponding to the transaction
+/// * `signature` - signature over the memos information
 async fn relay(
     contract: &CAPE<EthMiddleware>,
     transaction: CapeModelTxn,
@@ -104,6 +112,7 @@ async fn relay(
 
 pub const DEFAULT_RELAYER_PORT: u16 = 50077u16;
 
+/// This function starts the web server
 pub fn init_web_server(
     contract: CAPE<EthMiddleware>,
     port: String,

@@ -52,8 +52,7 @@ async fn retry_delay() {
     sleep(Duration::from_secs(1)).await
 }
 
-// TODO: Use real address book
-// Issue: https://github.com/EspressoSystems/cape/issues/641
+// Use the Address Book here instead: https://github.com/EspressoSystems/cape/issues/641
 async fn write_pub_key(key: &UserPubKey, path: &Path) {
     let mut keys: Vec<UserPubKey> = if path.exists() {
         get_pub_keys_from_file(path).await
@@ -217,8 +216,7 @@ async fn main() {
     }
 
     loop {
-        // TODO: Use Address book to get other wallet addresses
-        // https://github.com/EspressoSystems/cape/issues/641
+        // Use the Address book for this: https://github.com/EspressoSystems/cape/issues/641
         let peers: Vec<UserPubKey> = get_pub_keys_from_file(&args.pub_key_storage).await;
         let recipient =
             match peers.choose_weighted(&mut rng, |pk| if *pk == pub_key { 0 } else { 1 }) {

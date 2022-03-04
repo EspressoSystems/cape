@@ -258,7 +258,7 @@ async fn main() {
     let mut public_keys = vec![];
 
     for _i in 0..(args.num_wallets) {
-        // TODO: Send all wallets some native asset https://github.com/EspressoSystems/cape/issues/650.
+        // Send all wallets some native asset https://github.com/EspressoSystems/cape/issues/650.
         let (k, mut w) = create_wallet(&mut rng, &universal_param, &network, &args.storage).await;
 
         fund_eth_wallet(&mut w).await;

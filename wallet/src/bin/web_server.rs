@@ -323,9 +323,9 @@ mod tests {
             info,
             WalletSummary {
                 addresses: vec![],
-                spend_keys: vec![],
-                audit_keys: vec![],
-                freeze_keys: vec![],
+                sending_keys: vec![],
+                viewing_keys: vec![],
+                freezing_keys: vec![],
                 assets: vec![AssetInfo::from(AssetDefinition::native())]
             }
         )
@@ -511,9 +511,9 @@ mod tests {
         let server = TestServer::new().await;
 
         // Should fail if a wallet is not already open.
-        server.requires_wallet::<PubKey>("newkey/send").await;
-        server.requires_wallet::<PubKey>("newkey/trace").await;
-        server.requires_wallet::<PubKey>("newkey/freeze").await;
+        server.requires_wallet::<PubKey>("newkey/sending").await;
+        server.requires_wallet::<PubKey>("newkey/tracing").await;
+        server.requires_wallet::<PubKey>("newkey/freezing").await;
 
         // Now open a wallet.
         server
@@ -526,32 +526,32 @@ mod tests {
             .unwrap();
 
         // newkey should return a public key with the correct type and add the key to the wallet.
-        let spend_key = server.get::<PubKey>("newkey/send").await.unwrap();
-        let audit_key = server.get::<PubKey>("newkey/trace").await.unwrap();
-        let freeze_key = server.get::<PubKey>("newkey/freeze").await.unwrap();
+        let sending_key = server.get::<PubKey>("newkey/sending").await.unwrap();
+        let viewing_key = server.get::<PubKey>("newkey/viewing").await.unwrap();
+        let freezing_key = server.get::<PubKey>("newkey/freezing").await.unwrap();
         let info = server.get::<WalletSummary>("getinfo").await.unwrap();
-        match spend_key {
-            PubKey::Spend(key) => {
-                assert_eq!(info.spend_keys, vec![key]);
+        match sending_key {
+            PubKey::Sending(key) => {
+                assert_eq!(info.sending_keys, vec![key]);
             }
             _ => {
-                panic!("Expected PubKey::Spend, found {:?}", spend_key);
+                panic!("Expected PubKey::Sending, found {:?}", sending_key);
             }
         }
-        match audit_key {
-            PubKey::Audit(key) => {
-                assert_eq!(info.audit_keys, vec![key]);
+        match viewing_key {
+            PubKey::Viewing(key) => {
+                assert_eq!(info.viewing_keys, vec![key]);
             }
             _ => {
-                panic!("Expected PubKey::Audit, found {:?}", audit_key);
+                panic!("Expected PubKey::Viewing, found {:?}", viewing_key);
             }
         }
-        match freeze_key {
-            PubKey::Freeze(key) => {
-                assert_eq!(info.freeze_keys, vec![key]);
+        match freezing_key {
+            PubKey::Freezing(key) => {
+                assert_eq!(info.freezing_keys, vec![key]);
             }
             _ => {
-                panic!("Expected PubKey::Freeze, found {:?}", freeze_key);
+                panic!("Expected PubKey::Freezing, found {:?}", freezing_key);
             }
         }
 
@@ -570,22 +570,22 @@ mod tests {
         // Set parameters for newasset.
         let erc20_code = Erc20Code(EthereumAddr([1u8; 20]));
         let sponsor_addr = EthereumAddr([2u8; 20]);
-        let reveal_threshold = 10;
-        let trace_amount = true;
-        let trace_address = false;
+        let viewing_threshold = 10;
+        let view_amount = true;
+        let view_address = false;
         let description = TaggedBase64::new("DESC", &[3u8; 32]).unwrap();
 
         // Should fail if a wallet is not already open.
         server
             .requires_wallet::<AssetDefinition>(&format!(
-                "newasset/erc20/{}/sponsor/{}/traceamount/{}/traceaddress/{}/revealthreshold/{}",
-                erc20_code, sponsor_addr, trace_amount, trace_address, reveal_threshold
+                "newasset/erc20/{}/sponsor/{}/view_amount/{}/view_address/{}/viewing_threshold/{}",
+                erc20_code, sponsor_addr, view_amount, view_address, viewing_threshold
             ))
             .await;
         server
             .requires_wallet::<AssetDefinition>(&format!(
-                "newasset/description/{}/traceamount/{}/traceaddress/{}/revealthreshold/{}",
-                description, trace_amount, trace_address, reveal_threshold
+                "newasset/description/{}/view_amount/{}/view_address/{}/viewing_threshold/{}",
+                description, view_amount, view_address, viewing_threshold
             ))
             .await;
 
@@ -600,68 +600,68 @@ mod tests {
             .unwrap();
 
         // Create keys.
-        server.get::<PubKey>("newkey/trace").await.unwrap();
-        server.get::<PubKey>("newkey/freeze").await.unwrap();
+        server.get::<PubKey>("newkey/viewing").await.unwrap();
+        server.get::<PubKey>("newkey/freezing").await.unwrap();
         let info = server.get::<WalletSummary>("getinfo").await.unwrap();
-        let audit_key = &info.audit_keys[0];
-        let freeze_key = &info.freeze_keys[0];
+        let viewing_key = &info.viewing_keys[0];
+        let freezing_key = &info.freezing_keys[0];
 
         // newasset should return a sponsored asset with the correct policy if an ERC20 code is given.
         let sponsored_asset = server
             .get::<AssetDefinition>(&format!(
-                "newasset/erc20/{}/sponsor/{}/freezekey/{}/tracekey/{}/traceamount/{}/traceaddress/{}/revealthreshold/{}",
-                erc20_code, sponsor_addr, freeze_key, audit_key, trace_amount, trace_address, reveal_threshold
+                "newasset/erc20/{}/sponsor/{}/freezing_key/{}/viewing_key/{}/view_amount/{}/view_address/{}/viewing_threshold/{}",
+                erc20_code, sponsor_addr, freezing_key, viewing_key, view_amount, view_address, viewing_threshold
             ))
             .await
             .unwrap();
-        assert_eq!(sponsored_asset.policy_ref().auditor_pub_key(), audit_key);
-        assert_eq!(sponsored_asset.policy_ref().freezer_pub_key(), freeze_key);
+        assert_eq!(sponsored_asset.policy_ref().auditor_pub_key(), viewing_key);
+        assert_eq!(sponsored_asset.policy_ref().freezer_pub_key(), freezing_key);
         assert_eq!(
             sponsored_asset.policy_ref().reveal_threshold(),
-            reveal_threshold
+            viewing_threshold
         );
 
         // newasset should return a defined asset with the correct policy if no ERC20 code is given.
         let defined_asset = server
             .get::<AssetDefinition>(&format!(
-                "newasset/description/{}/freezekey/{}/tracekey/{}/traceamount/{}/traceaddress/{}/revealthreshold/{}",
-                description, freeze_key, audit_key, trace_amount, trace_address, reveal_threshold
+                "newasset/description/{}/freezing_key/{}/viewing_key/{}/view_amount/{}/view_address/{}/viewing_threshold/{}",
+                description, freezing_key, viewing_key, view_amount, view_address, viewing_threshold
             ))
             .await
             .unwrap();
-        assert_eq!(defined_asset.policy_ref().auditor_pub_key(), audit_key);
-        assert_eq!(defined_asset.policy_ref().freezer_pub_key(), freeze_key);
+        assert_eq!(defined_asset.policy_ref().auditor_pub_key(), viewing_key);
+        assert_eq!(defined_asset.policy_ref().freezer_pub_key(), freezing_key);
         assert_eq!(
             defined_asset.policy_ref().reveal_threshold(),
-            reveal_threshold
+            viewing_threshold
         );
         let defined_asset = server
             .get::<AssetDefinition>(&format!(
-            "newasset/freezekey/{}/tracekey/{}/traceamount/{}/traceaddress/{}/revealthreshold/{}",
-            freeze_key, audit_key, trace_amount, trace_address, reveal_threshold
+            "newasset/freezing_key/{}/viewing_key/{}/view_amount/{}/view_address/{}/viewing_threshold/{}",
+            freezing_key, viewing_key, view_amount, view_address, viewing_threshold
         ))
             .await
             .unwrap();
-        assert_eq!(defined_asset.policy_ref().auditor_pub_key(), audit_key);
-        assert_eq!(defined_asset.policy_ref().freezer_pub_key(), freeze_key);
+        assert_eq!(defined_asset.policy_ref().auditor_pub_key(), viewing_key);
+        assert_eq!(defined_asset.policy_ref().freezer_pub_key(), freezing_key);
         assert_eq!(
             defined_asset.policy_ref().reveal_threshold(),
-            reveal_threshold
+            viewing_threshold
         );
 
         // newasset should return an asset with the default freezer public key if it's not given.
         let sponsored_asset = server
                 .get::<AssetDefinition>(&format!(
-                    "newasset/erc20/{}/sponsor/{}/tracekey/{}/traceamount/{}/traceaddress/{}/revealthreshold/{}",
-                    erc20_code, sponsor_addr, audit_key, trace_amount, trace_address, reveal_threshold
+                    "newasset/erc20/{}/sponsor/{}/viewing_key/{}/view_amount/{}/view_address/{}/viewing_threshold/{}",
+                    erc20_code, sponsor_addr, viewing_key, view_amount, view_address, viewing_threshold
                 ))
                 .await
                 .unwrap();
         assert!(!sponsored_asset.policy_ref().is_freezer_pub_key_set());
         let sponsored_asset = server
             .get::<AssetDefinition>(&format!(
-                "newasset/description/{}/tracekey/{}/traceamount/{}/traceaddress/{}/revealthreshold/{}",
-                description, audit_key, trace_amount, trace_address, reveal_threshold
+                "newasset/description/{}/viewing_key/{}/view_amount/{}/view_address/{}/viewing_threshold/{}",
+                description, viewing_key, view_amount, view_address, viewing_threshold
             ))
             .await
             .unwrap();
@@ -671,8 +671,8 @@ mod tests {
         // auditor public key isn't given.
         let sponsored_asset = server
             .get::<AssetDefinition>(&format!(
-                "newasset/erc20/{}/sponsor/{}/freezekey/{}",
-                erc20_code, sponsor_addr, freeze_key
+                "newasset/erc20/{}/sponsor/{}/freezing_key/{}",
+                erc20_code, sponsor_addr, freezing_key
             ))
             .await
             .unwrap();
@@ -688,16 +688,16 @@ mod tests {
         // newasset should return an asset with no reveal threshold if it's not given.
         let sponsored_asset = server
                 .get::<AssetDefinition>(&format!(
-                    "newasset/erc20/{}/sponsor/{}/freezekey/{}/tracekey/{}/traceamount/{}/traceaddress/{}",
-                    erc20_code, sponsor_addr, freeze_key, audit_key, trace_amount, trace_address
+                    "newasset/erc20/{}/sponsor/{}/freezing_key/{}/viewing_key/{}/view_amount/{}/view_address/{}",
+                    erc20_code, sponsor_addr, freezing_key, viewing_key, view_amount, view_address
                 ))
                 .await
                 .unwrap();
         assert_eq!(sponsored_asset.policy_ref().reveal_threshold(), 0);
         let defined_asset = server
             .get::<AssetDefinition>(&format!(
-                "newasset/description/{}/freezekey/{}/tracekey/{}/traceamount/{}/traceaddress/{}",
-                description, freeze_key, audit_key, trace_amount, trace_address
+                "newasset/description/{}/freezing_key/{}/viewing_key/{}/view_amount/{}/view_address/{}",
+                description, freezing_key, viewing_key, view_amount, view_address
             ))
             .await
             .unwrap();
@@ -733,10 +733,10 @@ mod tests {
             .unwrap();
 
         // Create an address to receive the wrapped asset.
-        server.get::<PubKey>("newkey/send").await.unwrap();
+        server.get::<PubKey>("newkey/sending").await.unwrap();
         let info = server.get::<WalletSummary>("getinfo").await.unwrap();
-        let spend_key = &info.spend_keys[0];
-        let destination: UserAddress = spend_key.address().into();
+        let sending_key = &info.sending_keys[0];
+        let destination: UserAddress = sending_key.address().into();
 
         // wrap should fail if any of the destination, Ethereum address, and asset is invalid.
         let invalid_destination = UserAddress::from(UserKeyPair::generate(&mut rng).address());
@@ -828,7 +828,7 @@ mod tests {
             .get::<WalletSummary>("getinfo")
             .await
             .unwrap()
-            .spend_keys[0]
+            .sending_keys[0]
             .address()
             .into();
 
@@ -1011,9 +1011,9 @@ mod tests {
 
         let info = server.get::<WalletSummary>("getinfo").await.unwrap();
         assert_eq!(info.addresses.len(), 3);
-        assert_eq!(info.spend_keys.len(), 3);
-        assert_eq!(info.audit_keys.len(), 2);
-        assert_eq!(info.freeze_keys.len(), 2);
+        assert_eq!(info.sending_keys.len(), 3);
+        assert_eq!(info.viewing_keys.len(), 2);
+        assert_eq!(info.freezing_keys.len(), 2);
         assert_eq!(info.assets.len(), 2); // native asset + wrapped asset
 
         // One of the addresses should have a non-zero balance of the native asset type.

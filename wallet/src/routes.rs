@@ -229,20 +229,20 @@ pub enum ApiRouteKey {
     newwallet,
     openwallet,
     send,
-    trace,
     transaction,
     unfreeze,
     unwrap,
+    view,
     wrap,
     getrecords,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-/// Public keys for spending, auditing and freezing assets.
+/// Public keys for spending, viewing and freezing assets.
 pub enum PubKey {
-    Spend(UserPubKey),
-    Audit(AuditorPubKey),
-    Freeze(FreezerPubKey),
+    Sending(UserPubKey),
+    Viewing(AuditorPubKey),
+    Freezing(FreezerPubKey),
 }
 
 /// Verifiy that every variant of enum ApiRouteKey is defined in api.toml
@@ -487,9 +487,9 @@ async fn closewallet(wallet: &mut Option<Wallet>) -> Result<(), tide::Error> {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct WalletSummary {
     pub addresses: Vec<UserAddress>,
-    pub spend_keys: Vec<UserPubKey>,
-    pub audit_keys: Vec<AuditorPubKey>,
-    pub freeze_keys: Vec<FreezerPubKey>,
+    pub sending_keys: Vec<UserPubKey>,
+    pub viewing_keys: Vec<AuditorPubKey>,
+    pub freezing_keys: Vec<FreezerPubKey>,
     pub assets: Vec<AssetInfo>,
 }
 
@@ -502,9 +502,9 @@ async fn getinfo(wallet: &mut Option<Wallet>) -> Result<WalletSummary, tide::Err
             .into_iter()
             .map(|pub_key| pub_key.address().into())
             .collect(),
-        spend_keys: wallet.pub_keys().await,
-        audit_keys: wallet.auditor_pub_keys().await,
-        freeze_keys: wallet.freezer_pub_keys().await,
+        sending_keys: wallet.pub_keys().await,
+        viewing_keys: wallet.auditor_pub_keys().await,
+        freezing_keys: wallet.freezer_pub_keys().await,
         assets: known_assets(wallet).await.into_values().collect(),
     })
 }
@@ -597,11 +597,11 @@ async fn newkey(key_type: &str, wallet: &mut Option<Wallet>) -> Result<PubKey, t
     let wallet = require_wallet(wallet)?;
 
     match key_type {
-        "send" => Ok(PubKey::Spend(wallet.generate_user_key(None).await?)),
-        "trace" => Ok(PubKey::Audit(wallet.generate_audit_key().await?)),
-        "freeze" => Ok(PubKey::Freeze(wallet.generate_freeze_key().await?)),
+        "send" | "sending" => Ok(PubKey::Sending(wallet.generate_user_key(None).await?)),
+        "view" | "viewing" => Ok(PubKey::Viewing(wallet.generate_audit_key().await?)),
+        "freeze" | "freezing" => Ok(PubKey::Freezing(wallet.generate_freeze_key().await?)),
         _ => Err(server_error(CapeAPIError::Param {
-            expected: String::from("key type (send, trace or freeze)"),
+            expected: String::from("key type (sending, viewing or freezing)"),
             actual: String::from(key_type),
         })),
     }
@@ -615,28 +615,28 @@ async fn newasset(
 
     // Construct the asset policy.
     let mut policy = AssetPolicy::default();
-    if let Some(freeze_key) = bindings.get(":freeze_key") {
-        policy = policy.set_freezer_pub_key(freeze_key.value.to::<FreezerPubKey>()?)
+    if let Some(freezing_key) = bindings.get(":freezing_key") {
+        policy = policy.set_freezer_pub_key(freezing_key.value.to::<FreezerPubKey>()?)
     };
-    if let Some(trace_key) = bindings.get(":trace_key") {
-        // Always reveal blinding factor if an auditor public key is given.
+    if let Some(viewing_key) = bindings.get(":viewing_key") {
+        // Always reveal blinding factor if a viewing key is given.
         policy = policy
-            .set_auditor_pub_key(trace_key.value.to::<AuditorPubKey>()?)
+            .set_auditor_pub_key(viewing_key.value.to::<AuditorPubKey>()?)
             .reveal_blinding_factor()?;
 
-        // Only if an auditor public key is given, can amount and user address be revealed
-        // and reveal threshold be specified.
-        if let Some(trace_flag) = bindings.get(":trace_amount") {
-            if trace_flag.value.as_boolean()? {
+        // Only if a viewing key is given, can amount and user address be revealed and viewing
+        // threshold be specified.
+        if let Some(view_flag) = bindings.get(":view_amount") {
+            if view_flag.value.as_boolean()? {
                 policy = policy.reveal_amount()?;
             }
         }
-        if let Some(trace_flag) = bindings.get(":trace_address") {
-            if trace_flag.value.as_boolean()? {
+        if let Some(view_flag) = bindings.get(":view_address") {
+            if view_flag.value.as_boolean()? {
                 policy = policy.reveal_user_address()?;
             }
         }
-        if let Some(threshold) = bindings.get(":reveal_threshold") {
+        if let Some(threshold) = bindings.get(":viewing_threshold") {
             policy = policy.set_reveal_threshold(threshold.value.as_u64()?);
         };
     };
@@ -794,10 +794,10 @@ pub async fn dispatch_url(
             openwallet(bindings, rng, faucet_key_pair, wallet).await?,
         ),
         ApiRouteKey::send => response(&req, send(bindings, wallet).await?),
-        ApiRouteKey::trace => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::transaction => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::unfreeze => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::unwrap => response(&req, unwrap(bindings, wallet).await?),
+        ApiRouteKey::view => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::wrap => response(&req, wrap(bindings, wallet).await?),
         ApiRouteKey::getrecords => response(&req, get_records(wallet).await?),
     }

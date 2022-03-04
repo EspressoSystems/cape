@@ -460,7 +460,7 @@ Based on a few successful test runs, the entire suite should consume roughly 0.0
 
 ## CAP protocol specification
 
-A formal specification of the Configurable Asset Policy protocol can be found at [`./doc/cap-specification.pdf`](./doc/cap-specification.pdf)
+A formal specification of the Configurable Asset Policy protocol can be found at [our CAP github repo](https://github.com/EspressoSystems/cap/blob/main/cap-specification.pdf)
 
 ## CAPE Contract specification
 

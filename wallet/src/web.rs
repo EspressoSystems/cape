@@ -1,8 +1,7 @@
 // Copyright © 2021 Translucence Research, Inc. All rights reserved.
 
 use crate::routes::{
-    dispatch_url, dispatch_web_socket, CapeAPIError, RouteBinding, UrlSegmentType, UrlSegmentValue,
-    Wallet,
+    dispatch_url, CapeAPIError, RouteBinding, UrlSegmentType, UrlSegmentValue, Wallet,
 };
 use async_std::{
     sync::{Arc, Mutex},
@@ -16,8 +15,6 @@ use std::collections::hash_map::HashMap;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use structopt::StructOpt;
-use tide::StatusCode;
-use tide_websockets::{WebSocket, WebSocketConnection};
 
 pub const DEFAULT_ETH_ADDR: EthereumAddr = EthereumAddr([2; 20]);
 pub const DEFAULT_WRAPPED_AMT: u64 = 1000;
@@ -74,17 +71,10 @@ pub fn default_api_path() -> PathBuf {
 
 #[derive(Clone)]
 pub struct WebState {
-    pub(crate) web_path: PathBuf,
     pub(crate) api: toml::Value,
     pub(crate) wallet: Arc<Mutex<Option<Wallet>>>,
     pub(crate) rng: Arc<Mutex<ChaChaRng>>,
     pub(crate) faucet_key_pair: UserKeyPair,
-}
-
-async fn form_demonstration(req: tide::Request<WebState>) -> Result<tide::Body, tide::Error> {
-    let mut index_html: PathBuf = req.state().web_path.clone();
-    index_html.push("index.html");
-    Ok(tide::Body::from_file(index_html).await?)
 }
 
 // Get the route pattern that matches the URL of a request, and the bindings for parameters in the
@@ -149,8 +139,6 @@ fn parse_route(
                 } else {
                     arg_doc.push_str("(Parse failed)\n");
                     argument_parse_failed = true;
-                    // TODO !corbett capture parse failures documentation
-                    // UrlSegmentValue::ParseFailed(segment_type, req_segment)
                 }
             } else {
                 // No type information. Assume pat_segment is a literal.
@@ -162,8 +150,6 @@ fn parse_route(
                         req_segment, pat_segment
                     ));
                 }
-                // TODO !corbett else capture the matching literal in bindings
-                // TODO !corebtt if the edit distance is small, capture spelling suggestion
             }
         }
         if !found_literal_mismatch {
@@ -214,7 +200,6 @@ fn parse_route(
 ///
 /// This function duplicates the logic for deciding which route was requested. This
 /// is an unfortunate side-effect of defining the routes in an external file.
-// todo !corbett Convert the error feedback into HTML
 async fn entry_page(req: tide::Request<WebState>) -> Result<tide::Response, tide::Error> {
     match parse_route(&req) {
         Ok((pattern, bindings)) => dispatch_url(req, pattern.as_str(), &bindings).await,
@@ -284,25 +269,6 @@ async fn populatefortest(req: tide::Request<WebState>) -> Result<tide::Response,
     server::response(&req, ())
 }
 
-async fn handle_web_socket(
-    req: tide::Request<WebState>,
-    wsc: WebSocketConnection,
-) -> tide::Result<()> {
-    match parse_route(&req) {
-        Ok((pattern, bindings)) => dispatch_web_socket(req, wsc, pattern.as_str(), &bindings).await,
-        Err(arg_doc) => Err(tide::Error::from_str(StatusCode::BadRequest, arg_doc)),
-    }
-}
-
-// This route is a demonstration of a form with a WebSocket connection
-// for asynchronous updates. Once we have useful forms, this can go...
-fn add_form_demonstration(web_server: &mut tide::Server<WebState>) {
-    web_server
-        .at("/transfer/:id/:recipient/:amount")
-        .with(WebSocket::new(handle_web_socket))
-        .get(form_demonstration);
-}
-
 pub fn init_server(
     mut rng: ChaChaRng,
     api_path: PathBuf,
@@ -312,7 +278,6 @@ pub fn init_server(
     let api = crate::disco::load_messages(&api_path);
     let faucet_key_pair = UserKeyPair::generate(&mut rng);
     let mut web_server = tide::with_state(WebState {
-        web_path: web_path.clone(),
         api: api.clone(),
         wallet: Arc::new(Mutex::new(None)),
         rng: Arc::new(Mutex::new(rng)),
@@ -326,15 +291,9 @@ pub fn init_server(
     web_server.at("/public").serve_dir(web_path)?;
     web_server.at("/").get(crate::disco::compose_help);
 
-    add_form_demonstration(&mut web_server);
-
     // Add routes from a configuration file.
     if let Some(api_map) = api["route"].as_table() {
         api_map.values().for_each(|v| {
-            let web_socket = v
-                .get("WEB_SOCKET")
-                .map(|v| v.as_bool().expect("expected boolean value for WEB_SOCKET"))
-                .unwrap_or(false);
             let routes = match &v["PATH"] {
                 toml::Value::String(s) => {
                     vec![s.clone()]
@@ -353,12 +312,7 @@ pub fn init_server(
                 _ => panic!("Expecting a toml::String or toml::Array, but got: {:?}", &v),
             };
             for path in routes {
-                let mut route = web_server.at(&path);
-                if web_socket {
-                    route.get(WebSocket::new(handle_web_socket));
-                } else {
-                    route.get(entry_page);
-                }
+                web_server.at(&path).get(entry_page);
             }
         });
     }

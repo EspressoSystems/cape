@@ -31,11 +31,8 @@ pub async fn run(opt: &EQSOptions) -> std::io::Result<()> {
         last_updated_block_height: 0,
     };
 
-    // TODO: mechanism to signal for exit.
     loop {
-        if let Ok(_height) = eth_poll.check().await {
-            // do we want an idle/backoff on unchanged?
-        }
+        if let Ok(_height) = eth_poll.check().await {}
         // sleep here
         sleep(opt.query_frequency()).await;
     }

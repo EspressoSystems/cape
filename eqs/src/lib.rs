@@ -1,6 +1,6 @@
 pub mod api_server;
 pub mod configuration;
-pub mod disco; // really needs to go into a shared crate
+pub mod disco;
 pub mod entry;
 pub mod errors;
 pub mod eth_polling;

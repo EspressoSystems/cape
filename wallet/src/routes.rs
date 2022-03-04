@@ -5,6 +5,7 @@ use crate::{
     wallet::{CapeWalletError, CapeWalletExt},
     web::WebState,
 };
+use async_std::fs::File;
 use async_std::sync::{Arc, Mutex};
 use cap_rust_sandbox::{
     ledger::CapeLedger,
@@ -35,6 +36,7 @@ use serde::{Deserialize, Serialize};
 use snafu::Snafu;
 use std::collections::HashMap;
 use std::fmt::Debug;
+use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
 use strum::IntoEnumIterator;
@@ -42,7 +44,6 @@ use strum_macros::{AsRefStr, EnumIter, EnumString};
 use tagged_base64::TaggedBase64;
 use tide::StatusCode;
 use tide_websockets::WebSocketConnection;
-use async_std::fs::File;
 
 #[derive(Debug, Snafu, Serialize, Deserialize)]
 #[snafu(module(error))]
@@ -307,17 +308,29 @@ pub fn get_home_path() -> Result<PathBuf, tide::Error> {
             ),
         })
     })?;
-    PathBuf::from(home)
+    Ok(PathBuf::from(home))
 }
 
-pub async fn write_path(wallet_path: PathBuf) -> Result<(), tide::Error> {
-    let mut storage_path = get_home_path();
-    storage_path.push(".esspresso/last_wallet_path");
+pub async fn write_path(wallet_path: &Path) -> Result<(), tide::Error> {
+    let mut storage_path = get_home_path().unwrap();
+    storage_path.push(".espresso/last_wallet_path");
     let mut file = File::create(storage_path).await.unwrap();
-    file.write_all(&bincode::serialize(&wallet_path).unwrap()).unwrap();
-    Ok(())
+    Ok(file
+        .write_all(&bincode::serialize(&wallet_path).unwrap())
+        .await?)
 }
-
+pub async fn read_last_path(path: &Path) -> Option<PathBuf> {
+    let file = match File::open(&path).await {
+        Ok(f) => Some(f),
+        _ => return None,
+    };
+    let mut bytes = Vec::new();
+    let num_bytes = file.unwrap().read_to_end(&mut bytes).await.unwrap_or(0);
+    if num_bytes == 0 {
+        return None;
+    }
+    bincode::deserialize(&bytes).unwrap_or(None)
+}
 // Create a wallet (if !existing) or open an existing one.
 pub async fn init_wallet(
     rng: &mut ChaChaRng,
@@ -330,14 +343,13 @@ pub async fn init_wallet(
     let path = match path {
         Some(path) => path,
         None => {
-            let mut path = get_home_path();
+            let mut path = get_home_path().unwrap();
             path.push(".translucence/wallet");
             path
         }
     };
-
+    // write_path(&path).await;
     // Store the path for later
-
 
     let verif_crs = VerifierKeySet {
         mint: TransactionVerifyingKey::Mint(

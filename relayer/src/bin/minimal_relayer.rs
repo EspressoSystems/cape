@@ -7,7 +7,7 @@ use std::sync::Arc;
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
-#[structopt(name = "Minimal CAPE Relayer", about = "DO NOT USE IN PRODUCTION")]
+#[structopt(name = "Minimal CAPE Relayer")]
 struct MinimalRelayerOptions {
     /// URL for Ethers provider
     #[structopt(short = "u", long = "rpc-url", default_value = "http://localhost:8545")]

@@ -1,3 +1,5 @@
+//! This executable deploys a CAPE contract, submits a block of transactions and prints the corresponding ethereum gas used.
+
 use anyhow::Result;
 use cap_rust_sandbox::{
     cape::CapeBlock,
@@ -13,6 +15,7 @@ use reef::Ledger;
 async fn main() -> Result<()> {
     let rng = &mut ark_std::test_rng();
 
+    // Define how many transaction of each type are generated
     for (n_transfer, n_mint, n_freeze) in [
         (0, 0, 0),
         (1, 0, 0),
@@ -43,8 +46,10 @@ async fn main() -> Result<()> {
                 .await?;
         }
 
+        // Build the block from the list of transactions
         let cape_block = CapeBlock::generate(params.txns, vec![], miner.address())?;
 
+        // Submit the block to the CAPE contract
         contract
             .submit_cape_block(cape_block.into())
             .send()

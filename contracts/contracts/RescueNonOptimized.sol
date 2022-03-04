@@ -5,7 +5,7 @@ import "hardhat/console.sol";
 
 contract RescueNonOptimized {
     /// The constants are obtained from the Sage script
-    /// https://github.com/EspressoSystems/Marvellous/blob/master/rescue254.sage
+    /// https://github.com/EspressoSystems/Marvellous/blob/fcd4c41672f485ac2f62526bc87a16789d4d0459/rescue254.sage
 
     uint256 internal constant _N_ROUNDS = 12;
     uint256 internal constant _STATE_SIZE = 4;

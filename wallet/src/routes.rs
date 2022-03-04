@@ -619,12 +619,12 @@ async fn newasset(
         policy = policy.set_freezer_pub_key(freezing_key.value.to::<FreezerPubKey>()?)
     };
     if let Some(viewing_key) = bindings.get(":viewing_key") {
-        // Always reveal blinding factor if aa viewing key is given.
+        // Always reveal blinding factor if a viewing key is given.
         policy = policy
             .set_auditor_pub_key(viewing_key.value.to::<AuditorPubKey>()?)
             .reveal_blinding_factor()?;
 
-        // Only if a viewing key is given, can amount and user address be revealed and reveal
+        // Only if a viewing key is given, can amount and user address be revealed and viewing
         // threshold be specified.
         if let Some(view_flag) = bindings.get(":view_amount") {
             if view_flag.value.as_boolean()? {

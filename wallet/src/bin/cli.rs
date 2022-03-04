@@ -704,7 +704,7 @@ mod tests {
         .get("asset_code");
 
         // Submit a dummy transaction to finalize the wrap.
-        writeln!(receiver_input, "issue my_asset").unwrap();
+        writeln!(receiver_input, "create_asset my_asset").unwrap();
         wait_for_prompt(&mut receiver_output);
         let mint_amount = 20;
         writeln!(

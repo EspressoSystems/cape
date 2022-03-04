@@ -172,16 +172,16 @@ async fn main() {
     let my_asset = match wallet
         .assets()
         .await
-        .into_values()
-        .find(|info| info.mint_info.is_some())
+        .into_iter()
+        .find(|asset| asset.mint_info.is_some())
     {
-        Some(info) => {
+        Some(asset) => {
             event!(
                 Level::INFO,
                 "found saved wallet with custom asset type {}",
-                info.asset.code
+                asset.definition.code
             );
-            info.asset
+            asset.definition
         }
         None => {
             let my_asset = wallet
@@ -232,9 +232,9 @@ async fn main() {
 
         // Get a list of assets for which we have a non-zero balance.
         let mut asset_balances = vec![];
-        for code in wallet.assets().await.keys() {
-            if wallet.balance(&address, code).await > 0 {
-                asset_balances.push(*code);
+        for asset in wallet.assets().await {
+            if wallet.balance(&address, &asset.definition.code).await > 0 {
+                asset_balances.push(asset.definition.code);
             }
         }
         // Randomly choose an asset type for the transfer.

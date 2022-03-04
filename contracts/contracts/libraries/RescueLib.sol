@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 library RescueLib {
     /// The constants are obtained from the Sage script
-    /// https://gitlab.com/translucence/crypto/marvellous/-/blob/b0885058f0348171befcf6cf30533812c9f49e15/rescue254.sage
+    /// https://github.com/EspressoSystems/Marvellous/blob/fcd4c41672f485ac2f62526bc87a16789d4d0459/rescue254.sage
 
     uint256 private constant _N_ROUNDS = 12;
     uint256 private constant _STATE_SIZE = 4;

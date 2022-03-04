@@ -13,11 +13,11 @@
 //! ```
 //! cargo run --release -p cape_wallet --bin cli -- [options]
 //! ```
-//! 
+//!
 //! You can use `--help` to see a list of the possible values for `[options]`. A particularly useful
 //! option is `--storage PATH`, which sets the location the wallet will use to store keystore files.
 //! This allows you to have multiple wallets in different directories.
-//! 
+//!
 //! When you run the CLI, you will be prompted to create or open a wallet. Once you have an open
 //! wallet, you will get the REPL prompt, `>`. Now you can type `help` to view a list of commands
 //! you can execute.

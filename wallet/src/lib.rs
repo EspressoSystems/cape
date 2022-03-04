@@ -10,33 +10,27 @@
 //! of the functionality of the web server is included in this crate as a library, in the modules
 //! [disco], [routes], and [web].
 
-/// Instantiation of [seahorse::Wallet] for CAPE.
-pub mod wallet;
-
 /// An implementation of [seahorse::WalletBackend] for CAPE.
 pub mod backend;
-
-/// Web server.
-pub mod web;
-
-/// Web server endpoint handlers.
-pub mod routes;
-
 /// Configurable API loading.
 pub mod disco;
-
-/// Testing utilities.
-#[cfg(any(test, feature = "testing"))]
-pub mod testing;
-
-/// Test-only implementation of the [reef] ledger abstraction for CAPE.
-#[cfg(any(test, feature = "testing"))]
-pub mod mocks;
+/// Web server endpoint handlers.
+pub mod routes;
+/// Instantiation of [seahorse::Wallet] for CAPE.
+pub mod wallet;
+/// Web server.
+pub mod web;
 
 /// Testing utility for the CLI.
 ///
 /// DEPRECATED: DO NOT USE THIS IN NEW CODE.
 #[cfg(any(test, feature = "testing"))]
 pub mod cli_client;
+/// Test-only implementation of the [reef] ledger abstraction for CAPE.
+#[cfg(any(test, feature = "testing"))]
+pub mod mocks;
+/// Testing utilities.
+#[cfg(any(test, feature = "testing"))]
+pub mod testing;
 
 pub use wallet::*;

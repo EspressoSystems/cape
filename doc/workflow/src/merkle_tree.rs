@@ -1,16 +1,17 @@
+//! Describes the interface of the Records Merkle tree
 #![allow(unused_variables)]
 use jf_cap::{structs::RecordCommitment, MerkleCommitment, MerkleFrontier};
 
 use crate::CapeContract;
 
 pub(crate) trait RecordMerkleTree {
-    // verify the claimed current frontier
+    /// verify the claimed current frontier
     fn verify_frontier(&self, frontier: &MerkleFrontier) -> bool;
 
-    // Given the current frontier, and a list of new RecordCommitments to be inserted,
-    // this function verifies the frontier against the current merkle tree commitment (part of `self`);
-    // then batch insert all the `rc` and finally update the Merkle root and
-    // return an updated MerkleCommitment and the new MerkleFrontier.
+    /// Given the current frontier, and a list of new RecordCommitments to be inserted,
+    /// this function verifies the frontier against the current merkle tree commitment (part of `self`);
+    /// then batch insert all the `rc` and finally update the Merkle root and
+    /// return an updated MerkleCommitment and the new MerkleFrontier.
     fn batch_insert_with_frontier(
         &mut self,
         current_frontier: MerkleFrontier,

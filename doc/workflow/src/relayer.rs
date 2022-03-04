@@ -1,3 +1,4 @@
+//! Describes how relayers are instantiated
 #![allow(dead_code)]
 use jf_cap::{keys::UserKeyPair, MerkleTree};
 
@@ -9,6 +10,7 @@ pub(crate) struct Relayer {
 }
 
 impl Relayer {
+    /// Instantiate a new relayer
     pub(crate) fn new() -> Self {
         Self {
             mt: MerkleTree::new(RECORD_MT_HEIGHT).unwrap(),

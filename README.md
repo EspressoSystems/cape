@@ -1,6 +1,6 @@
 # CAP on Ethereum
 
-**DISCLAIMER:** This software is provided "as is" and still needs to go through an exhaustive security analysis. Use at your own risk.
+**DISCLAIMER:** This software is provided "as is" and its security has not been externally audited. Use at your own risk.
 
 ---
 

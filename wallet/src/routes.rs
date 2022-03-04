@@ -42,6 +42,7 @@ use strum_macros::{AsRefStr, EnumIter, EnumString};
 use tagged_base64::TaggedBase64;
 use tide::StatusCode;
 use tide_websockets::WebSocketConnection;
+use async_std::fs::File;
 
 #[derive(Debug, Snafu, Serialize, Deserialize)]
 #[snafu(module(error))]
@@ -297,6 +298,26 @@ pub fn wallet_error(source: CapeWalletError) -> tide::Error {
     })
 }
 
+pub fn get_home_path() -> Result<PathBuf, tide::Error> {
+    let home = std::env::var("HOME").map_err(|_| {
+        server_error(CapeAPIError::Internal {
+            msg: String::from(
+                "HOME directory is not set. Please set the server's HOME directory, or \
+                    specify a different storage location using :path.",
+            ),
+        })
+    })?;
+    PathBuf::from(home)
+}
+
+pub async fn write_path(wallet_path: PathBuf) -> Result<(), tide::Error> {
+    let mut storage_path = get_home_path();
+    storage_path.push(".esspresso/last_wallet_path");
+    let mut file = File::create(storage_path).await.unwrap();
+    file.write_all(&bincode::serialize(&wallet_path).unwrap()).unwrap();
+    Ok(())
+}
+
 // Create a wallet (if !existing) or open an existing one.
 pub async fn init_wallet(
     rng: &mut ChaChaRng,
@@ -309,19 +330,14 @@ pub async fn init_wallet(
     let path = match path {
         Some(path) => path,
         None => {
-            let home = std::env::var("HOME").map_err(|_| {
-                server_error(CapeAPIError::Internal {
-                    msg: String::from(
-                        "HOME directory is not set. Please set the server's HOME directory, or \
-                            specify a different storage location using :path.",
-                    ),
-                })
-            })?;
-            let mut path = PathBuf::from(home);
+            let mut path = get_home_path();
             path.push(".translucence/wallet");
             path
         }
     };
+
+    // Store the path for later
+
 
     let verif_crs = VerifierKeySet {
         mint: TransactionVerifyingKey::Mint(

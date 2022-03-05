@@ -1,4 +1,3 @@
-// Copyright © 2021 Translucence Research, Inc. All rights reserved.
 let webSocket;
 let clientId;
 // See https://developer.mozilla.org/en-US/docs/Web/API/CloseEvent#status_codes

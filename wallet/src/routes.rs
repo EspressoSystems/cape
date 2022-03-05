@@ -314,22 +314,16 @@ pub fn get_home_path() -> Result<PathBuf, tide::Error> {
 pub async fn write_path(wallet_path: &Path) -> Result<(), tide::Error> {
     let mut storage_path = get_home_path().unwrap();
     storage_path.push(".translucence/last_wallet_path");
-    let mut file = File::create(storage_path).await.unwrap();
+    let mut file = File::create(storage_path).await?;
     Ok(file
         .write_all(&bincode::serialize(&wallet_path).unwrap())
         .await?)
 }
-pub async fn read_last_path(path: &Path) -> Option<PathBuf> {
-    let file = match File::open(&path).await {
-        Ok(f) => Some(f),
-        _ => return None,
-    };
+pub async fn read_last_path(path: &Path) -> Result<PathBuf, tide::Error> {
+    let mut file = File::open(&path).await?;
     let mut bytes = Vec::new();
-    let num_bytes = file.unwrap().read_to_end(&mut bytes).await.unwrap_or(0);
-    if num_bytes == 0 {
-        return None;
-    }
-    bincode::deserialize(&bytes).unwrap_or(None)
+    file.read_to_end(&mut bytes).await?;
+    Ok(bincode::deserialize(&bytes)?)
 }
 // Create a wallet (if !existing) or open an existing one.
 pub async fn init_wallet(

@@ -1,9 +1,10 @@
 [package]
 name = "address_book"
 version = "0.0.1"
-authors = ["Fernando Krell <fernando@translucence.net>", "John D. Corbett <corbett@pictographer.com>"]
+authors = ["Espresso Systems <hello@espressosys.com>"]
 edition = "2018"
 description = "Web server that maintains a persistent mapping from user addresses to user public keys"
+license = "GPL-3.0-or-later"
 
 [dependencies]
 async-std = { version = "1.6.0", features = ["attributes"] }

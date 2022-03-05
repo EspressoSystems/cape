@@ -1,13 +1,9 @@
 [package]
 name = "cape_wallet"
 version = "0.1.0"
-authors = [
-    "Jeb Bearer <keyao@translucence.net>",
-    "Keyao Shen <keyao@translucence.net>",
-    "corbett@pictographer.com",
-]
+authors = ["Espresso Systems <hello@espressosys.com>"]
 edition = "2018"
-license = "Copyright © 2022 Translucence Research, Inc. All rights reserved."
+license = "GPL-3.0-or-later"
 
 [dependencies]
 async-std = { version = "1.9.0", features = ["unstable", "attributes"] }

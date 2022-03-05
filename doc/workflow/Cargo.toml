@@ -1,7 +1,9 @@
 [package]
 name = "cape-workflow"
 version = "0.1.0"
+authors = ["Espresso Systems <hello@espressosys.com>"]
 edition = "2018"
+license = "GPL-3.0-or-later"
 
 [dependencies]
 cap-rust-sandbox = { path = "../../contracts/rust" }

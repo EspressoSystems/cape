@@ -14,6 +14,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract SimpleToken is ERC20 {
+    /// @notice SimpleToken contract constructor. The caller of this method receives 1000*10**18 units.
     constructor() ERC20("Simple Token", "SIT") {
         _mint(msg.sender, 1000 * 10**18);
     }

@@ -2,6 +2,6 @@
 
 The CAPE system is a set of components which purpose is to enable users to
 
-- Issue, Transfer and Freeze assets on an AAP blockchain
-- Wrap ERC20/ERC721 tokens into AAP asset records
-- Unwrap AAP asset records into ERC20/ERC721 tokens
+- Create, Transfer and Freeze assets on an CAPE system.
+- Wrap ERC20 tokens into CAPE asset records.
+- Unwrap CAPE asset records back into ERC20 tokens.

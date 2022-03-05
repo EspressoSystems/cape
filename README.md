@@ -1,11 +1,16 @@
 # CAP on Ethereum
 
+**DISCLAIMER:** This software is provided "as is" and its security has not been externally audited. Use at your own risk.
+
+---
+
 <!-- run `md-toc` inside the nix-shell to generate the table of contents -->
 
 **Table of Contents**
 
 - [CAP on Ethereum](#cap-on-ethereum)
   - [Obtaining the source code](#obtaining-the-source-code)
+  - [Providing feedback](#providing-feedback)
 - [Environment](#environment)
   - [1. Install nix](#1-install-nix)
   - [2. Activate the nix environment](#2-activate-the-nix-environment)
@@ -45,6 +50,10 @@
 ## Obtaining the source code
 
     git clone git@github.com:EspressoSystems/cape.git
+
+## Providing feedback
+
+Feedback is welcome and can be provided by [creating a ticket](https://github.com/EspressoSystems/cape/issues/new).
 
 # Environment
 

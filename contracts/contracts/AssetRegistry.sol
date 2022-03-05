@@ -32,7 +32,7 @@ contract AssetRegistry {
         uint64 revealThreshold;
     }
 
-    /// @notice Return the CAP-native asset definition
+    /// @notice Return the CAP-native asset definition.
     function nativeDomesticAsset() public pure returns (AssetDefinition memory assetDefinition) {
         assetDefinition.code = CAP_NATIVE_ASSET_CODE;
         // affine representation of zero point in arkwork is (0,1)

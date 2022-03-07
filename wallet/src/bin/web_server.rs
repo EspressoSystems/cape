@@ -98,7 +98,7 @@ mod tests {
         model::{Erc20Code, EthereumAddr},
     };
     use cape_wallet::{
-        routes::{BalanceInfo, CapeAPIError, PubKey, WalletSummary},
+        routes::{get_home_path, BalanceInfo, CapeAPIError, PubKey, WalletSummary},
         testing::port,
         web::{
             DEFAULT_ETH_ADDR, DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR,
@@ -120,6 +120,7 @@ mod tests {
     use std::collections::hash_map::HashMap;
     use std::convert::TryInto;
     use std::fmt::Debug;
+    use std::fs::remove_file;
     use std::iter::once;
     use std::time::Duration;
     use surf::Url;
@@ -327,17 +328,27 @@ mod tests {
         println!("mnemonic: {}", mnemonic);
         let password = "my-password";
 
-        // Should fail if no wallet exists.
-        server
-            .requires_wallet::<()>(&format!("openwallet/{}/path/{}", password, server.path()))
-            .await;
+        // clean up from any previous test run on the current machine
+        let mut storage_path = get_home_path().unwrap();
+        storage_path.push(".espresso/cape/last_wallet_path");
+        remove_file(storage_path).unwrap();
+
+        // Should get None on first try if no last wallet.
+        let opt = server
+            .get::<Option<PathBuf>>("lastusedkeystore")
+            .await
+            .unwrap();
+        assert!(opt.is_none());
 
         let url = format!("newwallet/{}/{}/path/{}", mnemonic, password, server.path());
         server.get::<()>(&url).await.unwrap();
 
-        let mut path = server.get::<PathBuf>("lastusedkeystore").await.unwrap();
+        let mut path = server
+            .get::<Option<PathBuf>>("lastusedkeystore")
+            .await
+            .unwrap();
         assert_eq!(
-            path,
+            *path.as_ref().unwrap(),
             PathBuf::from(std::str::from_utf8(&server.path().value()).unwrap())
         );
 
@@ -346,9 +357,12 @@ mod tests {
             .get::<()>(&format!("openwallet/{}/path/{}", password, server.path()))
             .await
             .unwrap();
-        path = server.get::<PathBuf>("lastusedkeystore").await.unwrap();
+        path = server
+            .get::<Option<PathBuf>>("lastusedkeystore")
+            .await
+            .unwrap();
         assert_eq!(
-            path,
+            *path.as_ref().unwrap(),
             PathBuf::from(std::str::from_utf8(&server.path().value()).unwrap())
         );
 
@@ -357,7 +371,16 @@ mod tests {
             .get::<()>(&format!(
                 "openwallet/{}/path/{}",
                 password,
-                TaggedBase64::new("PATH", path.as_os_str().to_str().unwrap().as_bytes()).unwrap()
+                TaggedBase64::new(
+                    "PATH",
+                    path.as_ref()
+                        .unwrap()
+                        .as_os_str()
+                        .to_str()
+                        .unwrap()
+                        .as_bytes()
+                )
+                .unwrap()
             ))
             .await
             .unwrap();
@@ -383,9 +406,12 @@ mod tests {
             .await
             .unwrap();
 
-        path = server.get::<PathBuf>("lastusedkeystore").await.unwrap();
+        path = server
+            .get::<Option<PathBuf>>("lastusedkeystore")
+            .await
+            .unwrap();
         assert_eq!(
-            path,
+            *path.as_ref().unwrap(),
             PathBuf::from(std::str::from_utf8(&second_path.value()).unwrap())
         );
 
@@ -395,9 +421,12 @@ mod tests {
             .await
             .unwrap();
 
-        path = server.get::<PathBuf>("lastusedkeystore").await.unwrap();
+        path = server
+            .get::<Option<PathBuf>>("lastusedkeystore")
+            .await
+            .unwrap();
         assert_eq!(
-            path,
+            *path.as_ref().unwrap(),
             PathBuf::from(std::str::from_utf8(&server.path().value()).unwrap())
         );
     }

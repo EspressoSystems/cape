@@ -42,6 +42,23 @@ impl EthConnection {
         Self::connect(provider, client, contract.address())
     }
 
+    /// Connect to an existing contract to query its state
+    /// * `contract_address` example: "0x60417B5Ad8629778A46A2cAaA924D7498618622B"
+    /// * `provider_url` example: "http://localhost:8545"
+    pub fn from_config_for_query(contract_address: &str, provider_url: &str) -> Self {
+        let provider =
+            Provider::<Http>::try_from(provider_url).expect("could not instantiate HTTP Provider");
+
+        let dummy_wallet = LocalWallet::new(&mut rand::thread_rng());
+        Self::connect(
+            provider.clone(),
+            Arc::new(SignerMiddleware::new(provider, dummy_wallet)),
+            contract_address
+                .parse::<Address>()
+                .expect("could no parse contract_address"),
+        )
+    }
+
     /// Connect to an existing contract at `contract_address`
     pub fn connect(
         provider: Provider<Http>,

@@ -281,6 +281,54 @@ mod tests {
     #[cfg(feature = "slow-tests")]
     #[async_std::test]
     #[traced_test]
+    async fn test_openwallet() {
+        let server = TestServer::new().await;
+        let mnemonic = server.get::<String>("getmnemonic").await.unwrap();
+        println!("mnemonic: {}", mnemonic);
+        let password = "my-password";
+        let other_pass = "other-password";
+
+        // Should fail if no wallet exists.
+        server
+            .requires_wallet::<()>(&format!("openwallet/{}/path/{}", password, server.path()))
+            .await;
+
+        // Now create a wallet so we can open it.
+        server
+            .get::<()>(&format!(
+                "newwallet/{}/{}/path/{}",
+                mnemonic,
+                password,
+                server.path()
+            ))
+            .await
+            .unwrap();
+
+        let mut path = sever.get::<()>("lastusedkeystore").await;
+        assert_eq!(path, server.path());
+        server
+            .get::<()>(&format!("openwallet/{}/path/{}", password, server.path()))
+            .await
+            .unwrap();
+        path = sever.get::<()>("lastusedkeystore").await;
+        assert_eq!(path, server.path());
+        let second_path = server.path().push("2");
+
+        server
+            .get::<()>(&format!(
+                "newwallet/{}/{}/path/{}",
+                mnemonic, password, second_path
+            ))
+            .await
+            .unwrap();
+
+        path = sever.get::<()>("lastusedkeystore").await;
+        assert_eq!(path, second_path);
+    }
+
+    #[cfg(feature = "slow-tests")]
+    #[async_std::test]
+    #[traced_test]
     async fn test_closewallet() {
         let server = TestServer::new().await;
 

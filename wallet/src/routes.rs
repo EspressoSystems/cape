@@ -319,11 +319,13 @@ pub async fn write_path(wallet_path: &Path) -> Result<(), tide::Error> {
         .write_all(&bincode::serialize(&wallet_path).unwrap())
         .await?)
 }
-pub async fn read_last_path(path: &Path) -> Result<PathBuf, tide::Error> {
+pub async fn read_last_path() -> Result<PathBuf, tide::Error> {
+    let mut path = get_home_path().unwrap();
+    path.push(".translucence/last_wallet_path");
     let mut file = File::open(&path).await?;
     let mut bytes = Vec::new();
     file.read_to_end(&mut bytes).await?;
-    Ok(bincode::deserialize(&bytes)?)
+    Ok(bincode::deserialize(&bytes).unwrap())
 }
 // Create a wallet (if !existing) or open an existing one.
 pub async fn init_wallet(
@@ -342,7 +344,8 @@ pub async fn init_wallet(
             path
         }
     };
-    // Store the path for later
+
+    // Store the path so we can have a getlastkeystore endpoint
     write_path(&path).await?;
 
     let verif_crs = VerifierKeySet {
@@ -793,8 +796,8 @@ pub async fn get_records(wallet: &mut Option<Wallet>) -> Result<Vec<RecordInfo>,
     Ok(wallet.records().await.collect::<Vec<_>>())
 }
 
-pub async fn get_last_keystore() -> Result<String, tide::Error> {
-    Ok("".to_string())
+pub async fn get_last_keystore() -> Result<PathBuf, tide::Error> {
+    Ok(read_last_path().await?)
 }
 
 pub async fn dispatch_url(

@@ -320,7 +320,7 @@ pub async fn write_path(wallet_path: &Path) -> Result<(), tide::Error> {
     let mut storage_path = get_home_path().unwrap();
     storage_path.push(".espresso/cape");
     create_dir_all(&storage_path).await?;
-    storage_path.push("/last_wallet_path");
+    storage_path.push("last_wallet_path");
     let mut file = File::create(storage_path).await?;
     Ok(file
         .write_all(&bincode::serialize(&wallet_path).unwrap())

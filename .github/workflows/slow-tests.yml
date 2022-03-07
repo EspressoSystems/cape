@@ -5,7 +5,7 @@ on:
     branches:
       - main
   schedule:
-    - cron: '0 1 * * 1'
+    - cron: "0 1 * * 1"
   workflow_dispatch:
 
 env:
@@ -18,9 +18,6 @@ jobs:
     runs-on: self-hosted
     container:
       image: ghcr.io/espressosystems/nix:main
-      credentials:
-        username: ancient123
-        password: ${{ secrets.ORG_GITHUB_PAT }}
       volumes:
         - github_nix_251:/nix
     steps:

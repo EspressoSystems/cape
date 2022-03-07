@@ -160,16 +160,18 @@ impl EthPolling {
 
                     //create LedgerEvent::Memo
                     let mut memo_events = Vec::new();
+                    let mut index = 0;
                     fetched_block_with_memos.memos.iter().enumerate().for_each(
                         |(txn_id, (txn_memo, _))| {
                             let mut outputs = Vec::new();
-                            for (i, memo) in txn_memo.iter().enumerate() {
+                            for memo in txn_memo.iter() {
                                 outputs.push((
                                     memo.clone(),
-                                    output_record_commitment[i],
-                                    uids[i],
-                                    merkle_paths[i].clone(),
+                                    output_record_commitment[index],
+                                    uids[index],
+                                    merkle_paths[index].clone(),
                                 ));
+                                index += 1;
                             }
                             let memo_event = LedgerEvent::Memos {
                                 outputs,

@@ -161,24 +161,3 @@ impl EQSOptions {
         self.eqs_port
     }
 }
-// If we want EQS instances to provide authenticated identities in the future, for monitoring, reputation, etc...
-
-// lazy_static! {
-//     static ref EQS_KEYPAIR: UserKeyPair = {
-//         // TODO: this should only be for the first time; replace with store and recover
-//         let mut prng = ChaChaRng::from_entropy();
-//         UserKeyPair::generate(&mut prng)
-
-//         // TODO: load from stored, default if not specified, unless not found or reset; output error if specified and not found
-
-//         // let mut file = File::open(path.clone()).unwrap();
-//         // let mut bytes = Vec::new();
-//         // if let Err(err) = file.read_to_end(&mut bytes).unwrap();
-//         // let owner_keys = bincode::deserialize::<UserKeyPair>(&bytes);
-//         // owner_keys.address()
-//     };
-// }
-
-// pub(crate) fn eqs_addr() -> UserAddress {
-//     EQS_KEYPAIR.address()
-// }

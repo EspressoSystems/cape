@@ -332,7 +332,6 @@ mod tests {
             .requires_wallet::<()>(&format!("openwallet/{}/path/{}", password, server.path()))
             .await;
 
-        // Now create a wallet so we can open it.
         let url = format!("newwallet/{}/{}/path/{}", mnemonic, password, server.path());
         server.get::<()>(&url).await.unwrap();
 
@@ -341,6 +340,8 @@ mod tests {
             path,
             PathBuf::from(std::str::from_utf8(&server.path().value()).unwrap())
         );
+
+        // We should still get the same path after opening the wallet
         server
             .get::<()>(&format!("openwallet/{}/path/{}", password, server.path()))
             .await
@@ -351,7 +352,7 @@ mod tests {
             PathBuf::from(std::str::from_utf8(&server.path().value()).unwrap())
         );
 
-        // Open the wallet with the we retrieved
+        // Open the wallet with the we path we retrieved
         server
             .get::<()>(&format!(
                 "openwallet/{}/path/{}",
@@ -386,6 +387,18 @@ mod tests {
         assert_eq!(
             path,
             PathBuf::from(std::str::from_utf8(&second_path.value()).unwrap())
+        );
+
+        // repopen the first wallet and see the path returned is also the original
+        server
+            .get::<()>(&format!("openwallet/{}/path/{}", password, server.path()))
+            .await
+            .unwrap();
+
+        path = server.get::<PathBuf>("lastusedkeystore").await.unwrap();
+        assert_eq!(
+            path,
+            PathBuf::from(std::str::from_utf8(&server.path().value()).unwrap())
         );
     }
 

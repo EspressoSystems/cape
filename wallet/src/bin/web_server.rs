@@ -333,41 +333,60 @@ mod tests {
             .await;
 
         // Now create a wallet so we can open it.
-        server
-            .get::<()>(&format!(
-                "newwallet/{}/{}/path/{}",
-                mnemonic,
-                password,
-                server.path()
-            ))
-            .await
-            .unwrap();
+        let url = format!("newwallet/{}/{}/path/{}", mnemonic, password, server.path());
+        server.get::<()>(&url).await.unwrap();
 
         let mut path = server.get::<PathBuf>("lastusedkeystore").await.unwrap();
-        assert_eq!(path.to_str().unwrap(), format!("{}", server.path()));
+        assert_eq!(
+            path,
+            PathBuf::from(std::str::from_utf8(&server.path().value()).unwrap())
+        );
         server
             .get::<()>(&format!("openwallet/{}/path/{}", password, server.path()))
             .await
             .unwrap();
         path = server.get::<PathBuf>("lastusedkeystore").await.unwrap();
-        assert_eq!(path.to_str().unwrap(), format!("{}", server.path()));
+        assert_eq!(
+            path,
+            PathBuf::from(std::str::from_utf8(&server.path().value()).unwrap())
+        );
 
-        let mut second_path = PathBuf::new();
-        second_path.push(format!("{}", server.path()));
-        second_path.push("2");
+        // Open the wallet with the we retrieved
+        server
+            .get::<()>(&format!(
+                "openwallet/{}/path/{}",
+                password,
+                TaggedBase64::new("PATH", path.as_os_str().to_str().unwrap().as_bytes()).unwrap()
+            ))
+            .await
+            .unwrap();
+
+        // Test that the last path is updated when we create a new wallet w/ a new path
+        let second_path = TaggedBase64::new(
+            "PATH",
+            TempDir::new("test_cape_wallet_2")
+                .unwrap()
+                .path()
+                .as_os_str()
+                .to_str()
+                .unwrap()
+                .as_bytes(),
+        )
+        .unwrap();
 
         server
             .get::<()>(&format!(
                 "newwallet/{}/{}/path/{}",
-                mnemonic,
-                password,
-                second_path.to_str().unwrap()
+                mnemonic, password, second_path
             ))
             .await
             .unwrap();
 
         path = server.get::<PathBuf>("lastusedkeystore").await.unwrap();
-        assert_eq!(path, second_path);
+        assert_eq!(
+            path,
+            PathBuf::from(std::str::from_utf8(&second_path.value()).unwrap())
+        );
     }
 
     #[cfg(feature = "slow-tests")]

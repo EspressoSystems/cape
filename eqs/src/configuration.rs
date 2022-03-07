@@ -42,15 +42,6 @@ pub struct EQSOptions {
     )]
     pub rpc_url: String,
 
-    /// Mnemonic for Ethers wallet
-    #[structopt(
-        long = "mnemonic",
-        env = "MNEMONIC",
-        default_value = "",
-        hide_env_values = true
-    )]
-    pub mnemonic: String,
-
     /// Address for CAPE contract
     #[structopt(long = "cape_address", env = "CAPE_ADDRESS")]
     pub cape_address: Option<Address>,
@@ -120,10 +111,6 @@ impl EQSOptions {
 
     pub(crate) fn rpc_url(&self) -> &str {
         &self.rpc_url
-    }
-
-    pub(crate) fn mnemonic(&self) -> &str {
-        &self.mnemonic
     }
 
     pub(crate) fn cape_address(&self) -> Option<Address> {

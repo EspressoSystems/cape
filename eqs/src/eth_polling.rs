@@ -19,9 +19,6 @@ use cap_rust_sandbox::{
 };
 use core::mem;
 use ethers::abi::AbiDecode;
-use ethers::prelude::{
-    coins_bip39::English, Http, LocalWallet, MnemonicBuilder, Provider, SignerMiddleware,
-};
 use jf_cap::{structs::RecordOpening, MerkleTree};
 use reef::traits::Block;
 use seahorse::events::LedgerEvent;
@@ -72,20 +69,11 @@ impl EthPolling {
                 state_updater.contract_address = Some(contract_address);
             }
 
-            let provider = Provider::<Http>::try_from(opt.rpc_url())
-                .expect("could not instantiate Ethereum HTTP Provider");
-            let wallet = if opt.mnemonic().is_empty() {
-                LocalWallet::new(&mut rand::thread_rng())
-            } else {
-                MnemonicBuilder::<English>::default()
-                    .phrase(opt.mnemonic())
-                    .build()
-                    .expect("could not open wallet for EQS")
-            };
-            let client = Arc::new(SignerMiddleware::new(provider.clone(), wallet));
-
             (
-                EthConnection::connect(provider, client, contract_address),
+                EthConnection::from_config_for_query(
+                    &format!("{:?}", contract_address),
+                    opt.rpc_url(),
+                ),
                 last_updated_block_height,
             )
         } else {

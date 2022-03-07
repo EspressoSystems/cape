@@ -1,3 +1,12 @@
+// Copyright (c) 2022 Espresso Systems (espressosys.com)
+// This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
+
+// This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+// This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+// You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+//! Test-only implementation of the [reef] ledger abstraction for CAPE.
+
 use crate::wallet::{CapeWalletBackend, CapeWalletError};
 use async_std::sync::{Mutex, MutexGuard};
 use async_trait::async_trait;
@@ -25,7 +34,7 @@ use seahorse::{
     loader::WalletLoader,
     persistence::AtomicWalletStorage,
     testing,
-    txn_builder::{RecordDatabase, TransactionState, TransactionUID},
+    txn_builder::{RecordDatabase, TransactionInfo, TransactionState, TransactionUID},
     WalletBackend, WalletError, WalletState,
 };
 use serde::{de::DeserializeOwned, Serialize};
@@ -210,11 +219,10 @@ impl MockCapeNetwork {
             },
             key_scans: Default::default(),
             key_state: Default::default(),
-            auditable_assets: Default::default(),
+            assets: Default::default(),
             audit_keys: Default::default(),
             freeze_keys: Default::default(),
             user_keys: Default::default(),
-            defined_assets: Default::default(),
         })
     }
 
@@ -286,9 +294,6 @@ impl MockCapeNetwork {
         for effect in effects {
             if let CapeModelEthEffect::Emit(event) = effect {
                 events.push(event);
-            } else {
-                //TODO Simulate and validate the other ETH effects. If any effects fail, the
-                // whole transaction must be considered reverted with no visible effects.
             }
         }
 
@@ -521,14 +526,7 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> MockCapeBackend<'a, Meta> {
         ledger: Arc<Mutex<MockCapeLedger<'a>>>,
         loader: &mut impl WalletLoader<CapeLedger, Meta = Meta>,
     ) -> Result<Self, WalletError<CapeLedger>> {
-        // Workaround for https://github.com/EspressoSystems/atomicstore/issues/2, which affects logs
-        // containing more than one entry in a file. We simply set the fill size small enough that
-        // there will only ever be one entry per file.
-        //
-        // Note that this issue only effects CAPE (not the Spectrum wallet, which uses the same
-        // storage implementation) because the CAPE wallet state is much smaller than the Spectrum
-        // wallet state due to the CapeLedger types not doing lightweight validation.
-        let storage = AtomicWalletStorage::new(loader, 128)?;
+        let storage = AtomicWalletStorage::new(loader, 1024)?;
         Ok(Self {
             key_stream: storage.key_stream(),
             storage: Arc::new(Mutex::new(storage)),
@@ -635,12 +633,14 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
     async fn submit(
         &mut self,
         txn: CapeTransition,
-        uid: TransactionUID<CapeLedger>,
-        memos: Vec<ReceiverMemo>,
-        sig: Signature,
+        info: TransactionInfo<CapeLedger>,
     ) -> Result<(), WalletError<CapeLedger>> {
         let mut ledger = self.ledger.lock().await;
-        ledger.network().store_call_data(uid, memos, sig);
+        ledger.network().store_call_data(
+            info.uid.unwrap_or_else(|| TransactionUID(txn.hash())),
+            info.memos,
+            info.sig,
+        );
         ledger.submit(txn)
     }
 }

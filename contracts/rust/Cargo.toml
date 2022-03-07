@@ -1,23 +1,25 @@
 [package]
 name = "cap-rust-sandbox"
 version = "0.1.0"
+authors = ["Espresso Systems <hello@espressosys.com>"]
 edition = "2018"
+license = "GPL-3.0-or-later"
 
 [lib]
 doctest = false
 
 [dependencies]
-commit = { git = "ssh://git@github.com/EspressoSystems/commit.git", rev = "f48cd52c59755eade0605111826eef3df6abdcf8" }
-jf-plonk = { features=["std", "test_apis"], git = "ssh://git@github.com/EspressoSystems/jellyfish.git" }
-jf-primitives = { features=["std"], git = "ssh://git@github.com/EspressoSystems/jellyfish.git" }
-jf-cap = { features = ["test_apis"], git = "ssh://git@github.com/EspressoSystems/cap.git", rev = "16ad157f96d2102d59206df0106fb341302180d3" }
-jf-rescue = { features=["std"], git = "ssh://git@github.com/EspressoSystems/jellyfish.git" }
-jf-utils = { features=["std"], git = "ssh://git@github.com/EspressoSystems/jellyfish.git" }
-key-set = { git = "ssh://git@github.com/EspressoSystems/key-set.git" }
-reef = { git = "ssh://git@github.com/EspressoSystems/reef.git" }
-zerok-macros = { git = "ssh://git@github.com/EspressoSystems/zerok-macros.git" }
+commit = { git = "https://github.com/EspressoSystems/commit.git", tag = "0.1.0" }
+jf-plonk = { features=["std", "test_apis"], git = "https://github.com/EspressoSystems/jellyfish.git" }
+jf-primitives = { features=["std"], git = "https://github.com/EspressoSystems/jellyfish.git" }
+jf-cap = { features = ["test_apis"], git = "https://github.com/EspressoSystems/cap.git", tag = "0.0.1" }
+jf-rescue = { features=["std"], git = "https://github.com/EspressoSystems/jellyfish.git" }
+jf-utils = { features=["std"], git = "https://github.com/EspressoSystems/jellyfish.git" }
+key-set = { git = "https://github.com/EspressoSystems/key-set.git" }
+reef = { git = "https://github.com/EspressoSystems/reef.git" }
+espresso-macros = { git = "https://github.com/EspressoSystems/espresso-macros.git" }
 arbitrary = { version="1.0", features=["derive"] }
-arbitrary-wrappers = { git = "ssh://git@github.com/EspressoSystems/arbitrary-wrappers.git" }
+arbitrary-wrappers = { git = "https://github.com/EspressoSystems/arbitrary-wrappers.git" }
 
 # We need the legacy feature in order to avoid gas estimation issues. See https://github.com/gakonst/ethers-rs/issues/825
 ethers = { features=["legacy"], git = "https://github.com/gakonst/ethers-rs", branch = "master" }
@@ -57,9 +59,6 @@ snafu = { version = "0.7", features = ["backtraces"] }
 git = "https://github.com/arkworks-rs/poly-commit/"
 rev = "cafc05e39692bbc5c383990063ad851f0b94a553"
 default-features = false
-
-[dev-dependencies]
-proptest = "1.0.0"
 
 [build-dependencies]
 glob = "^0.3.0"

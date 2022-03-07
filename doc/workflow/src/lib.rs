@@ -1,3 +1,10 @@
+// Copyright (c) 2022 Espresso Systems (espressosys.com)
+// This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
+
+// This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+// This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+// You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 //! This crate describes the workflow and interfaces of a CAPE contract deployed on Ethereum.
 
 use cap_rust_sandbox::model::{is_erc20_asset_def_valid, Erc20Code, EthereumAddr};
@@ -23,11 +30,11 @@ pub struct NullifierRepeatedError;
 /// a block in CAPE blockchain
 #[derive(Default, Clone)]
 pub struct CapeBlock {
-    // NOTE: separated out list of burn transaction
+    /// NOTE: separated out list of burn transaction
     pub(crate) burn_txns: Vec<TransactionNote>,
-    // rest of the transactions (except burn txn)
+    /// rest of the transactions (except burn txn)
     pub(crate) txns: Vec<TransactionNote>,
-    // fee_blind: BlindFactor,
+    /// public key of the participant who will collect the fee
     pub(crate) miner: UserPubKey,
 }
 
@@ -48,11 +55,10 @@ fn is_burn_txn(txn: &TransactionNote) -> bool {
 }
 
 impl CapeBlock {
-    // Refer to `validate_block()` in:
-    // TODO point to new repository
-    // https://gitlab.com/translucence/crypto/jellyfish/-/blob/main/transactions/tests/examples.rs
-    // Take a new block and remove the transactions that are not valid and update
-    // the list of record openings corresponding to burn transactions accordingly.
+    /// Refer to `validate_block()` in:
+    /// <https://github.com/EspressoSystems/cap/blob/main/tests/examples.rs>
+    /// Take a new block and remove the transactions that are not valid and update
+    /// the list of record openings corresponding to burn transactions accordingly.
     pub fn validate(
         &self,
         recent_merkle_roots: &LinkedList<NodeValue>,
@@ -62,8 +68,7 @@ impl CapeBlock {
     ) -> (CapeBlock, Vec<RecordOpening>) {
         // In order to avoid race conditions between block submitters (relayers or wallets), the CAPE contract
         // discards invalid transactions but keeps the valid ones (instead of rejecting the full block).
-        // TODO point to new repository
-        // See https://gitlab.com/translucence/cap-on-ethereum/cape/-/issues/129 for more details.
+        // See https://github.com/EspressoSystems/cape/issues/157
 
         let mut filtered_block = CapeBlock {
             burn_txns: vec![],
@@ -148,22 +153,23 @@ impl CapeBlock {
 }
 
 pub struct CapeContract {
-    // set of spent records' nullifiers, stored as mapping in contract
+    /// set of spent records' nullifiers, stored as mapping in contract
     nullifiers: HashSet<Nullifier>,
-    // latest block height
+    /// latest block height
     height: u64,
-    // latest record merkle tree commitment (including merkle root, tree height and num of leaves)
+    /// latest record merkle tree commitment (including merkle root, tree height and num of leaves)
     merkle_commitment: MerkleCommitment,
-    // The merkle frontier is stored locally
+    /// The merkle frontier is stored locally
     mt_frontier: MerkleFrontier,
-    // last X merkle root, allowing transaction building against recent merkle roots (instead of just
-    // the latest merkle root) as a buffer.
-    // where X is the capacity the Queue and can be specified during constructor. (rust doesn't have queue
-    // so we use LinkedList to simulate)
-    // NOTE: in Solidity, we can instantiate with a fixed array and an indexer to build a FIFO queue.
+    /// last X merkle root, allowing transaction building against recent merkle roots (instead of just
+    /// the latest merkle root) as a buffer.
+    /// where X is the capacity the Queue and can be specified during constructor. (rust doesn't have queue
+    /// so we use LinkedList to simulate)
+    /// NOTE: in Solidity, we can instantiate with a fixed array and an indexer to build a FIFO queue.
     recent_merkle_roots: LinkedList<NodeValue>,
-    // NOTE: in Solidity impl, we should use `keccak256(abi.encode(AssetDefinition))` as the mapping key
+    /// NOTE: in Solidity impl, we should use `keccak256(abi.encode(AssetDefinition))` as the mapping key
     wrapped_erc20_registrar: HashMap<AssetDefinition, Address>,
+    /// List of record commitments corresponding to ERC20 deposits that will be added when the next block is processed
     pending_deposit_queue: Vec<RecordCommitment>,
 }
 
@@ -184,6 +190,7 @@ impl CapeContract {
         }
     }
 
+    /// Return the address of the contract
     pub(crate) fn address(&self) -> Address {
         // NOTE: in Solidity, use expression: `address(this)`
         Address::from_low_u64_le(666u64)
@@ -218,9 +225,10 @@ impl CapeContract {
         self.wrapped_erc20_registrar.insert(new_asset, erc20_addr);
     }
 
-    // NOTE: in Solidity, we can
-    // - avoid passing in `ro.freeze_flag` (to save a little gas?)
-    // - remove `depositor` from input parameters, and directly replaced with `msg.sender`
+    /// Deposit some ERC20 tokens so that these are wrapped into asset records
+    /// NOTE: in Solidity, we can
+    /// - avoid passing in `ro.freeze_flag` (to save a little gas?)
+    /// - remove `depositor` from input parameters, and directly replaced with `msg.sender`
     pub fn deposit_erc20(&mut self, ro: RecordOpening, erc20_addr: Address, depositor: Address) {
         let mut erc20_contract = Erc20Contract::at(erc20_addr);
 
@@ -439,9 +447,6 @@ mod test {
 
         // 2. user: invoke ERC20's approve (on-L1-chain)
         //
-        // NOTE: it's probably a good idea to add u64 overflow check at UI level so that
-        // users won't deposit more than u64::MAX, since our CAPE code base are dealing with amount
-        // in `u64` whereas Solidity is dealing with `U256`.
         let deposit_amount = U256::from(1000);
         usdc_contract.approve(cape_contract.address(), deposit_amount);
 

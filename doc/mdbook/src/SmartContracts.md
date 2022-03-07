@@ -2,14 +2,14 @@
 
 ## CAPE Contract
 
-The CAPE Smart contract allows bidirectional transfers of assets between Ethereum and the CAPE Blockchain. 
+The CAPE Smart contract allows bidirectional transfers of assets between Ethereum and the CAPE system. 
 Its design is inspired by [Tornado Cash](https://tornado.cash/) where an ERC20 token transfer can trigger automatically the creation of some asset record inside the CAPE Blockchain. 
 Transferring assets from CAPE to Ethereum relies on the idea of burning/destroying the asset record and unlock it on the other side (Ethereum) also in an atomic fashion.
 
 ### Interfaces
 
 The CAPE contract has 4 public [interfaces](./CAPE.md): 
-* `constructor` that is run only once when the contract is deployed
+* `constructor` that is run only once when the contract is deployed.
 * `sponsorCapeAsset` which allows to register a new asset type bound to an ERC20 token. 
 * `depositErc20` allows to *wrap* ERC20 tokens into some asset records of a specific type that has already been registered earlier through `sponsorCapeAsset`.
 * `submitCapeBlock` allows anyone to submit a block of CAPE transactions. If all the transactions in this block are valid then the state of the CAPE blockchain will be updated accordingly. If a transaction in the block is of type BURN, the asset records will be destroyed and the equivalent amount of ERC20 token will be sent to some specified ethereum address. This process is called *unwrapping*. 

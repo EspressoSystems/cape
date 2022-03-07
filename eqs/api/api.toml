@@ -28,6 +28,16 @@ HEADING_DESCRIPTION = "Description"
 PATH = [ "get_cap_state" ]
 DOC = "Returns the current CAP blockchain state."
 
+[route.get_all_nullifiers]
+PATH = [ "get_all_nullifiers" ]
+DOC = "Returns the current set of nullifiers."
+
+[route.check_nullifier]
+PATH = [ "check_nullifiers/:nullifier" ]
+":nullifier" = "TaggedBase64"
+DOC = "Returns whether the specified nullifier has been spent."
+ERROR_nullifier = "A valid nullifier is required. Nullifiers begin with NUL~."
+
 [route.get_events_since]
 PATH = [ "get_events_since/:first", "get_events_since/:first/:max_count" ]
 ":first" = "Integer"
@@ -35,3 +45,15 @@ PATH = [ "get_events_since/:first", "get_events_since/:first/:max_count" ]
 DOC = "Returns the array of [up to max_count] events since the specified index (inclusive)"
 ERROR_first = "The index must be a non-negative integer."
 ERROR_max_count = "The max_count must be a non-negative, non-zero integer."
+
+[route.get_transaction]
+PATH = [ "get_transaction/:block_id/:txn_id" ]
+":block_id" = "Integer"
+":txn_id" = "Integer"
+DOC = "Returns the committed transaction, if any, at the specified location, with output indexes."
+
+# [route.get_transaction_by_hash]
+# PATH = [ "get_transaction/:hash" ]
+# ":hash" = "TaggedBase64"
+# DOC = "Returns the committed transaction, if any, with the specified hash, with output indexes."
+# ERROR_hash = "A valid commitment hash is required. Commitment begin with NUL~."

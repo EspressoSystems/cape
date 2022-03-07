@@ -178,6 +178,14 @@ impl Transaction for CapeTransition {
     fn set_proofs(&mut self, _proofs: Vec<()>) {}
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct CommittedCapeTransition {
+    pub block_id: u64,
+    pub txn_id: u64,
+    pub outputs: Vec<u64>,
+    pub transition: CapeTransition,
+}
+
 impl ValidationError for CapeValidationError {
     fn new(msg: impl Display) -> Self {
         Self::Failed {

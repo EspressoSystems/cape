@@ -220,6 +220,32 @@ impl CapeBlock {
         }
         Self::generate(notes, burned_ros, miner)
     }
+    pub fn into_cape_transactions(self) -> Result<(Vec<CapeModelTxn>, UserAddress)> {
+        let mut transfer_notes = self.transfer_notes.into_iter().rev();
+        let mut mint_notes = self.mint_notes.into_iter().rev();
+        let mut freeze_notes = self.freeze_notes.into_iter().rev();
+        let mut burn_notes = self.burn_notes.into_iter().rev();
+        let txns: Option<Vec<CapeModelTxn>> = self
+            .note_types
+            .into_iter()
+            .map(|note_type| match note_type {
+                NoteType::Transfer => Some(CapeModelTxn::CAP(transfer_notes.next()?.into())),
+                NoteType::Mint => Some(CapeModelTxn::CAP(mint_notes.next()?.into())),
+                NoteType::Freeze => Some(CapeModelTxn::CAP(freeze_notes.next()?.into())),
+                NoteType::Burn => {
+                    let burn_note = burn_notes.next()?;
+                    Some(CapeModelTxn::Burn {
+                        xfr: Box::new(burn_note.transfer_note),
+                        ro: Box::new(burn_note.burned_ro),
+                    })
+                }
+            })
+            .collect();
+        Ok((
+            txns.ok_or_else(|| anyhow!("Malformed CapeBlock"))?,
+            self.miner_addr,
+        ))
+    }
 }
 
 impl From<CapeBlock> for sol::CapeBlock {

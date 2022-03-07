@@ -79,7 +79,13 @@ mod tests {
             .await?
             .await?;
 
-        let events = connection
+        // A connection with a random wallet (for queries only)
+        let query_connection = EthConnection::from_config_for_query(
+            &format!("{:?}", connection.contract.address()), // 0x123...cdf
+            "http://localhost:8545",
+        );
+
+        let events = query_connection
             .contract
             .block_committed_filter()
             .from_block(0u64)
@@ -88,7 +94,7 @@ mod tests {
 
         let (_, meta) = events[0].clone();
 
-        let fetched_block_with_memos = fetch_cape_block(&connection, meta.transaction_hash)
+        let fetched_block_with_memos = fetch_cape_block(&query_connection, meta.transaction_hash)
             .await?
             .unwrap();
 

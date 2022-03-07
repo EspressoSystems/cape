@@ -107,16 +107,7 @@ impl EthPolling {
             .await
             .unwrap();
 
-        for event in new_event {
-            let (filter, meta) = event.clone();
-            let new_updated_block_height = meta.block_number.as_u64();
-            if new_updated_block_height > self.last_updated_block_height {
-                let updated_state = self.query_result_state.write().await;
-                // update the state block
-                // persist the state block updates (will be more fine grained in r3)
-                self.state_persistence.store_latest_state(&*updated_state);
-            }
-
+        for (filter, meta) in new_event {
             match filter {
                 CAPEEvents::BlockCommittedFilter(_) => {
                     let fetched_block_with_memos =
@@ -132,21 +123,16 @@ impl EthPolling {
                         .unwrap()
                         .0;
 
-                    //add transactions to QueryResultState pending commit
+                    let wraps = mem::take(&mut self.pending_commit_event);
+
+                    //add transactions followed by wraps to pending commit
                     for tx in model_txns.clone() {
                         self.pending_commit_event
                             .push(CapeTransition::Transaction(tx.clone()));
                     }
 
-                    let transitions = model_txns
-                        .clone()
-                        .into_iter()
-                        .map(CapeTransition::Transaction)
-                        .collect::<Vec<_>>();
-
-                    //push to state's pending commit event
-                    for trn in transitions {
-                        self.pending_commit_event.push(trn);
+                    for wrap in wraps {
+                        self.pending_commit_event.push(wrap);
                     }
 
                     let pending_commit = mem::take(&mut self.pending_commit_event);
@@ -162,22 +148,14 @@ impl EthPolling {
                             state_comm: meta.block_number.as_u64() + 1,
                         });
 
-                    let input_record_commitment = fetched_block_with_memos
+                    let output_record_commitment = fetched_block_with_memos
                         .block
                         .get_list_of_input_record_commitments();
 
+                    let state_lock = self.query_result_state.read().await;
                     let merkle_tree = MerkleTree::restore_from_frontier(
-                        self.query_result_state
-                            .read()
-                            .await
-                            .ledger_state
-                            .record_merkle_commitment,
-                        &self
-                            .query_result_state
-                            .read()
-                            .await
-                            .ledger_state
-                            .record_merkle_frontier,
+                        state_lock.ledger_state.record_merkle_commitment,
+                        &state_lock.ledger_state.record_merkle_frontier,
                     );
 
                     //add commitments to merkle tree
@@ -185,21 +163,14 @@ impl EthPolling {
                     let mut merkle_paths = Vec::new();
                     if let Some(mut merkle_tree) = merkle_tree {
                         for (_record_id, record_commitment) in
-                            input_record_commitment.iter().enumerate()
+                            output_record_commitment.iter().enumerate()
                         {
                             uids.push(merkle_tree.num_leaves());
                             merkle_tree.push(record_commitment.to_field_element());
                         }
-                        self.query_result_state
-                            .write()
-                            .await
-                            .ledger_state
-                            .record_merkle_commitment = merkle_tree.commitment();
-                        self.query_result_state
-                            .write()
-                            .await
-                            .ledger_state
-                            .record_merkle_frontier = merkle_tree.frontier();
+                        let mut state_lock = self.query_result_state.write().await;
+                        state_lock.ledger_state.record_merkle_commitment = merkle_tree.commitment();
+                        state_lock.ledger_state.record_merkle_frontier = merkle_tree.frontier();
 
                         merkle_paths = uids
                             .iter()
@@ -215,7 +186,7 @@ impl EthPolling {
                             for (i, memo) in txn_memo.iter().enumerate() {
                                 outputs.push((
                                     memo.clone(),
-                                    input_record_commitment[i],
+                                    output_record_commitment[i],
                                     uids[i],
                                     merkle_paths[i].clone(),
                                 ));
@@ -249,6 +220,13 @@ impl EthPolling {
                     };
                     self.pending_commit_event.push(new_transition_wrap);
                 }
+            }
+            let new_updated_block_height = meta.block_number.as_u64();
+            if new_updated_block_height > self.last_updated_block_height {
+                let updated_state = self.query_result_state.write().await;
+                // update the state block
+                // persist the state block updates (will be more fine grained in r3)
+                self.state_persistence.store_latest_state(&*updated_state);
             }
         }
         Ok(0)

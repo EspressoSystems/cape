@@ -307,10 +307,7 @@ pub fn wallet_error(source: CapeWalletError) -> tide::Error {
 pub fn get_home_path() -> Result<PathBuf, tide::Error> {
     let home = std::env::var("HOME").map_err(|_| {
         server_error(CapeAPIError::Internal {
-            msg: String::from(
-                "HOME directory is not set. Please set the server's HOME directory, or \
-                    specify a different storage location using :path.",
-            ),
+            msg: String::from("HOME directory is not set. Please set the server's HOME directory."),
         })
     })?;
     Ok(PathBuf::from(home))
@@ -326,13 +323,19 @@ pub async fn write_path(wallet_path: &Path) -> Result<(), tide::Error> {
         .write_all(&bincode::serialize(&wallet_path).unwrap())
         .await?)
 }
-pub async fn read_last_path() -> Result<PathBuf, tide::Error> {
+pub async fn read_last_path() -> Result<Option<PathBuf>, tide::Error> {
     let mut path = get_home_path().unwrap();
     path.push(".espresso/cape/last_wallet_path");
-    let mut file = File::open(&path).await?;
+    let file_result = File::open(&path).await;
+    if file_result.is_err()
+        && file_result.as_ref().err().unwrap().kind() == std::io::ErrorKind::NotFound
+    {
+        return Ok(None);
+    }
+    let mut file = file_result?;
     let mut bytes = Vec::new();
     file.read_to_end(&mut bytes).await?;
-    Ok(bincode::deserialize(&bytes).unwrap())
+    Ok(Some(bincode::deserialize(&bytes)?))
 }
 // Create a wallet (if !existing) or open an existing one.
 pub async fn init_wallet(
@@ -798,7 +801,7 @@ pub async fn get_records(wallet: &mut Option<Wallet>) -> Result<Vec<RecordInfo>,
     Ok(wallet.records().await.collect::<Vec<_>>())
 }
 
-pub async fn get_last_keystore() -> Result<PathBuf, tide::Error> {
+pub async fn get_last_keystore() -> Result<Option<PathBuf>, tide::Error> {
     Ok(read_last_path().await?)
 }
 

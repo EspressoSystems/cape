@@ -60,20 +60,6 @@ Feedback is welcome and can be provided by [creating a ticket](https://github.co
 This project has a lot of dependencies. The only tested installation method is
 via the [nix](https://nixos.org) package manager.
 
-You also need access to the following repos
-
-- https://github.com/EspressoSystems/arbitrary-wrappers
-- https://github.com/EspressoSystems/atomic-store
-- https://github.com/EspressoSystems/cap
-- https://github.com/EspressoSystems/commit
-- https://github.com/EspressoSystems/curves
-- https://github.com/EspressoSystems/espresso-macros
-- https://github.com/EspressoSystems/jellyfish-cap
-- https://github.com/EspressoSystems/key-set
-- https://github.com/EspressoSystems/net
-- https://github.com/EspressoSystems/reef
-- https://github.com/EspressoSystems/seahorse
-
 ## 1. Install nix
 
 Installation instructions can be found [here](https://nixos.org/download.html).

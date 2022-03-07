@@ -147,9 +147,9 @@ fn parse_route(
             length_matches = true;
         }
         if argument_parse_failed {
-            arg_doc.push_str(&"Argument parsing failed.\n".to_string());
+            arg_doc.push_str("Argument parsing failed.\n");
         } else {
-            arg_doc.push_str(&"No argument parsing errors!\n".to_string());
+            arg_doc.push_str("No argument parsing errors!\n");
         }
         if !argument_parse_failed && length_matches && !found_literal_mismatch {
             let route_pattern_str = route_pattern.as_str().unwrap();

@@ -6,10 +6,10 @@
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use cap_rust_sandbox::{model::CAPE_MERKLE_HEIGHT, universal_param::UNIVERSAL_PARAM};
+use dirs::data_local_dir;
+use ethers::prelude::Address;
 use jf_cap::TransactionVerifyingKey;
 use key_set::{KeySet, VerifierKeySet};
-
-use dirs::data_local_dir;
 use std::{env, path::PathBuf, time::Duration};
 use structopt::StructOpt;
 
@@ -34,9 +34,26 @@ pub struct EQSOptions {
     #[structopt(long = "store_path", short = "s", default_value = "")]
     pub store_path: String,
 
+    /// URL for Ethers HTTP Provider
+    #[structopt(
+        long = "rpc_url",
+        env = "RPC_URL",
+        default_value = "http://localhost:8545"
+    )]
+    pub rpc_url: String,
+
+    /// Address for CAPE contract
+    #[structopt(long = "cape_address", env = "CAPE_ADDRESS")]
+    pub cape_address: Option<Address>,
+
+    /// Invoke as a test-only instance; will create and use test contract
+    /// Will also use a temp persistence path and not restore history
+    #[structopt(long = "temp_test_run")]
+    pub temp_test_run: bool,
+
     /// Flag to reset persisted state.
     #[structopt(long = "reset_store_state")]
-    pub reset_state_store: bool,
+    pub reset_store_state: bool,
 
     /// Polling frequency, in milliseconds, for commits to the contract.
     #[structopt(long = "query_frequency", default_value = "500")]
@@ -51,7 +68,7 @@ pub struct EQSOptions {
 fn default_data_path() -> PathBuf {
     let mut data_dir = data_local_dir()
         .unwrap_or_else(|| env::current_dir().unwrap_or_else(|_| PathBuf::from("./")));
-    data_dir.push("tri");
+    data_dir.push("espresso");
     data_dir.push("cape_eqs");
     data_dir
 }
@@ -92,8 +109,20 @@ impl EQSOptions {
         }
     }
 
+    pub(crate) fn rpc_url(&self) -> &str {
+        &self.rpc_url
+    }
+
+    pub(crate) fn cape_address(&self) -> Option<Address> {
+        self.cape_address
+    }
+
+    pub(crate) fn temp_test_run(&self) -> bool {
+        self.temp_test_run
+    }
+
     pub(crate) fn reset_state(&self) -> bool {
-        self.reset_state_store
+        self.reset_store_state
     }
 
     pub(crate) fn verifier_keys(&self) -> VerifierKeySet {

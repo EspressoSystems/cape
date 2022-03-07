@@ -1,4 +1,16 @@
+// Copyright (c) 2022 Espresso Systems (espressosys.com)
+// This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
+
+// This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+// This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+// You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 // A wallet that generates random transactions, for testing purposes.
+// This test is for testing a bunch of wallets in the same process doing random transactions.
+// It allows us to mock parts of the backend like the EQS, until it is ready for use.
+//
+// This test is still a work in progrogress.  See: https://github.com/EspressoSystems/cape/issues/649
+// for everything left before it works properly.
 #![deny(warnings)]
 
 use async_std::sync::{Arc, Mutex};
@@ -37,12 +49,6 @@ use tracing::{event, Level};
 
 #[derive(StructOpt)]
 struct Args {
-    /// Path to a private key file to use for the wallet.
-    ///
-    /// If not given, new keys are generated randomly.
-    // #[structopt(short, long)]
-    // key_path: Option<PathBuf>,
-
     /// Seed for random number generation.
     #[structopt(short, long)]
     seed: Option<u64>,
@@ -50,11 +56,8 @@ struct Args {
     /// Path to a saved wallet, or a new directory where this wallet will be saved.
     storage: PathBuf,
 
-    /// Spin up this many wallets to talk to eachother
+    /// Spin up this many wallets to talk to each other
     num_wallets: u64,
-    // TODO: How many transactions to do in Parallel
-    // #[structopt(short, long)]
-    // batch_size: Option<u64>,
 }
 
 struct NetworkInfo<'a> {
@@ -262,7 +265,7 @@ async fn main() {
     let mut public_keys = vec![];
 
     for _i in 0..(args.num_wallets) {
-        // TODO send native asset from sender to all wallets.
+        // Send all wallets some native asset https://github.com/EspressoSystems/cape/issues/650.
         let (k, mut w) = create_wallet(&mut rng, &universal_param, &network, &args.storage).await;
 
         fund_eth_wallet(&mut w).await;
@@ -287,9 +290,13 @@ async fn main() {
                 }
                 // Get a list of assets for which we have a non-zero balance.
                 let mut asset_balances = vec![];
-                for code in sender.assets().await.keys() {
-                    if sender.balance(&sender_address, code).await > 0 {
-                        asset_balances.push(*code);
+                for asset in sender.assets().await {
+                    if sender
+                        .balance(&sender_address, &asset.definition.code)
+                        .await
+                        > 0
+                    {
+                        asset_balances.push(asset.definition.code);
                     }
                 }
                 // Randomly choose an asset type for the transfer.
@@ -341,9 +348,9 @@ async fn main() {
                 let owner_address = owner.pub_keys().await[0].address();
                 // move this to helper
                 let mut asset_balances = vec![];
-                for code in owner.assets().await.keys() {
-                    if owner.balance(&owner_address, code).await > 0 {
-                        asset_balances.push(*code);
+                for asset in owner.assets().await {
+                    if owner.balance(&owner_address, &asset.definition.code).await > 0 {
+                        asset_balances.push(asset.definition.code);
                     }
                 }
                 let asset = asset_balances.choose(&mut rng).unwrap();
@@ -358,9 +365,9 @@ async fn main() {
                 let owner_address = owner.pub_keys().await[0].address();
                 // move this to helper
                 let mut asset_balances = vec![];
-                for code in owner.assets().await.keys() {
-                    if owner.balance(&owner_address, code).await > 0 {
-                        asset_balances.push(*code);
+                for asset in owner.assets().await {
+                    if owner.balance(&owner_address, &asset.definition.code).await > 0 {
+                        asset_balances.push(asset.definition.code);
                     }
                 }
                 let asset = asset_balances.choose(&mut rng).unwrap();

@@ -1,11 +1,19 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+// Copyright (c) 2022 Espresso Systems (espressosys.com)
+// This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
+
+// This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+// This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+// You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
 
 contract RescueNonOptimized {
     /// The constants are obtained from the Sage script
-    /// https://gitlab.com/translucence/crypto/marvellous/-/blob/b0885058f0348171befcf6cf30533812c9f49e15/rescue254.sage
+    /// https://github.com/EspressoSystems/Marvellous/blob/fcd4c41672f485ac2f62526bc87a16789d4d0459/rescue254.sage
 
     uint256 internal constant _N_ROUNDS = 12;
     uint256 internal constant _STATE_SIZE = 4;
@@ -297,5 +305,29 @@ contract RescueNonOptimized {
         state = _perm(input);
 
         return state[0];
+    }
+
+    function commit(uint256[15] memory inputs) public returns (uint256) {
+        uint256 a = inputs[0];
+        uint256 b = inputs[1];
+        uint256 c = inputs[2];
+        uint256 d;
+        require(a < _PRIME, "inputs must be below _PRIME");
+        require(b < _PRIME, "inputs must be below _PRIME");
+        require(c < _PRIME, "inputs must be below _PRIME");
+
+        for (uint256 i = 0; i < 5; i++) {
+            require(inputs[3 * i + 0] < _PRIME, "inputs must be below _PRIME");
+            require(inputs[3 * i + 1] < _PRIME, "inputs must be below _PRIME");
+            require(inputs[3 * i + 2] < _PRIME, "inputs must be below _PRIME");
+            a += inputs[3 * i + 0];
+            b += inputs[3 * i + 1];
+            c += inputs[3 * i + 2];
+            uint256[4] memory state = [a % _PRIME, b % _PRIME, c % _PRIME, d % _PRIME];
+            state = _perm(state);
+            (a, b, c, d) = (state[0], state[1], state[2], state[3]);
+        }
+
+        return a % _PRIME;
     }
 }

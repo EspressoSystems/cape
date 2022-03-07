@@ -1,3 +1,13 @@
+// Copyright (c) 2022 Espresso Systems (espressosys.com)
+// This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
+
+// This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+// This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+// You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+//! Testing utility for the CLI.
+//!
+//! DEPRECATED: DO NOT USE THIS IN NEW CODE.
 #![allow(dead_code)]
 
 use escargot::CargoBuild;
@@ -84,13 +94,10 @@ impl CliClient {
     /// Issue a command to the wallet identified by `wallet`.
     ///
     /// The command string will be preprocessed by replacing each occurrence of `$var` in the
-    /// command with the value of the variable `var`. See [output] for how variables can be bound to
-    /// values using named capture groups in regexes.
+    /// command with the value of the variable `var`. See [CliClient::output] for how variables can
+    /// be bound to values using named capture groups in regexes.
     ///
-    /// If `wallet` refers to a wallet that has not yet been created, a new one will be created. The
-    /// [TestState] always starts off with one wallet, index 0, which gets an initial grant of 2^32
-    /// native tokens. So `command(0, "command")` will not load a new wallet. But the first time
-    /// `command(1, "command")` is called, it will block until wallet 1 is created.
+    /// If `wallet` refers to a wallet that has not yet been created, a new one will be created.
     pub fn command(&mut self, id: usize, command: impl AsRef<str>) -> Result<&mut Self, String> {
         let command = self.substitute(command)?;
         let wallet = self

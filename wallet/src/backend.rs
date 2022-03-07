@@ -1,3 +1,11 @@
+// Copyright (c) 2022 Espresso Systems (espressosys.com)
+// This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
+
+// This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+// This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+// You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+//! An implementation of [seahorse::WalletBackend] for CAPE.
 #![deny(warnings)]
 
 use crate::{mocks::MockCapeLedger, CapeWalletBackend, CapeWalletError};
@@ -23,18 +31,18 @@ use futures::Stream;
 use jf_cap::{
     keys::{UserAddress, UserKeyPair, UserPubKey},
     proof::UniversalParam,
-    structs::{AssetDefinition, Nullifier, ReceiverMemo, RecordOpening},
-    Signature,
+    structs::{AssetDefinition, Nullifier, RecordOpening},
 };
 use net::client::parse_error_body;
 use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
+use reef::traits::Transaction;
 use relayer::SubmitBody;
 use seahorse::{
     events::{EventIndex, EventSource, LedgerEvent},
     hd,
     loader::WalletLoader,
     persistence::AtomicWalletStorage,
-    txn_builder::TransactionUID,
+    txn_builder::{TransactionInfo, TransactionUID},
     WalletBackend, WalletState,
 };
 use serde::{de::DeserializeOwned, Serialize};
@@ -125,9 +133,7 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
     async fn submit(
         &mut self,
         txn: CapeTransition,
-        uid: TransactionUID<CapeLedger>,
-        memos: Vec<ReceiverMemo>,
-        sig: Signature,
+        info: TransactionInfo<CapeLedger>,
     ) -> Result<(), CapeWalletError> {
         match &txn {
             CapeTransition::Transaction(txn) => {
@@ -135,8 +141,8 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
                     .post("submit")
                     .body_json(&SubmitBody {
                         transaction: txn.clone(),
-                        memos: memos.clone(),
-                        signature: sig.clone(),
+                        memos: info.memos.clone(),
+                        signature: info.sig.clone(),
                     })
                     .map_err(|err| CapeWalletError::Failed {
                         msg: err.to_string(),
@@ -161,7 +167,11 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
         // passing it the submitted transaction. This should not fail, since the submission to the
         // contract above succeeded, and the mock EQS is supposed to be tracking the contract state.
         let mut mock_eqs = self.mock_eqs.lock().await;
-        mock_eqs.network().store_call_data(uid, memos, sig);
+        mock_eqs.network().store_call_data(
+            info.uid.unwrap_or_else(|| TransactionUID(txn.hash())),
+            info.memos,
+            info.sig,
+        );
         mock_eqs.submit(txn).unwrap();
 
         Ok(())

@@ -1,17 +1,18 @@
 [package]
 name = "address_book"
 version = "0.0.1"
-authors = ["Fernando Krell <fernando@translucence.net>", "John D. Corbett <corbett@pictographer.com>"]
+authors = ["Espresso Systems <hello@espressosys.com>"]
 edition = "2018"
 description = "Web server that maintains a persistent mapping from user addresses to user public keys"
+license = "GPL-3.0-or-later"
 
 [dependencies]
 async-std = { version = "1.6.0", features = ["attributes"] }
-atomic_store = { git = "ssh://git@github.com/EspressoSystems/atomicstore.git" }
+atomic_store = { git = "https://github.com/EspressoSystems/atomicstore.git" }
 bincode = "1.3.3"
 itertools = "0.10.1"
-jf-cap = { features=["std"], git = "ssh://git@github.com/EspressoSystems/cap.git", rev = "16ad157f96d2102d59206df0106fb341302180d3" }
-net = { git = "ssh://git@github.com/EspressoSystems/net.git" }
+jf-cap = { features=["std"], git = "https://github.com/EspressoSystems/cap.git", tag = "0.0.1" }
+net = { git = "https://github.com/EspressoSystems/net.git" }
 once_cell = "1"
 rand_chacha = "0.3.1"
 serde = { version = "1.0", features = ["derive"] }

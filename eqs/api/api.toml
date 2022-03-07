@@ -1,8 +1,5 @@
 # API and messages
 #
-# Work-in-progress based on
-# https://www.notion.so/translucence/Ethereum-Query-Service-c0affc8b61c640fc8dc238852bfbea5b#20a388f0d7974bed946624091cb8f6f2
-#
 # TOML specification: https://github.com/kezhuw/toml-spec
 
 [meta]

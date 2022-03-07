@@ -1,11 +1,16 @@
-# CAP on Ethereum
+# Configurable Asset Privacy for Ethereum (CAPE)
+
+**DISCLAIMER:** This software is provided "as is" and its security has not been externally audited. Use at your own risk.
+
+---
 
 <!-- run `md-toc` inside the nix-shell to generate the table of contents -->
 
 **Table of Contents**
 
-- [CAP on Ethereum](#cap-on-ethereum)
+- [CAPE](#cape)
   - [Obtaining the source code](#obtaining-the-source-code)
+  - [Providing feedback](#providing-feedback)
 - [Environment](#environment)
   - [1. Install nix](#1-install-nix)
   - [2. Activate the nix environment](#2-activate-the-nix-environment)
@@ -46,26 +51,14 @@
 
     git clone git@github.com:EspressoSystems/cape.git
 
+## Providing feedback
+
+Feedback is welcome and can be provided by [creating a ticket](https://github.com/EspressoSystems/cape/issues/new).
+
 # Environment
 
 This project has a lot of dependencies. The only tested installation method is
 via the [nix](https://nixos.org) package manager.
-
-You also need access to the following currently private git repos
-
-- https://github.com/EspressoSystems/arbitrary-wrappers
-- https://github.com/EspressoSystems/atomic-store
-- https://github.com/EspressoSystems/cap
-- https://github.com/EspressoSystems/commit
-- https://github.com/EspressoSystems/curves
-- https://github.com/EspressoSystems/jellyfish-cap
-- https://github.com/EspressoSystems/key-set
-- https://github.com/EspressoSystems/net
-- https://github.com/EspressoSystems/reef
-- https://github.com/EspressoSystems/seahorse
-- https://github.com/EspressoSystems/zerok-macros
-
-Ping Mat for access.
 
 ## 1. Install nix
 
@@ -460,7 +453,7 @@ Based on a few successful test runs, the entire suite should consume roughly 0.0
 
 ## CAP protocol specification
 
-A formal specification of the Configurable Asset Policy protocol can be found at [`./doc/cap-specification.pdf`](./doc/cap-specification.pdf)
+A formal specification of the Configurable Asset Policy protocol can be found at [our CAP github repo](https://github.com/EspressoSystems/cap/blob/main/cap-specification.pdf)
 
 ## CAPE Contract specification
 

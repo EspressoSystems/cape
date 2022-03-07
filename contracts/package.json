@@ -2,16 +2,16 @@
   "name": "cap-on-ethereum",
   "version": "1.0.0",
   "description": "### Obtaining the source code Check out the source with submodules by running",
-  "homepage": "https://gitlab.com/translucence/cap-on-ethereum#readme",
+  "homepage": "https://github.com/EspressoSystems/cape/blob/main/README.md",
   "bugs": {
-    "url": "https://gitlab.com/translucence/cap-on-ethereum/issues"
+    "url": "https://github.com/EspressoSystems/cape/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@gitlab.com/translucence/cap-on-ethereum.git"
+    "url": "git+ssh://git@github.com:EspressoSystems/cape.git"
   },
   "license": "ISC",
-  "author": "Translucence Research Institute",
+  "author": "Espresso Systems <hello@espressosys.com>",
   "main": "hardhat.config.js",
   "dependencies": {
     "@noble/bls12-381": "^1.0.1",

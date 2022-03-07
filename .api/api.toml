@@ -1,0 +1,266 @@
+# API and messages
+#
+# TOML specification: https://github.com/kezhuw/toml-spec
+
+[meta]
+FORMAT_VERSION = "0.1.0"
+
+# Logo is 1093x230
+
+HTML_TOP = """
+<!DOCTYPE html>
+<html lang='en'>
+  <head>
+    <meta charset='utf-8'>
+    <title>Espresso Systems CAPE Web Help</title>
+    <link rel='stylesheet' href='public/css/style.css'>
+    <script src='public/js/script.js'></script>
+  </head>
+  <body>
+    <div><img src='public/media/Horizontal02.png'
+              alt='Espresso Systems Logo'
+              height='115'/></div>
+    <h1>Espresso Systems CAPE Web Interface</h1>
+    <p>The Espresso Systems CAPE Web Inteface provides a way to create and interact with a local wallet that can be used to build, submit, and track transactions, as well as creating and managing new types of assets.</p>
+"""
+
+HTML_BOTTOM = """
+  </body>
+</html>
+"""
+
+HEADING_ROUTES = "Routes"
+HEADING_PARAMETERS = "Parameters"
+HEADING_DESCRIPTION = "Description"
+
+[route.getmnemonic]
+PATH = ["getmnemonic"]
+DOC = "Generate a random mnemonic phrase."
+
+[route.newwallet]
+PATH = ["newwallet/:mnemonic/:password", "newwallet/:mnemonic/:password/path/:path"]
+":password" = "Literal"
+":path" = "TaggedBase64"
+":mnemonic" = "Literal"
+DOC = """
+Creates and opens a new the wallet with the given mnemonic and password.
+"""
+
+[route.openwallet]
+PATH = ["openwallet/:password", "openwallet/:password/path/:path"]
+":password" = "Literal"
+":path" = "TaggedBase64"
+DOC = """
+Open the wallet from local storage with the given password and path.
+"""
+
+[route.closewallet]
+PATH = ["closewallet"]
+DOC = """
+Close the current wallet.
+"""
+
+[route.getaddress]
+PATH = ["getaddress"]
+DOC = """
+Get the addresses for the current wallet.
+"""
+
+[route.lastusedkeystore]
+PATH = ["lastusedkeystore"]
+DOC = """
+Get the last used wallet's path.
+"""
+
+[route.getbalance]
+PATH = ["getbalance/all", "getbalance/address/:address", "getbalance/address/:address/asset/:asset"]
+":address" = "TaggedBase64"
+":asset" = "TaggedBase64"
+DOC = """
+Get all balances for the current wallet, all the balances for a given address, or the balance for a given address and asset type.
+"""
+
+[route.getrecords]
+PATH = ["getrecords"]
+DOC = """
+Get all records related to the current wallet.
+"""
+
+[route.getinfo]
+PATH = ["getinfo", "getinfo/address", "getinfo/key", "getinfo/asset", "getinfo/asset/:asset", "getinfo/freezing_key", "getinfo/sending_key", "getinfo/viewing_key"]
+DOC = """
+Get the addresses, public keys, and asset types for the current wallet.
+"""
+
+[route.newkey]
+PATH = ["newkey/sending", "newkey/viewing", "newkey/freezing"]
+DOC = """
+Generate and return a key of the given type.
+"""
+
+[route.importkey]
+PATH = ["importkey/freezing/:freezing", "importkey/sending/:sending", "importkey/sending/:sending/:index", "importkey/viewing/:viewing" ]
+":freezing" = "TaggedBase64"
+":sending" = "TaggedBase64"
+":index" = "Integer"
+":viewing" = "TaggedBase64"
+DOC = """
+Import the given key into the current wallet. For sending keys, the optional scan index give a block index at which to begin scanning. If omitted, the entire ledger is scanned for transactions using the key.
+"""
+
+[route.send]
+PATH = ["send/sender/:sender/asset/:asset/recipient/:recipient/amount/:amount/fee/:fee"]
+":sender" = "TaggedBase64"
+":asset" = "TaggedBase64"
+":recipient" = "TaggedBase64"
+":amount" = "Integer"
+":fee" = "Integer"
+DOC = """
+Transfer amount units of the given asset from the sender to the recipient. Returns a serialized receipt which can be used to track the transaction through the validation process.
+"""
+
+[route.wrap]
+PATH = ["wrap/destination/:destination/ethaddress/:eth_address/asset/:asset/amount/:amount"]
+":destination" = "TaggedBase64"
+":eth_address" = "TaggedBase64"
+":asset" = "TaggedBase64"
+":amount" = "Integer"
+DOC = """
+Wrap amount units of the given asset from the Ethereum address to the destination.
+"""
+
+[route.unwrap]
+PATH = ["unwrap/source/:source/ethaddress/:eth_address/asset/:asset/amount/:amount/fee/:fee"]
+":source" = "TaggedBase64"
+":eth_address" = "TaggedBase64"
+":asset" = "TaggedBase64"
+":amount" = "Integer"
+":fee" = "Integer"
+DOC = """
+Unwrap amount units of the given asset from the source to the Ethereum address. Returns a serialized receipt which can be used to track the transaction through the validation process.
+"""
+
+[route.newasset]
+PATH = [
+  # `symbol` may be added as a parameter in the future but it's not used for now.
+  # Only if `viewing_key` is given, can `view_amount`, `view_address` and `viewing_threshold` be specified.
+
+  # Paths for asset sponsor.
+  "newasset/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address/viewing_threshold/:viewing_threshold",
+  "newasset/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address",
+  "newasset/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/viewing_threshold/:viewing_threshold",
+  "newasset/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount",
+  "newasset/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_address/:view_address/viewing_threshold/:viewing_threshold",
+  "newasset/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_address/:view_address",
+  "newasset/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/viewing_threshold/:viewing_threshold",
+  "newasset/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key",
+  "newasset/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key",
+  "newasset/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address/viewing_threshold/:viewing_threshold",
+  "newasset/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address",
+  "newasset/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_amount/:view_amount/viewing_threshold/:viewing_threshold",
+  "newasset/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_amount/:view_amount",
+  "newasset/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_address/:view_address/viewing_threshold/:viewing_threshold",
+  "newasset/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_address/:view_address",
+  "newasset/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/viewing_threshold/:viewing_threshold",
+  "newasset/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key",
+  "newasset/erc20/:erc20/sponsor/:sponsor",
+
+  # Paths for asset definition with a given description.
+  "newasset/description/:description/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address/viewing_threshold/:viewing_threshold",
+  "newasset/description/:description/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address",
+  "newasset/description/:description/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/viewing_threshold/:viewing_threshold",
+  "newasset/description/:description/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount",
+  "newasset/description/:description/freezing_key/:freezing_key/viewing_key/:viewing_key/view_address/:view_address/viewing_threshold/:viewing_threshold",
+  "newasset/description/:description/freezing_key/:freezing_key/viewing_key/:viewing_key/view_address/:view_address",
+  "newasset/description/:description/freezing_key/:freezing_key/viewing_key/:viewing_key/viewing_threshold/:viewing_threshold",
+  "newasset/description/:description/freezing_key/:freezing_key/viewing_key/:viewing_key",
+  "newasset/description/:description/freezing_key/:freezing_key",
+  "newasset/description/:description/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address/viewing_threshold/:viewing_threshold",
+  "newasset/description/:description/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address",
+  "newasset/description/:description/viewing_key/:viewing_key/view_amount/:view_amount/viewing_threshold/:viewing_threshold",
+  "newasset/description/:description/viewing_key/:viewing_key/view_amount/:view_amount",
+  "newasset/description/:description/viewing_key/:viewing_key/view_address/:view_address/viewing_threshold/:viewing_threshold",
+  "newasset/description/:description/viewing_key/:viewing_key/view_address/:view_address",
+  "newasset/description/:description/viewing_key/:viewing_key/viewing_threshold/:viewing_threshold",
+  "newasset/description/:description/viewing_key/:viewing_key",
+  "newasset/description/:description",
+
+  # Paths for asset definition without a given description.
+  "newasset/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address/viewing_threshold/:viewing_threshold",
+  "newasset/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address",
+  "newasset/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/viewing_threshold/:viewing_threshold",
+  "newasset/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount",
+  "newasset/freezing_key/:freezing_key/viewing_key/:viewing_key/view_address/:view_address/viewing_threshold/:viewing_threshold",
+  "newasset/freezing_key/:freezing_key/viewing_key/:viewing_key/view_address/:view_address",
+  "newasset/freezing_key/:freezing_key/viewing_key/:viewing_key/viewing_threshold/:viewing_threshold",
+  "newasset/freezing_key/:freezing_key/viewing_key/:viewing_key",
+  "newasset/freezing_key/:freezing_key",
+  "newasset/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address/viewing_threshold/:viewing_threshold",
+  "newasset/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address",
+  "newasset/viewing_key/:viewing_key/view_amount/:view_amount/viewing_threshold/:viewing_threshold",
+  "newasset/viewing_key/:viewing_key/view_amount/:view_amount",
+  "newasset/viewing_key/:viewing_key/view_address/:view_address/viewing_threshold/:viewing_threshold",
+  "newasset/viewing_key/:viewing_key/view_address/:view_address",
+  "newasset/viewing_key/:viewing_key/viewing_threshold/:viewing_threshold",
+  "newasset/viewing_key/:viewing_key",
+  "newasset",
+]
+":erc20" = "TaggedBase64"
+":description" = "TaggedBase64"
+":sponsor" = "TaggedBase64"
+":freezing_key" = "TaggedBase64"
+":viewing_key" = "TaggedBase64"
+":view_amount" = "Boolean"
+":view_address" = "Boolean"
+":viewing_threshold" = "Integer"
+DOC = """
+Sponsor or define an asset, depending on if an ERC20 code is given. Reports the asset definition.
+"""
+
+[route.mint]
+PATH = ["mint/asset/:asset/amount/:amount/fee/:fee/minter/:minter/recipient/:recipient"]
+":asset" = "TaggedBase64"
+":amount" = "Integer"
+":fee" = "Integer"
+":minter" = "TaggedBase64"
+":recipient" = "TaggedBase64"
+DOC = """
+Mint amount units of a given asset code controlled by the current wallet to the recipient. Returns a serialized receipt which can be used to track the transaction through the validation process.
+"""
+
+[route.freeze]
+PATH = ["freeze/:address/:asset/fee/:fee_address/:fee_amount"]
+":address" = "TaggedBase64"
+":asset" = "TaggedBase64"
+":fee_address" = "TaggedBase64"
+":fee_amount" = "Integer"
+DOC = """
+Freeze the asset associated with the given address and asset type. Assumes the asset was defined with a freezing key. 
+"""
+
+[route.unfreeze]
+PATH = ["unfreeze/:address/:asset/fee/:fee_address/:fee_amount"]
+":address" = "TaggedBase64"
+":asset" = "TaggedBase64"
+":fee_address" = "TaggedBase64"
+":fee_amount" = "Integer"
+DOC = """
+Unfreeze the asset associated with the given address and asset type. Assumes the asset was defined with a freezing key. 
+"""
+
+[route.view]
+PATH = ["view/:asset", "view/key/:key"]
+":asset" = "TaggedBase64"
+":key" = "TaggedBase64"
+DOC = """
+View the given asset or view the asset associated with the given viewing key.
+"""
+
+[route.transaction]
+PATH = ["transaction/list", "transaction/list/:from/:count", "transaction/status/:receipt", "transaction/await/:reciept"]
+":from" = "TaggedBase64"
+":reciept" = "TaggedBase64"
+":count" = "Integer"
+DOC = """
+List transactions, poll the status of a given transaction, or await events for a given transaction.
+"""

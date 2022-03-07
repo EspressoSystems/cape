@@ -322,7 +322,7 @@ mod tests {
     #[cfg(feature = "slow-tests")]
     #[async_std::test]
     #[traced_test]
-    async fn test_openwallet() {
+    async fn test_lastusedkeystore() {
         let server = TestServer::new().await;
         let mnemonic = server.get::<String>("getmnemonic").await.unwrap();
         println!("mnemonic: {}", mnemonic);

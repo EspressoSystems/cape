@@ -12,7 +12,7 @@ use crate::{
     wallet::{CapeWalletError, CapeWalletExt},
     web::WebState,
 };
-use async_std::fs::File;
+use async_std::fs::{create_dir_all, File};
 use async_std::sync::{Arc, Mutex};
 use cap_rust_sandbox::{
     ledger::CapeLedger,
@@ -318,7 +318,9 @@ pub fn get_home_path() -> Result<PathBuf, tide::Error> {
 
 pub async fn write_path(wallet_path: &Path) -> Result<(), tide::Error> {
     let mut storage_path = get_home_path().unwrap();
-    storage_path.push(".espresso/last_wallet_path");
+    storage_path.push(".espresso/cape");
+    create_dir_all(&storage_path).await?;
+    storage_path.push("/last_wallet_path");
     let mut file = File::create(storage_path).await?;
     Ok(file
         .write_all(&bincode::serialize(&wallet_path).unwrap())
@@ -326,7 +328,7 @@ pub async fn write_path(wallet_path: &Path) -> Result<(), tide::Error> {
 }
 pub async fn read_last_path() -> Result<PathBuf, tide::Error> {
     let mut path = get_home_path().unwrap();
-    path.push(".espresso/last_wallet_path");
+    path.push(".espresso/cape/last_wallet_path");
     let mut file = File::open(&path).await?;
     let mut bytes = Vec::new();
     file.read_to_end(&mut bytes).await?;

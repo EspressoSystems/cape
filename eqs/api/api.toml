@@ -52,8 +52,8 @@ PATH = [ "get_transaction/:block_id/:txn_id" ]
 ":txn_id" = "Integer"
 DOC = "Returns the committed transaction, if any, at the specified location, with output indexes."
 
-# [route.get_transaction_by_hash]
-# PATH = [ "get_transaction/:hash" ]
-# ":hash" = "TaggedBase64"
-# DOC = "Returns the committed transaction, if any, with the specified hash, with output indexes."
-# ERROR_hash = "A valid commitment hash is required. Commitment begin with NUL~."
+[route.get_transaction_by_hash]
+PATH = [ "get_transaction/:hash" ]
+":hash" = "TaggedBase64"
+DOC = "Returns the committed transaction, if any, with the specified hash, with output indexes."
+ERROR_hash = "A valid commitment hash is required. Commitment begin with NUL~."

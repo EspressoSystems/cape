@@ -354,7 +354,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
     /// @dev send the ERC20 tokens equivalent to the asset records being burnt. Recall that the burned record opening is contained inside the note.
     /// @param note note of type *BURN*
     function _handleWithdrawal(BurnNote memory note) internal {
-        address ercTokenAddress = _lookup(note.recordOpening.assetDef);
+        address ercTokenAddress = lookup(note.recordOpening.assetDef);
 
         // Extract recipient address
         address recipientAddress = BytesLib.toAddress(

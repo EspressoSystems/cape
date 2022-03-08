@@ -83,6 +83,14 @@ async fn test_asset_registry() -> Result<()> {
 
     assert!(registered);
 
+    // Lookup the address given the asset definition
+    let address = contract
+        .lookup(asset_def.clone().into())
+        .call()
+        .await
+        .unwrap();
+    assert_eq!(address, erc20_address);
+
     // Asset cannot be registered again
     contract
         .sponsor_cape_asset(erc20_address, asset_def.clone().into())

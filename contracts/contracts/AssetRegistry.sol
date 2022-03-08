@@ -45,7 +45,7 @@ contract AssetRegistry {
     /// given asset definition.
     /// @param assetDefinition an asset definition
     /// @return An ERC-20 address
-    function _lookup(AssetDefinition memory assetDefinition) internal view returns (address) {
+    function lookup(AssetDefinition memory assetDefinition) public view returns (address) {
         bytes32 key = keccak256(abi.encode(assetDefinition));
         return assets[key];
     }
@@ -58,7 +58,7 @@ contract AssetRegistry {
         view
         returns (bool)
     {
-        return _lookup(assetDefinition) != address(0);
+        return lookup(assetDefinition) != address(0);
     }
 
     /// @notice Create and register a new asset type associated with an

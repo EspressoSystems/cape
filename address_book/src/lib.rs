@@ -17,6 +17,8 @@ use std::collections::HashMap;
 use std::time::Duration;
 use tide::{log::LevelFilter, prelude::*, StatusCode};
 
+pub mod signal;
+
 pub const DEFAULT_PORT: u16 = 50078u16;
 const ADDRESS_BOOK_STARTUP_RETRIES: usize = 8;
 
@@ -48,6 +50,7 @@ pub fn address_book_port() -> String {
 pub async fn init_web_server(
     log_level: LevelFilter,
 ) -> std::io::Result<JoinHandle<std::io::Result<()>>> {
+    let _interrupt_handler = signal::init_sig_handler().await;
     // Accessing `LOG_LEVEL` is considered unsafe since it is a static mutable
     // variable, but we need this to ensure that only one logger is running.
     unsafe {

@@ -5,18 +5,19 @@
 // This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use address_book::init_web_server;
-use tide::log::LevelFilter;
+use async_std::task::spawn;
+use async_std::task::JoinHandle;
+use signal_hook::{consts::SIGINT, consts::SIGTERM, iterator::Signals};
+use std::process;
 
-/// Run a web server that provides a key/value store mapping user
-/// addresses to public keys.
-#[async_std::main]
-async fn main() -> Result<(), std::io::Error> {
-    init_web_server(LevelFilter::Info)
-        .await
-        .unwrap_or_else(|err| {
-            panic!("Web server exited with an error: {}", err);
-        })
-        .await?;
-    Ok(())
+/// Spawn a thread that waits for SIGTERM. If SIGTERM is received,
+/// the application exits with exit status 1.
+pub async fn init_sig_handler() -> Result<JoinHandle<()>, ()> {
+    let mut signals = Signals::new(&[SIGINT, SIGTERM]).unwrap();
+    Ok(spawn(async move {
+        for sig in signals.forever() {
+            println!("Received signal {:?}", sig);
+            process::exit(1);
+        }
+    }))
 }

@@ -8,6 +8,7 @@
 use crate::model::*;
 use arbitrary::{Arbitrary, Unstructured};
 use arbitrary_wrappers::*;
+use ark_serialize::*;
 use commit::{Commitment, Committable, RawCommitmentBuilder};
 use espresso_macros::ser_test;
 use jf_cap::{
@@ -15,6 +16,7 @@ use jf_cap::{
     structs::{AssetCode, AssetDefinition, Nullifier, RecordCommitment, RecordOpening},
     TransactionNote,
 };
+use jf_utils::tagged_blob;
 use reef::{cap, traits::*, AuditError, AuditMemoOpening};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -182,9 +184,14 @@ impl Transaction for CapeTransition {
 pub struct CommittedCapeTransition {
     pub block_id: u64,
     pub txn_id: u64,
-    pub outputs: Vec<u64>,
+    pub output_start: u64,
+    pub output_size: u64,
     pub transition: CapeTransition,
 }
+
+#[tagged_blob("CMTMNT_CAPE_TRNSTN")]
+#[derive(CanonicalSerialize, CanonicalDeserialize, Debug, Clone)]
+pub struct CommitmentToCapeTransition(pub Commitment<CapeTransition>);
 
 impl ValidationError for CapeValidationError {
     fn new(msg: impl Display) -> Self {

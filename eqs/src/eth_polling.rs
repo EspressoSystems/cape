@@ -17,10 +17,11 @@ use cap_rust_sandbox::{
     model::{CapeModelTxn, Erc20Code, EthereumAddr},
     types::{CAPEEvents, RecordOpening as RecordOpeningSol},
 };
+use commit::Committable;
 use core::mem;
 use ethers::abi::AbiDecode;
 use jf_cap::{structs::RecordOpening, MerkleTree, TransactionNote};
-use reef::traits::Block;
+use reef::traits::{Block, Transaction};
 use seahorse::events::LedgerEvent;
 
 pub(crate) struct EthPolling {
@@ -117,6 +118,7 @@ impl EthPolling {
                         .unwrap()
                         .0;
 
+                    // TODO Instead of panicking here we need to handle cases of missing memos gracefully
                     let num_txn = model_txns.len();
                     let num_txn_memo = fetched_block_with_memos.memos.len();
                     if num_txn != num_txn_memo {
@@ -126,25 +128,15 @@ impl EthPolling {
                         );
                     }
 
-                    for (tx, (recv_memos, sig)) in
-                        model_txns.iter().zip(fetched_block_with_memos.memos.iter())
-                    {
-                        match tx {
-                            CapeModelTxn::CAP(note) => note.clone(),
-                            CapeModelTxn::Burn { xfr, .. } => TransactionNote::from(*xfr.clone()),
-                        }
-                        .verify_receiver_memos_signature(recv_memos, sig)
-                        .expect("Failed to verify receiver memo signature")
-                    }
-
                     let mut wraps = mem::take(&mut self.pending_commit_event);
 
                     //add transactions followed by wraps to pending commit
+                    let mut transitions = Vec::new();
                     for tx in model_txns.clone() {
-                        self.pending_commit_event
-                            .push(CapeTransition::Transaction(tx.clone()));
+                        transitions.push(CapeTransition::Transaction(tx.clone()));
                     }
 
+                    self.pending_commit_event.append(&mut transitions.clone());
                     self.pending_commit_event.append(&mut wraps);
 
                     let output_record_commitment = fetched_block_with_memos
@@ -173,11 +165,33 @@ impl EthPolling {
                             .collect::<Vec<_>>();
                     }
 
-                    //create LedgerEvent::Memo
+                    let memos_sig_valid: Vec<_> = model_txns
+                        .iter()
+                        .zip(fetched_block_with_memos.memos.iter())
+                        .map(|(tx, (recv_memos, sig))| {
+                            match tx {
+                                CapeModelTxn::CAP(note) => note.clone(),
+                                CapeModelTxn::Burn { xfr, .. } => {
+                                    TransactionNote::from(*xfr.clone())
+                                }
+                            }
+                            .verify_receiver_memos_signature(recv_memos, sig)
+                            .is_ok()
+                        })
+                        .collect();
+
+                    // Create LedgerEvent::Memos if memo signature is valid, skip otherwise
                     let mut memo_events = Vec::new();
                     let mut index = 0;
-                    fetched_block_with_memos.memos.iter().enumerate().for_each(
-                        |(txn_id, (txn_memo, _))| {
+                    fetched_block_with_memos
+                        .memos
+                        .iter()
+                        .enumerate()
+                        .filter_map(|(txn_id, (txn_memo, _))| match memos_sig_valid[txn_id] {
+                            true => Some((txn_id, txn_memo)),
+                            false => None,
+                        })
+                        .for_each(|(txn_id, txn_memo)| {
                             let mut outputs = Vec::new();
                             for memo in txn_memo.iter() {
                                 outputs.push((
@@ -193,8 +207,7 @@ impl EthPolling {
                                 transaction: Some((meta.block_number.as_u64(), txn_id as u64)),
                             };
                             memo_events.push(memo_event);
-                        },
-                    );
+                        });
                     let new_updated_block_height = meta.block_number.as_u64();
                     if new_updated_block_height > self.last_updated_block_height {
                         let mut updated_state = self.query_result_state.write().await;
@@ -217,6 +230,29 @@ impl EthPolling {
                             updated_state.ledger_state.record_merkle_frontier =
                                 merkle_tree.frontier();
                         }
+
+                        //update transaction_by_id and transaction_id_by_hash hashmap
+                        let mut record_index = 0;
+                        transitions
+                            .iter()
+                            .enumerate()
+                            .for_each(|(txn_id, transition)| {
+                                updated_state.transaction_by_id.insert(
+                                    (meta.block_number.as_u64(), txn_id as u64),
+                                    cap_rust_sandbox::ledger::CommittedCapeTransition {
+                                        block_id: meta.block_number.as_u64(),
+                                        txn_id: txn_id as u64,
+                                        output_start: uids[record_index],
+                                        output_size: transition.output_len() as u64,
+                                        transition: transition.clone(),
+                                    },
+                                );
+                                updated_state.transaction_id_by_hash.insert(
+                                    transition.commit(),
+                                    (meta.block_number.as_u64(), txn_id as u64),
+                                );
+                                record_index += transition.output_len();
+                            });
 
                         // persist the state block updates (will be more fine grained in r3)
                         self.state_persistence.store_latest_state(&*updated_state);

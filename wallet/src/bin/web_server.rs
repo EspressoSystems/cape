@@ -98,7 +98,7 @@ mod tests {
         model::{Erc20Code, EthereumAddr},
     };
     use cape_wallet::{
-        routes::{get_home_path, BalanceInfo, CapeAPIError, PubKey, WalletSummary},
+        routes::{BalanceInfo, CapeAPIError, PubKey, WalletSummary},
         testing::port,
         web::{
             DEFAULT_ETH_ADDR, DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR,
@@ -123,6 +123,7 @@ mod tests {
     use std::fmt::Debug;
     use std::fs::remove_file;
     use std::iter::once;
+    use std::path::Path;
     use std::time::Duration;
     use surf::Url;
     use tagged_base64::TaggedBase64;
@@ -332,8 +333,7 @@ mod tests {
         env::set_var("PATH_STORAGE", "/tmp");
 
         // clean up from any previous test run on the current machine
-        let mut storage_path = get_home_path().unwrap();
-        storage_path.push(".espresso/cape/last_wallet_path");
+        let storage_path = Path::new("/tmp/last_wallet_path");
         remove_file(storage_path).unwrap();
 
         // Should get None on first try if no last wallet.

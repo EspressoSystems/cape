@@ -14,13 +14,13 @@ use cap_rust_sandbox::{
     cape::submit_block::fetch_cape_block,
     ethereum::EthConnection,
     ledger::CapeTransition,
-    model::{Erc20Code, EthereumAddr},
+    model::{CapeModelTxn, Erc20Code, EthereumAddr},
     types::{CAPEEvents, RecordOpening as RecordOpeningSol},
 };
 use commit::Committable;
 use core::mem;
 use ethers::abi::AbiDecode;
-use jf_cap::{structs::RecordOpening, MerkleTree};
+use jf_cap::{structs::RecordOpening, MerkleTree, TransactionNote};
 use reef::traits::{Block, Transaction};
 use seahorse::events::LedgerEvent;
 
@@ -117,6 +117,26 @@ impl EthPolling {
                         .into_cape_transactions()
                         .unwrap()
                         .0;
+
+                    let num_txn = model_txns.len();
+                    let num_txn_memo = fetched_block_with_memos.memos.len();
+                    if num_txn != num_txn_memo {
+                        panic!(
+                            "Different number of txns and txn memos: {} vs {}",
+                            num_txn, num_txn_memo
+                        );
+                    }
+
+                    for (tx, (recv_memos, sig)) in
+                        model_txns.iter().zip(fetched_block_with_memos.memos.iter())
+                    {
+                        match tx {
+                            CapeModelTxn::CAP(note) => note.clone(),
+                            CapeModelTxn::Burn { xfr, .. } => TransactionNote::from(*xfr.clone()),
+                        }
+                        .verify_receiver_memos_signature(recv_memos, sig)
+                        .expect("Failed to verify receiver memo signature")
+                    }
 
                     let mut wraps = mem::take(&mut self.pending_commit_event);
 

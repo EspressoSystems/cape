@@ -106,6 +106,7 @@ pub enum UrlSegmentType {
     Hexadecimal,
     Integer,
     TaggedBase64,
+    Base64,
     Literal,
 }
 
@@ -116,6 +117,7 @@ pub enum UrlSegmentValue {
     Hexadecimal(u128),
     Integer(u128),
     Identifier(TaggedBase64),
+    Base64(Vec<u8>),
     Unparsed(String),
     ParseFailed(UrlSegmentType, String),
     Literal(String),
@@ -131,6 +133,9 @@ impl UrlSegmentValue {
             UrlSegmentType::Hexadecimal => Hexadecimal(u128::from_str_radix(value, 16).ok()?),
             UrlSegmentType::Integer => Integer(value.parse::<u128>().ok()?),
             UrlSegmentType::TaggedBase64 => Identifier(TaggedBase64::parse(value).ok()?),
+            UrlSegmentType::Base64 => {
+                Base64(base64::decode_config(value, base64::URL_SAFE_NO_PAD).ok()?)
+            }
             UrlSegmentType::Literal => Literal(String::from(value)),
         })
     }
@@ -183,16 +188,19 @@ impl UrlSegmentValue {
         }
     }
 
-    pub fn as_path(&self) -> Result<PathBuf, tide::Error> {
-        let tb64 = self.as_identifier()?;
-        if tb64.tag() == "PATH" {
-            Ok(PathBuf::from(std::str::from_utf8(&tb64.value())?))
+    pub fn as_base64(&self) -> Result<Vec<u8>, tide::Error> {
+        if let Base64(i) = self {
+            Ok(i.clone())
         } else {
-            Err(server_error(CapeAPIError::Tag {
-                expected: String::from("PATH"),
-                actual: tb64.tag(),
+            Err(server_error(CapeAPIError::Param {
+                expected: String::from("Base64"),
+                actual: self.to_string(),
             }))
         }
+    }
+
+    pub fn as_path(&self) -> Result<PathBuf, tide::Error> {
+        Ok(PathBuf::from(std::str::from_utf8(&self.as_base64()?)?))
     }
 
     pub fn as_string(&self) -> Result<String, tide::Error> {
@@ -702,7 +710,7 @@ async fn newasset(
         }
         None => {
             let description = match bindings.get(":description") {
-                Some(description) => description.value.as_identifier()?.value(),
+                Some(description) => description.value.as_base64()?,
                 _ => Vec::new(),
             };
             Ok(wallet.define_asset(&description, policy).await?)

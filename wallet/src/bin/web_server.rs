@@ -149,9 +149,8 @@ mod tests {
     }
 
     fn fmt_path(path: &Path) -> String {
-        TaggedBase64::new("PATH", path.as_os_str().to_str().unwrap().as_bytes())
-            .unwrap()
-            .to_string()
+        let bytes = path.as_os_str().to_str().unwrap().as_bytes();
+        base64::encode_config(bytes, base64::URL_SAFE_NO_PAD)
     }
 
     struct TestServer {
@@ -698,7 +697,7 @@ mod tests {
         let viewing_threshold = 10;
         let view_amount = true;
         let view_address = false;
-        let description = TaggedBase64::new("DESC", &[3u8; 32]).unwrap();
+        let description = base64::encode_config(&[3u8; 32], base64::URL_SAFE_NO_PAD);
 
         // Should fail if a wallet is not already open.
         server

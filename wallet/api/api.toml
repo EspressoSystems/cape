@@ -128,6 +128,24 @@ DOC = """
 Import the given key into the current wallet. For sending keys, the optional scan index give a block index at which to begin scanning. If omitted, the entire ledger is scanned for transactions using the key.
 """
 
+[route.recoverkey]
+PATH = ["recoverkey/sending", "recoverkey/sending/:scan_from", "recoverkey/viewing", "recoverkey/freezing"]
+":scan_from" = "Integer"
+DOC = """
+Regenerate an old key in a recovered wallet.
+
+Since key generation is deterministic, recovering keys amounts to creating a new wallet with the
+same mnemonic as the wallet being recovered, and then creating new keys, as if by `newkey`. The `n`th
+key of each type in the recovered wallet will be the same as the `n`th key of that type in the
+original wallet.
+
+The only difference between `recoverkey` and `newkey` is that when recovering a sending key, the
+wallet will initiate a scan of the ledger for existing records belonging to the recovered key. The
+optional `scan_from` parameter can be used to control how far back in time the scan starts. It is
+index into the event stream provided by the EQS. If not specified, the scan will start from event 0;
+that is, the entire ledger will be scanned.
+"""
+
 [route.send]
 PATH = ["send/sender/:sender/asset/:asset/recipient/:recipient/amount/:amount/fee/:fee"]
 ":sender" = "TaggedBase64"

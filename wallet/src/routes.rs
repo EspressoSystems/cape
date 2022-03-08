@@ -34,6 +34,7 @@ use net::{server::response, TaggedBlob, UserAddress};
 use rand_chacha::ChaChaRng;
 use reef::traits::Ledger;
 use seahorse::{
+    events::{EventIndex, EventSource},
     hd::KeyTree,
     loader::{Loader, LoaderMetadata},
     testing::MockLedger,
@@ -167,6 +168,10 @@ impl UrlSegmentValue {
         }
     }
 
+    pub fn as_usize(&self) -> Result<usize, tide::Error> {
+        Ok(self.as_u64()? as usize)
+    }
+
     pub fn as_identifier(&self) -> Result<TaggedBase64, tide::Error> {
         if let Identifier(i) = self {
             Ok(i.clone())
@@ -239,6 +244,7 @@ pub enum ApiRouteKey {
     newkey,
     newwallet,
     openwallet,
+    recoverkey,
     send,
     transaction,
     unfreeze,
@@ -778,6 +784,37 @@ async fn unwrap(
         .await?)
 }
 
+async fn recoverkey(
+    key_type: &str,
+    bindings: &HashMap<String, RouteBinding>,
+    wallet: &mut Option<Wallet>,
+) -> Result<PubKey, tide::Error> {
+    let wallet = require_wallet(wallet)?;
+
+    match key_type {
+        "send" | "sending" => {
+            let scan_from = match bindings.get(":scan_from") {
+                Some(param) => param.value.as_usize()?,
+                None => 0,
+            };
+            Ok(PubKey::Sending(
+                wallet
+                    .generate_user_key(Some(EventIndex::from_source(
+                        EventSource::QueryService,
+                        scan_from,
+                    )))
+                    .await?,
+            ))
+        }
+        "view" | "viewing" => Ok(PubKey::Viewing(wallet.generate_audit_key().await?)),
+        "freeze" | "freezing" => Ok(PubKey::Freezing(wallet.generate_freeze_key().await?)),
+        _ => Err(server_error(CapeAPIError::Param {
+            expected: String::from("key type (sending, viewing or freezing)"),
+            actual: String::from(key_type),
+        })),
+    }
+}
+
 pub async fn send(
     bindings: &HashMap<String, RouteBinding>,
     wallet: &mut Option<Wallet>,
@@ -939,6 +976,7 @@ pub async fn dispatch_url(
             &req,
             openwallet(bindings, rng, faucet_key_pair, wallet, path_storage).await?,
         ),
+        ApiRouteKey::recoverkey => response(&req, recoverkey(segments.1, bindings, wallet).await?),
         ApiRouteKey::send => response(&req, send(bindings, wallet).await?),
         ApiRouteKey::transaction => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::unfreeze => dummy_url_eval(route_pattern, bindings),

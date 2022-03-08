@@ -10,11 +10,15 @@ use async_std::{
     sync::{Arc, RwLock},
     task::{sleep, spawn, JoinHandle},
 };
+use atomic_store::{
+    load_store::BincodeLoadStore, AppendLog, AtomicStore, AtomicStoreLoader, PersistenceError,
+};
+use dirs::data_local_dir;
 use jf_cap::keys::{UserAddress, UserPubKey};
 use jf_cap::Signature;
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
-use std::time::Duration;
+use std::{env, path::PathBuf, time::Duration};
 use tide::{log::LevelFilter, prelude::*, StatusCode};
 
 pub const DEFAULT_PORT: u16 = 50078u16;
@@ -36,13 +40,72 @@ pub struct InsertPubKey {
     pub sig: Signature,
 }
 
-#[derive(Clone, Default)]
+struct InternalState {
+    map: HashMap<UserAddress, UserPubKey>,
+    atomic_store: AtomicStore,
+    pub_key_store: AppendLog<BincodeLoadStore<UserPubKey>>,
+}
+#[derive(Clone)]
 struct ServerState {
-    map: Arc<RwLock<HashMap<UserAddress, UserPubKey>>>,
+    state: Arc<RwLock<InternalState>>,
+}
+
+impl ServerState {
+    pub fn new() -> Self {
+        ServerState {
+            state: Arc::new(RwLock::new(InternalState::new())),
+        }
+    }
+}
+
+impl InternalState {
+    pub fn new() -> Self {
+        let mut loader = AtomicStoreLoader::load(&address_book_store_path(), "ab").unwrap();
+        let store_tag = "ab_log";
+        let pub_key_store =
+            AppendLog::load(&mut loader, Default::default(), store_tag, 1024).unwrap();
+        let atomic_store = AtomicStore::open(loader).unwrap();
+
+        let map: HashMap<UserAddress, UserPubKey> = pub_key_store
+            .iter()
+            .filter_map(|pk: Result<UserPubKey, PersistenceError>| {
+                if let Ok(pk) = pk {
+                    Some((pk.address(), pk))
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        InternalState {
+            map,
+            atomic_store,
+            pub_key_store,
+        }
+    }
 }
 
 pub fn address_book_port() -> String {
     std::env::var("PORT").unwrap_or_else(|_| DEFAULT_PORT.to_string())
+}
+
+fn default_data_path() -> PathBuf {
+    let mut data_dir = data_local_dir()
+        .unwrap_or_else(|| env::current_dir().unwrap_or_else(|_| PathBuf::from("./")));
+    data_dir.push("espresso");
+    data_dir.push("cape");
+    data_dir
+}
+
+pub fn address_book_store_path() -> PathBuf {
+    if let Ok(store_path) = std::env::var("AB_STORE_PATH") {
+        PathBuf::from(store_path)
+    } else {
+        let mut store_path = default_data_path();
+        store_path.push("address_book");
+        store_path.push("store");
+        store_path
+    }
 }
 
 pub async fn init_web_server(
@@ -54,7 +117,7 @@ pub async fn init_web_server(
         LOG_LEVEL = log_level;
     }
     Lazy::force(&LOGGING);
-    let mut app = tide::with_state(ServerState::default());
+    let mut app = tide::with_state(ServerState::new());
     app.at("/insert_pubkey").post(insert_pubkey);
     app.at("/request_pubkey").post(request_pubkey);
     let address = format!("0.0.0.0:{}", address_book_port());
@@ -94,8 +157,11 @@ fn verify_sig_and_get_pub_key(insert_request: InsertPubKey) -> Result<UserPubKey
 async fn insert_pubkey(mut req: tide::Request<ServerState>) -> Result<tide::Response, tide::Error> {
     let insert_request: InsertPubKey = net::server::request_body(&mut req).await?;
     let pub_key = verify_sig_and_get_pub_key(insert_request)?;
-    let mut hash_map = req.state().map.write().await;
-    hash_map.insert(pub_key.address(), pub_key.clone());
+    let mut state = req.state().state.write().await;
+    state.pub_key_store.store_resource(&pub_key).unwrap();
+    state.map.insert(pub_key.address(), pub_key.clone());
+    state.pub_key_store.commit_version().unwrap();
+    state.atomic_store.commit_version().unwrap();
     Ok(tide::Response::new(StatusCode::Ok))
 }
 
@@ -105,8 +171,8 @@ async fn request_pubkey(
     mut req: tide::Request<ServerState>,
 ) -> Result<tide::Response, tide::Error> {
     let address: UserAddress = net::server::request_body(&mut req).await?;
-    let hash_map = req.state().map.read().await;
-    match hash_map.get(&address) {
+    let state = req.state().state.read().await;
+    match state.map.get(&address) {
         Some(value) => {
             let bytes = bincode::serialize(value).unwrap();
             let response = tide::Response::builder(StatusCode::Ok)

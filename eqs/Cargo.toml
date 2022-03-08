@@ -1,6 +1,6 @@
 [package]
 name = "eqs"
-version = "0.0.1"
+version = "0.0.2"
 authors = ["Espresso Systems <hello@espressosys.com>"]
 edition = "2021"
 license = "GPL-3.0-or-later"
@@ -17,7 +17,7 @@ dirs = "4.0"
 # may switch to `ethers = "0.6.2"` in the future; keeping this for compatibility for now
 ethers = { git = "https://github.com/gakonst/ethers-rs", branch = "master" }
 
-jf-cap = { features=["std"], git = "https://github.com/EspressoSystems/cap.git", tag = "0.0.1" }
+jf-cap = { features=["std"], git = "https://github.com/EspressoSystems/cap.git" }
 jf-primitives = { features=["std"], git = "https://github.com/EspressoSystems/jellyfish.git" }
 key-set = { git = "https://github.com/EspressoSystems/key-set.git" }
 

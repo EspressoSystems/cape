@@ -401,7 +401,7 @@ mod test {
         let sender_dir = TempDir::new("cape_wallet_backend_test").unwrap();
         let mut sender_loader = MockCapeWalletLoader {
             path: PathBuf::from(sender_dir.path()),
-            key: hd::KeyTree::random(&mut rng).unwrap().0,
+            key: hd::KeyTree::random(&mut rng).0,
         };
         let sender_backend = CapeBackend::new(
             &universal_param,
@@ -433,7 +433,7 @@ mod test {
         let receiver_dir = TempDir::new("cape_wallet_backend_test").unwrap();
         let mut receiver_loader = MockCapeWalletLoader {
             path: PathBuf::from(receiver_dir.path()),
-            key: hd::KeyTree::random(&mut rng).unwrap().0,
+            key: hd::KeyTree::random(&mut rng).0,
         };
         let receiver_backend = CapeBackend::new(
             &universal_param,
@@ -510,7 +510,7 @@ mod test {
         let sponsor_dir = TempDir::new("cape_wallet_backend_test").unwrap();
         let mut sponsor_loader = MockCapeWalletLoader {
             path: PathBuf::from(sponsor_dir.path()),
-            key: hd::KeyTree::random(&mut rng).unwrap().0,
+            key: hd::KeyTree::random(&mut rng).0,
         };
         let sponsor_backend = CapeBackend::new(
             &universal_param,
@@ -529,7 +529,7 @@ mod test {
         let wrapper_dir = TempDir::new("cape_wallet_backend_test").unwrap();
         let mut wrapper_loader = MockCapeWalletLoader {
             path: PathBuf::from(wrapper_dir.path()),
-            key: hd::KeyTree::random(&mut rng).unwrap().0,
+            key: hd::KeyTree::random(&mut rng).0,
         };
         let wrapper_backend = CapeBackend::new(
             &universal_param,

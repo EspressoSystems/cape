@@ -767,7 +767,7 @@ impl<'a> SystemUnderTest<'a> for CapeTest {
     async fn create_storage(&mut self) -> Self::MockStorage {
         let mut loader = MockCapeWalletLoader {
             path: self.temp_dir(),
-            key: KeyTree::random(&mut self.rng).unwrap().0,
+            key: KeyTree::random(&mut self.rng).0,
         };
         AtomicWalletStorage::new(&mut loader, 128).unwrap()
     }

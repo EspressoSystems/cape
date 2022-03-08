@@ -119,7 +119,7 @@ mod tests {
     };
     use net::{client, UserAddress};
     use seahorse::{
-        hd::KeyTree,
+        hd::{KeyTree, Mnemonic},
         txn_builder::{RecordInfo, TransactionReceipt},
         AssetInfo,
     };
@@ -227,7 +227,7 @@ mod tests {
         let mnemonic = server.get::<String>("getmnemonic").await.unwrap();
 
         // Check that the mnemonic decodes correctly.
-        KeyTree::from_mnemonic(mnemonic.as_str().as_bytes()).unwrap();
+        KeyTree::from_mnemonic(&Mnemonic::from_phrase(&mnemonic.replace('-', " ")).unwrap());
 
         // Check that successive calls give different mnemonics.
         assert_ne!(mnemonic, server.get::<String>("getmnemonic").await.unwrap());

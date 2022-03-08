@@ -101,7 +101,7 @@ async fn main() {
     let universal_param = universal_setup_for_test(2usize.pow(16), &mut rng).unwrap();
     let mut loader = MockCapeWalletLoader {
         path: args.storage,
-        key: KeyTree::random(&mut rng).unwrap().0,
+        key: KeyTree::random(&mut rng).0,
     };
 
     // Everyone creates own relayer and EQS, not sure it works without EQS

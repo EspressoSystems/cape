@@ -436,7 +436,7 @@ pub async fn init_wallet(
     ));
     ledger.set_block_size(1).unwrap();
 
-    let mut loader = Loader::from_literal(mnemonic, password, path);
+    let mut loader = Loader::from_literal(mnemonic.map(|s| s.replace('-', " ")), password, path);
     let mut backend = MockCapeBackend::new(Arc::new(Mutex::new(ledger)), &mut loader)?;
 
     if backend.storage().await.exists() != existing {
@@ -477,9 +477,7 @@ pub fn require_wallet(wallet: &mut Option<Wallet>) -> Result<&mut Wallet, tide::
 //
 
 pub async fn getmnemonic(rng: &mut ChaChaRng) -> Result<String, tide::Error> {
-    Ok(KeyTree::random(rng)
-        .map_err(|source| wallet_error(CapeWalletError::KeyError { source }))?
-        .1)
+    Ok(KeyTree::random(rng).1.to_string().replace(' ', "-"))
 }
 
 pub async fn newwallet(

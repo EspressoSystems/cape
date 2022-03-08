@@ -1,6 +1,6 @@
 [package]
 name = "cap-rust-sandbox"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Espresso Systems <hello@espressosys.com>"]
 edition = "2018"
 license = "GPL-3.0-or-later"
@@ -12,7 +12,7 @@ doctest = false
 commit = { git = "https://github.com/EspressoSystems/commit.git", tag = "0.1.0" }
 jf-plonk = { features=["std", "test_apis"], git = "https://github.com/EspressoSystems/jellyfish.git" }
 jf-primitives = { features=["std"], git = "https://github.com/EspressoSystems/jellyfish.git" }
-jf-cap = { features = ["test_apis"], git = "https://github.com/EspressoSystems/cap.git", tag = "0.0.1" }
+jf-cap = { features = ["test_apis"], git = "https://github.com/EspressoSystems/cap.git" }
 jf-rescue = { features=["std"], git = "https://github.com/EspressoSystems/jellyfish.git" }
 jf-utils = { features=["std"], git = "https://github.com/EspressoSystems/jellyfish.git" }
 key-set = { git = "https://github.com/EspressoSystems/key-set.git" }

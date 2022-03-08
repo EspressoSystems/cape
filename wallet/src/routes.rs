@@ -313,7 +313,7 @@ pub fn get_home_path() -> Result<PathBuf, tide::Error> {
     Ok(PathBuf::from(home))
 }
 
-pub async fn defult_storage_path() -> Result<PathBuf, tide::Error> {
+pub async fn default_storage_path() -> Result<PathBuf, tide::Error> {
     let mut storage_path = get_home_path().unwrap();
     storage_path.push(".espresso/cape");
     create_dir_all(&storage_path).await?;
@@ -325,7 +325,7 @@ pub async fn get_storage_path() -> Result<PathBuf, tide::Error> {
     let mut path = if path_str.is_ok() {
         PathBuf::from(path_str.unwrap())
     } else {
-        defult_storage_path().await?
+        default_storage_path().await?
     };
     path.push("last_wallet_path");
     Ok(path)

@@ -121,9 +121,7 @@ mod tests {
     use std::convert::TryInto;
     use std::env;
     use std::fmt::Debug;
-    use std::fs::remove_file;
     use std::iter::once;
-    use std::path::Path;
     use std::time::Duration;
     use surf::Url;
     use tagged_base64::TaggedBase64;
@@ -331,11 +329,7 @@ mod tests {
         let password = "my-password";
 
         let dir = TempDir::new("wallet_last_used_test").unwrap();
-        env::set_var("PATH_STORAGE", &format!("{:?}", dir));
-
-        // clean up from any previous test run on the current machine
-        let storage_path = Path::new("/tmp/last_wallet_path");
-        remove_file(storage_path).unwrap();
+        env::set_var("PATH_STORAGE", dir.path().as_os_str().to_str().unwrap());
 
         // Should get None on first try if no last wallet.
         let opt = server

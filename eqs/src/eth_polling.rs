@@ -139,7 +139,7 @@ impl EthPolling {
 
                     let output_record_commitment = fetched_block_with_memos
                         .block
-                        .get_list_of_input_record_commitments();
+                        .get_list_of_output_record_commitments();
 
                     let state_lock = self.query_result_state.read().await;
                     let merkle_tree = MerkleTree::restore_from_frontier(

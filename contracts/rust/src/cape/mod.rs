@@ -159,7 +159,7 @@ impl CapeBlock {
     }
 
     /// Collect the record commitments from the transaction outputs in the same order as the CAPE contract
-    pub fn get_list_of_input_record_commitments(self) -> Vec<RecordCommitment> {
+    pub fn get_list_of_output_record_commitments(self) -> Vec<RecordCommitment> {
         let mut transfer_idx: usize = 0;
         let mut mint_idx: usize = 0;
         let mut freeze_idx: usize = 0;
@@ -171,8 +171,8 @@ impl CapeBlock {
                 NoteType::Transfer => {
                     for rc in self.transfer_notes[transfer_idx].clone().output_commitments {
                         outputs_record_commitments.push(rc);
-                        transfer_idx += 1;
                     }
+                    transfer_idx += 1;
                 }
                 NoteType::Mint => {
                     let note = self.mint_notes[mint_idx].clone();
@@ -183,18 +183,22 @@ impl CapeBlock {
                 NoteType::Freeze => {
                     for rc in self.freeze_notes[freeze_idx].clone().output_commitments {
                         outputs_record_commitments.push(rc);
-                        freeze_idx += 1;
                     }
+                    freeze_idx += 1;
                 }
                 NoteType::Burn => {
-                    for rc in self.burn_notes[burn_idx]
+                    for (counter, rc) in self.burn_notes[burn_idx]
                         .clone()
                         .transfer_note
                         .output_commitments
+                        .into_iter()
+                        .enumerate()
                     {
-                        outputs_record_commitments.push(rc);
-                        burn_idx += 1;
+                        if counter != 1 {
+                            outputs_record_commitments.push(rc);
+                        }
                     }
+                    burn_idx += 1;
                 }
             }
         }

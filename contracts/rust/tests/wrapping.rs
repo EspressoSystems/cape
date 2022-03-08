@@ -242,7 +242,7 @@ async fn integration_test_wrapping_erc20_tokens() -> Result<()> {
     let mut mt = MerkleTree::new(CapeLedger::merkle_height()).unwrap();
 
     // Add the output commitments of the transactions
-    let output_commitments = cape_block.get_list_of_input_record_commitments();
+    let output_commitments = cape_block.get_list_of_output_record_commitments();
     for comm in output_commitments {
         mt.push(comm.to_field_element());
     }

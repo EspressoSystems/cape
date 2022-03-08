@@ -56,4 +56,4 @@ DOC = "Returns the committed transaction, if any, at the specified location, wit
 PATH = [ "get_transaction/:hash" ]
 ":hash" = "TaggedBase64"
 DOC = "Returns the committed transaction, if any, with the specified hash, with output indexes."
-ERROR_hash = "A valid commitment hash is required. Commitment begin with NUL~."
+ERROR_hash = "A valid commitment hash is required. Commitment begin with CMTMNT_CAPE_TRNSTN~."

@@ -158,7 +158,14 @@ pub async fn get_transaction_by_hash(
             .to::<CommitmentToCapeTransition>()?
             .0,
     ) {
-        Ok(query_result_state.transaction_by_id.get(txn_id).cloned())
+        if let Some(txn) = query_result_state.transaction_by_id.get(txn_id).cloned() {
+            Ok(Some(txn))
+        } else {
+            Err(tide::Error::from_str(
+                tide::StatusCode::InternalServerError,
+                "Commitment indexed, but transaction not found",
+            ))
+        }
     } else {
         Ok(None)
     }

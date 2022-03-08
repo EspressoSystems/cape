@@ -17,10 +17,11 @@ use cap_rust_sandbox::{
     model::{CapeModelTxn, Erc20Code, EthereumAddr},
     types::{CAPEEvents, RecordOpening as RecordOpeningSol},
 };
+use commit::Committable;
 use core::mem;
 use ethers::abi::AbiDecode;
 use jf_cap::{structs::RecordOpening, MerkleTree, TransactionNote};
-use reef::traits::Block;
+use reef::traits::{Block, Transaction};
 use seahorse::events::LedgerEvent;
 
 pub(crate) struct EthPolling {
@@ -130,11 +131,12 @@ impl EthPolling {
                     let mut wraps = mem::take(&mut self.pending_commit_event);
 
                     //add transactions followed by wraps to pending commit
+                    let mut transitions = Vec::new();
                     for tx in model_txns.clone() {
-                        self.pending_commit_event
-                            .push(CapeTransition::Transaction(tx.clone()));
+                        transitions.push(CapeTransition::Transaction(tx.clone()));
                     }
 
+                    self.pending_commit_event.append(&mut transitions.clone());
                     self.pending_commit_event.append(&mut wraps);
 
                     let output_record_commitment = fetched_block_with_memos
@@ -228,6 +230,29 @@ impl EthPolling {
                             updated_state.ledger_state.record_merkle_frontier =
                                 merkle_tree.frontier();
                         }
+
+                        //update transaction_by_id and transaction_id_by_hash hashmap
+                        let mut record_index = 0;
+                        transitions
+                            .iter()
+                            .enumerate()
+                            .for_each(|(txn_id, transition)| {
+                                updated_state.transaction_by_id.insert(
+                                    (meta.block_number.as_u64(), txn_id as u64),
+                                    cap_rust_sandbox::ledger::CommittedCapeTransition {
+                                        block_id: meta.block_number.as_u64(),
+                                        txn_id: txn_id as u64,
+                                        output_start: uids[record_index],
+                                        output_size: transition.output_len() as u64,
+                                        transition: transition.clone(),
+                                    },
+                                );
+                                updated_state.transaction_id_by_hash.insert(
+                                    transition.commit(),
+                                    (meta.block_number.as_u64(), txn_id as u64),
+                                );
+                                record_index += transition.output_len();
+                            });
 
                         // persist the state block updates (will be more fine grained in r3)
                         self.state_persistence.store_latest_state(&*updated_state);

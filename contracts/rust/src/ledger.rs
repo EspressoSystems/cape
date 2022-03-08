@@ -184,7 +184,8 @@ impl Transaction for CapeTransition {
 pub struct CommittedCapeTransition {
     pub block_id: u64,
     pub txn_id: u64,
-    pub outputs: Vec<u64>,
+    pub output_start: u64,
+    pub output_size: u64,
     pub transition: CapeTransition,
 }
 

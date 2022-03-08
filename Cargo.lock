@@ -23,7 +23,7 @@ dependencies = [
 
 [[package]]
 name = "address_book"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "async-std",
  "atomic_store 0.1.0 (git+https://github.com/EspressoSystems/atomicstore.git)",
@@ -165,22 +165,8 @@ dependencies = [
 
 [[package]]
 name = "arbitrary-wrappers"
-version = "0.1.0"
-source = "git+https://github.com/EspressoSystems/arbitrary-wrappers.git?tag=0.1.0#c6363d620aea834f96caa10e21a619e56beee093"
-dependencies = [
- "arbitrary",
- "ark-std",
- "espresso-macros 0.1.0 (git+https://github.com/EspressoSystems/espresso-macros.git?tag=0.1.0)",
- "itertools 0.10.3",
- "jf-cap",
- "rand_chacha 0.3.1",
- "serde",
-]
-
-[[package]]
-name = "arbitrary-wrappers"
-version = "0.1.0"
-source = "git+https://github.com/EspressoSystems/arbitrary-wrappers.git#c6363d620aea834f96caa10e21a619e56beee093"
+version = "0.2.0"
+source = "git+https://github.com/EspressoSystems/arbitrary-wrappers.git#101280b4ec74636405df383d583c62131bd5217b"
 dependencies = [
  "arbitrary",
  "ark-std",
@@ -827,6 +813,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "bip0039"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bef0f0152ec5cf17f49a5866afaa3439816207fd4f0a224c0211ffaf5e278426"
+dependencies = [
+ "hmac 0.12.1",
+ "pbkdf2 0.10.1",
+ "rand 0.8.5",
+ "sha2 0.10.2",
+ "unicode-normalization",
+ "zeroize",
+]
+
+[[package]]
 name = "bit-set"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1052,11 +1052,11 @@ dependencies = [
 
 [[package]]
 name = "cap-rust-sandbox"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "arbitrary",
- "arbitrary-wrappers 0.1.0 (git+https://github.com/EspressoSystems/arbitrary-wrappers.git)",
+ "arbitrary-wrappers",
  "ark-bn254",
  "ark-ec",
  "ark-ed-on-bn254",
@@ -1103,7 +1103,7 @@ dependencies = [
 
 [[package]]
 name = "cape-workflow"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "cap-rust-sandbox",
  "ethers 0.6.0 (git+https://github.com/gakonst/ethers-rs)",
@@ -1118,7 +1118,7 @@ dependencies = [
 
 [[package]]
 name = "cape_wallet"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "address_book",
  "async-std",
@@ -2008,7 +2008,7 @@ checksum = "c34f04666d835ff5d62e058c3995147c06f42fe86ff053337632bca83e42702d"
 
 [[package]]
 name = "eqs"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "async-std",
  "atomic_store 0.1.0 (git+https://github.com/EspressoSystems/atomicstore.git)",
@@ -3363,7 +3363,7 @@ checksum = "1aab8fc367588b89dcee83ab0fd66b72b50b72fa1904d7095045ace2b0c81c35"
 [[package]]
 name = "jf-cap"
 version = "0.0.1"
-source = "git+https://github.com/EspressoSystems/cap.git?tag=0.0.1#1f4daf7368bdcbea501a96cdfb1219e5019f12c6"
+source = "git+https://github.com/EspressoSystems/cap.git#a9489cff402408953bae25d4b27b5cdaa481f9dd"
 dependencies = [
  "anyhow",
  "ark-bn254",
@@ -3531,8 +3531,8 @@ checksum = "67c21572b4949434e4fc1e1978b99c5f77064153c59d998bf13ecd96fb5ecba7"
 
 [[package]]
 name = "key-set"
-version = "0.1.0"
-source = "git+https://github.com/EspressoSystems/key-set.git#a22bbd2d0d5c19ca780dd8d683a9836731c85cb7"
+version = "0.2.0"
+source = "git+https://github.com/EspressoSystems/key-set.git#4d73b07b963c64c71c3bb94ad1422cee0d235fea"
 dependencies = [
  "ark-serialize",
  "bincode",
@@ -3764,19 +3764,9 @@ dependencies = [
 ]
 
 [[package]]
-name = "mnemonic"
-version = "1.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "29fae0e4c0b155d3b019a7cbc27abe4a90e15c06814d27889ce9f5f44e2faf77"
-dependencies = [
- "byteorder",
- "lazy_static",
-]
-
-[[package]]
 name = "net"
-version = "0.1.0"
-source = "git+https://github.com/EspressoSystems/net.git#8a7235d18142a2a66bd53b1ba3db1146677b2322"
+version = "0.2.0"
+source = "git+https://github.com/EspressoSystems/net.git#6e98531d741f8a37acabfadfd71d154bba4e61c4"
 dependencies = [
  "ark-serialize",
  "ark-std",
@@ -4677,11 +4667,11 @@ dependencies = [
 
 [[package]]
 name = "reef"
-version = "0.1.0"
-source = "git+https://github.com/EspressoSystems/reef.git#f04d3142453f1bd300a5f65185b030f3626eefed"
+version = "0.2.0"
+source = "git+https://github.com/EspressoSystems/reef.git#89f43d9ac455204b40c5ae543b6c106057a362eb"
 dependencies = [
  "arbitrary",
- "arbitrary-wrappers 0.1.0 (git+https://github.com/EspressoSystems/arbitrary-wrappers.git?tag=0.1.0)",
+ "arbitrary-wrappers",
  "ark-serialize",
  "commit",
  "funty 1.1.0",
@@ -4720,7 +4710,7 @@ checksum = "f497285884f3fcff424ffc933e56d7cbca511def0c9831a7f9b5f6153e3cc89b"
 
 [[package]]
 name = "relayer"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "async-std",
  "atomic_store 0.1.0 (git+https://github.com/EspressoSystems/atomicstore.git?tag=0.1.0)",
@@ -5063,11 +5053,11 @@ dependencies = [
 
 [[package]]
 name = "seahorse"
-version = "0.1.0"
-source = "git+https://github.com/EspressoSystems/seahorse.git#873a0a2613d475a862fec40c048b0f89414f8739"
+version = "0.2.0"
+source = "git+https://github.com/EspressoSystems/seahorse.git#e53cb72e6691a06abc4c05efcdb8acfba4ae6845"
 dependencies = [
  "arbitrary",
- "arbitrary-wrappers 0.1.0 (git+https://github.com/EspressoSystems/arbitrary-wrappers.git)",
+ "arbitrary-wrappers",
  "ark-serialize",
  "ark-std",
  "async-scoped",
@@ -5075,6 +5065,7 @@ dependencies = [
  "async-trait",
  "atomic_store 0.1.0 (git+https://github.com/EspressoSystems/atomicstore.git)",
  "bincode",
+ "bip0039",
  "chacha20",
  "chrono",
  "commit",
@@ -5087,7 +5078,6 @@ dependencies = [
  "jf-utils",
  "key-set",
  "lazy_static",
- "mnemonic",
  "net",
  "pipe",
  "proptest",

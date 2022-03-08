@@ -79,7 +79,7 @@ async fn create_backend_and_sender_wallet<'a>(
 ) -> (NetworkInfo<'a>, CapeWallet<'a, CapeBackend<'a, ()>>) {
     let mut loader = MockCapeWalletLoader {
         path: storage.to_path_buf(),
-        key: KeyTree::random(rng).unwrap().0,
+        key: KeyTree::random(rng).0,
     };
 
     let nework_tuple = create_test_network(rng, universal_param).await;
@@ -138,7 +138,7 @@ async fn create_wallet<'a>(
 ) -> (UserPubKey, CapeWallet<'a, CapeBackend<'a, ()>>) {
     let mut loader = MockCapeWalletLoader {
         path: storage.to_path_buf(),
-        key: KeyTree::random(rng).unwrap().0,
+        key: KeyTree::random(rng).0,
     };
 
     let backend = CapeBackend::new(

@@ -1,6 +1,6 @@
 [package]
 name = "cape_wallet"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Espresso Systems <hello@espressosys.com>"]
 edition = "2018"
 license = "GPL-3.0-or-later"
@@ -17,7 +17,7 @@ ethers = { git = "https://github.com/gakonst/ethers-rs", branch = "master" }
 futures = "0.3.0"
 futures-util = "0.3.8"
 itertools = "0.10.1"
-jf-cap = { features = ["test_apis"], git = "https://github.com/EspressoSystems/cap.git", tag = "0.0.1" }
+jf-cap = { features = ["test_apis"], git = "https://github.com/EspressoSystems/cap.git" }
 key-set = { git = "https://github.com/EspressoSystems/key-set.git" }
 lazy_static = "1.4.0"
 jf-plonk = { features=["std"], git = "https://github.com/EspressoSystems/jellyfish.git" }

@@ -1,6 +1,6 @@
 [package]
 name = "address_book"
-version = "0.0.1"
+version = "0.0.2"
 authors = ["Espresso Systems <hello@espressosys.com>"]
 edition = "2018"
 description = "Web server that maintains a persistent mapping from user addresses to user public keys"
@@ -11,7 +11,7 @@ async-std = { version = "1.6.0", features = ["attributes"] }
 atomic_store = { git = "https://github.com/EspressoSystems/atomicstore.git" }
 bincode = "1.3.3"
 itertools = "0.10.1"
-jf-cap = { features=["std"], git = "https://github.com/EspressoSystems/cap.git", tag = "0.0.1" }
+jf-cap = { features=["std"], git = "https://github.com/EspressoSystems/cap.git" }
 net = { git = "https://github.com/EspressoSystems/net.git" }
 once_cell = "1"
 rand_chacha = "0.3.1"

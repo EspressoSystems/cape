@@ -239,6 +239,11 @@ impl EthPolling {
                     };
                     self.pending_commit_event.push(new_transition_wrap);
                 }
+                CAPEEvents::FaucetInitializedFilter(filter_data) => {
+                    let ro_bytes = filter_data.ro_bytes;
+                    let _ro_sol: RecordOpeningSol = AbiDecode::decode(ro_bytes).unwrap();
+                    todo!();
+                }
             }
         }
         Ok(0)

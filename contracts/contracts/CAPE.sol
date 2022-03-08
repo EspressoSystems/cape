@@ -48,6 +48,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
     // See https://github.com/EspressoSystems/cape/issues/400
     uint256 public constant MAX_NUM_PENDING_DEPOSIT = 10;
 
+    event FaucetInitialized(bytes roBytes);
     event BlockCommitted(uint64 indexed height, uint256[] depositCommitments);
     event Erc20TokensDeposited(bytes roBytes, address erc20TokenAddress, address from);
 
@@ -178,6 +179,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
         _updateRecordsMerkleTree(recordCommitments);
         _addRoot(_rootValue);
 
+        emit FaucetInitialized(abi.encode(ro));
         faucetInitialized = true;
     }
 

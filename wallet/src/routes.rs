@@ -313,19 +313,33 @@ pub fn get_home_path() -> Result<PathBuf, tide::Error> {
     Ok(PathBuf::from(home))
 }
 
-pub async fn write_path(wallet_path: &Path) -> Result<(), tide::Error> {
+pub async fn defult_storage_path() -> Result<PathBuf, tide::Error> {
     let mut storage_path = get_home_path().unwrap();
     storage_path.push(".espresso/cape");
     create_dir_all(&storage_path).await?;
-    storage_path.push("last_wallet_path");
+    Ok(storage_path)
+}
+
+pub async fn get_storage_path() -> Result<PathBuf, tide::Error> {
+    let path_str = std::env::var("PATH_STORAGE");
+    let mut path = if path_str.is_ok() {
+        PathBuf::from(path_str.unwrap())
+    } else {
+        defult_storage_path().await?
+    };
+    path.push("last_wallet_path");
+    Ok(path)
+}
+
+pub async fn write_path(wallet_path: &Path) -> Result<(), tide::Error> {
+    let storage_path = get_storage_path().await?;
     let mut file = File::create(storage_path).await?;
     Ok(file
         .write_all(&bincode::serialize(&wallet_path).unwrap())
         .await?)
 }
 pub async fn read_last_path() -> Result<Option<PathBuf>, tide::Error> {
-    let mut path = get_home_path().unwrap();
-    path.push(".espresso/cape/last_wallet_path");
+    let path = get_storage_path().await?;
     let file_result = File::open(&path).await;
     if file_result.is_err()
         && file_result.as_ref().err().unwrap().kind() == std::io::ErrorKind::NotFound

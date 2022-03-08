@@ -119,6 +119,7 @@ mod tests {
     use serde::de::DeserializeOwned;
     use std::collections::hash_map::HashMap;
     use std::convert::TryInto;
+    use std::env;
     use std::fmt::Debug;
     use std::fs::remove_file;
     use std::iter::once;
@@ -328,6 +329,8 @@ mod tests {
         println!("mnemonic: {}", mnemonic);
         let password = "my-password";
 
+        env::set_var("PATH_STORAGE", "/tmp");
+
         // clean up from any previous test run on the current machine
         let mut storage_path = get_home_path().unwrap();
         storage_path.push(".espresso/cape/last_wallet_path");
@@ -429,6 +432,8 @@ mod tests {
             *path.as_ref().unwrap(),
             PathBuf::from(std::str::from_utf8(&server.path().value()).unwrap())
         );
+
+        env::remove_var("PATH_STORAGE");
     }
 
     #[cfg(feature = "slow-tests")]

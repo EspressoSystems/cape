@@ -330,7 +330,8 @@ mod tests {
         println!("mnemonic: {}", mnemonic);
         let password = "my-password";
 
-        env::set_var("PATH_STORAGE", "/tmp");
+        let dir = TempDir::new("wallet_last_used_test").unwrap();
+        env::set_var("PATH_STORAGE", &format!("{:?}", dir));
 
         // clean up from any previous test run on the current machine
         let storage_path = Path::new("/tmp/last_wallet_path");

@@ -40,7 +40,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
     address public deployer;
     bool public faucetInitialized;
 
-    bytes public constant CAPE_BURN_MAGIC_BYTES = "TRICAPE burn";
+    bytes public constant CAPE_BURN_MAGIC_BYTES = "EsSCAPE burn";
     uint256 public constant CAPE_BURN_MAGIC_BYTES_SIZE = 12;
     // In order to avoid the contract running out of gas if the queue is too large
     // we set the maximum number of pending deposits record commitments to process

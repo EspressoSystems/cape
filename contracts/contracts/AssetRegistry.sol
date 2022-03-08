@@ -132,6 +132,6 @@ contract AssetRegistry {
         returns (bytes memory)
     {
         return
-            bytes.concat("TRICAPE ERC20", bytes20(erc20Address), "sponsored by", bytes20(sponsor));
+            bytes.concat("EsSCAPE ERC20", bytes20(erc20Address), "sponsored by", bytes20(sponsor));
     }
 }

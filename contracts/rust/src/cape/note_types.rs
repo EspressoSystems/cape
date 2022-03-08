@@ -28,7 +28,7 @@ async fn test_contains_burn_prefix() {
     for (input, expected) in [
         ("", false),
         ("x", false),
-        ("TRICAPE bur", false),
+        ("EsSCAPE bur", false),
         ("more data but but still not a burn", false),
         (dom_sep_str, true),
         (&(dom_sep_str.to_owned() + "more stuff"), true),

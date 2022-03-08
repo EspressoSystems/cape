@@ -63,6 +63,7 @@ async fn main() -> Result<(), std::io::Error> {
     // the executable path.
     let opt_api_path = NodeOpt::from_args().api_path;
     let opt_web_path = NodeOpt::from_args().web_path;
+    let opt_path_storage = NodeOpt::from_args().path_storage;
     let web_path = if opt_web_path.is_empty() {
         default_web_path()
     } else {
@@ -72,6 +73,11 @@ async fn main() -> Result<(), std::io::Error> {
         default_api_path()
     } else {
         PathBuf::from(opt_api_path)
+    };
+    let path_storage = if opt_path_storage.is_empty() {
+        None
+    } else {
+        Some(PathBuf::from(opt_path_storage))
     };
     println!("Web path: {:?}", web_path);
 
@@ -83,6 +89,7 @@ async fn main() -> Result<(), std::io::Error> {
         api_path,
         web_path,
         port.parse().unwrap(),
+        path_storage,
     )?
     .await?;
 
@@ -119,7 +126,6 @@ mod tests {
     use serde::de::DeserializeOwned;
     use std::collections::hash_map::HashMap;
     use std::convert::TryInto;
-    use std::env;
     use std::fmt::Debug;
     use std::iter::once;
     use std::time::Duration;
@@ -146,7 +152,7 @@ mod tests {
     }
 
     impl TestServer {
-        async fn new() -> Self {
+        async fn new(path_storage: Option<PathBuf>) -> Self {
             let port = port().await;
 
             // Run a server in the background that is unique to this test. Note that the server task
@@ -159,6 +165,7 @@ mod tests {
                 default_api_path(),
                 default_web_path(),
                 port,
+                path_storage,
             )
             .unwrap();
             Self::wait(port).await;
@@ -215,7 +222,7 @@ mod tests {
     #[async_std::test]
     #[traced_test]
     async fn test_getmnemonic() {
-        let server = TestServer::new().await;
+        let server = TestServer::new(None).await;
 
         let mnemonic = server.get::<String>("getmnemonic").await.unwrap();
 
@@ -230,7 +237,7 @@ mod tests {
     #[async_std::test]
     #[traced_test]
     async fn test_newwallet() {
-        let server = TestServer::new().await;
+        let server = TestServer::new(None).await;
         let mnemonic = server.get::<String>("getmnemonic").await.unwrap();
         let password = "my-password";
 
@@ -279,7 +286,7 @@ mod tests {
     #[async_std::test]
     #[traced_test]
     async fn test_openwallet() {
-        let server = TestServer::new().await;
+        let server = TestServer::new(None).await;
         let mnemonic = server.get::<String>("getmnemonic").await.unwrap();
         println!("mnemonic: {}", mnemonic);
         let password = "my-password";
@@ -323,13 +330,12 @@ mod tests {
     #[async_std::test]
     #[traced_test]
     async fn test_lastusedkeystore() {
-        let server = TestServer::new().await;
+        let dir = TempDir::new("wallet_last_used_test").unwrap();
+        let storage_path = dir.path().to_path_buf();
+        let server = TestServer::new(Some(storage_path)).await;
         let mnemonic = server.get::<String>("getmnemonic").await.unwrap();
         println!("mnemonic: {}", mnemonic);
         let password = "my-password";
-
-        let dir = TempDir::new("wallet_last_used_test").unwrap();
-        env::set_var("PATH_STORAGE", dir.path().as_os_str().to_str().unwrap());
 
         // Should get None on first try if no last wallet.
         let opt = server
@@ -427,15 +433,13 @@ mod tests {
             *path.as_ref().unwrap(),
             PathBuf::from(std::str::from_utf8(&server.path().value()).unwrap())
         );
-
-        env::remove_var("PATH_STORAGE");
     }
 
     #[cfg(feature = "slow-tests")]
     #[async_std::test]
     #[traced_test]
     async fn test_closewallet() {
-        let server = TestServer::new().await;
+        let server = TestServer::new(None).await;
 
         // Should fail if a wallet is not already open.
         server.requires_wallet::<()>("closewallet").await;
@@ -455,7 +459,7 @@ mod tests {
     #[async_std::test]
     #[traced_test]
     async fn test_getinfo() {
-        let server = TestServer::new().await;
+        let server = TestServer::new(None).await;
 
         // Should fail if a wallet is not already open.
         server.requires_wallet::<WalletSummary>("getinfo").await;
@@ -486,7 +490,7 @@ mod tests {
     #[async_std::test]
     #[traced_test]
     async fn test_getaddress() {
-        let server = TestServer::new().await;
+        let server = TestServer::new(None).await;
 
         // Should fail if a wallet is not already open.
         server
@@ -514,7 +518,7 @@ mod tests {
     #[traced_test]
     #[ignore]
     async fn test_getrecords() {
-        let server = TestServer::new().await;
+        let server = TestServer::new(None).await;
 
         // Should fail if a wallet is not already open.
         server
@@ -559,7 +563,7 @@ mod tests {
     #[async_std::test]
     #[traced_test]
     async fn test_getbalance() {
-        let server = TestServer::new().await;
+        let server = TestServer::new(None).await;
         let mut rng = ChaChaRng::from_seed([42u8; 32]);
 
         let addr = UserAddress::from(UserKeyPair::generate(&mut rng).address());
@@ -660,7 +664,7 @@ mod tests {
     #[async_std::test]
     #[traced_test]
     async fn test_newkey() {
-        let server = TestServer::new().await;
+        let server = TestServer::new(None).await;
 
         // Should fail if a wallet is not already open.
         server.requires_wallet::<PubKey>("newkey/sending").await;
@@ -717,7 +721,7 @@ mod tests {
     #[async_std::test]
     #[traced_test]
     async fn test_newasset() {
-        let server = TestServer::new().await;
+        let server = TestServer::new(None).await;
 
         // Set parameters for newasset.
         let erc20_code = Erc20Code(EthereumAddr([1u8; 20]));
@@ -864,7 +868,7 @@ mod tests {
         let sponsor_addr = EthereumAddr([2u8; 20]);
 
         // Open a wallet.
-        let server = TestServer::new().await;
+        let server = TestServer::new(None).await;
         let mut rng = ChaChaRng::from_seed([42u8; 32]);
         server
             .get::<()>(&format!(
@@ -938,7 +942,7 @@ mod tests {
         let mut rng = ChaChaRng::from_seed([50u8; 32]);
 
         // Open a wallet with some initial grants and keys.
-        let server = TestServer::new().await;
+        let server = TestServer::new(None).await;
         server
             .get::<()>(&format!(
                 "newwallet/{}/minter-password/path/{}",
@@ -1052,7 +1056,7 @@ mod tests {
         let fee = 1;
 
         // Open a wallet with some wrapped and native assets.
-        let server = TestServer::new().await;
+        let server = TestServer::new(None).await;
         server
             .get::<()>(&format!(
                 "newwallet/{}/minter-password/path/{}",
@@ -1150,7 +1154,7 @@ mod tests {
     #[traced_test]
     #[ignore]
     async fn test_dummy_populate() {
-        let server = TestServer::new().await;
+        let server = TestServer::new(None).await;
         server
             .get::<()>(&format!(
                 "newwallet/{}/my-password/path/{}",
@@ -1213,7 +1217,7 @@ mod tests {
     #[traced_test]
     #[ignore]
     async fn test_send() {
-        let server = TestServer::new().await;
+        let server = TestServer::new(None).await;
         let mut rng = ChaChaRng::from_seed([1; 32]);
 
         // Should fail if a wallet is not already open.

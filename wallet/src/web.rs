@@ -52,6 +52,13 @@ pub struct NodeOpt {
         default_value = ""      // See fn default_api_path().
     )]
     pub api_path: String,
+
+    /// Path to store location of most recent wallet
+    #[structopt(
+        long = "storage_path",
+        env = "PATH_STORAGE"    // Fallback to env_var or $HOME
+    )]
+    pub path_storage: String,
 }
 
 /// Returns the project directory.
@@ -88,6 +95,7 @@ pub struct WebState {
     pub(crate) wallet: Arc<Mutex<Option<Wallet>>>,
     pub(crate) rng: Arc<Mutex<ChaChaRng>>,
     pub(crate) faucet_key_pair: UserKeyPair,
+    pub(crate) path_storage: Option<PathBuf>,
 }
 
 // Get the route pattern that matches the URL of a request, and the bindings for parameters in the
@@ -301,6 +309,7 @@ pub fn init_server(
     api_path: PathBuf,
     web_path: PathBuf,
     port: u64,
+    path_storage: Option<PathBuf>,
 ) -> std::io::Result<JoinHandle<std::io::Result<()>>> {
     let api = crate::disco::load_messages(&api_path);
     let faucet_key_pair = UserKeyPair::generate(&mut rng);
@@ -309,6 +318,7 @@ pub fn init_server(
         wallet: Arc::new(Mutex::new(None)),
         rng: Arc::new(Mutex::new(rng)),
         faucet_key_pair,
+        path_storage,
     });
     web_server
         .with(server::trace)

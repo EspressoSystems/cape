@@ -9,7 +9,7 @@ use crate::api_server::WebState;
 use crate::query_result_state::QueryResultState;
 use crate::route_parsing::*;
 
-use cap_rust_sandbox::ledger::{CapeLedger, CommittedCapeTransition};
+use cap_rust_sandbox::ledger::{CapeLedger, CommitmentToCapeTransition, CommittedCapeTransition};
 use cap_rust_sandbox::model::CapeLedgerState;
 use jf_cap::structs::Nullifier;
 use net::server::response;
@@ -29,7 +29,7 @@ pub enum ApiRouteKey {
     check_nullifier,
     get_events_since,
     get_transaction,
-    // get_transaction_by_hash,
+    get_transaction_by_hash,
 }
 
 /// Verify that every variant of enum ApiRouteKey is defined in api.toml
@@ -148,19 +148,28 @@ pub async fn get_transaction(
         .cloned())
 }
 
-// pub async fn get_transaction_by_hash(
-//     bindings: &HashMap<String, RouteBinding>,
-//     query_result_state: &QueryResultState,
-// ) -> Result<Option<CommittedCapeTransition>, tide::Error> {
-//     if let Some(txn_id) = query_result_state
-//         .transaction_id_by_hash
-//         .get(&bindings[":hash"].value.to::<Commitment<CapeTransition>>()?)
-//     {
-//         Ok(query_result_state.transaction_by_id.get(txn_id).cloned())
-//     } else {
-//         Ok(None)
-//     }
-// }
+pub async fn get_transaction_by_hash(
+    bindings: &HashMap<String, RouteBinding>,
+    query_result_state: &QueryResultState,
+) -> Result<Option<CommittedCapeTransition>, tide::Error> {
+    if let Some(txn_id) = query_result_state.transaction_id_by_hash.get(
+        &bindings[":hash"]
+            .value
+            .to::<CommitmentToCapeTransition>()?
+            .0,
+    ) {
+        if let Some(txn) = query_result_state.transaction_by_id.get(txn_id).cloned() {
+            Ok(Some(txn))
+        } else {
+            Err(tide::Error::from_str(
+                tide::StatusCode::InternalServerError,
+                "Commitment indexed, but transaction not found",
+            ))
+        }
+    } else {
+        Ok(None)
+    }
+}
 
 pub async fn dispatch_url(
     req: tide::Request<WebState>,
@@ -182,8 +191,9 @@ pub async fn dispatch_url(
         }
         ApiRouteKey::get_transaction => {
             response(&req, get_transaction(bindings, query_state).await?)
-        } // ApiRouteKey::get_transaction_by_hash => {
-          //     response(&req, get_transaction_by_hash(bindings, query_state).await?)
-          // }
+        }
+        ApiRouteKey::get_transaction_by_hash => {
+            response(&req, get_transaction_by_hash(bindings, query_state).await?)
+        }
     }
 }

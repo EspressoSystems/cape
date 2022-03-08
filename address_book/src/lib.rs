@@ -50,7 +50,6 @@ pub fn address_book_port() -> String {
 pub async fn init_web_server(
     log_level: LevelFilter,
 ) -> std::io::Result<JoinHandle<std::io::Result<()>>> {
-    let _interrupt_handler = signal::init_sig_handler().await;
     // Accessing `LOG_LEVEL` is considered unsafe since it is a static mutable
     // variable, but we need this to ensure that only one logger is running.
     unsafe {

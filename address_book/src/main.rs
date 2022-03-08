@@ -6,17 +6,29 @@
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use address_book::init_web_server;
+use address_book::signal::handle_signals;
+use signal_hook::consts::SIGINT;
+use signal_hook::consts::SIGTERM;
+use signal_hook_async_std::Signals;
 use tide::log::LevelFilter;
 
 /// Run a web server that provides a key/value store mapping user
 /// addresses to public keys.
 #[async_std::main]
 async fn main() -> Result<(), std::io::Error> {
+    let signals = Signals::new(&[SIGINT, SIGTERM]).unwrap();
+    let handle = signals.handle();
+    let signals_task = async_std::task::spawn(handle_signals(signals));
+
     init_web_server(LevelFilter::Info)
         .await
         .unwrap_or_else(|err| {
             panic!("Web server exited with an error: {}", err);
         })
         .await?;
+
+    handle.close();
+    signals_task.await;
+
     Ok(())
 }

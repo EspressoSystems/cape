@@ -117,6 +117,7 @@ impl EthPolling {
                         .unwrap()
                         .0;
 
+                    // TODO Instead of panicking here we need to handle cases of missing memos gracefully
                     let num_txn = model_txns.len();
                     let num_txn_memo = fetched_block_with_memos.memos.len();
                     if num_txn != num_txn_memo {
@@ -124,17 +125,6 @@ impl EthPolling {
                             "Different number of txns and txn memos: {} vs {}",
                             num_txn, num_txn_memo
                         );
-                    }
-
-                    for (tx, (recv_memos, sig)) in
-                        model_txns.iter().zip(fetched_block_with_memos.memos.iter())
-                    {
-                        match tx {
-                            CapeModelTxn::CAP(note) => note.clone(),
-                            CapeModelTxn::Burn { xfr, .. } => TransactionNote::from(*xfr.clone()),
-                        }
-                        .verify_receiver_memos_signature(recv_memos, sig)
-                        .expect("Failed to verify receiver memo signature")
                     }
 
                     let mut wraps = mem::take(&mut self.pending_commit_event);
@@ -173,11 +163,33 @@ impl EthPolling {
                             .collect::<Vec<_>>();
                     }
 
-                    //create LedgerEvent::Memo
+                    let memos_sig_valid: Vec<_> = model_txns
+                        .iter()
+                        .zip(fetched_block_with_memos.memos.iter())
+                        .map(|(tx, (recv_memos, sig))| {
+                            match tx {
+                                CapeModelTxn::CAP(note) => note.clone(),
+                                CapeModelTxn::Burn { xfr, .. } => {
+                                    TransactionNote::from(*xfr.clone())
+                                }
+                            }
+                            .verify_receiver_memos_signature(recv_memos, sig)
+                            .is_ok()
+                        })
+                        .collect();
+
+                    // Create LedgerEvent::Memos if memo signature is valid, skip otherwise
                     let mut memo_events = Vec::new();
                     let mut index = 0;
-                    fetched_block_with_memos.memos.iter().enumerate().for_each(
-                        |(txn_id, (txn_memo, _))| {
+                    fetched_block_with_memos
+                        .memos
+                        .iter()
+                        .enumerate()
+                        .filter_map(|(txn_id, (txn_memo, _))| match memos_sig_valid[txn_id] {
+                            true => Some((txn_id, txn_memo)),
+                            false => None,
+                        })
+                        .for_each(|(txn_id, txn_memo)| {
                             let mut outputs = Vec::new();
                             for memo in txn_memo.iter() {
                                 outputs.push((
@@ -193,8 +205,7 @@ impl EthPolling {
                                 transaction: Some((meta.block_number.as_u64(), txn_id as u64)),
                             };
                             memo_events.push(memo_event);
-                        },
-                    );
+                        });
                     let new_updated_block_height = meta.block_number.as_u64();
                     if new_updated_block_height > self.last_updated_block_height {
                         let mut updated_state = self.query_result_state.write().await;

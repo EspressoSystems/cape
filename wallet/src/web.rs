@@ -269,7 +269,11 @@ async fn populatefortest(req: tide::Request<WebState>) -> Result<tide::Response,
         .sponsor(erc20_code, sponsor_addr.clone(), Default::default())
         .await
         .map_err(wallet_error)?;
-    let wrapped_asset_addr = wallet.pub_keys().await[0].address();
+    // Ensure this address is different from the faucet address.
+    let mut wrapped_asset_addr = wallet.pub_keys().await[0].address();
+    if wrapped_asset_addr == req.state().faucet_key_pair.address() {
+        wrapped_asset_addr = wallet.pub_keys().await[1].address();
+    }
     wallet
         .wrap(
             sponsor_addr,

@@ -20,6 +20,7 @@
 pub mod backend;
 pub mod disco;
 pub mod routes;
+pub mod ui;
 pub mod wallet;
 pub mod web;
 

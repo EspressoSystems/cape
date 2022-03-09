@@ -17,6 +17,8 @@ use std::collections::HashMap;
 use std::time::Duration;
 use tide::{log::LevelFilter, prelude::*, StatusCode};
 
+pub mod signal;
+
 pub const DEFAULT_PORT: u16 = 50078u16;
 const ADDRESS_BOOK_STARTUP_RETRIES: usize = 8;
 

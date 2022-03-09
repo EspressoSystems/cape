@@ -225,6 +225,7 @@ impl EthPolling {
                         });
 
                         updated_state.events.append(&mut memo_events);
+                        updated_state.ledger_state.state_number += 1;
 
                         //update merkle tree
                         if let Some(merkle_tree) = merkle_tree {

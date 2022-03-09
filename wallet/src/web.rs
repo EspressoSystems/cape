@@ -56,7 +56,8 @@ pub struct NodeOpt {
     /// Path to store location of most recent wallet
     #[structopt(
         long = "storage_path",
-        env = "PATH_STORAGE"    // Fallback to env_var or $HOME
+        env = "PATH_STORAGE",    // Fallback to env_var or $HOME
+        default_value = "",
     )]
     pub path_storage: String,
 }

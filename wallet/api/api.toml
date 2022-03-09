@@ -92,6 +92,26 @@ DOC = """
 Get the addresses, public keys, and asset types for the current wallet.
 """
 
+[route.getaccount]
+PATH = ["getaccount/:address"]
+":address" = "TaggedBase64"
+DOC = """
+Get information about an account.
+
+`:address` can be an account address, or a viewing, freezing, or sending public key. In any case, the result contains at least the following fields:
+* `"records"` - a list of records related to this account. For addresses and sending public keys, it is a list of owned records. For viewing keys
+  it is a list of viewable records, and for freezing keys, a list of freezable records.
+* `"assets"` - assets related to this account, indexed by code. Each asset is an `AssetInfo` structure, as returned by `getinfo/asset`. For addresses
+  and sending public keys, this is just the collection of assets currently owned by the account. For viewing and freezing keys, it also includes all
+  assets known to the wallet which are viewable or freezable using that key. It is still guaranteed to contain the asset type of every record in `"records"`.
+
+Each record contains the following fields:
+* `"asset"` - an asset code, which can be used as an index into `:assets`
+* `"address"` - owner of the record, in `TaggedBase64`
+* `"amount"` - record amount as an integer
+* `"uid"` - integer unique to this record
+"""
+
 [route.newkey]
 PATH = ["newkey/sending", "newkey/viewing", "newkey/freezing"]
 DOC = """

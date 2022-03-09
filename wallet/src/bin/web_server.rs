@@ -105,8 +105,9 @@ mod tests {
         model::{Erc20Code, EthereumAddr},
     };
     use cape_wallet::{
-        routes::{BalanceInfo, CapeAPIError, PubKey, WalletSummary},
+        routes::CapeAPIError,
         testing::port,
+        ui::*,
         web::{
             DEFAULT_ETH_ADDR, DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR,
             DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR, DEFAULT_WRAPPED_AMT,
@@ -114,7 +115,7 @@ mod tests {
     };
     use futures::Future;
     use jf_cap::{
-        keys::UserKeyPair,
+        keys::{AuditorKeyPair, FreezerKeyPair, UserKeyPair},
         structs::{AssetCode, AssetDefinition},
     };
     use net::{client, UserAddress};
@@ -1306,5 +1307,119 @@ mod tests {
                 .await
                 .unwrap()
         );
+    }
+
+    // Issue: https://github.com/EspressoSystems/cape/issues/600.
+    #[async_std::test]
+    #[traced_test]
+    #[ignore]
+    async fn test_getaccount() {
+        let server = TestServer::new().await;
+        let mut rng = ChaChaRng::from_seed([1; 32]);
+
+        // Should fail if a wallet is not already open.
+        server
+            .requires_wallet::<Account>(&format!(
+                "getaccount/{}",
+                UserKeyPair::generate(&mut rng).address(),
+            ))
+            .await;
+        server
+            .requires_wallet::<Account>(&format!(
+                "getaccount/{}",
+                UserKeyPair::generate(&mut rng).pub_key(),
+            ))
+            .await;
+        server
+            .requires_wallet::<Account>(&format!(
+                "getaccount/{}",
+                AuditorKeyPair::generate(&mut rng).pub_key(),
+            ))
+            .await;
+        server
+            .requires_wallet::<Account>(&format!(
+                "getaccount/{}",
+                FreezerKeyPair::generate(&mut rng).pub_key(),
+            ))
+            .await;
+
+        // Now open a wallet.
+        server
+            .get::<()>(&format!(
+                "newwallet/{}/my-password/path/{}",
+                server.get::<String>("getmnemonic").await.unwrap(),
+                server.path()
+            ))
+            .await
+            .unwrap();
+        // Populate the wallet with some dummy data so we have a balance of an asset to send.
+        server.get::<()>("populatefortest").await.unwrap();
+
+        // Get the wrapped asset type.
+        let info = server.get::<WalletSummary>("getinfo").await.unwrap();
+        let asset = if info.assets[0].definition.code == AssetCode::native() {
+            info.assets[1].clone()
+        } else {
+            info.assets[0].clone()
+        };
+
+        // The wrapper addressœd it so we can check the account interface.
+        let mut addresses = info.addresses.into_iter();
+        let address = loop {
+            let address = addresses.next().unwrap();
+            println!(
+                "{:?}",
+                server
+                    .get::<BalanceInfo>(&format!(
+                        "getbalance/address/{}/asset/{}",
+                        address,
+                        AssetCode::native()
+                    ))
+                    .await
+                    .unwrap()
+            );
+            if let BalanceInfo::Balance(DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR) = server
+                .get::<BalanceInfo>(&format!(
+                    "getbalance/address/{}/asset/{}",
+                    address,
+                    AssetCode::native()
+                ))
+                .await
+                .unwrap()
+            {
+                break address;
+            }
+        };
+
+        let mut account = server
+            .get::<Account>(&format!("getaccount/{}", address))
+            .await
+            .unwrap();
+        assert_eq!(account.records.len(), 2);
+        assert_eq!(account.assets.len(), 2);
+
+        // We don't know what order the records will be reported in, but we know that the native
+        // transfer gets committed before the wrap, so we can figure out the UIDs and sort. The
+        // faucet record should have UID 0, and the change output from the native transfer should be
+        // 1. So our native record should have UID 2 and our wrapped record should be 3.
+        let expected_records = vec![
+            Record {
+                address: address.clone(),
+                asset: AssetCode::native(),
+                amount: DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR,
+                uid: 2,
+            },
+            Record {
+                address,
+                asset: asset.definition.code,
+                amount: DEFAULT_WRAPPED_AMT,
+                uid: 3,
+            },
+        ];
+        account.records.sort_by_key(|rec| rec.uid);
+        assert_eq!(account.records, expected_records);
+
+        assert_eq!(account.assets[&AssetCode::native()], AssetInfo::native());
+        assert_eq!(account.assets[&asset.definition.code], asset);
     }
 }

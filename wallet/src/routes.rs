@@ -9,6 +9,7 @@
 
 use crate::{
     mocks::{MockCapeBackend, MockCapeNetwork},
+    ui::*,
     wallet::{CapeWalletError, CapeWalletExt},
     web::WebState,
 };
@@ -108,7 +109,7 @@ pub enum UrlSegmentType {
 }
 
 #[allow(dead_code)]
-#[derive(Debug, strum_macros::Display)]
+#[derive(Clone, Debug, strum_macros::Display)]
 pub enum UrlSegmentValue {
     Boolean(bool),
     Hexadecimal(u128),
@@ -228,6 +229,7 @@ pub enum ApiRouteKey {
     closewallet,
     freeze,
     getaddress,
+    getaccount,
     getbalance,
     getinfo,
     getmnemonic,
@@ -245,14 +247,6 @@ pub enum ApiRouteKey {
     wrap,
     getrecords,
     lastusedkeystore,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-/// Public keys for spending, viewing and freezing assets.
-pub enum PubKey {
-    Sending(UserPubKey),
-    Viewing(AuditorPubKey),
-    Freezing(FreezerPubKey),
 }
 
 /// Verifiy that every variant of enum ApiRouteKey is defined in api.toml
@@ -551,15 +545,6 @@ async fn closewallet(wallet: &mut Option<Wallet>) -> Result<(), tide::Error> {
     Ok(())
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct WalletSummary {
-    pub addresses: Vec<UserAddress>,
-    pub sending_keys: Vec<UserPubKey>,
-    pub viewing_keys: Vec<AuditorPubKey>,
-    pub freezing_keys: Vec<FreezerPubKey>,
-    pub assets: Vec<AssetInfo>,
-}
-
 async fn getinfo(wallet: &mut Option<Wallet>) -> Result<WalletSummary, tide::Error> {
     let wallet = require_wallet(wallet)?;
     Ok(WalletSummary {
@@ -584,16 +569,6 @@ async fn getaddress(wallet: &mut Option<Wallet>) -> Result<Vec<UserAddress>, tid
         .into_iter()
         .map(|pub_key| pub_key.address().into())
         .collect())
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub enum BalanceInfo {
-    /// The balance of a single asset, in a single account.
-    Balance(u64),
-    /// All the balances of an account, by asset type.
-    AccountBalances(HashMap<AssetCode, u64>),
-    /// All the balances of all accounts owned by the wallet.
-    AllBalances(HashMap<UserAddress, HashMap<AssetCode, u64>>),
 }
 
 // Get all balances for the current wallet, all the balances for a given address, or the balance for
@@ -834,6 +809,104 @@ pub async fn get_last_keystore(path: &Option<PathBuf>) -> Result<Option<PathBuf>
     Ok(read_last_path(path).await?)
 }
 
+// Get the set of assets associated with the given codes.
+//
+// The caller must ensure that each asset code is known to `wallet`.
+async fn get_assets(wallet: &Wallet, codes: &[AssetCode]) -> HashMap<AssetCode, AssetInfo> {
+    iter(codes)
+        .then(|code| async move { (*code, wallet.asset(*code).await.unwrap()) })
+        .collect()
+        .await
+}
+
+async fn get_sending_account(wallet: &Wallet, address: UserAddress) -> Account {
+    let (records, asset_codes): (Vec<_>, Vec<_>) = wallet
+        .records()
+        .await
+        .filter_map(|record| {
+            if record.ro.pub_key.address() == address.0 {
+                Some((record.clone().into(), record.ro.asset_def.code))
+            } else {
+                None
+            }
+        })
+        .unzip();
+
+    Account {
+        records,
+        assets: get_assets(wallet, &asset_codes).await,
+    }
+}
+
+async fn get_viewing_account(wallet: &Wallet, address: AuditorPubKey) -> Account {
+    let (records, asset_codes): (Vec<_>, Vec<_>) = wallet
+        .records()
+        .await
+        .filter_map(|record| {
+            if record.ro.asset_def.policy_ref().auditor_pub_key() == &address {
+                Some((record.clone().into(), record.ro.asset_def.code))
+            } else {
+                None
+            }
+        })
+        .unzip();
+    let mut assets = get_assets(wallet, &asset_codes).await;
+
+    // Make sure assets contains _all_ asset types that are viewable, not just the ones for which we
+    // currently have records.
+    for asset in wallet.assets().await {
+        if asset.definition.policy_ref().auditor_pub_key() == &address {
+            assets.insert(asset.definition.code, asset);
+        }
+    }
+
+    Account { records, assets }
+}
+
+async fn get_freezing_account(wallet: &Wallet, address: FreezerPubKey) -> Account {
+    let (records, asset_codes): (Vec<_>, Vec<_>) = wallet
+        .records()
+        .await
+        .filter_map(|record| {
+            if record.ro.asset_def.policy_ref().freezer_pub_key() == &address {
+                Some((record.clone().into(), record.ro.asset_def.code))
+            } else {
+                None
+            }
+        })
+        .unzip();
+    let mut assets = get_assets(wallet, &asset_codes).await;
+
+    // Make sure assets contains _all_ asset types that are freezableœ
+    for asset in wallet.assets().await {
+        if asset.definition.policy_ref().freezer_pub_key() == &address {
+            assets.insert(asset.definition.code, asset);
+        }
+    }
+
+    Account { records, assets }
+}
+
+async fn getaccount(
+    bindings: &HashMap<String, RouteBinding>,
+    wallet: &mut Option<Wallet>,
+) -> Result<Account, tide::Error> {
+    let wallet = require_wallet(wallet)?;
+    let address = bindings[":address"].value.clone();
+    match address.as_identifier()?.tag().as_str() {
+        "ADDR" => Ok(get_sending_account(wallet, address.to()?).await),
+        "USERPUBKEY" => {
+            Ok(get_sending_account(wallet, address.to::<UserPubKey>()?.address().into()).await)
+        }
+        "AUDPUBKEY" => Ok(get_viewing_account(wallet, address.to()?).await),
+        "FREEZEPUBKEY" => Ok(get_freezing_account(wallet, address.to()?).await),
+        tag => Err(server_error(CapeAPIError::Tag {
+            expected: String::from("ADDR | USERPUBKEY | AUDPUBKEY | FREEZEPUBKEY"),
+            actual: String::from(tag),
+        })),
+    }
+}
+
 pub async fn dispatch_url(
     req: tide::Request<WebState>,
     route_pattern: &str,
@@ -850,6 +923,7 @@ pub async fn dispatch_url(
         ApiRouteKey::closewallet => response(&req, closewallet(wallet).await?),
         ApiRouteKey::freeze => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::getaddress => response(&req, getaddress(wallet).await?),
+        ApiRouteKey::getaccount => response(&req, getaccount(bindings, wallet).await?),
         ApiRouteKey::getbalance => response(&req, getbalance(bindings, wallet).await?),
         ApiRouteKey::getinfo => response(&req, getinfo(wallet).await?),
         ApiRouteKey::getmnemonic => response(&req, getmnemonic(rng).await?),

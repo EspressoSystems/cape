@@ -166,7 +166,9 @@ library PolynomialEval {
         uint256 divisor;
         uint256 tmp;
         uint256 vanishEvalDivN = self.sizeInv;
+        uint256 divisorProd;
         uint256[] memory localDomainElements = domainElements(self, length);
+        uint256[] memory buffer = new uint256[](length);
 
         // vanish_eval_div_n = (zeta^n-1)/n
         assembly {
@@ -180,6 +182,23 @@ library PolynomialEval {
         //      = Z_H(zeta) * v_i / (zeta - g^i)
         //      = vanish_eval_div_n * g^i / (zeta - g^i)
         // - v_i = g^i / n
+        divisorProd = 1;
+        for (uint256 i = 0; i < length; i++) {
+            assembly {
+                // tmp points to g^i
+                // first 32 bytes of reference is the length of an array
+                tmp := mload(add(add(localDomainElements, 0x20), mul(i, 0x20)))
+                // compute (zeta - g^i)
+                divisor := addmod(sub(p, tmp), zeta, p)
+            }
+            // compute prod (zeta - g^i)
+            buffer[i] = divisor;
+            divisorProd = mulmod(divisorProd, divisor, p);
+        }
+
+        // compute 1 / prod (zeta - g^i)
+        divisorProd = BN254.invert(divisorProd);
+
         for (uint256 i = 0; i < length; i++) {
             assembly {
                 // tmp points to g^i
@@ -187,11 +206,14 @@ library PolynomialEval {
                 tmp := mload(add(add(localDomainElements, 0x20), mul(i, 0x20)))
                 // vanish_eval_div_n * g^i
                 ithLagrange := mulmod(vanishEvalDivN, tmp, p)
-                // compute (zeta - g^i)
-                divisor := addmod(sub(p, tmp), zeta, p)
             }
             // compute 1/(zeta - g^i)
-            divisor = BN254.invert(divisor);
+            divisor = divisorProd;
+            for (uint256 j = 0; j < length; j++) {
+                if (i != j) {
+                    divisor = mulmod(divisor, buffer[j], p);
+                }
+            }
             assembly {
                 // tmp points to public input
                 tmp := mload(add(add(pi, 0x20), mul(i, 0x20)))

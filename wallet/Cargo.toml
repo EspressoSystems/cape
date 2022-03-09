@@ -32,7 +32,7 @@ rand_chacha = "0.3.1"
 regex = "1.5.4"
 reef = { git = "https://github.com/EspressoSystems/reef.git" }
 relayer = { path = "../relayer", features = ["testing"] }
-seahorse = { git = "https://github.com/EspressoSystems/seahorse.git", features = ["testing"] }
+seahorse = { git = "https://github.com/EspressoSystems/seahorse.git", rev = "1acd9798408151e6e674dbf59af425bb5cfd8f58", features = ["testing"] }
 serde = { version = "1.0.123", features = ["derive", "rc"] }
 serde_derive = "1.0.118"
 serde_json = "1.0.61"

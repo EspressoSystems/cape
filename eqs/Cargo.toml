@@ -27,7 +27,7 @@ net = { git = "https://github.com/EspressoSystems/net.git" }
 rand = "0.8.4"
 rand_chacha = { version = "0.3.1", features = ["serde1"] }
 reef = { git = "https://github.com/EspressoSystems/reef.git" }
-seahorse = { git = "https://github.com/EspressoSystems/seahorse.git", features = ["testing"] }
+seahorse = { git = "https://github.com/EspressoSystems/seahorse.git", rev = "1acd9798408151e6e674dbf59af425bb5cfd8f58", features = ["testing"] }
 serde = { version = "1.0.123", features = ["derive", "rc"] }
 serde_derive = "1.0.118"
 serde_json = "1.0.61"

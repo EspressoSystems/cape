@@ -425,7 +425,7 @@ mod test {
         sender.sync(mock_eqs.lock().await.now()).await.unwrap();
         sender.await_key_scan(&sender_key.address()).await.unwrap();
         let total_balance = sender
-            .balance(&sender_key.address(), &AssetCode::native())
+            .balance_breakdown(&sender_key.address(), &AssetCode::native())
             .await;
         assert!(total_balance > 0);
 
@@ -461,13 +461,13 @@ mod test {
         await_transaction(&txn, &sender, &[&receiver]).await;
         assert_eq!(
             sender
-                .balance(&sender_key.address(), &AssetCode::native())
+                .balance_breakdown(&sender_key.address(), &AssetCode::native())
                 .await,
             total_balance - 3
         );
         assert_eq!(
             receiver
-                .balance(&receiver_key.address(), &AssetCode::native())
+                .balance_breakdown(&receiver_key.address(), &AssetCode::native())
                 .await,
             2
         );
@@ -486,13 +486,13 @@ mod test {
         await_transaction(&txn, &receiver, &[&sender]).await;
         assert_eq!(
             sender
-                .balance(&sender_key.address(), &AssetCode::native())
+                .balance_breakdown(&sender_key.address(), &AssetCode::native())
                 .await,
             total_balance - 2
         );
         assert_eq!(
             receiver
-                .balance(&receiver_key.address(), &AssetCode::native())
+                .balance_breakdown(&receiver_key.address(), &AssetCode::native())
                 .await,
             0
         );
@@ -558,7 +558,7 @@ mod test {
             .await
             .unwrap();
         let total_native_balance = wrapper
-            .balance(&wrapper_key.address(), &AssetCode::native())
+            .balance_breakdown(&wrapper_key.address(), &AssetCode::native())
             .await;
         assert!(total_native_balance > 0);
 
@@ -610,20 +610,20 @@ mod test {
         await_transaction(&receipt, &wrapper, &[&sponsor]).await;
         assert_eq!(
             wrapper
-                .balance(&wrapper_key.address(), &AssetCode::native())
+                .balance_breakdown(&wrapper_key.address(), &AssetCode::native())
                 .await,
             total_native_balance - 2
         );
         assert_eq!(
             sponsor
-                .balance(&sponsor_key.address(), &AssetCode::native())
+                .balance_breakdown(&sponsor_key.address(), &AssetCode::native())
                 .await,
             1
         );
         // The transfer transaction caused the wrap record to be created.
         assert_eq!(
             wrapper
-                .balance(&wrapper_key.address(), &cape_asset.code)
+                .balance_breakdown(&wrapper_key.address(), &cape_asset.code)
                 .await,
             100
         );
@@ -642,13 +642,13 @@ mod test {
         await_transaction(&receipt, &wrapper, &[&sponsor]).await;
         assert_eq!(
             wrapper
-                .balance(&wrapper_key.address(), &cape_asset.code)
+                .balance_breakdown(&wrapper_key.address(), &cape_asset.code)
                 .await,
             0
         );
         assert_eq!(
             sponsor
-                .balance(&sponsor_key.address(), &cape_asset.code)
+                .balance_breakdown(&sponsor_key.address(), &cape_asset.code)
                 .await,
             100
         );
@@ -667,7 +667,7 @@ mod test {
         await_transaction(&receipt, &sponsor, &[]).await;
         assert_eq!(
             sponsor
-                .balance(&sponsor_key.address(), &cape_asset.code)
+                .balance_breakdown(&sponsor_key.address(), &cape_asset.code)
                 .await,
             0
         );

@@ -290,7 +290,7 @@ async fn populatefortest(req: tide::Request<WebState>) -> Result<tide::Response,
     // The transfer also finalizes the wrap.
     wallet
         .transfer(
-            &req.state().faucet_key_pair.address(),
+            Some(&req.state().faucet_key_pair.address()),
             &AssetCode::native(),
             &[(wrapped_asset_addr, DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR)],
             1000 - DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR - DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR,

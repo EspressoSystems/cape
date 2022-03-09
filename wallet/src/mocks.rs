@@ -820,7 +820,10 @@ mod cape_wallet_tests {
 
         // Check the balance after CAPE wallet initialization.
         assert_eq!(
-            wallets[0].0.balance(&owner, &AssetCode::native()).await,
+            wallets[0]
+                .0
+                .balance_breakdown(&owner, &AssetCode::native())
+                .await,
             initial_grant
         );
 
@@ -870,7 +873,13 @@ mod cape_wallet_tests {
             .await
             .unwrap();
         println!("Wrap completed: {}s", now.elapsed().as_secs_f32());
-        assert_eq!(wallets[0].0.balance(&owner, &cap_asset.code).await, 0);
+        assert_eq!(
+            wallets[0]
+                .0
+                .balance_breakdown(&owner, &cap_asset.code)
+                .await,
+            0
+        );
 
         // Submit dummy transactions to finalize the wrap.
         now = Instant::now();
@@ -893,11 +902,17 @@ mod cape_wallet_tests {
 
         // Check the balance after the wrap.
         assert_eq!(
-            wallets[0].0.balance(&owner, &AssetCode::native()).await,
+            wallets[0]
+                .0
+                .balance_breakdown(&owner, &AssetCode::native())
+                .await,
             initial_grant - mint_fee
         );
         assert_eq!(
-            wallets[0].0.balance(&owner, &cap_asset.code).await,
+            wallets[0]
+                .0
+                .balance_breakdown(&owner, &cap_asset.code)
+                .await,
             wrap_amount
         );
 
@@ -965,9 +980,18 @@ mod cape_wallet_tests {
         println!("Burn completed: {}s", now.elapsed().as_secs_f32());
 
         // Check the balance after the burn.
-        assert_eq!(wallets[0].0.balance(&owner, &cap_asset.code).await, 0);
         assert_eq!(
-            wallets[0].0.balance(&owner, &AssetCode::native()).await,
+            wallets[0]
+                .0
+                .balance_breakdown(&owner, &cap_asset.code)
+                .await,
+            0
+        );
+        assert_eq!(
+            wallets[0]
+                .0
+                .balance_breakdown(&owner, &AssetCode::native())
+                .await,
             initial_grant - mint_fee - burn_fee
         );
 

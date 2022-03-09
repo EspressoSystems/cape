@@ -614,8 +614,9 @@ async fn getbalance(
         None => None,
     };
 
-    let one_balance =
-        |address: UserAddress, asset| async move { wallet.balance(&address.into(), &asset).await };
+    let one_balance = |address: UserAddress, asset| async move {
+        wallet.balance_breakdown(&address.into(), &asset).await
+    };
     let account_balances = |address: UserAddress| async move {
         iter(known_assets(wallet).await.into_keys())
             .then(|asset| {
@@ -840,7 +841,7 @@ pub async fn send(
     let fee = bindings.get(":fee").unwrap().value.as_u64()?;
 
     wallet
-        .transfer(&src.into(), &asset, &[(dst.into(), amount)], fee)
+        .transfer(Some(&src.into()), &asset, &[(dst.into(), amount)], fee)
         .await
         .map_err(wallet_error)
 }

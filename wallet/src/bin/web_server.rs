@@ -63,6 +63,7 @@ async fn main() -> Result<(), std::io::Error> {
     // the executable path.
     let opt_api_path = NodeOpt::from_args().api_path;
     let opt_web_path = NodeOpt::from_args().web_path;
+    let opt_path_storage = NodeOpt::from_args().path_storage;
     let web_path = if opt_web_path.is_empty() {
         default_web_path()
     } else {
@@ -72,6 +73,11 @@ async fn main() -> Result<(), std::io::Error> {
         default_api_path()
     } else {
         PathBuf::from(opt_api_path)
+    };
+    let path_storage = if opt_path_storage.is_empty() {
+        None
+    } else {
+        Some(PathBuf::from(opt_path_storage))
     };
     println!("Web path: {:?}", web_path);
 
@@ -83,6 +89,7 @@ async fn main() -> Result<(), std::io::Error> {
         api_path,
         web_path,
         port.parse().unwrap(),
+        path_storage,
     )?
     .await?;
 
@@ -142,6 +149,7 @@ mod tests {
     struct TestServer {
         client: surf::Client,
         temp_dir: TempDir,
+        _temp_path_dir: TempDir,
     }
 
     impl TestServer {
@@ -153,11 +161,13 @@ mod tests {
             // the server will continue running until the process is killed, even after the test
             // ends. This is ok, since each test's server task should be idle once
             // the test is over.
+            let temp_path_dir = TempDir::new("wallet_last_used_test").unwrap();
             init_server(
                 ChaChaRng::from_seed([42; 32]),
                 default_api_path(),
                 default_web_path(),
                 port,
+                Some(temp_path_dir.path().to_path_buf()),
             )
             .unwrap();
             Self::wait(port).await;
@@ -170,6 +180,7 @@ mod tests {
             Self {
                 client: client.with(client::parse_error_body::<CapeAPIError>),
                 temp_dir: TempDir::new("test_cape_wallet").unwrap(),
+                _temp_path_dir: temp_path_dir,
             }
         }
 
@@ -317,6 +328,112 @@ mod tests {
             .get::<()>(&format!("openwallet/{}/path/invalid-path", password))
             .await
             .expect_err("openwallet succeeded with an invalid path");
+    }
+
+    #[async_std::test]
+    #[traced_test]
+    async fn test_lastusedkeystore() {
+        let server = TestServer::new().await;
+        let mnemonic = server.get::<String>("getmnemonic").await.unwrap();
+        println!("mnemonic: {}", mnemonic);
+        let password = "my-password";
+
+        // Should get None on first try if no last wallet.
+        let opt = server
+            .get::<Option<PathBuf>>("lastusedkeystore")
+            .await
+            .unwrap();
+        assert!(opt.is_none());
+
+        let url = format!("newwallet/{}/{}/path/{}", mnemonic, password, server.path());
+        server.get::<()>(&url).await.unwrap();
+
+        let mut path = server
+            .get::<Option<PathBuf>>("lastusedkeystore")
+            .await
+            .unwrap();
+        assert_eq!(
+            *path.as_ref().unwrap(),
+            PathBuf::from(std::str::from_utf8(&server.path().value()).unwrap())
+        );
+
+        // We should still get the same path after opening the wallet
+        server
+            .get::<()>(&format!("openwallet/{}/path/{}", password, server.path()))
+            .await
+            .unwrap();
+        path = server
+            .get::<Option<PathBuf>>("lastusedkeystore")
+            .await
+            .unwrap();
+        assert_eq!(
+            *path.as_ref().unwrap(),
+            PathBuf::from(std::str::from_utf8(&server.path().value()).unwrap())
+        );
+
+        // Open the wallet with the we path we retrieved
+        server
+            .get::<()>(&format!(
+                "openwallet/{}/path/{}",
+                password,
+                TaggedBase64::new(
+                    "PATH",
+                    path.as_ref()
+                        .unwrap()
+                        .as_os_str()
+                        .to_str()
+                        .unwrap()
+                        .as_bytes()
+                )
+                .unwrap()
+            ))
+            .await
+            .unwrap();
+
+        // Test that the last path is updated when we create a new wallet w/ a new path
+        let second_path = TaggedBase64::new(
+            "PATH",
+            TempDir::new("test_cape_wallet_2")
+                .unwrap()
+                .path()
+                .as_os_str()
+                .to_str()
+                .unwrap()
+                .as_bytes(),
+        )
+        .unwrap();
+
+        server
+            .get::<()>(&format!(
+                "newwallet/{}/{}/path/{}",
+                mnemonic, password, second_path
+            ))
+            .await
+            .unwrap();
+
+        path = server
+            .get::<Option<PathBuf>>("lastusedkeystore")
+            .await
+            .unwrap();
+        assert_eq!(
+            *path.as_ref().unwrap(),
+            PathBuf::from(std::str::from_utf8(&second_path.value()).unwrap())
+        );
+
+        // repopen the first wallet and see the path returned is also the original
+        server
+            .get::<()>(&format!("openwallet/{}/path/{}", password, server.path()))
+            .await
+            .unwrap();
+
+        path = server
+            .get::<Option<PathBuf>>("lastusedkeystore")
+            .await
+            .unwrap();
+        assert_eq!(
+            *path.as_ref().unwrap(),
+            PathBuf::from(std::str::from_utf8(&server.path().value()).unwrap())
+        );
     }
 
     #[cfg(feature = "slow-tests")]

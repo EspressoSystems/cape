@@ -12,6 +12,7 @@ use crate::{
     wallet::{CapeWalletError, CapeWalletExt},
     web::WebState,
 };
+use async_std::fs::{create_dir_all, File};
 use async_std::sync::{Arc, Mutex};
 use cap_rust_sandbox::{
     ledger::CapeLedger,
@@ -42,6 +43,7 @@ use serde::{Deserialize, Serialize};
 use snafu::Snafu;
 use std::collections::HashMap;
 use std::fmt::Debug;
+use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
 use strum::IntoEnumIterator;
@@ -242,6 +244,7 @@ pub enum ApiRouteKey {
     view,
     wrap,
     getrecords,
+    lastusedkeystore,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -301,6 +304,55 @@ pub fn wallet_error(source: CapeWalletError) -> tide::Error {
     })
 }
 
+pub fn get_home_path() -> Result<PathBuf, tide::Error> {
+    let home = std::env::var("HOME").map_err(|_| {
+        server_error(CapeAPIError::Internal {
+            msg: String::from("HOME directory is not set. Please set the server's HOME directory."),
+        })
+    })?;
+    Ok(PathBuf::from(home))
+}
+
+pub async fn default_storage_path() -> Result<PathBuf, tide::Error> {
+    let mut storage_path = get_home_path().unwrap();
+    storage_path.push(".espresso/cape");
+    create_dir_all(&storage_path).await?;
+    Ok(storage_path)
+}
+
+pub async fn get_storage_path(path_arg: &Option<PathBuf>) -> Result<PathBuf, tide::Error> {
+    let mut path = if path_arg.is_some() {
+        path_arg.as_ref().unwrap().clone()
+    } else {
+        default_storage_path().await?
+    };
+    path.push("last_wallet_path");
+    Ok(path)
+}
+
+pub async fn write_path(
+    wallet_path: &Path,
+    storage_path: &Option<PathBuf>,
+) -> Result<(), tide::Error> {
+    let path = get_storage_path(storage_path).await?;
+    let mut file = File::create(path).await?;
+    Ok(file
+        .write_all(&bincode::serialize(&wallet_path).unwrap())
+        .await?)
+}
+pub async fn read_last_path(path_arg: &Option<PathBuf>) -> Result<Option<PathBuf>, tide::Error> {
+    let path = get_storage_path(path_arg).await?;
+    let file_result = File::open(&path).await;
+    if file_result.is_err()
+        && file_result.as_ref().err().unwrap().kind() == std::io::ErrorKind::NotFound
+    {
+        return Ok(None);
+    }
+    let mut file = file_result?;
+    let mut bytes = Vec::new();
+    file.read_to_end(&mut bytes).await?;
+    Ok(Some(bincode::deserialize(&bytes)?))
+}
 // Create a wallet (if !existing) or open an existing one.
 pub async fn init_wallet(
     rng: &mut ChaChaRng,
@@ -309,23 +361,19 @@ pub async fn init_wallet(
     password: String,
     path: Option<PathBuf>,
     existing: bool,
+    storage_path: &Option<PathBuf>,
 ) -> Result<Wallet, tide::Error> {
     let path = match path {
         Some(path) => path,
         None => {
-            let home = std::env::var("HOME").map_err(|_| {
-                server_error(CapeAPIError::Internal {
-                    msg: String::from(
-                        "HOME directory is not set. Please set the server's HOME directory, or \
-                            specify a different storage location using :path.",
-                    ),
-                })
-            })?;
-            let mut path = PathBuf::from(home);
+            let mut path = get_home_path().unwrap();
             path.push(".espresso/cape/wallet");
             path
         }
     };
+
+    // Store the path so we can have a getlastkeystore endpoint
+    write_path(&path, storage_path).await?;
 
     let verif_crs = VerifierKeySet {
         mint: TransactionVerifyingKey::Mint(
@@ -437,6 +485,7 @@ pub async fn newwallet(
     rng: &mut ChaChaRng,
     faucet_key_pair: &UserKeyPair,
     wallet: &mut Option<Wallet>,
+    storage_path: &Option<PathBuf>,
 ) -> Result<(), tide::Error> {
     let path = match bindings.get(":path") {
         Some(binding) => Some(binding.value.as_path()?),
@@ -457,6 +506,7 @@ pub async fn newwallet(
             password,
             path,
             false,
+            storage_path,
         )
         .await?,
     );
@@ -468,6 +518,7 @@ pub async fn openwallet(
     rng: &mut ChaChaRng,
     faucet_key_pair: &UserKeyPair,
     wallet: &mut Option<Wallet>,
+    storage_path: &Option<PathBuf>,
 ) -> Result<(), tide::Error> {
     let path = match bindings.get(":path") {
         Some(binding) => Some(binding.value.as_path()?),
@@ -479,7 +530,18 @@ pub async fn openwallet(
     // with two wallets using the same file at the same time.
     *wallet = None;
 
-    *wallet = Some(init_wallet(rng, faucet_key_pair.pub_key(), None, password, path, true).await?);
+    *wallet = Some(
+        init_wallet(
+            rng,
+            faucet_key_pair.pub_key(),
+            None,
+            password,
+            path,
+            true,
+            storage_path,
+        )
+        .await?,
+    );
     Ok(())
 }
 
@@ -768,6 +830,10 @@ pub async fn get_records(wallet: &mut Option<Wallet>) -> Result<Vec<RecordInfo>,
     Ok(wallet.records().await.collect::<Vec<_>>())
 }
 
+pub async fn get_last_keystore(path: &Option<PathBuf>) -> Result<Option<PathBuf>, tide::Error> {
+    Ok(read_last_path(path).await?)
+}
+
 pub async fn dispatch_url(
     req: tide::Request<WebState>,
     route_pattern: &str,
@@ -778,6 +844,7 @@ pub async fn dispatch_url(
     let rng = &mut *state.rng.lock().await;
     let faucet_key_pair = &state.faucet_key_pair;
     let wallet = &mut *state.wallet.lock().await;
+    let path_storage = &state.path_storage;
     let key = ApiRouteKey::from_str(segments.0).expect("Unknown route");
     match key {
         ApiRouteKey::closewallet => response(&req, closewallet(wallet).await?),
@@ -792,11 +859,11 @@ pub async fn dispatch_url(
         ApiRouteKey::newkey => response(&req, newkey(segments.1, wallet).await?),
         ApiRouteKey::newwallet => response(
             &req,
-            newwallet(bindings, rng, faucet_key_pair, wallet).await?,
+            newwallet(bindings, rng, faucet_key_pair, wallet, path_storage).await?,
         ),
         ApiRouteKey::openwallet => response(
             &req,
-            openwallet(bindings, rng, faucet_key_pair, wallet).await?,
+            openwallet(bindings, rng, faucet_key_pair, wallet, path_storage).await?,
         ),
         ApiRouteKey::send => response(&req, send(bindings, wallet).await?),
         ApiRouteKey::transaction => dummy_url_eval(route_pattern, bindings),
@@ -805,5 +872,6 @@ pub async fn dispatch_url(
         ApiRouteKey::view => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::wrap => response(&req, wrap(bindings, wallet).await?),
         ApiRouteKey::getrecords => response(&req, get_records(wallet).await?),
+        ApiRouteKey::lastusedkeystore => response(&req, get_last_keystore(path_storage).await?),
     }
 }

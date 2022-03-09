@@ -10,11 +10,10 @@ use crate::ethereum::{deploy, get_funded_client};
 use crate::model::CAPE_MERKLE_HEIGHT;
 use crate::test_utils::contract_abi_path;
 use crate::types::{
-    AssetRegistry, GenericInto, Greeter, SimpleToken, TestBN254, TestCAPE, TestCapeTypes,
-    TestEdOnBN254, TestPlonkVerifier, TestPolynomialEval, TestRecordsMerkleTree, TestRescue,
-    TestRootStore, TestTranscript, TestVerifyingKeys,
+    AssetRegistry, GenericInto, SimpleToken, TestBN254, TestCAPE, TestCapeTypes, TestEdOnBN254,
+    TestPlonkVerifier, TestPolynomialEval, TestRecordsMerkleTree, TestRescue, TestRootStore,
+    TestTranscript, TestVerifyingKeys,
 };
-use anyhow::Result;
 use ethers::prelude::{k256::ecdsa::SigningKey, Address, Http, Provider, SignerMiddleware, Wallet};
 use std::sync::Arc;
 
@@ -109,18 +108,6 @@ mk_deploy_fun!(
 );
 
 // We do not call the macro for the contracts below because they take some argument
-pub async fn deploy_greeter_contract() -> Result<Greeter<EthMiddleware>> {
-    let client = get_funded_client().await.unwrap();
-    let contract = deploy(
-        client.clone(),
-        &contract_abi_path("Greeter.sol/Greeter"),
-        ("Initial Greeting".to_string(),),
-    )
-    .await
-    .unwrap();
-    Ok(Greeter::new(contract.address(), client))
-}
-
 pub async fn deploy_test_root_store_contract() -> TestRootStore<EthMiddleware> {
     let client = get_funded_client().await.unwrap();
     let contract = deploy(

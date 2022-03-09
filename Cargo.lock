@@ -29,6 +29,7 @@ dependencies = [
  "atomic_store 0.1.0 (git+https://github.com/EspressoSystems/atomicstore.git)",
  "bincode",
  "futures",
+ "hex",
  "itertools 0.10.3",
  "jf-cap",
  "net",

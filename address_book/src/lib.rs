@@ -6,15 +6,12 @@
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #[warn(unused_imports)]
-use async_std::{
-    sync::{Arc, RwLock},
-    task::{sleep, spawn, JoinHandle},
-};
+use async_std::task::{sleep, spawn, JoinHandle};
 use jf_cap::keys::{UserAddress, UserPubKey};
 use jf_cap::Signature;
 use once_cell::sync::Lazy;
-use std::collections::HashMap;
-use std::time::Duration;
+use std::path::PathBuf;
+use std::{fs, time::Duration};
 use tide::{log::LevelFilter, prelude::*, StatusCode};
 
 pub mod signal;
@@ -32,15 +29,48 @@ static LOGGING: Lazy<()> = Lazy::new(|| unsafe {
     tide::log::with_level(LOG_LEVEL);
 });
 
+trait Store {
+    fn save(&self, address: UserAddress, pubkey: UserPubKey) -> Result<(), std::io::Error>;
+    fn load(&self, address: UserAddress) -> Option<UserPubKey>;
+}
+
+#[derive(Debug, Clone)]
+struct FileStore {
+    dir: PathBuf,
+}
+
+impl FileStore {
+    fn new(dir: PathBuf) -> Self {
+        Self { dir }
+    }
+    fn path(&self, address: UserAddress) -> PathBuf {
+        let as_hex = hex::encode(bincode::serialize(&address).unwrap());
+        self.dir.join(format!("{}.bin", as_hex))
+    }
+}
+
+impl Store for FileStore {
+    fn save(&self, address: UserAddress, pubkey: UserPubKey) -> Result<(), std::io::Error> {
+        fs::write(self.path(address), bincode::serialize(&pubkey).unwrap())
+    }
+
+    fn load(&self, address: UserAddress) -> Option<UserPubKey> {
+        match fs::read(self.path(address)) {
+            Ok(bytes) => Some(bincode::deserialize(&bytes).unwrap()),
+            Err(_) => None,
+        }
+    }
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct InsertPubKey {
     pub pub_key_bytes: Vec<u8>,
     pub sig: Signature,
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone)]
 struct ServerState {
-    map: Arc<RwLock<HashMap<UserAddress, UserPubKey>>>,
+    store: FileStore,
 }
 
 pub fn address_book_port() -> String {
@@ -56,7 +86,12 @@ pub async fn init_web_server(
         LOG_LEVEL = log_level;
     }
     Lazy::force(&LOGGING);
-    let mut app = tide::with_state(ServerState::default());
+    let mut app = tide::with_state(ServerState {
+        // TODO
+        // 1. configure directory correctly
+        // 2. use temp dir / clean up after tests
+        store: FileStore::new(PathBuf::from("test-file-store")),
+    });
     app.at("/insert_pubkey").post(insert_pubkey);
     app.at("/request_pubkey").post(request_pubkey);
     let address = format!("0.0.0.0:{}", address_book_port());
@@ -96,8 +131,7 @@ fn verify_sig_and_get_pub_key(insert_request: InsertPubKey) -> Result<UserPubKey
 async fn insert_pubkey(mut req: tide::Request<ServerState>) -> Result<tide::Response, tide::Error> {
     let insert_request: InsertPubKey = net::server::request_body(&mut req).await?;
     let pub_key = verify_sig_and_get_pub_key(insert_request)?;
-    let mut hash_map = req.state().map.write().await;
-    hash_map.insert(pub_key.address(), pub_key.clone());
+    req.state().store.save(pub_key.address(), pub_key)?;
     Ok(tide::Response::new(StatusCode::Ok))
 }
 
@@ -107,10 +141,10 @@ async fn request_pubkey(
     mut req: tide::Request<ServerState>,
 ) -> Result<tide::Response, tide::Error> {
     let address: UserAddress = net::server::request_body(&mut req).await?;
-    let hash_map = req.state().map.read().await;
-    match hash_map.get(&address) {
+    let pubkey = req.state().store.load(address);
+    match pubkey {
         Some(value) => {
-            let bytes = bincode::serialize(value).unwrap();
+            let bytes = bincode::serialize(&value).unwrap();
             let response = tide::Response::builder(StatusCode::Ok)
                 .body(bytes)
                 .content_type(tide::http::mime::BYTE_STREAM)

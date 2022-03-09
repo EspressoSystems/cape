@@ -251,6 +251,10 @@ impl EthPolling {
                                     transition.commit(),
                                     (meta.block_number.as_u64(), txn_id as u64),
                                 );
+                                for nullifier in transition.proven_nullifiers().iter() {
+                                    updated_state.nullifiers.insert(nullifier.0);
+                                }
+
                                 record_index += transition.output_len();
                             });
 

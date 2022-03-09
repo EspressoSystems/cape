@@ -163,63 +163,91 @@ library PolynomialEval {
         uint256 p = BN254.R_MOD;
         uint256 length = pi.length;
         uint256 ithLagrange;
-        uint256 divisor;
+        uint256 ithDivisor;
         uint256 tmp;
         uint256 vanishEvalDivN = self.sizeInv;
         uint256 divisorProd;
         uint256[] memory localDomainElements = domainElements(self, length);
-        uint256[] memory buffer = new uint256[](length);
+        uint256[] memory divisors = new uint256[](length);
 
-        // vanish_eval_div_n = (zeta^n-1)/n
         assembly {
+            // vanish_eval_div_n = (zeta^n-1)/n
             vanishEvalDivN := mulmod(vanishEvalDivN, vanishEval, p)
-        }
 
-        // Now we need to compute
-        //  \sum_{i=0..l} L_{i,H}(zeta) * pub_input[i]
-        // where
-        // - L_{i,H}(zeta)
-        //      = Z_H(zeta) * v_i / (zeta - g^i)
-        //      = vanish_eval_div_n * g^i / (zeta - g^i)
-        // - v_i = g^i / n
-        divisorProd = 1;
-        for (uint256 i = 0; i < length; i++) {
-            assembly {
+            // Now we need to compute
+            //  \sum_{i=0..l} L_{i,H}(zeta) * pub_input[i]
+            // where
+            // - L_{i,H}(zeta)
+            //      = Z_H(zeta) * v_i / (zeta - g^i)
+            //      = vanish_eval_div_n * g^i / (zeta - g^i)
+            // - v_i = g^i / n
+            //
+            // we want to use batch inversion method where we compute
+            //
+            //      divisorProd = 1 / \prod (zeta - g^i)
+            //
+            // and then each 1 / (zeta - g^i) can be computed via (length - 1)
+            // multiplications:
+            //
+            //      1 / (zeta - g^i) = divisorProd * \prod_{j!=i} (zeta - g^j)
+            //
+            // In total this takes n(n-1) multiplications and 1 inversion,
+            // instead of doing n inversions.
+            //
+            // credit: https://github.com/EspressoSystems/cape/issues/689
+            divisorProd := 1
+
+            for {
+                let i := 0
+            } lt(i, length) {
+                i := add(i, 1)
+            } {
                 // tmp points to g^i
                 // first 32 bytes of reference is the length of an array
                 tmp := mload(add(add(localDomainElements, 0x20), mul(i, 0x20)))
                 // compute (zeta - g^i)
-                divisor := addmod(sub(p, tmp), zeta, p)
+                ithDivisor := addmod(sub(p, tmp), zeta, p)
+                // accumulate (zeta - g^i) to the divisorProd
+                divisorProd := mulmod(divisorProd, ithDivisor, p)
+                // store ithDivisor in the array
+                mstore(add(add(divisors, 0x20), mul(i, 0x20)), ithDivisor)
             }
-            // compute prod (zeta - g^i)
-            buffer[i] = divisor;
-            divisorProd = mulmod(divisorProd, divisor, p);
         }
 
-        // compute 1 / prod (zeta - g^i)
+        // compute 1 / \prod_{i=0}^length (zeta - g^i)
         divisorProd = BN254.invert(divisorProd);
 
-        for (uint256 i = 0; i < length; i++) {
-            assembly {
+        assembly {
+            for {
+                let i := 0
+            } lt(i, length) {
+                i := add(i, 1)
+            } {
                 // tmp points to g^i
                 // first 32 bytes of reference is the length of an array
                 tmp := mload(add(add(localDomainElements, 0x20), mul(i, 0x20)))
                 // vanish_eval_div_n * g^i
                 ithLagrange := mulmod(vanishEvalDivN, tmp, p)
-            }
-            // compute 1/(zeta - g^i)
-            divisor = divisorProd;
-            for (uint256 j = 0; j < length; j++) {
-                if (i != j) {
-                    divisor = mulmod(divisor, buffer[j], p);
+
+                // now we compute vanish_eval_div_n * g^i / (zeta - g^i) via
+                // vanish_eval_div_n * g^i * divisorProd * \prod_{j!=i} (zeta - g^j)
+                ithLagrange := mulmod(ithLagrange, divisorProd, p)
+                for {
+                    let j := 0
+                } lt(j, length) {
+                    j := add(j, 1)
+                } {
+                    // here we cannot use not(eq(i, j)): not(x) will flip all bits of x
+                    if eq(eq(i, j), 0) {
+                        ithDivisor := mload(add(add(divisors, 0x20), mul(j, 0x20)))
+                        ithLagrange := mulmod(ithLagrange, ithDivisor, p)
+                    }
                 }
-            }
-            assembly {
+
+                // multiply by pub_input[i] and update res
                 // tmp points to public input
                 tmp := mload(add(add(pi, 0x20), mul(i, 0x20)))
                 ithLagrange := mulmod(ithLagrange, tmp, p)
-                ithLagrange := mulmod(ithLagrange, divisor, p)
-
                 res := addmod(res, ithLagrange, p)
             }
         }

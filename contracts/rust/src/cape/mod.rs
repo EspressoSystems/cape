@@ -26,7 +26,7 @@ use jf_cap::{Signature, TransactionNote};
 use num_traits::{FromPrimitive, ToPrimitive};
 use std::str::from_utf8;
 
-pub const DOM_SEP_CAPE_BURN: &[u8] = b"TRICAPE burn";
+pub const DOM_SEP_CAPE_BURN: &[u8] = b"EsSCAPE burn";
 type BlockMemos = Vec<(Vec<ReceiverMemo>, Signature)>;
 
 /// Burning transaction structure for a single asset (with fee)

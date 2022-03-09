@@ -38,7 +38,7 @@ pub struct CapeBlock {
     pub(crate) miner: UserPubKey,
 }
 
-const CAPE_BURN_PREFIX_BYTES: &str = "TRICAPE burn";
+const CAPE_BURN_PREFIX_BYTES: &str = "EsSCAPE burn";
 const CAPE_BURN_PREFIX_BYTES_LEN: usize = 12;
 
 // Check that the transaction note corresponds to a transfer and that the prefix of the auxiliary

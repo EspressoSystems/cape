@@ -28,7 +28,7 @@ use std::sync::Arc;
 // NOTE: currently supported among list of hardcoded VK inside contract,
 // can be changed later.
 pub const CAPE_MERKLE_HEIGHT: u8 = 24 /*H*/;
-pub const CAPE_BURN_MAGIC_BYTES: &str = "TRICAPE burn";
+pub const CAPE_BURN_MAGIC_BYTES: &str = "EsSCAPE burn";
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum CapeModelTxn {
@@ -287,7 +287,7 @@ pub struct CapeContractState {
 
 pub fn erc20_asset_description(erc20_code: &Erc20Code, sponsor: &EthereumAddr) -> Vec<u8> {
     [
-        "TRICAPE ERC20".as_bytes(),
+        "EsSCAPE ERC20".as_bytes(),
         (erc20_code.0).0.as_ref(),
         "sponsored by".as_bytes(),
         sponsor.0.as_ref(),

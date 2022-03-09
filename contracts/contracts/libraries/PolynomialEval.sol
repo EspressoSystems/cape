@@ -193,8 +193,6 @@ library PolynomialEval {
             //
             // In total this takes n(n-1) multiplications and 1 inversion,
             // instead of doing n inversions.
-            //
-            // credit: https://github.com/EspressoSystems/cape/issues/689
             divisorProd := 1
 
             for {

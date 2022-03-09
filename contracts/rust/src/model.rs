@@ -10,6 +10,7 @@
 use ark_serialize::*;
 use core::convert::TryFrom;
 use core::fmt::Debug;
+use jf_cap::structs::ReceiverMemo;
 use jf_cap::{
     errors::TxnApiError,
     structs::{AssetDefinition, Nullifier, RecordCommitment, RecordOpening},
@@ -155,6 +156,10 @@ pub enum CapeModelOperation {
         erc20_code: Erc20Code,
         src_addr: EthereumAddr,
         ro: Box<RecordOpening>,
+    },
+    Faucet {
+        ro: Box<RecordOpening>,
+        memo: Box<ReceiverMemo>,
     },
 }
 
@@ -669,6 +674,9 @@ impl CapeContractState {
                         wraps: wrapped_commitments,
                         txns: filtered_txns,
                     }))
+                }
+                CapeModelOperation::Faucet { .. } => {
+                    // Do nothing
                 }
             }
         }

@@ -20,7 +20,10 @@ use cap_rust_sandbox::{
 use commit::Committable;
 use core::mem;
 use ethers::abi::AbiDecode;
+use jf_cap::structs::{ReceiverMemo, RecordCommitment};
 use jf_cap::{structs::RecordOpening, MerkleTree, TransactionNote};
+use rand_chacha::rand_core::SeedableRng;
+use rand_chacha::ChaChaRng;
 use reef::traits::{Block, Transaction};
 use seahorse::events::LedgerEvent;
 
@@ -139,7 +142,7 @@ impl EthPolling {
                     self.pending_commit_event.append(&mut transitions.clone());
                     self.pending_commit_event.append(&mut wraps);
 
-                    let output_record_commitment = fetched_block_with_memos
+                    let output_record_commitments = fetched_block_with_memos
                         .block
                         .get_list_of_output_record_commitments();
 
@@ -154,7 +157,7 @@ impl EthPolling {
                     let mut merkle_paths = Vec::new();
                     if let Some(mut merkle_tree) = merkle_tree.clone() {
                         for (_record_id, record_commitment) in
-                            output_record_commitment.iter().enumerate()
+                            output_record_commitments.iter().enumerate()
                         {
                             uids.push(merkle_tree.num_leaves());
                             merkle_tree.push(record_commitment.to_field_element());
@@ -196,7 +199,7 @@ impl EthPolling {
                             for memo in txn_memo.iter() {
                                 outputs.push((
                                     memo.clone(),
-                                    output_record_commitment[index],
+                                    output_record_commitments[index],
                                     uids[index],
                                     merkle_paths[index].clone(),
                                 ));
@@ -281,8 +284,50 @@ impl EthPolling {
                 }
                 CAPEEvents::FaucetInitializedFilter(filter_data) => {
                     let ro_bytes = filter_data.ro_bytes;
-                    let _ro_sol: RecordOpeningSol = AbiDecode::decode(ro_bytes).unwrap();
-                    todo!();
+
+                    // Obtain record opening
+                    let ro_sol: RecordOpeningSol = AbiDecode::decode(ro_bytes).unwrap();
+                    let ro = RecordOpening::from(ro_sol);
+
+                    // Compute record commmitment
+                    let rc = RecordCommitment::from(&ro);
+
+                    // Compute memo
+                    let mut rng = ChaChaRng::from_entropy();
+                    let memo = ReceiverMemo::from_ro(&mut rng, &ro, &[]).unwrap();
+
+                    // Update the Merkle tree
+                    let state_lock = self.query_result_state.read().await;
+                    let merkle_tree = MerkleTree::restore_from_frontier(
+                        state_lock.ledger_state.record_merkle_commitment,
+                        &state_lock.ledger_state.record_merkle_frontier,
+                    );
+
+                    let mut merkle_tree = merkle_tree.unwrap().clone();
+                    let uid = merkle_tree.num_leaves();
+                    merkle_tree.push(rc.to_field_element());
+                    let merkle_path = merkle_tree.get_leaf(uid).expect_ok().unwrap().1.path;
+
+                    // Process the memo
+                    let output = (memo.clone(), rc, uid, merkle_path.clone());
+
+                    let memo_event = LedgerEvent::Memos {
+                        outputs: vec![output],
+                        transaction: None,
+                    };
+
+                    let mut memo_events = vec![memo_event];
+
+                    // Update the local data structures
+                    let mut updated_state = self.query_result_state.write().await;
+
+                    updated_state.ledger_state.record_merkle_commitment = merkle_tree.commitment();
+                    updated_state.ledger_state.record_merkle_frontier = merkle_tree.frontier();
+
+                    updated_state.events.append(&mut memo_events);
+
+                    // persist the state block updates (will be more fine grained in r3)
+                    self.state_persistence.store_latest_state(&*updated_state);
                 }
             }
         }

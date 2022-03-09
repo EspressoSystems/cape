@@ -66,6 +66,7 @@ pub enum CapeTransactionKind {
     CAP(cap::TransactionKind),
     Burn,
     Wrap,
+    Faucet,
 }
 
 impl TransactionKind for CapeTransactionKind {
@@ -97,7 +98,7 @@ impl TransactionKind for CapeTransactionKind {
 // CapeTransition models all of the objects which can transition a CAPE ledger. This includes
 // transactions, submitted from users to the validator via the relayer, as well as ERC20 wrap
 // operations, which are submitted directly to the contract but whose outputs end up being included
-// in the next committed block.
+// in the next committed block as well a call to the faucet function of the CAPE contract.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum CapeTransition {
     Transaction(CapeModelTxn),

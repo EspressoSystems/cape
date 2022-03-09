@@ -66,7 +66,6 @@ pub enum CapeTransactionKind {
     CAP(cap::TransactionKind),
     Burn,
     Wrap,
-    Faucet,
 }
 
 impl TransactionKind for CapeTransactionKind {

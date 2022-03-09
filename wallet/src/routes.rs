@@ -834,7 +834,6 @@ async fn get_sending_account(wallet: &Wallet, address: UserAddress) -> Account {
 
     Account {
         records,
-        // `assets` is only applicable for viewing and freezing accounts.
         assets: get_assets(wallet, &asset_codes).await,
     }
 }

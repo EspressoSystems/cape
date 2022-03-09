@@ -16,7 +16,7 @@ use seahorse::{txn_builder::RecordInfo, AssetInfo};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
 /// Public keys for spending, viewing and freezing assets.
 pub enum PubKey {
     Sending(UserPubKey),

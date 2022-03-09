@@ -129,6 +129,7 @@ mod tests {
     use std::convert::TryInto;
     use std::fmt::Debug;
     use std::iter::once;
+    use std::path::Path;
     use std::time::Duration;
     use surf::Url;
     use tagged_base64::TaggedBase64;
@@ -145,6 +146,12 @@ mod tests {
             backoff *= 2;
         }
         panic!("retry loop did not complete in {:?}", backoff);
+    }
+
+    fn fmt_path(path: &Path) -> String {
+        TaggedBase64::new("PATH", path.as_os_str().to_str().unwrap().as_bytes())
+            .unwrap()
+            .to_string()
     }
 
     struct TestServer {
@@ -196,17 +203,8 @@ mod tests {
                 .expect_err(&format!("{} succeeded without an open wallet", path));
         }
 
-        fn path(&self) -> TaggedBase64 {
-            TaggedBase64::new(
-                "PATH",
-                self.temp_dir
-                    .path()
-                    .as_os_str()
-                    .to_str()
-                    .unwrap()
-                    .as_bytes(),
-            )
-            .unwrap()
+        fn path(&self) -> String {
+            fmt_path(self.temp_dir.path())
         }
 
         async fn wait(port: u64) {
@@ -353,10 +351,7 @@ mod tests {
             .get::<Option<PathBuf>>("lastusedkeystore")
             .await
             .unwrap();
-        assert_eq!(
-            *path.as_ref().unwrap(),
-            PathBuf::from(std::str::from_utf8(&server.path().value()).unwrap())
-        );
+        assert_eq!(fmt_path(path.as_ref().unwrap()), server.path());
 
         // We should still get the same path after opening the wallet
         server
@@ -367,42 +362,20 @@ mod tests {
             .get::<Option<PathBuf>>("lastusedkeystore")
             .await
             .unwrap();
-        assert_eq!(
-            *path.as_ref().unwrap(),
-            PathBuf::from(std::str::from_utf8(&server.path().value()).unwrap())
-        );
+        assert_eq!(fmt_path(path.as_ref().unwrap()), server.path());
 
         // Open the wallet with the we path we retrieved
         server
             .get::<()>(&format!(
                 "openwallet/{}/path/{}",
                 password,
-                TaggedBase64::new(
-                    "PATH",
-                    path.as_ref()
-                        .unwrap()
-                        .as_os_str()
-                        .to_str()
-                        .unwrap()
-                        .as_bytes()
-                )
-                .unwrap()
+                fmt_path(path.as_ref().unwrap())
             ))
             .await
             .unwrap();
 
         // Test that the last path is updated when we create a new wallet w/ a new path
-        let second_path = TaggedBase64::new(
-            "PATH",
-            TempDir::new("test_cape_wallet_2")
-                .unwrap()
-                .path()
-                .as_os_str()
-                .to_str()
-                .unwrap()
-                .as_bytes(),
-        )
-        .unwrap();
+        let second_path = fmt_path(TempDir::new("test_cape_wallet_2").unwrap().path());
 
         server
             .get::<()>(&format!(
@@ -416,10 +389,7 @@ mod tests {
             .get::<Option<PathBuf>>("lastusedkeystore")
             .await
             .unwrap();
-        assert_eq!(
-            *path.as_ref().unwrap(),
-            PathBuf::from(std::str::from_utf8(&second_path.value()).unwrap())
-        );
+        assert_eq!(fmt_path(path.as_ref().unwrap()), second_path);
 
         // repopen the first wallet and see the path returned is also the original
         server
@@ -431,10 +401,7 @@ mod tests {
             .get::<Option<PathBuf>>("lastusedkeystore")
             .await
             .unwrap();
-        assert_eq!(
-            *path.as_ref().unwrap(),
-            PathBuf::from(std::str::from_utf8(&server.path().value()).unwrap())
-        );
+        assert_eq!(fmt_path(path.as_ref().unwrap()), server.path());
     }
 
     #[cfg(feature = "slow-tests")]
@@ -1421,5 +1388,71 @@ mod tests {
 
         assert_eq!(account.assets[&AssetCode::native()], AssetInfo::native());
         assert_eq!(account.assets[&asset.definition.code], asset);
+    }
+
+    #[async_std::test]
+    #[traced_test]
+    async fn test_recoverkey() {
+        let server = TestServer::new().await;
+
+        // Should fail if a wallet is not already open.
+        server
+            .requires_wallet::<PubKey>(&format!("recoverkey/sending"))
+            .await;
+        server
+            .requires_wallet::<PubKey>(&format!("recoverkey/sending/0"))
+            .await;
+        server
+            .requires_wallet::<PubKey>(&format!("recoverkey/viewing"))
+            .await;
+        server
+            .requires_wallet::<PubKey>(&format!("recoverkey/freezing"))
+            .await;
+
+        // Create a wallet and generate some keys, 2 of each type.
+        let mnemonic = server.get::<String>("getmnemonic").await.unwrap();
+        server
+            .get::<()>(&format!(
+                "newwallet/{}/my-password/path/{}",
+                mnemonic,
+                server.path()
+            ))
+            .await
+            .unwrap();
+        let mut keys = vec![];
+        for ty in &["sending", "viewing", "freezing"] {
+            for _ in 0..2 {
+                keys.push(
+                    server
+                        .get::<PubKey>(&format!("newkey/{}", ty))
+                        .await
+                        .unwrap(),
+                );
+            }
+        }
+
+        // Close the wallet, create a new wallet with the same mnemonic, and recover the keys.
+        let new_dir = TempDir::new("test_recover_key_path2").unwrap();
+        server.get::<()>("closewallet").await.unwrap();
+        server
+            .get::<()>(&format!(
+                "newwallet/{}/my-password/path/{}",
+                mnemonic,
+                fmt_path(new_dir.path())
+            ))
+            .await
+            .unwrap();
+        let mut recovered_keys = vec![];
+        for ty in &["sending", "viewing", "freezing"] {
+            for _ in 0..2 {
+                recovered_keys.push(
+                    server
+                        .get::<PubKey>(&format!("recoverkey/{}", ty))
+                        .await
+                        .unwrap(),
+                );
+            }
+        }
+        assert_eq!(recovered_keys, keys);
     }
 }

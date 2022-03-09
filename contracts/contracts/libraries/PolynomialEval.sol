@@ -237,8 +237,7 @@ library PolynomialEval {
                 } lt(j, length) {
                     j := add(j, 1)
                 } {
-                    // here we cannot use not(eq(i, j)): not(x) will flip all bits of x
-                    if eq(eq(i, j), 0) {
+                    if iszero(eq(i, j)) {
                         ithDivisor := mload(add(add(divisors, 0x20), mul(j, 0x20)))
                         ithLagrange := mulmod(ithLagrange, ithDivisor, p)
                     }

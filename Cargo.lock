@@ -34,6 +34,7 @@ dependencies = [
  "jf-cap",
  "net",
  "once_cell",
+ "rand 0.8.5",
  "rand_chacha 0.3.1",
  "serde",
  "signal-hook",

@@ -10,6 +10,7 @@ use async_std::task::{sleep, spawn, JoinHandle};
 use jf_cap::keys::{UserAddress, UserPubKey};
 use jf_cap::Signature;
 use once_cell::sync::Lazy;
+use rand::{distributions::Alphanumeric, Rng};
 use std::path::PathBuf;
 use std::{fs, time::Duration};
 use tide::{log::LevelFilter, prelude::*, StatusCode};
@@ -30,8 +31,8 @@ static LOGGING: Lazy<()> = Lazy::new(|| unsafe {
 });
 
 trait Store {
-    fn save(&self, address: UserAddress, pubkey: UserPubKey) -> Result<(), std::io::Error>;
-    fn load(&self, address: UserAddress) -> Option<UserPubKey>;
+    fn save(&self, address: &UserAddress, pubkey: &UserPubKey) -> Result<(), std::io::Error>;
+    fn load(&self, address: &UserAddress) -> Option<UserPubKey>;
 }
 
 #[derive(Debug, Clone)]
@@ -43,18 +44,31 @@ impl FileStore {
     fn new(dir: PathBuf) -> Self {
         Self { dir }
     }
-    fn path(&self, address: UserAddress) -> PathBuf {
+
+    fn path(&self, address: &UserAddress) -> PathBuf {
         let as_hex = hex::encode(bincode::serialize(&address).unwrap());
         self.dir.join(format!("{}.bin", as_hex))
+    }
+
+    fn tmp_path(&self, address: &UserAddress) -> PathBuf {
+        let rand_string: String = rand::thread_rng()
+            .sample_iter(&Alphanumeric)
+            .take(16)
+            .map(char::from)
+            .collect();
+
+        self.path(address).with_extension(rand_string)
     }
 }
 
 impl Store for FileStore {
-    fn save(&self, address: UserAddress, pubkey: UserPubKey) -> Result<(), std::io::Error> {
-        fs::write(self.path(address), bincode::serialize(&pubkey).unwrap())
+    fn save(&self, address: &UserAddress, pubkey: &UserPubKey) -> Result<(), std::io::Error> {
+        let tmp_path = self.tmp_path(address);
+        fs::write(&tmp_path, bincode::serialize(&pubkey).unwrap())?;
+        fs::rename(&tmp_path, self.path(address))
     }
 
-    fn load(&self, address: UserAddress) -> Option<UserPubKey> {
+    fn load(&self, address: &UserAddress) -> Option<UserPubKey> {
         match fs::read(self.path(address)) {
             Ok(bytes) => Some(bincode::deserialize(&bytes).unwrap()),
             Err(_) => None,
@@ -131,7 +145,7 @@ fn verify_sig_and_get_pub_key(insert_request: InsertPubKey) -> Result<UserPubKey
 async fn insert_pubkey(mut req: tide::Request<ServerState>) -> Result<tide::Response, tide::Error> {
     let insert_request: InsertPubKey = net::server::request_body(&mut req).await?;
     let pub_key = verify_sig_and_get_pub_key(insert_request)?;
-    req.state().store.save(pub_key.address(), pub_key)?;
+    req.state().store.save(&pub_key.address(), &pub_key)?;
     Ok(tide::Response::new(StatusCode::Ok))
 }
 
@@ -141,7 +155,7 @@ async fn request_pubkey(
     mut req: tide::Request<ServerState>,
 ) -> Result<tide::Response, tide::Error> {
     let address: UserAddress = net::server::request_body(&mut req).await?;
-    let pubkey = req.state().store.load(address);
+    let pubkey = req.state().store.load(&address);
     match pubkey {
         Some(value) => {
             let bytes = bincode::serialize(&value).unwrap();

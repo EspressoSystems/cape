@@ -39,6 +39,7 @@ use reef::Ledger;
 use relayer::testing::start_minimal_relayer_for_test;
 use seahorse::testing::await_transaction;
 use seahorse::txn_builder::{TransactionReceipt, TransactionStatus};
+use std::env;
 use surf::Url;
 use tide::log::LevelFilter;
 
@@ -61,7 +62,7 @@ pub async fn create_test_network<'a>(
     rng: &mut ChaChaRng,
     universal_param: &'a UniversalParam,
 ) -> (UserKeyPair, Url, Address, Arc<Mutex<MockCapeLedger<'a>>>) {
-    init_web_server(LevelFilter::Error)
+    init_web_server(LevelFilter::Error, env::temp_dir())
         .await
         .expect("Failed to run server.");
     wait_for_server().await;

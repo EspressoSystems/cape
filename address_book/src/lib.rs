@@ -11,6 +11,7 @@ use jf_cap::keys::{UserAddress, UserPubKey};
 use jf_cap::Signature;
 use once_cell::sync::Lazy;
 use rand::{distributions::Alphanumeric, Rng};
+use std::env;
 use std::path::PathBuf;
 use std::{fs, time::Duration};
 use tide::{log::LevelFilter, prelude::*, StatusCode};
@@ -29,6 +30,8 @@ pub static mut LOG_LEVEL: LevelFilter = LevelFilter::Info;
 static LOGGING: Lazy<()> = Lazy::new(|| unsafe {
     tide::log::with_level(LOG_LEVEL);
 });
+
+// TODO: remove test store after tests, add TestFileStore type that implements Drop?
 
 trait Store {
     fn save(&self, address: &UserAddress, pubkey: &UserPubKey) -> Result<(), std::io::Error>;
@@ -91,8 +94,24 @@ pub fn address_book_port() -> String {
     std::env::var("PORT").unwrap_or_else(|_| DEFAULT_PORT.to_string())
 }
 
+pub fn cape_data_path() -> PathBuf {
+    dirs::data_local_dir()
+        .unwrap_or_else(|| env::current_dir().unwrap_or_else(|_| PathBuf::from("./")))
+        .join("espresso")
+        .join("cape")
+}
+
+pub fn address_book_store_path() -> PathBuf {
+    if let Ok(store_path) = std::env::var("CAPE_ADDRESS_BOOK_STORE_PATH") {
+        PathBuf::from(store_path)
+    } else {
+        cape_data_path().join("address_book").join("store")
+    }
+}
+
 pub async fn init_web_server(
     log_level: LevelFilter,
+    store_path: PathBuf,
 ) -> std::io::Result<JoinHandle<std::io::Result<()>>> {
     // Accessing `LOG_LEVEL` is considered unsafe since it is a static mutable
     // variable, but we need this to ensure that only one logger is running.
@@ -100,11 +119,12 @@ pub async fn init_web_server(
         LOG_LEVEL = log_level;
     }
     Lazy::force(&LOGGING);
+
+    tide::log::info!("Using store path {:?}", store_path);
+    fs::create_dir_all(&store_path)?;
+
     let mut app = tide::with_state(ServerState {
-        // TODO
-        // 1. configure directory correctly
-        // 2. use temp dir / clean up after tests
-        store: FileStore::new(PathBuf::from("test-file-store")),
+        store: FileStore::new(store_path),
     });
     app.at("/insert_pubkey").post(insert_pubkey);
     app.at("/request_pubkey").post(request_pubkey);

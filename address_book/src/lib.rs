@@ -32,8 +32,6 @@ static LOGGING: Lazy<()> = Lazy::new(|| unsafe {
     tide::log::with_level(LOG_LEVEL);
 });
 
-// TODO: remove test store after tests, add TestFileStore type that implements Drop?
-
 trait Store {
     fn save(&self, address: &UserAddress, pubkey: &UserPubKey) -> Result<(), std::io::Error>;
     fn load(&self, address: &UserAddress) -> Option<UserPubKey>;

@@ -257,7 +257,7 @@ async fn populatefortest(req: tide::Request<WebState>) -> Result<tide::Response,
         wallet::CapeWalletExt,
     };
     use cap_rust_sandbox::model::Erc20Code;
-    use jf_cap::structs::AssetDefinition;
+    use rand::{RngCore, SeedableRng};
 
     let wallet = &mut *req.state().wallet.lock().await;
     let wallet = require_wallet(wallet)?;
@@ -282,29 +282,17 @@ async fn populatefortest(req: tide::Request<WebState>) -> Result<tide::Response,
     wallet.await_key_scan(&faucet_addr).await.unwrap();
 
     // Add a wrapped asset, and give it some nonzero balance.
-    let mut erc20_code = Erc20Code(EthereumAddr([0; 20]));
+    // Sample the Ethereum address from entropy to avoid ERC 20 code collision.
+    let mut rng = ChaChaRng::from_entropy();
+    let mut random_addr = [0u8; 20];
+    rng.fill_bytes(&mut random_addr);
+    let erc20_code = Erc20Code(EthereumAddr(random_addr));
     let sponsor_addr = DEFAULT_ETH_ADDR;
-    let mut asset_def = AssetDefinition::dummy();
-    for i in 1..5 {
-        match wallet
-            .sponsor(erc20_code.clone(), sponsor_addr.clone(), Default::default())
-            .await
-        {
-            Ok(def) => {
-                asset_def = def;
-                break;
-            }
-            error => {
-                if i < 4 {
-                    // Try a different ERC20 token since the previous one may be already
-                    // registered in caes of a race condition.
-                    erc20_code = Erc20Code(EthereumAddr([i; 20]));
-                } else {
-                    error.map_err(wallet_error)?;
-                }
-            }
-        }
-    }
+    let asset_def = wallet
+        .sponsor(erc20_code.clone(), sponsor_addr.clone(), Default::default())
+        .await
+        .map_err(wallet_error)?;
+
     // Ensure this address is different from the faucet address.
     let mut wrapped_asset_addr = wallet.pub_keys().await[0].address();
     if wrapped_asset_addr == req.state().faucet_key_pair.address() {

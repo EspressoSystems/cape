@@ -1183,7 +1183,7 @@ mod tests {
     // Issue: https://github.com/EspressoSystems/cape/issues/600.
     #[async_std::test]
     #[traced_test]
-    #[ignore]
+    // #[ignore]
     async fn test_send() {
         let server = TestServer::new().await;
         let mut rng = ChaChaRng::from_seed([1; 32]);
@@ -1193,6 +1193,13 @@ mod tests {
             .requires_wallet::<AssetDefinition>(&format!(
                 "send/sender/{}/asset/{}/recipient/{}/amount/1/fee/1",
                 UserKeyPair::generate(&mut rng).address(),
+                AssetCode::random(&mut rng).0,
+                EthereumAddr([1; 20]),
+            ))
+            .await;
+        server
+            .requires_wallet::<AssetDefinition>(&format!(
+                "send/asset/{}/recipient/{}/amount/1/fee/1",
                 AssetCode::random(&mut rng).0,
                 EthereumAddr([1; 20]),
             ))
@@ -1207,9 +1214,11 @@ mod tests {
             ))
             .await
             .unwrap();
+
         // Populate the wallet with some dummy data so we have a balance of an asset to send.
         server.get::<()>("populatefortest").await.unwrap();
         let info = server.get::<WalletSummary>("getinfo").await.unwrap();
+
         // One of the wallet's addresses (the faucet address) should have a nonzero balance of the
         // native asset, and at least one should have a 0 balance. Get one of each so we can
         // transfer from an account with non-zero balance to one with 0 balance. Note that in the
@@ -1235,7 +1244,7 @@ mod tests {
         let src_address = funded_account.unwrap();
         let dst_address = unfunded_account.unwrap();
 
-        // Make a transfer.
+        // Make a transfer with a given sender address.
         server
             .get::<TransactionReceipt<CapeLedger>>(&format!(
                 "send/sender/{}/asset/{}/recipient/{}/amount/{}/fee/{}",
@@ -1247,6 +1256,7 @@ mod tests {
             ))
             .await
             .unwrap();
+
         // Wait for the balance to show up.
         retry(|| async {
             server
@@ -1273,6 +1283,32 @@ mod tests {
                 .await
                 .unwrap()
         );
+
+        // Make a transfer without a sender address.
+        server
+            .get::<TransactionReceipt<CapeLedger>>(&format!(
+                "send/asset/{}/recipient/{}/amount/{}/fee/{}",
+                &AssetCode::native(),
+                dst_address,
+                100,
+                1
+            ))
+            .await
+            .unwrap();
+
+        // Check that the balance was added to the receiver address.
+        retry(|| async {
+            server
+                .get::<BalanceInfo>(&format!(
+                    "getbalance/address/{}/asset/{}",
+                    dst_address,
+                    AssetCode::native()
+                ))
+                .await
+                .unwrap()
+                == BalanceInfo::Balance(200)
+        })
+        .await;
     }
 
     // Issue: https://github.com/EspressoSystems/cape/issues/600.

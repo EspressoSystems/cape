@@ -830,7 +830,6 @@ pub async fn send(
 ) -> Result<TransactionReceipt<CapeLedger>, tide::Error> {
     let wallet = require_wallet(wallet)?;
 
-    let src = bindings.get(":sender").unwrap().value.to::<UserAddress>()?;
     let dst = bindings
         .get(":recipient")
         .unwrap()
@@ -840,10 +839,21 @@ pub async fn send(
     let amount = bindings.get(":amount").unwrap().value.as_u64()?;
     let fee = bindings.get(":fee").unwrap().value.as_u64()?;
 
-    wallet
-        .transfer(Some(&src.into()), &asset, &[(dst.into(), amount)], fee)
-        .await
-        .map_err(wallet_error)
+    match bindings.get(":sender") {
+        Some(addr) => wallet
+            .transfer(
+                Some(&addr.value.to::<UserAddress>()?.into()),
+                &asset,
+                &[(dst.into(), amount)],
+                fee,
+            )
+            .await
+            .map_err(wallet_error),
+        None => wallet
+            .transfer(None, &asset, &[(dst.into(), amount)], fee)
+            .await
+            .map_err(wallet_error),
+    }
 }
 
 pub async fn get_records(wallet: &mut Option<Wallet>) -> Result<Vec<RecordInfo>, tide::Error> {

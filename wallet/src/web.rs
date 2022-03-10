@@ -12,7 +12,8 @@
 //! of the actual routes is defined in [crate::routes].
 
 use crate::routes::{
-    dispatch_url, CapeAPIError, RouteBinding, UrlSegmentType, UrlSegmentValue, Wallet,
+    dispatch_url, keystores_dir, CapeAPIError, RouteBinding, UrlSegmentType, UrlSegmentValue,
+    Wallet,
 };
 use async_std::{
     sync::{Arc, Mutex},
@@ -25,6 +26,7 @@ use net::server;
 use rand_chacha::ChaChaRng;
 use seahorse::testing::await_transaction;
 use std::collections::hash_map::HashMap;
+use std::fs::create_dir_all;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::time::Duration;
@@ -43,26 +45,19 @@ pub const DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR: u64 = 400;
 )]
 pub struct NodeOpt {
     /// Path to assets including web server files.
-    #[structopt(
-        long = "assets",
-        default_value = ""      // See fn default_web_path().
-    )]
-    pub web_path: String,
+    #[structopt(long = "assets")]
+    pub web_path: Option<PathBuf>,
 
     /// Path to API specification and messages.
-    #[structopt(
-        long = "api",
-        default_value = ""      // See fn default_api_path().
-    )]
-    pub api_path: String,
+    #[structopt(long = "api")]
+    pub api_path: Option<PathBuf>,
 
-    /// Path to store location of most recent wallet
+    /// Path to store keystores and location of most recent wallet
     #[structopt(
-        long = "storage_path",
-        env = "PATH_STORAGE",    // Fallback to env_var or $HOME
-        default_value = "",
+        long = "storage",
+        env = "CAPE_WALLET_STORAGE", // Fallback to env_var or $HOME
     )]
-    pub path_storage: String,
+    pub storage: Option<PathBuf>,
 }
 
 /// Returns the project directory.
@@ -92,6 +87,13 @@ pub fn default_api_path() -> PathBuf {
     [&dir, Path::new(API_FILE)].iter().collect()
 }
 
+/// Returns the default path to store generated files.
+pub fn default_storage_path() -> PathBuf {
+    let home = std::env::var("HOME")
+        .expect("HOME directory is not set. Please set the server's HOME directory.");
+    [&home, ".espresso/cape/wallet"].iter().collect()
+}
+
 /// State maintained by the server, used to handle requests.
 #[derive(Clone)]
 pub struct WebState {
@@ -99,7 +101,7 @@ pub struct WebState {
     pub(crate) wallet: Arc<Mutex<Option<Wallet>>>,
     pub(crate) rng: Arc<Mutex<ChaChaRng>>,
     pub(crate) faucet_key_pair: UserKeyPair,
-    pub(crate) path_storage: Option<PathBuf>,
+    pub(crate) storage: PathBuf,
 }
 
 // Get the route pattern that matches the URL of a request, and the bindings for parameters in the
@@ -357,8 +359,11 @@ pub fn init_server(
     api_path: PathBuf,
     web_path: PathBuf,
     port: u64,
-    path_storage: Option<PathBuf>,
+    storage: PathBuf,
 ) -> std::io::Result<JoinHandle<std::io::Result<()>>> {
+    // Make sure relevant sub-directories of `storage` exist.
+    create_dir_all(keystores_dir(&storage))?;
+
     let api = crate::disco::load_messages(&api_path);
     let faucet_key_pair = UserKeyPair::generate(&mut rng);
     let mut web_server = tide::with_state(WebState {
@@ -366,7 +371,7 @@ pub fn init_server(
         wallet: Arc::new(Mutex::new(None)),
         rng: Arc::new(Mutex::new(rng)),
         faucet_key_pair,
-        path_storage,
+        storage,
     });
     web_server
         .with(server::trace)

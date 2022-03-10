@@ -465,11 +465,9 @@ mod tests {
         assert_eq!(addresses, vec![]);
     }
 
-    // Issue: https://github.com/EspressoSystems/cape/issues/600.
     #[async_std::test]
     #[traced_test]
-    // #[ignore]
-    async fn ignore_test_getrecords() {
+    async fn test_getrecords() {
         let server = TestServer::new().await;
 
         // Should fail if a wallet is not already open.
@@ -885,11 +883,9 @@ mod tests {
             .unwrap();
     }
 
-    // Issue: https://github.com/EspressoSystems/cape/issues/600.
     #[async_std::test]
     #[traced_test]
-    // #[ignore]
-    async fn ignore_test_mint() {
+    async fn test_mint() {
         // Set parameters.
         let description = base64::encode_config(&[3u8; 32], base64::URL_SAFE_NO_PAD);
         let amount = 10;
@@ -988,11 +984,9 @@ mod tests {
         .await;
     }
 
-    // Issue: https://github.com/EspressoSystems/cape/issues/600.
     #[async_std::test]
     #[traced_test]
-    // #[ignore]
-    async fn ignore_test_unwrap() {
+    async fn test_unwrap() {
         // Set parameters.
         let eth_addr = DEFAULT_ETH_ADDR;
         let fee = 1;
@@ -1094,11 +1088,9 @@ mod tests {
         .await;
     }
 
-    // Issue: https://github.com/EspressoSystems/cape/issues/600.
     #[async_std::test]
     #[traced_test]
-    // #[ignore]
-    async fn ignore_test_dummy_populate() {
+    async fn test_dummy_populate() {
         let server = TestServer::new().await;
         server
             .get::<()>(&format!(
@@ -1160,11 +1152,9 @@ mod tests {
         );
     }
 
-    // Issue: https://github.com/EspressoSystems/cape/issues/600.
     #[async_std::test]
     #[traced_test]
-    // #[ignore]
-    async fn ignore_test_send() {
+    async fn test_send() {
         let server = TestServer::new().await;
         let mut rng = ChaChaRng::from_seed([1; 32]);
 
@@ -1293,11 +1283,9 @@ mod tests {
         .await;
     }
 
-    // Issue: https://github.com/EspressoSystems/cape/issues/600.
     #[async_std::test]
     #[traced_test]
-    // #[ignore]
-    async fn ignore_test_getaccount() {
+    async fn test_getaccount() {
         let server = TestServer::new().await;
         let mut rng = ChaChaRng::from_seed([1; 32]);
 

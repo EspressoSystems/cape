@@ -147,14 +147,19 @@ that is, the entire ledger will be scanned.
 """
 
 [route.send]
-PATH = ["send/sender/:sender/asset/:asset/recipient/:recipient/amount/:amount/fee/:fee"]
+PATH = [
+  "send/sender/:sender/asset/:asset/recipient/:recipient/amount/:amount/fee/:fee",
+  "send/asset/:asset/recipient/:recipient/amount/:amount/fee/:fee"
+]
 ":sender" = "TaggedBase64"
 ":asset" = "TaggedBase64"
 ":recipient" = "TaggedBase64"
 ":amount" = "Integer"
 ":fee" = "Integer"
 DOC = """
-Transfer amount units of the given asset from the sender to the recipient. Returns a serialized receipt which can be used to track the transaction through the validation process.
+Transfer amount units of the given asset to the recipient from the sender, or any addresses owned by
+the current wallet if a sender isn't given. Returns a serialized receipt which can be used to track
+the transaction through the validation process.
 """
 
 [route.wrap]

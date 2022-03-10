@@ -26,6 +26,7 @@ name = "address_book"
 version = "0.0.2"
 dependencies = [
  "async-std",
+ "async-trait",
  "atomic_store 0.1.0 (git+https://github.com/EspressoSystems/atomicstore.git)",
  "bincode",
  "dirs",

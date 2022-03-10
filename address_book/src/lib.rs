@@ -6,11 +6,14 @@
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #[warn(unused_imports)]
+use async_std::sync::{Arc, RwLock};
 use async_std::task::{sleep, spawn, JoinHandle};
+use async_trait::async_trait;
 use jf_cap::keys::{UserAddress, UserPubKey};
 use jf_cap::Signature;
 use once_cell::sync::Lazy;
 use rand::{distributions::Alphanumeric, Rng};
+use std::collections::HashMap;
 use std::env;
 use std::path::PathBuf;
 use std::{fs, time::Duration};
@@ -32,18 +35,22 @@ static LOGGING: Lazy<()> = Lazy::new(|| unsafe {
     tide::log::with_level(LOG_LEVEL);
 });
 
-trait Store {
-    fn save(&self, address: &UserAddress, pubkey: &UserPubKey) -> Result<(), std::io::Error>;
-    fn load(&self, address: &UserAddress) -> Option<UserPubKey>;
+#[async_trait]
+pub trait Store: Clone + Send + Sync {
+    async fn save(&self, address: &UserAddress, pub_key: &UserPubKey)
+        -> Result<(), std::io::Error>;
+    async fn load(&self, address: &UserAddress) -> Option<UserPubKey>;
 }
 
 #[derive(Debug, Clone)]
-struct FileStore {
+pub struct FileStore {
     dir: PathBuf,
 }
 
+/// Persistent file backed store.
+/// Each (address, pub_key) pair is store in a single file inside `dir`.
 impl FileStore {
-    fn new(dir: PathBuf) -> Self {
+    pub fn new(dir: PathBuf) -> Self {
         Self { dir }
     }
 
@@ -63,18 +70,47 @@ impl FileStore {
     }
 }
 
+#[async_trait]
 impl Store for FileStore {
-    fn save(&self, address: &UserAddress, pubkey: &UserPubKey) -> Result<(), std::io::Error> {
+    async fn save(
+        &self,
+        address: &UserAddress,
+        pub_key: &UserPubKey,
+    ) -> Result<(), std::io::Error> {
         let tmp_path = self.tmp_path(address);
-        fs::write(&tmp_path, bincode::serialize(&pubkey).unwrap())?;
+        fs::write(&tmp_path, bincode::serialize(&pub_key).unwrap())?;
         fs::rename(&tmp_path, self.path(address))
     }
 
-    fn load(&self, address: &UserAddress) -> Option<UserPubKey> {
+    async fn load(&self, address: &UserAddress) -> Option<UserPubKey> {
         match fs::read(self.path(address)) {
             Ok(bytes) => Some(bincode::deserialize(&bytes).unwrap()),
             Err(_) => None,
         }
+    }
+}
+
+/// Non-persistent in-memory store. Suitable for testing only.
+#[derive(Debug, Clone, Default)]
+pub struct MemoryStore {
+    map: Arc<RwLock<HashMap<UserAddress, UserPubKey>>>,
+}
+
+#[async_trait]
+impl Store for MemoryStore {
+    async fn save(
+        &self,
+        address: &UserAddress,
+        pub_key: &UserPubKey,
+    ) -> Result<(), std::io::Error> {
+        let mut hash_map = self.map.write().await;
+        hash_map.insert(address.clone(), pub_key.clone());
+        Ok(())
+    }
+
+    async fn load(&self, address: &UserAddress) -> Option<UserPubKey> {
+        let hash_map = self.map.read().await;
+        Some(hash_map.get(address).unwrap().clone())
     }
 }
 
@@ -85,8 +121,8 @@ pub struct InsertPubKey {
 }
 
 #[derive(Clone)]
-struct ServerState {
-    store: FileStore,
+struct ServerState<T: Store> {
+    store: T,
 }
 
 pub fn address_book_temp_dir() -> TempDir {
@@ -112,9 +148,9 @@ pub fn address_book_store_path() -> PathBuf {
     }
 }
 
-pub async fn init_web_server(
+pub async fn init_web_server<T: Store + 'static>(
     log_level: LevelFilter,
-    store_path: PathBuf,
+    store: T,
 ) -> std::io::Result<JoinHandle<std::io::Result<()>>> {
     // Accessing `LOG_LEVEL` is considered unsafe since it is a static mutable
     // variable, but we need this to ensure that only one logger is running.
@@ -123,12 +159,7 @@ pub async fn init_web_server(
     }
     Lazy::force(&LOGGING);
 
-    tide::log::info!("Using store path {:?}", store_path);
-    fs::create_dir_all(&store_path)?;
-
-    let mut app = tide::with_state(ServerState {
-        store: FileStore::new(store_path),
-    });
+    let mut app = tide::with_state(ServerState { store });
     app.at("/insert_pubkey").post(insert_pubkey);
     app.at("/request_pubkey").post(request_pubkey);
     let address = format!("0.0.0.0:{}", address_book_port());
@@ -165,21 +196,23 @@ fn verify_sig_and_get_pub_key(insert_request: InsertPubKey) -> Result<UserPubKey
 }
 
 /// Insert or update the public key at the given address.
-async fn insert_pubkey(mut req: tide::Request<ServerState>) -> Result<tide::Response, tide::Error> {
+async fn insert_pubkey<T: Store>(
+    mut req: tide::Request<ServerState<T>>,
+) -> Result<tide::Response, tide::Error> {
     let insert_request: InsertPubKey = net::server::request_body(&mut req).await?;
     let pub_key = verify_sig_and_get_pub_key(insert_request)?;
-    req.state().store.save(&pub_key.address(), &pub_key)?;
+    req.state().store.save(&pub_key.address(), &pub_key).await?;
     Ok(tide::Response::new(StatusCode::Ok))
 }
 
 /// Fetch the public key for the given address. If not found, return
 /// StatusCode::NotFound.
-async fn request_pubkey(
-    mut req: tide::Request<ServerState>,
+async fn request_pubkey<T: Store>(
+    mut req: tide::Request<ServerState<T>>,
 ) -> Result<tide::Response, tide::Error> {
     let address: UserAddress = net::server::request_body(&mut req).await?;
-    let pubkey = req.state().store.load(&address);
-    match pubkey {
+    let pub_key = req.state().store.load(&address).await;
+    match pub_key {
         Some(value) => {
             let bytes = bincode::serialize(&value).unwrap();
             let response = tide::Response::builder(StatusCode::Ok)

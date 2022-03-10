@@ -13,9 +13,9 @@ use crate::mocks::*;
 use crate::wallet::CapeWalletExt;
 use crate::CapeWallet;
 use crate::CapeWalletError;
-use address_book::address_book_temp_dir;
 use address_book::init_web_server;
 use address_book::wait_for_server;
+use address_book::MemoryStore;
 use async_std::sync::{Arc, Mutex};
 use cap_rust_sandbox::deploy::EthMiddleware;
 use cap_rust_sandbox::ledger::CapeLedger;
@@ -62,13 +62,9 @@ pub async fn create_test_network<'a>(
     rng: &mut ChaChaRng,
     universal_param: &'a UniversalParam,
 ) -> (UserKeyPair, Url, Address, Arc<Mutex<MockCapeLedger<'a>>>) {
-    init_web_server(
-        LevelFilter::Error,
-        // TODO this directory isn't cleaned up after test runs
-        address_book_temp_dir().into_path().to_path_buf(),
-    )
-    .await
-    .expect("Failed to run server.");
+    init_web_server(LevelFilter::Error, MemoryStore::default())
+        .await
+        .expect("Failed to run server.");
     wait_for_server().await;
 
     // Set up a network that includes a minimal relayer, connected to a real Ethereum

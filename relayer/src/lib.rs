@@ -1,7 +1,24 @@
+// Copyright (c) 2022 Espresso Systems (espressosys.com)
+// This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
+
+// This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+// This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+// You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+//! The Relayer is the component of the system that collects transactions from end users and submit them to the CAPE contract.
+//! The current implementation is a simplified version where the Relayer only forwards a single transaction at a time.
+//! Moreover the Relayer currently does not validate the transaction on its own. If the transaction is invalid it will be rejected
+//! by the CAPE contract.
+#[warn(unused_imports)]
 use async_std::task;
-use cap_rust_sandbox::{cape::CapeBlock, deploy::EthMiddleware, model::CapeModelTxn, types::CAPE};
-use ethers::prelude::*;
-use jf_cap::keys::UserPubKey;
+use cap_rust_sandbox::{
+    cape::{submit_block::submit_cape_block_with_memos, BlockWithMemos, CapeBlock},
+    deploy::EthMiddleware,
+    model::CapeModelTxn,
+    types::CAPE,
+};
+use ethers::prelude::TransactionReceipt;
+use jf_cap::{keys::UserPubKey, structs::ReceiverMemo, Signature};
 use net::server::{add_error_body, request_body, response};
 use serde::{Deserialize, Serialize};
 use snafu::Snafu;
@@ -49,32 +66,49 @@ struct WebState {
     contract: CAPE<EthMiddleware>,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SubmitBody {
+    pub transaction: CapeModelTxn,
+    pub memos: Vec<ReceiverMemo>,
+    pub signature: Signature,
+}
+
 async fn submit_endpoint(mut req: tide::Request<WebState>) -> Result<tide::Response, tide::Error> {
-    let tx = request_body(&mut req).await.map_err(|err| {
+    let SubmitBody {
+        transaction,
+        memos,
+        signature,
+    } = request_body(&mut req).await.map_err(|err| {
         server_error(Error::Deserialize {
             msg: err.to_string(),
         })
     })?;
-    let ret = relay(&req.state().contract, tx)
+    let ret = relay(&req.state().contract, transaction, memos, signature)
         .await
         .map_err(server_error)?;
     response(&req, ret)
 }
-
+/// This function implements the core logic of the relayer
+/// * `contract` -  CAPE contract instance to submit the block information to
+/// * `transaction` - CAPE transaction from a user
+/// * `memos` - list of memos corresponding to the transaction
+/// * `signature` - signature over the memos information
 async fn relay(
     contract: &CAPE<EthMiddleware>,
     transaction: CapeModelTxn,
+    memos: Vec<ReceiverMemo>,
+    sig: Signature,
 ) -> Result<TransactionReceipt, Error> {
     let miner = UserPubKey::default();
-
-    let cape_block = CapeBlock::from_cape_transactions(vec![transaction], miner.address())
-        .map_err(|err| Error::BadBlock {
-            msg: err.to_string(),
-        })?;
-    contract
-        .submit_cape_block(cape_block.into())
-        .send()
-        .await
+    let block = BlockWithMemos {
+        block: CapeBlock::from_cape_transactions(vec![transaction], miner.address()).map_err(
+            |err| Error::BadBlock {
+                msg: err.to_string(),
+            },
+        )?,
+        memos: vec![(memos, sig)],
+    };
+    submit_cape_block_with_memos(contract, block).await
         .map_err(|err| Error::Submission { msg: err.to_string() })?
         .await
         .map_err(|err| Error::Submission { msg: err.to_string() })?
@@ -85,6 +119,7 @@ async fn relay(
 
 pub const DEFAULT_RELAYER_PORT: u16 = 50077u16;
 
+/// This function starts the web server
 pub fn init_web_server(
     contract: CAPE<EthMiddleware>,
     port: String,
@@ -183,8 +218,10 @@ mod test {
         test_utils::contract_abi_path,
         types::{GenericInto, CAPE},
     };
+    use ethers::types::Address;
     use jf_cap::{
         keys::UserKeyPair,
+        sign_receiver_memos,
         structs::{AssetDefinition, FreezeFlag, RecordOpening},
         testing_apis::universal_setup_for_test,
         transfer::{TransferNote, TransferNoteInput},
@@ -197,6 +234,7 @@ mod test {
     };
     use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
     use reef::traits::Ledger;
+    use std::iter::once;
     use surf::Url;
     use testing::{
         deploy_test_contract_with_faucet, start_minimal_relayer_for_test, upcast_test_cape_to_cape,
@@ -224,7 +262,7 @@ mod test {
         faucet_rec: RecordOpening,
         receiver: UserPubKey,
         records: &MerkleTree,
-    ) -> CapeModelTxn {
+    ) -> (CapeModelTxn, Vec<ReceiverMemo>, Signature) {
         let srs = universal_setup_for_test(2usize.pow(16), rng).unwrap();
         let xfr_prove_key =
             jf_cap::proof::transfer::preprocess(&srs, 1, 2, CapeLedger::merkle_height())
@@ -240,18 +278,23 @@ mod test {
             owner_keypair: faucet,
             cred: None,
         }];
-        let outputs = [RecordOpening::new(
+        let outputs = vec![RecordOpening::new(
             rng,
             1,
             AssetDefinition::native(),
             receiver,
             FreezeFlag::Unfrozen,
         )];
-        let note =
+        let (note, sign_key, fee_output) =
             TransferNote::generate_native(rng, inputs, &outputs, 1, valid_until, &xfr_prove_key)
-                .unwrap()
-                .0;
-        CapeModelTxn::CAP(TransactionNote::Transfer(Box::new(note)))
+                .unwrap();
+        let txn = CapeModelTxn::CAP(TransactionNote::Transfer(Box::new(note)));
+        let memos = once(fee_output)
+            .chain(outputs)
+            .map(|ro| ReceiverMemo::from_ro(rng, &ro, &[]).unwrap())
+            .collect::<Vec<_>>();
+        let sig = sign_receiver_memos(&sign_key, &memos).unwrap();
+        (txn, memos, sig)
     }
 
     #[async_std::test]
@@ -260,7 +303,7 @@ mod test {
         let user = UserKeyPair::generate(&mut rng);
 
         let (contract, faucet, faucet_rec, records) = deploy_test_contract_with_faucet().await;
-        let transaction =
+        let (transaction, memos, sig) =
             generate_transfer(&mut rng, &faucet, faucet_rec, user.pub_key(), &records);
 
         // Submit a transaction and verify that the 2 output commitments get added to the contract's
@@ -268,6 +311,8 @@ mod test {
         relay(
             &upcast_test_cape_to_cape(contract.clone()),
             transaction.clone(),
+            memos.clone(),
+            sig.clone(),
         )
         .await
         .unwrap();
@@ -275,7 +320,14 @@ mod test {
 
         // Submit an invalid transaction (e.g.the same one again) and check that the contract's
         // records Merkle tree is not modified.
-        match relay(&upcast_test_cape_to_cape(contract.clone()), transaction).await {
+        match relay(
+            &upcast_test_cape_to_cape(contract.clone()),
+            transaction,
+            memos,
+            sig,
+        )
+        .await
+        {
             Err(Error::Submission { .. }) => {}
             res => panic!("expected submission error, got {:?}", res),
         }
@@ -298,11 +350,15 @@ mod test {
         let port = get_port().await;
         let (contract, faucet, faucet_rec, records) = start_minimal_relayer_for_test(port).await;
         let client = get_client(port);
-        let transaction =
+        let (transaction, memos, signature) =
             generate_transfer(&mut rng, &faucet, faucet_rec, user.pub_key(), &records);
         let mut res = client
             .post("/submit")
-            .body_json(&transaction)
+            .body_json(&SubmitBody {
+                transaction: transaction.clone(),
+                memos: memos.clone(),
+                signature: signature.clone(),
+            })
             .unwrap()
             .send()
             .await
@@ -345,7 +401,11 @@ mod test {
         match Error::from_client_error(
             client
                 .post("/submit")
-                .body_json(&transaction)
+                .body_json(&SubmitBody {
+                    transaction,
+                    memos,
+                    signature,
+                })
                 .unwrap()
                 .send()
                 .await

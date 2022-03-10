@@ -1,10 +1,19 @@
+// Copyright (c) 2022 Espresso Systems (espressosys.com)
+// This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
+
+// This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+// This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+// You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 // A wallet that generates random transactions, for testing purposes.
+// This test is still a work in progress and will not work until we have
+// integration with the EQS.  See Issue: https://github.com/EspressoSystems/cape/issues/548
 #![deny(warnings)]
 
 use async_std::task::sleep;
-use cape_wallet::backend::create_test_network;
 use cape_wallet::backend::CapeBackend;
 use cape_wallet::mocks::*;
+use cape_wallet::testing::create_test_network;
 use cape_wallet::CapeWallet;
 use jf_cap::keys::UserKeyPair;
 use jf_cap::structs::AssetCode;
@@ -50,8 +59,7 @@ async fn retry_delay() {
     sleep(Duration::from_secs(1)).await
 }
 
-// Read then overwrite the whole file.  Plenty of race conditions possible
-// but it's fine for the test if you wait between spinning up processes.
+// Use the Address Book here instead: https://github.com/EspressoSystems/cape/issues/641
 async fn write_pub_key(key: &UserPubKey, path: &Path) {
     let mut keys: Vec<UserPubKey> = if path.exists() {
         get_pub_keys_from_file(path).await
@@ -93,7 +101,7 @@ async fn main() {
     let universal_param = universal_setup_for_test(2usize.pow(16), &mut rng).unwrap();
     let mut loader = MockCapeWalletLoader {
         path: args.storage,
-        key: KeyTree::random(&mut rng).unwrap().0,
+        key: KeyTree::random(&mut rng).0,
     };
 
     // Everyone creates own relayer and EQS, not sure it works without EQS
@@ -163,7 +171,11 @@ async fn main() {
     );
 
     // Wait for initial balance.
-    while wallet.balance(&address, &AssetCode::native()).await == 0 {
+    while wallet
+        .balance_breakdown(&address, &AssetCode::native())
+        .await
+        == 0
+    {
         event!(Level::INFO, "waiting for initial balance");
         retry_delay().await;
     }
@@ -172,16 +184,16 @@ async fn main() {
     let my_asset = match wallet
         .assets()
         .await
-        .into_values()
-        .find(|info| info.mint_info.is_some())
+        .into_iter()
+        .find(|asset| asset.mint_info.is_some())
     {
-        Some(info) => {
+        Some(asset) => {
             event!(
                 Level::INFO,
                 "found saved wallet with custom asset type {}",
-                info.asset.code
+                asset.definition.code
             );
-            info.asset
+            asset.definition
         }
         None => {
             let my_asset = wallet
@@ -193,7 +205,7 @@ async fn main() {
         }
     };
     // If we don't yet have a balance of our asset type, mint some.
-    if wallet.balance(&address, &my_asset.code).await == 0 {
+    if wallet.balance_breakdown(&address, &my_asset.code).await == 0 {
         event!(Level::INFO, "minting my asset type {}", my_asset.code);
         loop {
             let txn = wallet
@@ -214,8 +226,8 @@ async fn main() {
         event!(Level::INFO, "minted custom asset");
     }
 
-    // TODO actually get the peers from Address Book service.
     loop {
+        // Use the Address book for this: https://github.com/EspressoSystems/cape/issues/641
         let peers: Vec<UserPubKey> = get_pub_keys_from_file(&args.pub_key_storage).await;
         let recipient =
             match peers.choose_weighted(&mut rng, |pk| if *pk == pub_key { 0 } else { 1 }) {
@@ -232,9 +244,13 @@ async fn main() {
 
         // Get a list of assets for which we have a non-zero balance.
         let mut asset_balances = vec![];
-        for code in wallet.assets().await.keys() {
-            if wallet.balance(&address, code).await > 0 {
-                asset_balances.push(*code);
+        for asset in wallet.assets().await {
+            if wallet
+                .balance_breakdown(&address, &asset.definition.code)
+                .await
+                > 0
+            {
+                asset_balances.push(asset.definition.code);
             }
         }
         // Randomly choose an asset type for the transfer.
@@ -259,7 +275,7 @@ async fn main() {
             recipient,
         );
         let txn = match wallet
-            .transfer(&address, asset, &[(recipient.address(), amount)], fee)
+            .transfer(Some(&address), asset, &[(recipient.address(), amount)], fee)
             .await
         {
             Ok(txn) => txn,

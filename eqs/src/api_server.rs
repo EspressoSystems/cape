@@ -1,4 +1,11 @@
-use crate::configuration::{api_path, eqs_port, web_path};
+// Copyright (c) 2022 Espresso Systems (espressosys.com)
+// This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
+
+// This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+// This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+// You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+use crate::configuration::EQSOptions;
 use crate::errors::EQSNetError;
 use crate::query_result_state::QueryResultState;
 use crate::route_parsing::{RouteBinding, UrlSegmentType, UrlSegmentValue};
@@ -140,9 +147,9 @@ fn parse_route(
             length_matches = true;
         }
         if argument_parse_failed {
-            arg_doc.push_str(&"Argument parsing failed.\n".to_string());
+            arg_doc.push_str("Argument parsing failed.\n");
         } else {
-            arg_doc.push_str(&"No argument parsing errors!\n".to_string());
+            arg_doc.push_str("No argument parsing errors!\n");
         }
         if !argument_parse_failed && length_matches && !found_literal_mismatch {
             let route_pattern_str = route_pattern.as_str().unwrap();
@@ -193,12 +200,13 @@ async fn entry_page(req: tide::Request<WebState>) -> Result<tide::Response, tide
 /// The wallet uses the PORT env variable, making that unsuitable for the EQS
 
 pub(crate) fn init_web_server(
+    opt: &EQSOptions,
     query_result_state: Arc<RwLock<QueryResultState>>,
 ) -> Result<task::JoinHandle<Result<(), std::io::Error>>, tide::Error> {
-    let api = crate::disco::load_messages(&api_path());
+    let api = crate::disco::load_messages(&opt.api_path());
     let mut web_server = tide::with_state(WebState {
         query_result_state,
-        web_path: web_path(),
+        web_path: opt.web_path(),
         api: api.clone(),
     });
     web_server
@@ -233,7 +241,7 @@ pub(crate) fn init_web_server(
         });
     }
 
-    let port = eqs_port().to_string();
+    let port = opt.eqs_port().to_string();
     let addr = format!("0.0.0.0:{}", port);
     let join_handle = async_std::task::spawn(web_server.listen(addr));
     Ok(join_handle)

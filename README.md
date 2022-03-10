@@ -1,11 +1,16 @@
-# CAP on Ethereum
+# Configurable Asset Privacy for Ethereum (CAPE)
+
+**DISCLAIMER:** This software is provided "as is" and its security has not been externally audited. Use at your own risk.
+
+---
 
 <!-- run `md-toc` inside the nix-shell to generate the table of contents -->
 
 **Table of Contents**
 
-- [CAP on Ethereum](#cap-on-ethereum)
+- [CAPE](#cape)
   - [Obtaining the source code](#obtaining-the-source-code)
+  - [Providing feedback](#providing-feedback)
 - [Environment](#environment)
   - [1. Install nix](#1-install-nix)
   - [2. Activate the nix environment](#2-activate-the-nix-environment)
@@ -39,33 +44,21 @@
 - [CI](#ci)
   - [Nightly CI builds](#nightly-ci-builds)
 - [Documentation](#documentation)
+  - [CAP protocol specification](#cap-protocol-specification)
   - [CAPE Contract specification](#cape-contract-specification)
 
 ## Obtaining the source code
 
-    git clone git@github.com:SpectrumXYZ/cape.git
+    git clone git@github.com:EspressoSystems/cape.git
+
+## Providing feedback
+
+Feedback is welcome and can be provided by [creating a ticket](https://github.com/EspressoSystems/cape/issues/new).
 
 # Environment
 
 This project has a lot of dependencies. The only tested installation method is
 via the [nix](https://nixos.org) package manager.
-
-You also need access to the following currently private git repos
-
-- https://github.com/SpectrumXYZ/arbitrary-wrappers
-- https://github.com/SpectrumXYZ/atomic-store
-- https://github.com/SpectrumXYZ/cap
-- https://github.com/SpectrumXYZ/commit
-- https://github.com/SpectrumXYZ/curves
-- https://github.com/SpectrumXYZ/jellyfish-cap
-- https://github.com/SpectrumXYZ/key-set
-- https://github.com/SpectrumXYZ/net
-- https://github.com/SpectrumXYZ/reef
-- https://github.com/SpectrumXYZ/seahorse
-- https://github.com/SpectrumXYZ/universal-params
-- https://github.com/SpectrumXYZ/zerok-macros
-
-Ping Mat for access.
 
 ## 1. Install nix
 
@@ -458,7 +451,15 @@ Based on a few successful test runs, the entire suite should consume roughly 0.0
 
 # Documentation
 
-Extracting documentation from the solidity source is done using a javascript
+## CAP protocol specification
+
+A formal specification of the Configurable Asset Policy protocol can be found at [our CAP github repo](https://github.com/EspressoSystems/cap/blob/main/cap-specification.pdf)
+
+## CAPE Contract specification
+
+A specification of the CAPE _smart contract logic_ written in Rust can be found at `./doc/workflow/lib.rs`.
+
+Extracting _API documentation_ from the solidity source is done using a javascript
 tool called `solidity-docgen`.
 
 To generate the documentation run
@@ -466,7 +467,3 @@ To generate the documentation run
     make-doc
 
 and observe the CLI output.
-
-## CAPE Contract specification
-
-A specification of the CAPE smart contract logic written in Rust can be found at `./doc/workflow/lib.rs`.

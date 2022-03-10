@@ -1,4 +1,12 @@
-//SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+// Copyright (c) 2022 Espresso Systems (espressosys.com)
+// This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
+
+// This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+// This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+// You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 pragma solidity ^0.8.0;
 
 import {BN254} from "../libraries/BN254.sol";
@@ -155,41 +163,88 @@ library PolynomialEval {
         uint256 p = BN254.R_MOD;
         uint256 length = pi.length;
         uint256 ithLagrange;
-        uint256 divisor;
+        uint256 ithDivisor;
         uint256 tmp;
         uint256 vanishEvalDivN = self.sizeInv;
+        uint256 divisorProd;
         uint256[] memory localDomainElements = domainElements(self, length);
+        uint256[] memory divisors = new uint256[](length);
 
-        // vanish_eval_div_n = (zeta^n-1)/n
         assembly {
+            // vanish_eval_div_n = (zeta^n-1)/n
             vanishEvalDivN := mulmod(vanishEvalDivN, vanishEval, p)
+
+            // Now we need to compute
+            //  \sum_{i=0..l} L_{i,H}(zeta) * pub_input[i]
+            // where
+            // - L_{i,H}(zeta)
+            //      = Z_H(zeta) * v_i / (zeta - g^i)
+            //      = vanish_eval_div_n * g^i / (zeta - g^i)
+            // - v_i = g^i / n
+            //
+            // we want to use batch inversion method where we compute
+            //
+            //      divisorProd = 1 / \prod (zeta - g^i)
+            //
+            // and then each 1 / (zeta - g^i) can be computed via (length - 1)
+            // multiplications:
+            //
+            //      1 / (zeta - g^i) = divisorProd * \prod_{j!=i} (zeta - g^j)
+            //
+            // In total this takes n(n-1) multiplications and 1 inversion,
+            // instead of doing n inversions.
+            divisorProd := 1
+
+            for {
+                let i := 0
+            } lt(i, length) {
+                i := add(i, 1)
+            } {
+                // tmp points to g^i
+                // first 32 bytes of reference is the length of an array
+                tmp := mload(add(add(localDomainElements, 0x20), mul(i, 0x20)))
+                // compute (zeta - g^i)
+                ithDivisor := addmod(sub(p, tmp), zeta, p)
+                // accumulate (zeta - g^i) to the divisorProd
+                divisorProd := mulmod(divisorProd, ithDivisor, p)
+                // store ithDivisor in the array
+                mstore(add(add(divisors, 0x20), mul(i, 0x20)), ithDivisor)
+            }
         }
 
-        // Now we need to compute
-        //  \sum_{i=0..l} L_{i,H}(zeta) * pub_input[i]
-        // where
-        // - L_{i,H}(zeta)
-        //      = Z_H(zeta) * v_i / (zeta - g^i)
-        //      = vanish_eval_div_n * g^i / (zeta - g^i)
-        // - v_i = g^i / n
-        for (uint256 i = 0; i < length; i++) {
-            assembly {
+        // compute 1 / \prod_{i=0}^length (zeta - g^i)
+        divisorProd = BN254.invert(divisorProd);
+
+        assembly {
+            for {
+                let i := 0
+            } lt(i, length) {
+                i := add(i, 1)
+            } {
                 // tmp points to g^i
                 // first 32 bytes of reference is the length of an array
                 tmp := mload(add(add(localDomainElements, 0x20), mul(i, 0x20)))
                 // vanish_eval_div_n * g^i
                 ithLagrange := mulmod(vanishEvalDivN, tmp, p)
-                // compute (zeta - g^i)
-                divisor := addmod(sub(p, tmp), zeta, p)
-            }
-            // compute 1/(zeta - g^i)
-            divisor = BN254.invert(divisor);
-            assembly {
+
+                // now we compute vanish_eval_div_n * g^i / (zeta - g^i) via
+                // vanish_eval_div_n * g^i * divisorProd * \prod_{j!=i} (zeta - g^j)
+                ithLagrange := mulmod(ithLagrange, divisorProd, p)
+                for {
+                    let j := 0
+                } lt(j, length) {
+                    j := add(j, 1)
+                } {
+                    if iszero(eq(i, j)) {
+                        ithDivisor := mload(add(add(divisors, 0x20), mul(j, 0x20)))
+                        ithLagrange := mulmod(ithLagrange, ithDivisor, p)
+                    }
+                }
+
+                // multiply by pub_input[i] and update res
                 // tmp points to public input
                 tmp := mload(add(add(pi, 0x20), mul(i, 0x20)))
                 ithLagrange := mulmod(ithLagrange, tmp, p)
-                ithLagrange := mulmod(ithLagrange, divisor, p)
-
                 res := addmod(res, ithLagrange, p)
             }
         }

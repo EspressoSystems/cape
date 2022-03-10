@@ -1,3 +1,10 @@
+// Copyright (c) 2022 Espresso Systems (espressosys.com)
+// This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
+
+// This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+// This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+// You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 #![deny(warnings)]
 mod events;
 mod faucet;
@@ -19,7 +26,7 @@ use jf_cap::{Signature, TransactionNote};
 use num_traits::{FromPrimitive, ToPrimitive};
 use std::str::from_utf8;
 
-pub const DOM_SEP_CAPE_BURN: &[u8] = b"TRICAPE burn";
+pub const DOM_SEP_CAPE_BURN: &[u8] = b"EsSCAPE burn";
 type BlockMemos = Vec<(Vec<ReceiverMemo>, Signature)>;
 
 /// Burning transaction structure for a single asset (with fee)
@@ -152,7 +159,7 @@ impl CapeBlock {
     }
 
     /// Collect the record commitments from the transaction outputs in the same order as the CAPE contract
-    pub fn get_list_of_input_record_commitments(self) -> Vec<RecordCommitment> {
+    pub fn get_list_of_output_record_commitments(self) -> Vec<RecordCommitment> {
         let mut transfer_idx: usize = 0;
         let mut mint_idx: usize = 0;
         let mut freeze_idx: usize = 0;
@@ -164,8 +171,8 @@ impl CapeBlock {
                 NoteType::Transfer => {
                     for rc in self.transfer_notes[transfer_idx].clone().output_commitments {
                         outputs_record_commitments.push(rc);
-                        transfer_idx += 1;
                     }
+                    transfer_idx += 1;
                 }
                 NoteType::Mint => {
                     let note = self.mint_notes[mint_idx].clone();
@@ -176,18 +183,22 @@ impl CapeBlock {
                 NoteType::Freeze => {
                     for rc in self.freeze_notes[freeze_idx].clone().output_commitments {
                         outputs_record_commitments.push(rc);
-                        freeze_idx += 1;
                     }
+                    freeze_idx += 1;
                 }
                 NoteType::Burn => {
-                    for rc in self.burn_notes[burn_idx]
+                    for (counter, rc) in self.burn_notes[burn_idx]
                         .clone()
                         .transfer_note
                         .output_commitments
+                        .into_iter()
+                        .enumerate()
                     {
-                        outputs_record_commitments.push(rc);
-                        burn_idx += 1;
+                        if counter != 1 {
+                            outputs_record_commitments.push(rc);
+                        }
                     }
+                    burn_idx += 1;
                 }
             }
         }
@@ -212,6 +223,32 @@ impl CapeBlock {
             }
         }
         Self::generate(notes, burned_ros, miner)
+    }
+    pub fn into_cape_transactions(self) -> Result<(Vec<CapeModelTxn>, UserAddress)> {
+        let mut transfer_notes = self.transfer_notes.into_iter().rev();
+        let mut mint_notes = self.mint_notes.into_iter().rev();
+        let mut freeze_notes = self.freeze_notes.into_iter().rev();
+        let mut burn_notes = self.burn_notes.into_iter().rev();
+        let txns: Option<Vec<CapeModelTxn>> = self
+            .note_types
+            .into_iter()
+            .map(|note_type| match note_type {
+                NoteType::Transfer => Some(CapeModelTxn::CAP(transfer_notes.next()?.into())),
+                NoteType::Mint => Some(CapeModelTxn::CAP(mint_notes.next()?.into())),
+                NoteType::Freeze => Some(CapeModelTxn::CAP(freeze_notes.next()?.into())),
+                NoteType::Burn => {
+                    let burn_note = burn_notes.next()?;
+                    Some(CapeModelTxn::Burn {
+                        xfr: Box::new(burn_note.transfer_note),
+                        ro: Box::new(burn_note.burned_ro),
+                    })
+                }
+            })
+            .collect();
+        Ok((
+            txns.ok_or_else(|| anyhow!("Malformed CapeBlock"))?,
+            self.miner_addr,
+        ))
     }
 }
 

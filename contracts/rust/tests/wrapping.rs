@@ -1,3 +1,10 @@
+// Copyright (c) 2022 Espresso Systems (espressosys.com)
+// This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
+
+// This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+// This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+// You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 use anyhow::Result;
 use cap_rust_sandbox::assertion::EnsureMined;
 use cap_rust_sandbox::cape::CapeBlock;
@@ -235,7 +242,7 @@ async fn integration_test_wrapping_erc20_tokens() -> Result<()> {
     let mut mt = MerkleTree::new(CapeLedger::merkle_height()).unwrap();
 
     // Add the output commitments of the transactions
-    let output_commitments = cape_block.get_list_of_input_record_commitments();
+    let output_commitments = cape_block.get_list_of_output_record_commitments();
     for comm in output_commitments {
         mt.push(comm.to_field_element());
     }

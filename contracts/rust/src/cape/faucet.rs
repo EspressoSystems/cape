@@ -1,3 +1,10 @@
+// Copyright (c) 2022 Espresso Systems (espressosys.com)
+// This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
+
+// This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+// This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+// You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 #![cfg(test)]
 
 use crate::{
@@ -5,9 +12,10 @@ use crate::{
     deploy::deploy_cape_test_with_deployer,
     ethereum::get_funded_client,
     model::CAPE_MERKLE_HEIGHT,
-    types::{field_to_u256, TestCAPE},
+    types::{field_to_u256, GenericInto, RecordOpening as RecordOpeningSol, TestCAPE},
 };
 use anyhow::Result;
+use ethers::abi::AbiDecode;
 use jf_cap::{
     keys::UserKeyPair,
     structs::{AssetDefinition, BlindFactor, FreezeFlag, RecordCommitment, RecordOpening},
@@ -58,6 +66,15 @@ async fn test_faucet() -> Result<()> {
         freeze_flag: FreezeFlag::Unfrozen,
         blind: BlindFactor::from(BaseField::from(0u32)),
     };
+
+    // Check FaucetInitialized event with matching RecordOpening was emitted
+    let events = contract
+        .faucet_initialized_filter()
+        .from_block(0u64)
+        .query()
+        .await?;
+    let event_ro: RecordOpeningSol = AbiDecode::decode(events[0].ro_bytes.clone()).unwrap();
+    assert_eq!(event_ro, ro.clone().generic_into::<RecordOpeningSol>());
 
     let mut mt = MerkleTree::new(CAPE_MERKLE_HEIGHT).unwrap();
     mt.push(RecordCommitment::from(&ro).to_field_element());

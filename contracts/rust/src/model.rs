@@ -1,3 +1,10 @@
+// Copyright (c) 2022 Espresso Systems (espressosys.com)
+// This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
+
+// This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+// This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+// You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 #![deny(warnings)]
 
 use ark_serialize::*;
@@ -21,7 +28,7 @@ use std::sync::Arc;
 // NOTE: currently supported among list of hardcoded VK inside contract,
 // can be changed later.
 pub const CAPE_MERKLE_HEIGHT: u8 = 24 /*H*/;
-pub const CAPE_BURN_MAGIC_BYTES: &str = "TRICAPE burn";
+pub const CAPE_BURN_MAGIC_BYTES: &str = "EsSCAPE burn";
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum CapeModelTxn {
@@ -280,10 +287,10 @@ pub struct CapeContractState {
 
 pub fn erc20_asset_description(erc20_code: &Erc20Code, sponsor: &EthereumAddr) -> Vec<u8> {
     [
-        "TRICAPE ERC20".as_bytes(),
-        &(erc20_code.0).0.to_vec(),
+        "EsSCAPE ERC20".as_bytes(),
+        (erc20_code.0).0.as_ref(),
         "sponsored by".as_bytes(),
-        &sponsor.0.to_vec(),
+        sponsor.0.as_ref(),
     ]
     .concat()
 }

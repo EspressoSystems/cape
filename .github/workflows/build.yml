@@ -18,10 +18,7 @@ jobs:
   build:
     runs-on: self-hosted
     container:
-      image: ghcr.io/spectrumxyz/nix:main
-      credentials:
-        username: ancient123
-        password: ${{ secrets.ORG_GITHUB_PAT }}
+      image: ghcr.io/espressosystems/nix:main
       volumes:
         - github_nix_251:/nix
     steps:
@@ -46,12 +43,6 @@ jobs:
       - name: Initialize Nix Shell
         run: nix-shell --run "echo Init"
 
-      - name: Configure Git
-        run: |
-          git config --global url."https://ancient123:${{ secrets.ORG_GITHUB_PAT }}@github.com".insteadOf git://github.com
-          git config --global url."https://ancient123:${{ secrets.ORG_GITHUB_PAT }}@github.com".insteadOf ssh://git@github.com
-          git config --global url."https://dl.cloudsmith.io/${{ secrets.CLOUDSMITH_ENTITLEMENT }}/".insteadOf https://dl.cloudsmith.io/basic/
-
       - name: Cache cargo
         uses: actions/cache@v2
         with:
@@ -61,7 +52,7 @@ jobs:
             ~/.cargo/git
             target
           # todo: add nix key, for example:  nix-instantiate shell.nix | sha256sum  | head -c 10
-          key: cape-v4-${{ hashFiles('Cargo.lock') }}
+          key: cape-v5-${{ hashFiles('Cargo.lock') }}
 
       - name: Linting
         run: nix-shell --run "prepend-timestamps lint-ci"
@@ -75,6 +66,14 @@ jobs:
 
       - name: Generate Docs
         run: nix-shell --run "prepend-timestamps make-doc"
+
+      - name: Deploy Docs
+        uses: peaceiris/actions-gh-pages@v3
+        if: ${{ github.ref == 'refs/heads/main' }}
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./doc/mdbook/book/
+          cname: cape.docs.espressosys.com
 
       - name: Build Wallet
         run: nix-shell --run "cargo build -p cape_wallet --release"
@@ -117,7 +116,7 @@ jobs:
         name: Generate Docker Metadata
         id: meta
         with:
-          images: ghcr.io/SpectrumXYZ/cape/wallet
+          images: ghcr.io/espressosystems/cape/wallet
 
       - uses: docker/build-push-action@v2
         name: Build and Push Docker

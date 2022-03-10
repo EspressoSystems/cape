@@ -1,14 +1,25 @@
-// Copyright © 2021 Translucence Research, Inc. All rights reserved.
+// Copyright (c) 2022 Espresso Systems (espressosys.com)
+// This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
+
+// This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+// This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+// You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+//! # Wallet server library
+//!
+//! This module provides functions and types needed to run the wallet web server. It includes
+//! configuration options, request parsing, and the main web server entrypoint. The implementation
+//! of the actual routes is defined in [crate::routes].
 
 use crate::routes::{
-    dispatch_url, dispatch_web_socket, CapeAPIError, RouteBinding, UrlSegmentType, UrlSegmentValue,
-    Wallet,
+    dispatch_url, CapeAPIError, RouteBinding, UrlSegmentType, UrlSegmentValue, Wallet,
 };
 use async_std::{
     sync::{Arc, Mutex},
-    task::{spawn, JoinHandle},
+    task::{sleep, spawn, JoinHandle},
 };
 use cap_rust_sandbox::model::EthereumAddr;
+use futures::Future;
 use jf_cap::{keys::UserKeyPair, structs::AssetCode};
 use net::server;
 use rand_chacha::ChaChaRng;
@@ -16,15 +27,15 @@ use seahorse::testing::await_transaction;
 use std::collections::hash_map::HashMap;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
+use std::time::Duration;
 use structopt::StructOpt;
-use tide::StatusCode;
-use tide_websockets::{WebSocket, WebSocketConnection};
 
 pub const DEFAULT_ETH_ADDR: EthereumAddr = EthereumAddr([2; 20]);
 pub const DEFAULT_WRAPPED_AMT: u64 = 1000;
 pub const DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR: u64 = 500;
 pub const DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR: u64 = 400;
 
+/// Server configuration with command line parsing support.
 #[derive(Debug, StructOpt)]
 #[structopt(
     name = "Wallet Web API",
@@ -44,6 +55,14 @@ pub struct NodeOpt {
         default_value = ""      // See fn default_api_path().
     )]
     pub api_path: String,
+
+    /// Path to store location of most recent wallet
+    #[structopt(
+        long = "storage_path",
+        env = "PATH_STORAGE",    // Fallback to env_var or $HOME
+        default_value = "",
+    )]
+    pub path_storage: String,
 }
 
 /// Returns the project directory.
@@ -73,19 +92,14 @@ pub fn default_api_path() -> PathBuf {
     [&dir, Path::new(API_FILE)].iter().collect()
 }
 
+/// State maintained by the server, used to handle requests.
 #[derive(Clone)]
 pub struct WebState {
-    pub(crate) web_path: PathBuf,
     pub(crate) api: toml::Value,
     pub(crate) wallet: Arc<Mutex<Option<Wallet>>>,
     pub(crate) rng: Arc<Mutex<ChaChaRng>>,
     pub(crate) faucet_key_pair: UserKeyPair,
-}
-
-async fn form_demonstration(req: tide::Request<WebState>) -> Result<tide::Body, tide::Error> {
-    let mut index_html: PathBuf = req.state().web_path.clone();
-    index_html.push("index.html");
-    Ok(tide::Body::from_file(index_html).await?)
+    pub(crate) path_storage: Option<PathBuf>,
 }
 
 // Get the route pattern that matches the URL of a request, and the bindings for parameters in the
@@ -150,8 +164,6 @@ fn parse_route(
                 } else {
                     arg_doc.push_str("(Parse failed)\n");
                     argument_parse_failed = true;
-                    // TODO !corbett capture parse failures documentation
-                    // UrlSegmentValue::ParseFailed(segment_type, req_segment)
                 }
             } else {
                 // No type information. Assume pat_segment is a literal.
@@ -163,8 +175,6 @@ fn parse_route(
                         req_segment, pat_segment
                     ));
                 }
-                // TODO !corbett else capture the matching literal in bindings
-                // TODO !corebtt if the edit distance is small, capture spelling suggestion
             }
         }
         if !found_literal_mismatch {
@@ -182,9 +192,9 @@ fn parse_route(
             length_matches = true;
         }
         if argument_parse_failed {
-            arg_doc.push_str(&"Argument parsing failed.\n".to_string());
+            arg_doc.push_str("Argument parsing failed.\n");
         } else {
-            arg_doc.push_str(&"No argument parsing errors!\n".to_string());
+            arg_doc.push_str("No argument parsing errors!\n");
         }
         if !argument_parse_failed && length_matches && !found_literal_mismatch {
             let route_pattern_str = route_pattern.as_str().unwrap();
@@ -215,17 +225,12 @@ fn parse_route(
 ///
 /// This function duplicates the logic for deciding which route was requested. This
 /// is an unfortunate side-effect of defining the routes in an external file.
-// todo !corbett Convert the error feedback into HTML
 async fn entry_page(req: tide::Request<WebState>) -> Result<tide::Response, tide::Error> {
     match parse_route(&req) {
         Ok((pattern, bindings)) => dispatch_url(req, pattern.as_str(), &bindings).await,
         Err(arg_doc) => Ok(tide::Response::builder(200).body(arg_doc).build()),
     }
 }
-
-use async_std::task::sleep;
-use futures::Future;
-use std::time::Duration;
 
 pub async fn retry<Fut: Future<Output = bool>>(f: impl Fn() -> Fut) {
     let mut backoff = Duration::from_millis(100);
@@ -239,6 +244,12 @@ pub async fn retry<Fut: Future<Output = bool>>(f: impl Fn() -> Fut) {
     panic!("retry loop did not complete in {:?}", backoff);
 }
 
+/// Testing route handler which populates a wallet with dummy data.
+///
+/// This route will modify the wallet by generating 2 of each kind of key (viewing, freezing, and
+/// sending), adding the faucet key to the wallet so that the wallet owns a large amount of CAPE fee
+/// tokens, transfer some of the fee tokens to another one of its addresses, and sponsor and wrap an
+/// ERC-20 asset for that same address.
 #[cfg(any(test, feature = "testing"))]
 async fn populatefortest(req: tide::Request<WebState>) -> Result<tide::Response, tide::Error> {
     use crate::{
@@ -294,7 +305,11 @@ async fn populatefortest(req: tide::Request<WebState>) -> Result<tide::Response,
             }
         }
     }
-    let wrapped_asset_addr = wallet.pub_keys().await[0].address();
+    // Ensure this address is different from the faucet address.
+    let mut wrapped_asset_addr = wallet.pub_keys().await[0].address();
+    if wrapped_asset_addr == req.state().faucet_key_pair.address() {
+        wrapped_asset_addr = wallet.pub_keys().await[1].address();
+    }
     wallet
         .wrap(
             sponsor_addr,
@@ -310,7 +325,7 @@ async fn populatefortest(req: tide::Request<WebState>) -> Result<tide::Response,
     // The transfer also finalizes the wrap.
     let receipt = wallet
         .transfer(
-            &faucet_addr,
+            Some(&faucet_addr),
             &AssetCode::native(),
             &[(
                 wrapped_asset_addr.clone(),
@@ -325,49 +340,45 @@ async fn populatefortest(req: tide::Request<WebState>) -> Result<tide::Response,
     await_transaction(&receipt, wallet, &[]).await;
     retry(|| async {
         wallet
-            .balance(&wrapped_asset_addr, &AssetCode::native())
+            .balance_breakdown(&wrapped_asset_addr, &AssetCode::native())
             .await
             != 0
     })
     .await;
-    retry(|| async { wallet.balance(&wrapped_asset_addr, &asset_def.code).await != 0 }).await;
+    retry(|| async {
+        wallet
+            .balance_breakdown(&wrapped_asset_addr, &asset_def.code)
+            .await
+            != 0
+    })
+    .await;
 
     server::response(&req, receipt)
 }
 
-async fn handle_web_socket(
-    req: tide::Request<WebState>,
-    wsc: WebSocketConnection,
-) -> tide::Result<()> {
-    match parse_route(&req) {
-        Ok((pattern, bindings)) => dispatch_web_socket(req, wsc, pattern.as_str(), &bindings).await,
-        Err(arg_doc) => Err(tide::Error::from_str(StatusCode::BadRequest, arg_doc)),
-    }
-}
-
-// This route is a demonstration of a form with a WebSocket connection
-// for asynchronous updates. Once we have useful forms, this can go...
-fn add_form_demonstration(web_server: &mut tide::Server<WebState>) {
-    web_server
-        .at("/transfer/:id/:recipient/:amount")
-        .with(WebSocket::new(handle_web_socket))
-        .get(form_demonstration);
-}
-
+/// Start the CAPE wallet server.
+///
+/// The server runs on `localhost` at the specified port. A new task is spawned to run the server,
+/// and a handle to the task is returned. Waiting on the handle will join the task; dropping the
+/// handle will detach the task.
+///
+/// Note that there is currently no way to stop the server task once started, other than killing the
+/// entire process. This is a limitation of the Tide server framework.
 pub fn init_server(
     mut rng: ChaChaRng,
     api_path: PathBuf,
     web_path: PathBuf,
     port: u64,
+    path_storage: Option<PathBuf>,
 ) -> std::io::Result<JoinHandle<std::io::Result<()>>> {
     let api = crate::disco::load_messages(&api_path);
     let faucet_key_pair = UserKeyPair::generate(&mut rng);
     let mut web_server = tide::with_state(WebState {
-        web_path: web_path.clone(),
         api: api.clone(),
         wallet: Arc::new(Mutex::new(None)),
         rng: Arc::new(Mutex::new(rng)),
         faucet_key_pair,
+        path_storage,
     });
     web_server
         .with(server::trace)
@@ -377,15 +388,9 @@ pub fn init_server(
     web_server.at("/public").serve_dir(web_path)?;
     web_server.at("/").get(crate::disco::compose_help);
 
-    add_form_demonstration(&mut web_server);
-
     // Add routes from a configuration file.
     if let Some(api_map) = api["route"].as_table() {
         api_map.values().for_each(|v| {
-            let web_socket = v
-                .get("WEB_SOCKET")
-                .map(|v| v.as_bool().expect("expected boolean value for WEB_SOCKET"))
-                .unwrap_or(false);
             let routes = match &v["PATH"] {
                 toml::Value::String(s) => {
                     vec![s.clone()]
@@ -404,12 +409,7 @@ pub fn init_server(
                 _ => panic!("Expecting a toml::String or toml::Array, but got: {:?}", &v),
             };
             for path in routes {
-                let mut route = web_server.at(&path);
-                if web_socket {
-                    route.get(WebSocket::new(handle_web_socket));
-                } else {
-                    route.get(entry_page);
-                }
+                web_server.at(&path).get(entry_page);
             }
         });
     }

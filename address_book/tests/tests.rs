@@ -1,4 +1,14 @@
-use address_book::{address_book_port, init_web_server, wait_for_server, InsertPubKey};
+// Copyright (c) 2022 Espresso Systems (espressosys.com)
+// This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
+
+// This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+// This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+// You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+use address_book::{
+    address_book_port, address_book_temp_dir, init_web_server, wait_for_server, FileStore,
+    InsertPubKey, Store, TransientFileStore,
+};
 use jf_cap::keys::{UserKeyPair, UserPubKey};
 use rand_chacha::rand_core::SeedableRng;
 use tide::log::LevelFilter;
@@ -11,10 +21,9 @@ const NOT_FOUND_COUNT: u64 = 100;
 // and
 //    lookup(y) = Err, if y has not been previously inserted.
 //
-#[async_std::test]
-async fn round_trip() {
+async fn round_trip<T: Store + 'static>(store: T) {
     // TODO !corbett find an unused port rather than assuming 50078 is free.
-    init_web_server(LevelFilter::Error)
+    init_web_server(LevelFilter::Error, store)
         .await
         .expect("Failed to run server.");
     wait_for_server().await;
@@ -86,4 +95,16 @@ async fn round_trip() {
         let bytes = response.body_bytes().await.unwrap();
         assert!(bincode::deserialize::<UserPubKey>(&bytes).is_err());
     }
+}
+
+#[async_std::test]
+async fn test_address_book() {
+    // Can change to using two separate tests once the webserver port is
+    // configurable.
+    let temp_dir = address_book_temp_dir();
+    let store = FileStore::new(temp_dir.path().to_path_buf());
+    round_trip(store).await;
+
+    let store = TransientFileStore::default();
+    round_trip(store).await
 }

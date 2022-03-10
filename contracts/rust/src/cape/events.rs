@@ -1,3 +1,10 @@
+// Copyright (c) 2022 Espresso Systems (espressosys.com)
+// This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
+
+// This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+// This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+// You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 #[cfg(test)]
 mod tests {
     use crate::{
@@ -43,7 +50,7 @@ mod tests {
             .await?;
 
         // XXX Adapted from seahorse
-        // https://github.com/SpectrumXYZ/seahorse/blob/ace20bc5f1bcf5b88ca0562799b8e80e6c52e933/src/persistence.rs#L574
+        // https://github.com/EspressoSystems/seahorse/blob/ace20bc5f1bcf5b88ca0562799b8e80e6c52e933/src/persistence.rs#L574
         // Generate some memos with default UserKeyPair
         let key_pair = UserKeyPair::default();
         let memos_with_sigs = repeat_with(|| {
@@ -68,9 +75,17 @@ mod tests {
 
         let block_with_memos = BlockWithMemos::new(cape_block.clone(), memos_with_sigs.clone());
 
-        submit_cape_block_with_memos(&connection.contract, block_with_memos.clone()).await?;
+        submit_cape_block_with_memos(&connection.contract, block_with_memos.clone())
+            .await?
+            .await?;
 
-        let events = connection
+        // A connection with a random wallet (for queries only)
+        let query_connection = EthConnection::from_config_for_query(
+            &format!("{:?}", connection.contract.address()), // 0x123...cdf
+            "http://localhost:8545",
+        );
+
+        let events = query_connection
             .contract
             .block_committed_filter()
             .from_block(0u64)
@@ -79,7 +94,7 @@ mod tests {
 
         let (_, meta) = events[0].clone();
 
-        let fetched_block_with_memos = fetch_cape_block(&connection, meta.transaction_hash)
+        let fetched_block_with_memos = fetch_cape_block(&query_connection, meta.transaction_hash)
             .await?
             .unwrap();
 

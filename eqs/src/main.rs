@@ -1,54 +1,15 @@
-use crate::api_server::init_web_server;
-use crate::configuration::{query_frequency, reset_state, store_path, verifier_keys};
-use crate::eth_polling::EthPolling;
-use crate::query_result_state::QueryResultState;
-use crate::state_persistence::StatePersistence;
+// Copyright (c) 2022 Espresso Systems (espressosys.com)
+// This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
 
-use async_std::{
-    sync::{Arc, RwLock},
-    task::sleep,
-};
+// This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+// This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+// You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-mod api_server;
-mod configuration;
-mod disco; // really needs to go into a shared crate
-mod errors;
-mod eth_polling;
-mod query_result_state;
-mod route_parsing;
-mod routes;
-mod state_persistence;
+use eqs::configuration::EQSOptions;
+use structopt::StructOpt;
 
 #[async_std::main]
 async fn main() -> std::io::Result<()> {
     tracing_subscriber::fmt().pretty().init();
-    let (state_persistence, query_result_state) = if reset_state() {
-        (
-            StatePersistence::new(&store_path(), "eqs").unwrap(),
-            Arc::new(RwLock::new(QueryResultState::new(verifier_keys()))),
-        )
-    } else {
-        let state_persistence = StatePersistence::load(&store_path(), "eqs").unwrap();
-        let query_result_state =
-            Arc::new(RwLock::new(state_persistence.load_latest_state().unwrap()));
-        (state_persistence, query_result_state)
-    };
-
-    let _api_handle = init_web_server(query_result_state.clone()).unwrap();
-
-    // will replace with subscription in phase 3
-    let mut eth_poll = EthPolling {
-        query_result_state,
-        state_persistence,
-        last_updated_block_height: 0,
-    };
-
-    // TODO: mechanism to signal for exit.
-    loop {
-        if let Ok(_height) = eth_poll.check().await {
-            // do we want an idle/backoff on unchanged?
-        }
-        // sleep here
-        sleep(query_frequency()).await;
-    }
+    eqs::run_eqs(&EQSOptions::from_args()).await
 }

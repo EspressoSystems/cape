@@ -1,9 +1,31 @@
-////////////////////////////////////////////////////////////////////////////////
-// The CAPE Wallet Frontend
-//
-// For now, this "frontend" is simply a command-line read-eval-print loop which
-// allows the user to enter commands for a wallet interactively.
-//
+// Copyright (c) 2022 Espresso Systems (espressosys.com)
+// This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
+
+// This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+// This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+// You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+//! # The CAPE Wallet CLI
+//!
+//! One of two main entrypoints to the wallet (the other being the web server) this executable
+//! provides a command-line read-eval-print loop which allows the user to enter commands for a wallet
+//! interactively.
+//!
+//! It instantiates the generic [seahorse::cli] in order to provide most of the functionality. It
+//! then extends the generic CLI with additional CAPE-specific commands.
+//!
+//! ## Usage
+//! ```
+//! cargo run --release -p cape_wallet --bin cli -- [options]
+//! ```
+//!
+//! You can use `--help` to see a list of the possible values for `[options]`. A particularly useful
+//! option is `--storage PATH`, which sets the location the wallet will use to store keystore files.
+//! This allows you to have multiple wallets in different directories.
+//!
+//! When you run the CLI, you will be prompted to create or open a wallet. Once you have an open
+//! wallet, you will get the REPL prompt, `>`. Now you can type `help` to view a list of commands
+//! you can execute.
 
 extern crate cape_wallet;
 use async_std::sync::Mutex;
@@ -39,6 +61,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 use structopt::StructOpt;
 
+/// Implementation of the [seahorse] [CLI] interface for CAPE.
 pub struct CapeCli;
 
 impl<'a> CLI<'a> for CapeCli {
@@ -112,29 +135,31 @@ impl<'a> CLIInput<'a, CapeCli> for Erc20Code {
     }
 }
 
+/// The instantiation of [seahorse::Wallet] for CAPE used by the CLI.
 type CapeWallet<'a> = seahorse::Wallet<'a, MockCapeBackend<'a, LoaderMetadata>, CapeLedger>;
 
+/// Implementation of the `sponsor` command for the CAPE wallet CLI.
 #[allow(clippy::too_many_arguments)]
 async fn cli_sponsor<'a>(
     io: &mut SharedIO,
     wallet: &mut CapeWallet<'_>,
     erc20_code: Erc20Code,
     sponsor_addr: EthereumAddr,
-    auditor: Option<AuditorPubKey>,
+    viewer: Option<AuditorPubKey>,
     freezer: Option<FreezerPubKey>,
-    trace_amount: Option<bool>,
-    trace_address: Option<bool>,
-    trace_blind: Option<bool>,
-    reveal_threshold: Option<u64>,
+    view_amount: Option<bool>,
+    view_address: Option<bool>,
+    view_blind: Option<bool>,
+    viewing_threshold: Option<u64>,
 ) {
     let mut policy = AssetPolicy::default();
-    if let Some(auditor) = auditor {
-        policy = policy.set_auditor_pub_key(auditor);
+    if let Some(viewer) = viewer {
+        policy = policy.set_auditor_pub_key(viewer);
     }
     if let Some(freezer) = freezer {
         policy = policy.set_freezer_pub_key(freezer);
     }
-    if Some(true) == trace_amount {
+    if Some(true) == view_amount {
         policy = match policy.reveal_amount() {
             Ok(policy) => policy,
             Err(err) => {
@@ -143,7 +168,7 @@ async fn cli_sponsor<'a>(
             }
         }
     }
-    if Some(true) == trace_address {
+    if Some(true) == view_address {
         policy = match policy.reveal_user_address() {
             Ok(policy) => policy,
             Err(err) => {
@@ -152,7 +177,7 @@ async fn cli_sponsor<'a>(
             }
         }
     }
-    if Some(true) == trace_blind {
+    if Some(true) == view_blind {
         policy = match policy.reveal_blinding_factor() {
             Ok(policy) => policy,
             Err(err) => {
@@ -161,8 +186,8 @@ async fn cli_sponsor<'a>(
             }
         }
     }
-    if let Some(reveal_threshold) = reveal_threshold {
-        policy = policy.set_reveal_threshold(reveal_threshold);
+    if let Some(viewing_threshold) = viewing_threshold {
+        policy = policy.set_reveal_threshold(viewing_threshold);
     }
     match wallet.sponsor(erc20_code, sponsor_addr, policy).await {
         Ok(def) => {
@@ -174,6 +199,7 @@ async fn cli_sponsor<'a>(
     }
 }
 
+/// Implementation of the `wrap` command for the CAPE wallet CLI.
 async fn cli_wrap<'a>(
     io: &mut SharedIO,
     wallet: &mut CapeWallet<'_>,
@@ -192,6 +218,7 @@ async fn cli_wrap<'a>(
     }
 }
 
+/// Implementation of the `burn` command for the CAPE wallet CLI.
 #[allow(clippy::too_many_arguments)]
 async fn cli_burn<'a>(
     io: &mut SharedIO,
@@ -209,6 +236,10 @@ async fn cli_burn<'a>(
     finish_transaction::<CapeCli>(io, wallet, res, wait, "burned").await;
 }
 
+/// The collection of CLI commands which are specific to CAPE.
+///
+/// These commands are not part of the generic [seahorse::cli], but they are added to the CAPE CLI
+/// via the [CLI::extra_commands] trait method.
 fn cape_specific_cli_commands<'a>() -> Vec<Command<'a, CapeCli>> {
     vec![
         command!(
@@ -219,13 +250,13 @@ fn cape_specific_cli_commands<'a>() -> Vec<Command<'a, CapeCli>> {
              wallet,
              erc20_code: Erc20Code,
              sponsor_addr: EthereumAddr;
-             auditor: Option<AuditorPubKey>,
+             viewer: Option<AuditorPubKey>,
              freezer: Option<FreezerPubKey>,
-             trace_amount: Option<bool>,
-             trace_address: Option<bool>,
-             trace_blind: Option<bool>,
-             reveal_threshold: Option<u64>| {
-                cli_sponsor(io, wallet, erc20_code, sponsor_addr, auditor, freezer, trace_amount, trace_address, trace_blind, reveal_threshold).await;
+             view_amount: Option<bool>,
+             view_address: Option<bool>,
+             view_blind: Option<bool>,
+             viewing_threshold: Option<u64>| {
+                cli_sponsor(io, wallet, erc20_code, sponsor_addr, viewer, freezer, view_amount, view_address, view_blind, viewing_threshold).await;
             }
         ),
         command!(
@@ -259,6 +290,7 @@ fn cape_specific_cli_commands<'a>() -> Vec<Command<'a, CapeCli>> {
     ]
 }
 
+/// Command line arguments for the CAPE wallet CLI.
 #[derive(StructOpt)]
 pub struct CapeArgs {
     /// Generate keys for a wallet, do not run the REPL.
@@ -269,7 +301,7 @@ pub struct CapeArgs {
 
     /// Path to a saved wallet, or a new directory where this wallet will be saved.
     ///
-    /// If not given, the wallet will be stored in ~/.translucence/wallet. If a wallet already
+    /// If not given, the wallet will be stored in ~/.espresso/cape/wallet. If a wallet already
     /// exists there, it will be loaded. Otherwise, a new wallet will be created.
     #[structopt(short, long)]
     pub storage: Option<PathBuf>,
@@ -376,13 +408,13 @@ mod tests {
                      wallet,
                      erc20_code: Erc20Code,
                      sponsor_addr: EthereumAddr;
-                     auditor: Option<AuditorPubKey>,
+                     viewer: Option<AuditorPubKey>,
                      freezer: Option<FreezerPubKey>,
-                     trace_amount: Option<bool>,
-                     trace_address: Option<bool>,
-                     trace_blind: Option<bool>,
-                     reveal_threshold: Option<u64>| {
-                        cli_sponsor(io, wallet, erc20_code, sponsor_addr, auditor, freezer, trace_amount, trace_address, trace_blind, reveal_threshold).await;
+                     view_amount: Option<bool>,
+                     view_address: Option<bool>,
+                     view_blind: Option<bool>,
+                     viewing_threshold: Option<u64>| {
+                        cli_sponsor(io, wallet, erc20_code, sponsor_addr, viewer, freezer, view_amount, view_address, view_blind, viewing_threshold).await;
                     }
                 ),
                 command!(
@@ -534,13 +566,13 @@ mod tests {
         let erc20_code = Erc20Code(EthereumAddr([1u8; 20]));
 
         t
-            // Generate freezer and auditor keys.
-            .command(0, "gen_key freeze")?
+            // Generate freezing and viewing keys.
+            .command(0, "gen_key freezing")?
             .output("(?P<freezer>FREEZEPUBKEY~.*)")?
-            .command(0, "gen_key audit")?
-            .output("(?P<auditor>AUDPUBKEY~.*)")?
+            .command(0, "gen_key viewing")?
+            .output("(?P<viewer>AUDPUBKEY~.*)")?
             // Sponsor an asset with all policy attributes specified.
-            .command(0, format!("sponsor {} {} auditor=$auditor freezer=$freezer trace_amount=true trace_address=true trace_blind=true reveal_threshold=10", erc20_code, sponsor_addr))?
+            .command(0, format!("sponsor {} {} viewer=$viewer freezer=$freezer view_amount=true view_address=true view_blind=true viewing_threshold=10", erc20_code, sponsor_addr))?
             .output(format!("(?P<asset_def>ASSET_DEF~.*)"))?;
 
         Ok(())
@@ -557,18 +589,18 @@ mod tests {
             // Sponsor an asset with the default policy.
             .command(0, format!("sponsor {} {}", erc20_code, sponsor_addr))?
             .output(format!("(?P<asset_default>ASSET_DEF~.*)"))?
-            // Sponsor a non-auditable asset with a freezer key.
-            .command(0, "gen_key freeze")?
+            // Sponsor an unviewable asset with a freezer key.
+            .command(0, "gen_key freezing")?
             .output("(?P<freezer>FREEZEPUBKEY~.*)")?
             .command(0, format!("sponsor {} {} freezer=$freezer", erc20_code, sponsor_addr))?
-            .output(format!("(?P<asset_non_auditable>ASSET_DEF~.*)"))?
-            // Sponsor an auditable asset without a freezer key.
-            .command(0, "gen_key audit")?
-            .output("(?P<auditor>AUDPUBKEY~.*)")?
-            .command(0, format!("sponsor {} {} auditor=$auditor trace_amount=true trace_address=true trace_blind=true reveal_threshold=10", erc20_code, sponsor_addr))?
-            .output(format!("(?P<asset_auditable>ASSET_DEF~.*)"))?
-            // Should fail to sponsor an auditable asset without a given auditor key.
-            .command(0, format!("sponsor {} {} trace_amount=true trace_address=true trace_blind=true reveal_threshold=10", erc20_code, sponsor_addr))?
+            .output(format!("(?P<asset_unviewable>ASSET_DEF~.*)"))?
+            // Sponsor a viewable asset without a freezer key.
+            .command(0, "gen_key viewing")?
+            .output("(?P<viewer>AUDPUBKEY~.*)")?
+            .command(0, format!("sponsor {} {} viewer=$viewer view_amount=true view_address=true view_blind=true viewing_threshold=10", erc20_code, sponsor_addr))?
+            .output(format!("(?P<asset_viewable>ASSET_DEF~.*)"))?
+            // Should fail to sponsor an viewable asset without a given viewing key.
+            .command(0, format!("sponsor {} {} view_amount=true view_address=true view_blind=true viewing_threshold=10", erc20_code, sponsor_addr))?
             .output(format!("Invalid policy: Invalid parameters: Cannot reveal amount to dummy AuditorPublicKey"))?;
 
         Ok(())
@@ -620,9 +652,9 @@ mod tests {
         Ok(())
     }
 
-    // TODO !keyao Replace the use of `CliClient` with `CapeTest` and CLI matching helpers in
-    // Seahorse, similar to `test_cli_burn`.
-    // Related issue: https://github.com/SpectrumXYZ/cape/issues/477.
+    // Disabled until we can replace the use of `CliClient` with `CapeTest` and CLI matching helpers
+    // in Seahorse, similar to `test_cli_burn`. Related issue:
+    // https://github.com/EspressoSystems/cape/issues/477.
     #[test]
     #[ignore]
     fn test_cli_sponsor() {
@@ -637,9 +669,9 @@ mod tests {
         });
     }
 
-    // TODO !keyao Replace the use of `CliClient` with `CapeTest` and CLI matching helpers in
-    // Seahorse, similar to `test_cli_burn`.
-    // Related issue: https://github.com/SpectrumXYZ/cape/issues/477.
+    // Disabled until we can replace the use of `CliClient` with `CapeTest` and CLI matching helpers
+    // in Seahorse, similar to `test_cli_burn`. Related issue:
+    // https://github.com/EspressoSystems/cape/issues/477.
     #[test]
     #[ignore]
     fn test_cli_wrap() {
@@ -661,7 +693,7 @@ mod tests {
     #[async_std::test]
     async fn test_cli_burn() {
         let mut t = CapeTest::default();
-        let (ledger, key_streams) = create_cape_network(&mut t, &[1000, 1000, 1000]).await;
+        let (ledger, key_streams) = create_cape_network(&mut t, &[2000, 2000, 2000]).await;
 
         // Create wallets for sponsor, wrapper and receiver.
         let (mut sponsor_input, mut sponsor_output) =
@@ -671,14 +703,14 @@ mod tests {
         let (mut receiver_input, mut receiver_output) =
             create_cape_wallet(ledger.clone(), key_streams[2].clone());
 
-        // Get the freezer and auditor keys for the sponsor, and the receiver's addresses.
-        writeln!(sponsor_input, "gen_key freeze").unwrap();
-        let freezer_key =
-            match_output(&mut sponsor_output, &["(?P<freezekey>FREEZEPUBKEY~.*)"]).get("freezekey");
-        writeln!(sponsor_input, "gen_key audit").unwrap();
-        let auditor_key =
-            match_output(&mut sponsor_output, &["(?P<audkey>AUDPUBKEY~.*)"]).get("audkey");
-        writeln!(receiver_input, "gen_key spend scan_from=start wait=true").unwrap();
+        // Get the freezing and viewing keys for the sponsor, and the receiver's addresses.
+        writeln!(sponsor_input, "gen_key freezing").unwrap();
+        let freezing_key =
+            match_output(&mut sponsor_output, &["(?P<freezing>FREEZEPUBKEY~.*)"]).get("freezing");
+        writeln!(sponsor_input, "gen_key viewing").unwrap();
+        let viewing_key =
+            match_output(&mut sponsor_output, &["(?P<viewing>AUDPUBKEY~.*)"]).get("viewing");
+        writeln!(receiver_input, "gen_key spending scan_from=start wait=true").unwrap();
         let receiver_addr = match_output(&mut receiver_output, &["(?P<addr>ADDR~.*)"]).get("addr");
         writeln!(receiver_input, "balance 0").unwrap();
         match_output(&mut receiver_output, &[format!("{} 1000", receiver_addr)]);
@@ -686,7 +718,7 @@ mod tests {
         // Sponsor and wrap an asset.
         let erc20_code = Erc20Code(EthereumAddr([1u8; 20]));
         let sponsor_eth_addr = EthereumAddr([2u8; 20]);
-        writeln!(sponsor_input, "sponsor {} {} freezer={} auditor={} trace_amount=true trace_address=true trace_blind=true reveal_threshold=10", erc20_code, sponsor_eth_addr, freezer_key, auditor_key).unwrap();
+        writeln!(sponsor_input, "sponsor {} {} freezer={} viewer={} view_amount=true view_address=true view_blind=true viewing_threshold=10", erc20_code, sponsor_eth_addr, freezing_key, viewing_key).unwrap();
         let asset_def =
             match_output(&mut sponsor_output, &["(?P<asset_def>ASSET_DEF~.*)"]).get("asset_def");
         let wrapper_eth_addr = EthereumAddr([3u8; 20]);
@@ -704,7 +736,7 @@ mod tests {
         .get("asset_code");
 
         // Submit a dummy transaction to finalize the wrap.
-        writeln!(receiver_input, "issue my_asset").unwrap();
+        writeln!(receiver_input, "create_asset my_asset").unwrap();
         wait_for_prompt(&mut receiver_output);
         let mint_amount = 20;
         writeln!(

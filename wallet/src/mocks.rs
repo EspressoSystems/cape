@@ -1,9 +1,19 @@
+// Copyright (c) 2022 Espresso Systems (espressosys.com)
+// This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
+
+// This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+// This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+// You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+//! Test-only implementation of the [reef] ledger abstraction for CAPE.
+
 use crate::wallet::{CapeWalletBackend, CapeWalletError};
 use async_std::sync::{Mutex, MutexGuard};
 use async_trait::async_trait;
 use cap_rust_sandbox::{
     deploy::EthMiddleware, ledger::*, model::*, universal_param::UNIVERSAL_PARAM,
 };
+use commit::Committable;
 use futures::stream::Stream;
 use itertools::izip;
 use jf_cap::{
@@ -13,10 +23,9 @@ use jf_cap::{
     MerklePath, MerkleTree, Signature, TransactionNote,
 };
 use key_set::{OrderByOutputs, ProverKeySet, SizedKey, VerifierKeySet};
-use lazy_static::lazy_static;
 use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
 use reef::{
-    traits::{Block as _, Ledger as _, Transaction as _},
+    traits::{Block as _, Transaction as _},
     Block,
 };
 use seahorse::{
@@ -25,7 +34,7 @@ use seahorse::{
     loader::WalletLoader,
     persistence::AtomicWalletStorage,
     testing,
-    txn_builder::{RecordDatabase, TransactionState},
+    txn_builder::{RecordDatabase, TransactionInfo, TransactionState, TransactionUID},
     WalletBackend, WalletError, WalletState,
 };
 use serde::{de::DeserializeOwned, Serialize};
@@ -51,6 +60,7 @@ struct CommittedTransaction {
 #[derive(Clone)]
 pub struct MockCapeNetwork {
     contract: CapeContractState,
+    call_data: HashMap<TransactionUID<CapeLedger>, (Vec<ReceiverMemo>, Signature)>,
 
     // Mock EQS and peripheral services
     block_height: u64,
@@ -62,8 +72,7 @@ pub struct MockCapeNetwork {
     // pending finalization.
     pending_erc20_deposits:
         HashMap<RecordCommitment, (Erc20Code, EthereumAddr, Box<RecordOpening>)>,
-    query_service_events: MockEventSource<CapeLedger>,
-    memo_events: MockEventSource<CapeLedger>,
+    events: MockEventSource<CapeLedger>,
     txns: HashMap<(u64, u64), CommittedTransaction>,
     address_map: HashMap<UserAddress, UserPubKey>,
 }
@@ -76,11 +85,11 @@ impl MockCapeNetwork {
     ) -> Self {
         let mut ledger = Self {
             contract: CapeContractState::new(verif_crs, records.clone()),
+            call_data: Default::default(),
             block_height: 0,
             records,
             pending_erc20_deposits: Default::default(),
-            query_service_events: MockEventSource::new(EventSource::QueryService),
-            memo_events: MockEventSource::new(EventSource::BulletinBoard),
+            events: MockEventSource::new(EventSource::QueryService),
             txns: Default::default(),
             address_map: Default::default(),
         };
@@ -210,11 +219,10 @@ impl MockCapeNetwork {
             },
             key_scans: Default::default(),
             key_state: Default::default(),
-            auditable_assets: Default::default(),
+            assets: Default::default(),
             audit_keys: Default::default(),
             freeze_keys: Default::default(),
             user_keys: Default::default(),
-            defined_assets: Default::default(),
         })
     }
 
@@ -223,10 +231,7 @@ impl MockCapeNetwork {
         from: EventIndex,
         to: Option<EventIndex>,
     ) -> Pin<Box<dyn Stream<Item = (LedgerEvent<CapeLedger>, EventSource)> + Send>> {
-        Box::pin(futures::stream::select(
-            self.query_service_events.subscribe(from, to),
-            self.memo_events.subscribe(from, to),
-        ))
+        self.events.subscribe(from, to)
     }
 
     pub fn get_public_key(&self, address: &UserAddress) -> Result<UserPubKey, CapeWalletError> {
@@ -271,6 +276,15 @@ impl MockCapeNetwork {
         }
     }
 
+    pub fn store_call_data(
+        &mut self,
+        txn: TransactionUID<CapeLedger>,
+        memos: Vec<ReceiverMemo>,
+        sig: Signature,
+    ) {
+        self.call_data.insert(txn, (memos, sig));
+    }
+
     pub fn submit_operations(
         &mut self,
         ops: Vec<CapeModelOperation>,
@@ -280,9 +294,6 @@ impl MockCapeNetwork {
         for effect in effects {
             if let CapeModelEthEffect::Emit(event) = effect {
                 events.push(event);
-            } else {
-                //TODO Simulate and validate the other ETH effects. If any effects fail, the
-                // whole transaction must be considered reverted with no visible effects.
             }
         }
 
@@ -339,10 +350,21 @@ impl MockCapeNetwork {
                 }
 
                 self.generate_event(LedgerEvent::Commit {
-                    block: CapeBlock::new(block),
+                    block: CapeBlock::new(block.clone()),
                     block_id: self.block_height,
                     state_comm: self.block_height + 1,
                 });
+
+                // The memos for this block should have already been posted in the calldata, so we
+                // can now generate the corresponding Memos events.
+                for (txn_id, txn) in block.into_iter().enumerate() {
+                    if let Some((memos, sig)) = self.call_data.remove(&TransactionUID(txn.commit()))
+                    {
+                        self.post_memos(self.block_height, txn_id as u64, memos, sig)
+                            .unwrap();
+                    }
+                }
+
                 self.block_height += 1;
             }
 
@@ -360,7 +382,7 @@ impl MockCapeNetwork {
 
 impl<'a> MockNetwork<'a, CapeLedger> for MockCapeNetwork {
     fn now(&self) -> EventIndex {
-        self.query_service_events.now() + self.memo_events.now()
+        self.events.now()
     }
 
     fn submit(&mut self, block: Block<CapeLedger>) -> Result<(), WalletError<CapeLedger>> {
@@ -461,7 +483,7 @@ impl<'a> MockNetwork<'a, CapeLedger> for MockCapeNetwork {
         txn.memos = Some((memos.clone(), sig));
         let event = LedgerEvent::Memos {
             outputs: memos,
-            transaction: Some((block_id as u64, txn_id as u64)),
+            transaction: Some((block_id as u64, txn_id as u64, txn.txn.kind())),
         };
         self.generate_event(event);
 
@@ -469,13 +491,23 @@ impl<'a> MockNetwork<'a, CapeLedger> for MockCapeNetwork {
     }
 
     fn memos_source(&self) -> EventSource {
-        EventSource::BulletinBoard
+        EventSource::QueryService
     }
 
     fn generate_event(&mut self, event: LedgerEvent<CapeLedger>) {
-        match event {
-            LedgerEvent::Memos { .. } => self.memo_events.publish(event),
-            _ => self.query_service_events.publish(event),
+        self.events.publish(event)
+    }
+
+    fn event(
+        &self,
+        index: EventIndex,
+        source: EventSource,
+    ) -> Result<LedgerEvent<CapeLedger>, WalletError<CapeLedger>> {
+        match source {
+            EventSource::QueryService => self.events.get(index),
+            _ => Err(WalletError::Failed {
+                msg: String::from("invalid event source"),
+            }),
         }
     }
 }
@@ -494,14 +526,7 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> MockCapeBackend<'a, Meta> {
         ledger: Arc<Mutex<MockCapeLedger<'a>>>,
         loader: &mut impl WalletLoader<CapeLedger, Meta = Meta>,
     ) -> Result<Self, WalletError<CapeLedger>> {
-        // Workaround for https://github.com/SpectrumXYZ/atomicstore/issues/2, which affects logs
-        // containing more than one entry in a file. We simply set the fill size small enough that
-        // there will only ever be one entry per file.
-        //
-        // Note that this issue only effects CAPE (not the Spectrum wallet, which uses the same
-        // storage implementation) because the CAPE wallet state is much smaller than the Spectrum
-        // wallet state due to the CapeLedger types not doing lightweight validation.
-        let storage = AtomicWalletStorage::new(loader, 128)?;
+        let storage = AtomicWalletStorage::new(loader, 1024)?;
         Ok(Self {
             key_stream: storage.key_stream(),
             storage: Arc::new(Mutex::new(storage)),
@@ -589,37 +614,22 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
         }
     }
 
-    async fn get_transaction(
-        &self,
-        block_id: u64,
-        txn_id: u64,
-    ) -> Result<CapeTransition, WalletError<CapeLedger>> {
-        self.ledger
-            .lock()
-            .await
-            .network()
-            .get_transaction(block_id, txn_id)
-    }
-
     fn key_stream(&self) -> KeyTree {
         self.key_stream.clone()
     }
 
-    async fn submit(&mut self, txn: CapeTransition) -> Result<(), WalletError<CapeLedger>> {
-        self.ledger.lock().await.submit(txn)
-    }
-
-    async fn post_memos(
+    async fn submit(
         &mut self,
-        block_id: u64,
-        txn_id: u64,
-        memos: Vec<ReceiverMemo>,
-        sig: Signature,
+        txn: CapeTransition,
+        info: TransactionInfo<CapeLedger>,
     ) -> Result<(), WalletError<CapeLedger>> {
-        self.ledger
-            .lock()
-            .await
-            .post_memos(block_id, txn_id, memos, sig)
+        let mut ledger = self.ledger.lock().await;
+        ledger.network().store_call_data(
+            info.uid.unwrap_or_else(|| TransactionUID(txn.hash())),
+            info.memos,
+            info.sig,
+        );
+        ledger.submit(txn)
     }
 }
 
@@ -721,13 +731,6 @@ impl Default for CapeTest {
     }
 }
 
-lazy_static! {
-    static ref CAPE_UNIVERSAL_PARAM: UniversalParam = universal_param::get(
-        &mut ChaChaRng::from_seed([1u8; 32]),
-        CapeLedger::merkle_height()
-    );
-}
-
 #[async_trait]
 impl<'a> SystemUnderTest<'a> for CapeTest {
     type Ledger = CapeLedger;
@@ -752,7 +755,7 @@ impl<'a> SystemUnderTest<'a> for CapeTest {
     async fn create_storage(&mut self) -> Self::MockStorage {
         let mut loader = MockCapeWalletLoader {
             path: self.temp_dir(),
-            key: KeyTree::random(&mut self.rng).unwrap().0,
+            key: KeyTree::random(&mut self.rng).0,
         };
         AtomicWalletStorage::new(&mut loader, 128).unwrap()
     }
@@ -768,7 +771,7 @@ impl<'a> SystemUnderTest<'a> for CapeTest {
     }
 
     fn universal_param(&self) -> &'a UniversalParam {
-        &*CAPE_UNIVERSAL_PARAM
+        &*UNIVERSAL_PARAM
     }
 }
 
@@ -794,18 +797,26 @@ mod cape_wallet_tests {
         let mut now = Instant::now();
         let num_inputs = 2;
         let num_outputs = 2;
-        let initial_grant = 10;
+        let total_initial_grant = 20;
+        let initial_grant = total_initial_grant / 2;
         let (ledger, mut wallets) = t
-            .create_test_network(&[(num_inputs, num_outputs)], vec![initial_grant], &mut now)
+            .create_test_network(
+                &[(num_inputs, num_outputs)],
+                vec![total_initial_grant],
+                &mut now,
+            )
             .await;
         assert_eq!(wallets.len(), 1);
-        let owner = wallets[0].1.clone();
+        let owner = wallets[0].1[0].clone();
         t.sync(&ledger, &wallets).await;
         println!("CAPE wallet created: {}s", now.elapsed().as_secs_f32());
 
         // Check the balance after CAPE wallet initialization.
         assert_eq!(
-            wallets[0].0.balance(&owner, &AssetCode::native()).await,
+            wallets[0]
+                .0
+                .balance_breakdown(&owner, &AssetCode::native())
+                .await,
             initial_grant
         );
 
@@ -855,7 +866,13 @@ mod cape_wallet_tests {
             .await
             .unwrap();
         println!("Wrap completed: {}s", now.elapsed().as_secs_f32());
-        assert_eq!(wallets[0].0.balance(&owner, &cap_asset.code).await, 0);
+        assert_eq!(
+            wallets[0]
+                .0
+                .balance_breakdown(&owner, &cap_asset.code)
+                .await,
+            0
+        );
 
         // Submit dummy transactions to finalize the wrap.
         now = Instant::now();
@@ -878,11 +895,17 @@ mod cape_wallet_tests {
 
         // Check the balance after the wrap.
         assert_eq!(
-            wallets[0].0.balance(&owner, &AssetCode::native()).await,
+            wallets[0]
+                .0
+                .balance_breakdown(&owner, &AssetCode::native())
+                .await,
             initial_grant - mint_fee
         );
         assert_eq!(
-            wallets[0].0.balance(&owner, &cap_asset.code).await,
+            wallets[0]
+                .0
+                .balance_breakdown(&owner, &cap_asset.code)
+                .await,
             wrap_amount
         );
 
@@ -950,9 +973,18 @@ mod cape_wallet_tests {
         println!("Burn completed: {}s", now.elapsed().as_secs_f32());
 
         // Check the balance after the burn.
-        assert_eq!(wallets[0].0.balance(&owner, &cap_asset.code).await, 0);
         assert_eq!(
-            wallets[0].0.balance(&owner, &AssetCode::native()).await,
+            wallets[0]
+                .0
+                .balance_breakdown(&owner, &cap_asset.code)
+                .await,
+            0
+        );
+        assert_eq!(
+            wallets[0]
+                .0
+                .balance_breakdown(&owner, &AssetCode::native())
+                .await,
             initial_grant - mint_fee - burn_fee
         );
 

@@ -5,7 +5,7 @@ project=$(dirname $(dirname $0))
 
 output=$project/doc/mdbook/book/index.html
 css=$project/doc/templates/style.css
-title='Spectrum Cape Smart Contract API'
+title='Espresso Systems Cape Smart Contract API'
 
 
 echo "  Running solidity-docgen..."

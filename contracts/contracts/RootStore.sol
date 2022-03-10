@@ -1,4 +1,12 @@
-//SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+// Copyright (c) 2022 Espresso Systems (espressosys.com)
+// This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
+
+// This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+// This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+// You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 pragma solidity ^0.8.0;
 
 contract RootStore {
@@ -16,7 +24,7 @@ contract RootStore {
 
         // Intially all roots are set to zero.
         // This value is such that no adversary can extend a branch from this root node.
-        // See proposition 2, page 48 of the AT-Spec document SpectrumXYZ/AT-spec@01f71ce
+        // See proposition 2, page 48 of the AT-Spec document EspressoSystems/AT-spec@01f71ce
     }
 
     /// @dev Add a root value. Only keep the latest nRoots ones.

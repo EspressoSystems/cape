@@ -1,3 +1,12 @@
+// Copyright (c) 2022 Espresso Systems (espressosys.com)
+// This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
+
+// This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+// This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+// You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+//! Instantiation of [seahorse::Wallet] for CAPE.
+
 use async_std::sync::Arc;
 use async_trait::async_trait;
 use cap_rust_sandbox::{deploy::EthMiddleware, ledger::*, model::*};
@@ -12,6 +21,7 @@ use seahorse::{
 
 pub type CapeWalletError = WalletError<CapeLedger>;
 
+/// Extension of the [WalletBackend] trait with CAPE-specific functionality.
 #[async_trait]
 pub trait CapeWalletBackend<'a>: WalletBackend<'a, CapeLedger> {
     /// Update the global ERC20 asset registry with a new (ERC20, CAPE asset) pair.
@@ -49,13 +59,20 @@ pub trait CapeWalletBackend<'a>: WalletBackend<'a, CapeLedger> {
         ro: RecordOpening,
     ) -> Result<(), CapeWalletError>;
 
+    /// Get the underlying Ethereum connection.
     fn eth_client(&self) -> Result<Arc<EthMiddleware>, CapeWalletError>;
 }
 
 pub type CapeWallet<'a, Backend> = Wallet<'a, Backend, CapeLedger>;
 
+/// Extension methods for CAPE wallets.
+///
+/// This trait adds to [Wallet] some methods that implement CAPE-specific functionality. It is
+/// automatically implemented for any instantiation of [Wallet] with a backend that implements
+/// [CapeWalletBackend].
 #[async_trait]
 pub trait CapeWalletExt<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> {
+    /// Sponsor the creation of a new wrapped ERC-20 CAPE asset.
     async fn sponsor(
         &mut self,
         erc20_code: Erc20Code,
@@ -63,23 +80,37 @@ pub trait CapeWalletExt<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> {
         cap_asset_policy: AssetPolicy,
     ) -> Result<AssetDefinition, CapeWalletError>;
 
-    // We may return a `WrapReceipt`, i.e., a record commitment to track wraps, once it's defined.
-    //
-    // It would be better to replace the `AssetDefinition` parameter with `AssetCode` to be
-    // consistent with other transactions, but currently there is no way to inform the wallet of
-    // the existence of an asset (so that it can convert a code to a definition) without owning it.
+    /// Wrap some ERC-20 tokens into a CAPE asset.
+    ///
+    /// This function will withdraw `amount` tokens from the account with address `src_addr` of the
+    /// ERC-20 token corresponding to the CAPE asset `cap_asset`. `src_addr` must be one of the
+    /// addresses of the ETH wallet backing this CAPE wallet. [CapeWalletExt::eth_address] will
+    /// return a valid address to be used here.
     async fn wrap(
         &mut self,
         src_addr: EthereumAddr,
         // We take as input the target asset, not the source ERC20 code, because there may be more
         // than one CAP asset for a given ERC20 token. We need the user to disambiguate (probably
         // using a list of approved (CAP, ERC20) pairs provided by the query service).
+        //
+        // It would be better to replace the `AssetDefinition` parameter with `AssetCode` to be
+        // consistent with other transactions, but currently there is no way to inform the wallet of
+        // the existence of an asset (so that it can convert a code to a definition) without owning
+        // it.
         cap_asset: AssetDefinition,
         dst_addr: UserAddress,
         amount: u64,
+        // We may return a `WrapReceipt`, i.e., a record commitment to track wraps, once it's defined.
     ) -> Result<(), CapeWalletError>;
 
-    /// For now, the amount to burn should be the same as a wrapped record.
+    /// Burn some wrapped tokens, unlocking the corresponding ERC-20 tokens into the account
+    /// `dst_addr`.
+    ///
+    /// `cap_asset` must be a wrapped asset type.
+    ///
+    /// The amount to burn must match exactly the amount of a wrapped record owned by `account`, as
+    /// burn transactions with change are not supported. This restriction will be lifted in the
+    /// future.
     async fn burn(
         &mut self,
         account: &UserAddress,
@@ -89,8 +120,13 @@ pub trait CapeWalletExt<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> {
         fee: u64,
     ) -> Result<TransactionReceipt<CapeLedger>, CapeWalletError>;
 
+    /// Return the list of Espresso-approved CAPE asset types.
     async fn approved_assets(&self) -> Vec<(AssetDefinition, Erc20Code)>;
+
+    /// Get the underlying Ethereum connection.
     async fn eth_client(&self) -> Result<Arc<EthMiddleware>, CapeWalletError>;
+
+    /// Get an address owned by the underlying Ethereum wallet.
     async fn eth_address(&self) -> Result<EthereumAddr, CapeWalletError>;
 }
 
@@ -107,9 +143,6 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
         let mut state = self.lock().await;
 
         let description = erc20_asset_description(&erc20_code, &sponsor_addr);
-
-        //todo Include CAPE-specific domain separator in AssetCode derivation, once Jellyfish adds
-        // support for domain separators.
         let code = AssetCode::new_foreign(&description);
         let asset = AssetDefinition::new(code, cap_asset_policy)
             .map_err(|source| CapeWalletError::CryptoError { source })?;
@@ -169,7 +202,7 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
             // need to put some address in the receiver field though, so just use the one we have
             // handy.
             .build_transfer(
-                account,
+                Some(account),
                 cap_asset,
                 &[(account.clone(), amount)],
                 fee,
@@ -181,11 +214,11 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
         // Only generate memos for the fee change output.
         assert!(xfr_info.fee_output.is_some());
         let (memos, sig) = self
-            .generate_memos(vec![xfr_info.fee_output.unwrap()], &xfr_info.sig_keypair)
+            .generate_memos(vec![xfr_info.fee_output.unwrap()], &xfr_info.sig_key_pair)
             .await?;
 
         let mut txn_info = TransactionInfo {
-            account: xfr_info.owner_address,
+            accounts: xfr_info.owner_addresses,
             memos,
             sig,
             freeze_outputs: vec![],

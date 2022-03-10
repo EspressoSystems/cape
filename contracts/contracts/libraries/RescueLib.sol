@@ -1,9 +1,17 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+// Copyright (c) 2022 Espresso Systems (espressosys.com)
+// This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
+
+// This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+// This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+// You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 pragma solidity ^0.8.0;
 
 library RescueLib {
     /// The constants are obtained from the Sage script
-    /// https://gitlab.com/translucence/crypto/marvellous/-/blob/b0885058f0348171befcf6cf30533812c9f49e15/rescue254.sage
+    /// https://github.com/EspressoSystems/Marvellous/blob/fcd4c41672f485ac2f62526bc87a16789d4d0459/rescue254.sage
 
     uint256 private constant _N_ROUNDS = 12;
     uint256 private constant _STATE_SIZE = 4;
@@ -695,21 +703,35 @@ library RescueLib {
         o %= _PRIME;
     }
 
+    function checkBounded(uint256[15] memory inputs) internal pure {
+        for (uint256 i = 0; i < inputs.length; ++i) {
+            require(inputs[i] < _PRIME, "inputs must be below _PRIME");
+        }
+    }
+
+    // Must be public so it doesn't get inlined into CAPE.sol and blow
+    // the size limit
     function commit(uint256[15] memory inputs) public view returns (uint256) {
+        checkBounded(inputs);
+
         uint256 a;
         uint256 b;
         uint256 c;
         uint256 d;
 
         for (uint256 i = 0; i < 5; i++) {
-            (a, b, c, d) = perm(
-                (a + inputs[3 * i + 0]) % _PRIME,
-                (b + inputs[3 * i + 1]) % _PRIME,
-                (c + inputs[3 * i + 2]) % _PRIME,
-                d % _PRIME
-            );
+            unchecked {
+                (a, b, c, d) = perm(
+                    (a + inputs[3 * i + 0]) % _PRIME,
+                    (b + inputs[3 * i + 1]) % _PRIME,
+                    (c + inputs[3 * i + 2]) % _PRIME,
+                    d
+                );
+
+                (a, b, c, d) = (a % _PRIME, b % _PRIME, c % _PRIME, d % _PRIME);
+            }
         }
 
-        return a % _PRIME;
+        return a;
     }
 }

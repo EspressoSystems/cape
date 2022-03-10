@@ -1,13 +1,19 @@
+// Copyright (c) 2022 Espresso Systems (espressosys.com)
+// This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
+
+// This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+// This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+// You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 use crate::cape::CAPEConstructorArgs;
 use crate::ethereum::{deploy, get_funded_client};
 use crate::model::CAPE_MERKLE_HEIGHT;
 use crate::test_utils::contract_abi_path;
 use crate::types::{
-    AssetRegistry, GenericInto, Greeter, SimpleToken, TestBN254, TestCAPE, TestCapeTypes,
-    TestEdOnBN254, TestPlonkVerifier, TestPolynomialEval, TestRecordsMerkleTree, TestRescue,
-    TestRootStore, TestTranscript, TestVerifyingKeys,
+    AssetRegistry, GenericInto, SimpleToken, TestBN254, TestCAPE, TestCapeTypes, TestEdOnBN254,
+    TestPlonkVerifier, TestPolynomialEval, TestRecordsMerkleTree, TestRescue, TestRootStore,
+    TestTranscript, TestVerifyingKeys,
 };
-use anyhow::Result;
 use ethers::prelude::{k256::ecdsa::SigningKey, Address, Http, Provider, SignerMiddleware, Wallet};
 use std::sync::Arc;
 
@@ -102,18 +108,6 @@ mk_deploy_fun!(
 );
 
 // We do not call the macro for the contracts below because they take some argument
-pub async fn deploy_greeter_contract() -> Result<Greeter<EthMiddleware>> {
-    let client = get_funded_client().await.unwrap();
-    let contract = deploy(
-        client.clone(),
-        &contract_abi_path("Greeter.sol/Greeter"),
-        ("Initial Greeting".to_string(),),
-    )
-    .await
-    .unwrap();
-    Ok(Greeter::new(contract.address(), client))
-}
-
 pub async fn deploy_test_root_store_contract() -> TestRootStore<EthMiddleware> {
     let client = get_funded_client().await.unwrap();
     let contract = deploy(

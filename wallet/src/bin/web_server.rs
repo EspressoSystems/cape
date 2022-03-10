@@ -1,4 +1,43 @@
-// Copyright © 2021 Translucence Research, Inc. All rights reserved.
+// Copyright (c) 2022 Espresso Systems (espressosys.com)
+// This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
+
+// This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+// This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+// You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+//! # The CAPE Wallet Server
+//!
+//! One of two main entrypoints to the wallet (the other being the CLI) this executable provides a
+//! web server which exposes wallet functionality via an HTTP interface. It is primarily intended
+//! to be run in a Docker container and used as the backend for the CAPE wallet GUI.
+//!
+//! ## Usage
+//!
+//! ### Running in Docker
+//! ```
+//! docker run -it -p 60000:60000  ghcr.io/espressosystems/cape/wallet:main
+//! ```
+//!
+//! The `-p 60000:60000` option binds the port 60000 in the Docker container (where the web server
+//! is hosted) to the port 60000 on the host. You can change which port on `localhost` hosts the
+//! server by changing the first number, e.g. `-p 42000:60000`.
+//!
+//! ### Building and running locally
+//! ```
+//! cargo run --release -p cape_wallet --bin web_server -- [options]
+//! ```
+//!
+//! You can use `--help` to see a list of the possible values for `[options]`.
+//!
+//! Once started, the web server will serve an HTTP API at `localhost:60000`. You can override the
+//! default port by setting the `PORT` environment variable. The endpoints are documented in
+//! `api/api.toml`.
+//!
+//! ## Development
+//!
+//! This executable file only defines the main function to process command line arguments and start
+//! the web server. Most of the functionality, such as API interpretation, request parsing, and
+//! route handling, is defined in the [cape_wallet] crate.
 
 use cape_wallet::web::{default_api_path, default_web_path, init_server, NodeOpt};
 use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
@@ -24,6 +63,7 @@ async fn main() -> Result<(), std::io::Error> {
     // the executable path.
     let opt_api_path = NodeOpt::from_args().api_path;
     let opt_web_path = NodeOpt::from_args().web_path;
+    let opt_path_storage = NodeOpt::from_args().path_storage;
     let web_path = if opt_web_path.is_empty() {
         default_web_path()
     } else {
@@ -34,15 +74,22 @@ async fn main() -> Result<(), std::io::Error> {
     } else {
         PathBuf::from(opt_api_path)
     };
+    let path_storage = if opt_path_storage.is_empty() {
+        None
+    } else {
+        Some(PathBuf::from(opt_path_storage))
+    };
     println!("Web path: {:?}", web_path);
 
-    // TODO Use something different than the default Spectrum port (60000 vs 50000).
+    // We use 60000 by default, chosen because it differs from the default ports for the EQS and the
+    // Espresso query service.
     let port = std::env::var("PORT").unwrap_or_else(|_| String::from("60000"));
     init_server(
         ChaChaRng::from_entropy(),
         api_path,
         web_path,
         port.parse().unwrap(),
+        path_storage,
     )?
     .await?;
 
@@ -57,35 +104,45 @@ mod tests {
         model::{Erc20Code, EthereumAddr},
     };
     use cape_wallet::{
-        routes::{BalanceInfo, CapeAPIError, PubKey, WalletSummary},
+        routes::CapeAPIError,
         testing::port,
+        ui::*,
         web::{
             retry, DEFAULT_ETH_ADDR, DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR,
             DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR, DEFAULT_WRAPPED_AMT,
         },
     };
     use jf_cap::{
-        keys::UserKeyPair,
+        keys::{AuditorKeyPair, FreezerKeyPair, UserKeyPair},
         structs::{AssetCode, AssetDefinition},
     };
     use net::{client, UserAddress};
     use seahorse::{
-        hd::KeyTree,
-        txn_builder::{AssetInfo, TransactionReceipt},
+        hd::{KeyTree, Mnemonic},
+        txn_builder::{RecordInfo, TransactionReceipt},
+        AssetInfo,
     };
     use serde::de::DeserializeOwned;
     use std::collections::hash_map::HashMap;
     use std::convert::TryInto;
     use std::fmt::Debug;
     use std::iter::once;
+    use std::path::Path;
+    use std::time::Duration;
     use surf::Url;
     use tagged_base64::TaggedBase64;
     use tempdir::TempDir;
     use tracing_test::traced_test;
 
+    fn fmt_path(path: &Path) -> String {
+        let bytes = path.as_os_str().to_str().unwrap().as_bytes();
+        base64::encode_config(bytes, base64::URL_SAFE_NO_PAD)
+    }
+
     struct TestServer {
         client: surf::Client,
         temp_dir: TempDir,
+        _temp_path_dir: TempDir,
     }
 
     impl TestServer {
@@ -97,11 +154,13 @@ mod tests {
             // the server will continue running until the process is killed, even after the test
             // ends. This is ok, since each test's server task should be idle once
             // the test is over.
+            let temp_path_dir = TempDir::new("wallet_last_used_test").unwrap();
             init_server(
                 ChaChaRng::from_seed([42; 32]),
                 default_api_path(),
                 default_web_path(),
                 port,
+                Some(temp_path_dir.path().to_path_buf()),
             )
             .unwrap();
             Self::wait(port).await;
@@ -114,6 +173,7 @@ mod tests {
             Self {
                 client: client.with(client::parse_error_body::<CapeAPIError>),
                 temp_dir: TempDir::new("test_cape_wallet").unwrap(),
+                _temp_path_dir: temp_path_dir,
             }
         }
 
@@ -128,17 +188,8 @@ mod tests {
                 .expect_err(&format!("{} succeeded without an open wallet", path));
         }
 
-        fn path(&self) -> TaggedBase64 {
-            TaggedBase64::new(
-                "PATH",
-                self.temp_dir
-                    .path()
-                    .as_os_str()
-                    .to_str()
-                    .unwrap()
-                    .as_bytes(),
-            )
-            .unwrap()
+        fn path(&self) -> String {
+            fmt_path(self.temp_dir.path())
         }
 
         async fn wait(port: u64) {
@@ -163,7 +214,7 @@ mod tests {
         let mnemonic = server.get::<String>("getmnemonic").await.unwrap();
 
         // Check that the mnemonic decodes correctly.
-        KeyTree::from_mnemonic(mnemonic.as_str().as_bytes()).unwrap();
+        KeyTree::from_mnemonic(&Mnemonic::from_phrase(&mnemonic.replace('-', " ")).unwrap());
 
         // Check that successive calls give different mnemonics.
         assert_ne!(mnemonic, server.get::<String>("getmnemonic").await.unwrap());
@@ -263,6 +314,81 @@ mod tests {
             .expect_err("openwallet succeeded with an invalid path");
     }
 
+    #[async_std::test]
+    #[traced_test]
+    async fn test_lastusedkeystore() {
+        let server = TestServer::new().await;
+        let mnemonic = server.get::<String>("getmnemonic").await.unwrap();
+        println!("mnemonic: {}", mnemonic);
+        let password = "my-password";
+
+        // Should get None on first try if no last wallet.
+        let opt = server
+            .get::<Option<PathBuf>>("lastusedkeystore")
+            .await
+            .unwrap();
+        assert!(opt.is_none());
+
+        let url = format!("newwallet/{}/{}/path/{}", mnemonic, password, server.path());
+        server.get::<()>(&url).await.unwrap();
+
+        let mut path = server
+            .get::<Option<PathBuf>>("lastusedkeystore")
+            .await
+            .unwrap();
+        assert_eq!(fmt_path(path.as_ref().unwrap()), server.path());
+
+        // We should still get the same path after opening the wallet
+        server
+            .get::<()>(&format!("openwallet/{}/path/{}", password, server.path()))
+            .await
+            .unwrap();
+        path = server
+            .get::<Option<PathBuf>>("lastusedkeystore")
+            .await
+            .unwrap();
+        assert_eq!(fmt_path(path.as_ref().unwrap()), server.path());
+
+        // Open the wallet with the we path we retrieved
+        server
+            .get::<()>(&format!(
+                "openwallet/{}/path/{}",
+                password,
+                fmt_path(path.as_ref().unwrap())
+            ))
+            .await
+            .unwrap();
+
+        // Test that the last path is updated when we create a new wallet w/ a new path
+        let second_path = fmt_path(TempDir::new("test_cape_wallet_2").unwrap().path());
+
+        server
+            .get::<()>(&format!(
+                "newwallet/{}/{}/path/{}",
+                mnemonic, password, second_path
+            ))
+            .await
+            .unwrap();
+
+        path = server
+            .get::<Option<PathBuf>>("lastusedkeystore")
+            .await
+            .unwrap();
+        assert_eq!(fmt_path(path.as_ref().unwrap()), second_path);
+
+        // repopen the first wallet and see the path returned is also the original
+        server
+            .get::<()>(&format!("openwallet/{}/path/{}", password, server.path()))
+            .await
+            .unwrap();
+
+        path = server
+            .get::<Option<PathBuf>>("lastusedkeystore")
+            .await
+            .unwrap();
+        assert_eq!(fmt_path(path.as_ref().unwrap()), server.path());
+    }
+
     #[cfg(feature = "slow-tests")]
     #[async_std::test]
     #[traced_test]
@@ -307,9 +433,9 @@ mod tests {
             info,
             WalletSummary {
                 addresses: vec![],
-                spend_keys: vec![],
-                audit_keys: vec![],
-                freeze_keys: vec![],
+                sending_keys: vec![],
+                viewing_keys: vec![],
+                freezing_keys: vec![],
                 assets: vec![AssetInfo::from(AssetDefinition::native())]
             }
         )
@@ -339,6 +465,53 @@ mod tests {
         // The result is not very interesting before we add any keys, but that's for another
         // endpoint.
         assert_eq!(addresses, vec![]);
+    }
+
+    // Issue: https://github.com/EspressoSystems/cape/issues/600.
+    #[async_std::test]
+    #[traced_test]
+    #[ignore]
+    async fn test_getrecords() {
+        let server = TestServer::new().await;
+
+        // Should fail if a wallet is not already open.
+        server
+            .requires_wallet::<Vec<UserAddress>>("getrecords")
+            .await;
+
+        // Now open a wallet populate it and call getrecords.
+        server
+            .get::<()>(&format!(
+                "newwallet/{}/my-password/path/{}",
+                server.get::<String>("getmnemonic").await.unwrap(),
+                server.path()
+            ))
+            .await
+            .unwrap();
+        server.get::<()>("populatefortest").await.unwrap();
+
+        let records = server.get::<Vec<RecordInfo>>("getrecords").await.unwrap();
+        let info = server.get::<WalletSummary>("getinfo").await.unwrap();
+
+        // get the wrapped asset
+        let asset = if info.assets[0].definition.code == AssetCode::native() {
+            info.assets[1].definition.code
+        } else {
+            info.assets[0].definition.code
+        };
+        // populate for test should create 3 records
+        assert_eq!(records.len(), 3);
+
+        let ro1 = &records[0].ro;
+        let ro2 = &records[1].ro;
+        let ro3 = &records[2].ro;
+
+        assert_eq!(ro1.amount, DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR);
+        assert_eq!(ro1.asset_def.code, AssetCode::native());
+        assert_eq!(ro2.amount, DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR);
+        assert_eq!(ro2.asset_def.code, AssetCode::native());
+        assert_eq!(ro3.amount, DEFAULT_WRAPPED_AMT);
+        assert_eq!(ro3.asset_def.code, asset);
     }
 
     #[async_std::test]
@@ -448,9 +621,9 @@ mod tests {
         let server = TestServer::new().await;
 
         // Should fail if a wallet is not already open.
-        server.requires_wallet::<PubKey>("newkey/send").await;
-        server.requires_wallet::<PubKey>("newkey/trace").await;
-        server.requires_wallet::<PubKey>("newkey/freeze").await;
+        server.requires_wallet::<PubKey>("newkey/sending").await;
+        server.requires_wallet::<PubKey>("newkey/tracing").await;
+        server.requires_wallet::<PubKey>("newkey/freezing").await;
 
         // Now open a wallet.
         server
@@ -463,32 +636,32 @@ mod tests {
             .unwrap();
 
         // newkey should return a public key with the correct type and add the key to the wallet.
-        let spend_key = server.get::<PubKey>("newkey/send").await.unwrap();
-        let audit_key = server.get::<PubKey>("newkey/trace").await.unwrap();
-        let freeze_key = server.get::<PubKey>("newkey/freeze").await.unwrap();
+        let sending_key = server.get::<PubKey>("newkey/sending").await.unwrap();
+        let viewing_key = server.get::<PubKey>("newkey/viewing").await.unwrap();
+        let freezing_key = server.get::<PubKey>("newkey/freezing").await.unwrap();
         let info = server.get::<WalletSummary>("getinfo").await.unwrap();
-        match spend_key {
-            PubKey::Spend(key) => {
-                assert_eq!(info.spend_keys, vec![key]);
+        match sending_key {
+            PubKey::Sending(key) => {
+                assert_eq!(info.sending_keys, vec![key]);
             }
             _ => {
-                panic!("Expected PubKey::Spend, found {:?}", spend_key);
+                panic!("Expected PubKey::Sending, found {:?}", sending_key);
             }
         }
-        match audit_key {
-            PubKey::Audit(key) => {
-                assert_eq!(info.audit_keys, vec![key]);
+        match viewing_key {
+            PubKey::Viewing(key) => {
+                assert_eq!(info.viewing_keys, vec![key]);
             }
             _ => {
-                panic!("Expected PubKey::Audit, found {:?}", audit_key);
+                panic!("Expected PubKey::Viewing, found {:?}", viewing_key);
             }
         }
-        match freeze_key {
-            PubKey::Freeze(key) => {
-                assert_eq!(info.freeze_keys, vec![key]);
+        match freezing_key {
+            PubKey::Freezing(key) => {
+                assert_eq!(info.freezing_keys, vec![key]);
             }
             _ => {
-                panic!("Expected PubKey::Freeze, found {:?}", freeze_key);
+                panic!("Expected PubKey::Freezing, found {:?}", freezing_key);
             }
         }
 
@@ -507,22 +680,22 @@ mod tests {
         // Set parameters for newasset.
         let erc20_code = Erc20Code(EthereumAddr([1u8; 20]));
         let sponsor_addr = EthereumAddr([2u8; 20]);
-        let reveal_threshold = 10;
-        let trace_amount = true;
-        let trace_address = false;
-        let description = TaggedBase64::new("DESC", &[3u8; 32]).unwrap();
+        let viewing_threshold = 10;
+        let view_amount = true;
+        let view_address = false;
+        let description = base64::encode_config(&[3u8; 32], base64::URL_SAFE_NO_PAD);
 
         // Should fail if a wallet is not already open.
         server
             .requires_wallet::<AssetDefinition>(&format!(
-                "newasset/erc20/{}/issuer/{}/traceamount/{}/traceaddress/{}/revealthreshold/{}",
-                erc20_code, sponsor_addr, trace_amount, trace_address, reveal_threshold
+                "newasset/erc20/{}/sponsor/{}/view_amount/{}/view_address/{}/viewing_threshold/{}",
+                erc20_code, sponsor_addr, view_amount, view_address, viewing_threshold
             ))
             .await;
         server
             .requires_wallet::<AssetDefinition>(&format!(
-                "newasset/description/{}/traceamount/{}/traceaddress/{}/revealthreshold/{}",
-                description, trace_amount, trace_address, reveal_threshold
+                "newasset/description/{}/view_amount/{}/view_address/{}/viewing_threshold/{}",
+                description, view_amount, view_address, viewing_threshold
             ))
             .await;
 
@@ -537,68 +710,68 @@ mod tests {
             .unwrap();
 
         // Create keys.
-        server.get::<PubKey>("newkey/trace").await.unwrap();
-        server.get::<PubKey>("newkey/freeze").await.unwrap();
+        server.get::<PubKey>("newkey/viewing").await.unwrap();
+        server.get::<PubKey>("newkey/freezing").await.unwrap();
         let info = server.get::<WalletSummary>("getinfo").await.unwrap();
-        let audit_key = &info.audit_keys[0];
-        let freeze_key = &info.freeze_keys[0];
+        let viewing_key = &info.viewing_keys[0];
+        let freezing_key = &info.freezing_keys[0];
 
         // newasset should return a sponsored asset with the correct policy if an ERC20 code is given.
         let sponsored_asset = server
             .get::<AssetDefinition>(&format!(
-                "newasset/erc20/{}/issuer/{}/freezekey/{}/tracekey/{}/traceamount/{}/traceaddress/{}/revealthreshold/{}",
-                erc20_code, sponsor_addr, freeze_key, audit_key, trace_amount, trace_address, reveal_threshold
+                "newasset/erc20/{}/sponsor/{}/freezing_key/{}/viewing_key/{}/view_amount/{}/view_address/{}/viewing_threshold/{}",
+                erc20_code, sponsor_addr, freezing_key, viewing_key, view_amount, view_address, viewing_threshold
             ))
             .await
             .unwrap();
-        assert_eq!(sponsored_asset.policy_ref().auditor_pub_key(), audit_key);
-        assert_eq!(sponsored_asset.policy_ref().freezer_pub_key(), freeze_key);
+        assert_eq!(sponsored_asset.policy_ref().auditor_pub_key(), viewing_key);
+        assert_eq!(sponsored_asset.policy_ref().freezer_pub_key(), freezing_key);
         assert_eq!(
             sponsored_asset.policy_ref().reveal_threshold(),
-            reveal_threshold
+            viewing_threshold
         );
 
         // newasset should return a defined asset with the correct policy if no ERC20 code is given.
         let defined_asset = server
             .get::<AssetDefinition>(&format!(
-                "newasset/description/{}/freezekey/{}/tracekey/{}/traceamount/{}/traceaddress/{}/revealthreshold/{}",
-                description, freeze_key, audit_key, trace_amount, trace_address, reveal_threshold
+                "newasset/description/{}/freezing_key/{}/viewing_key/{}/view_amount/{}/view_address/{}/viewing_threshold/{}",
+                description, freezing_key, viewing_key, view_amount, view_address, viewing_threshold
             ))
             .await
             .unwrap();
-        assert_eq!(defined_asset.policy_ref().auditor_pub_key(), audit_key);
-        assert_eq!(defined_asset.policy_ref().freezer_pub_key(), freeze_key);
+        assert_eq!(defined_asset.policy_ref().auditor_pub_key(), viewing_key);
+        assert_eq!(defined_asset.policy_ref().freezer_pub_key(), freezing_key);
         assert_eq!(
             defined_asset.policy_ref().reveal_threshold(),
-            reveal_threshold
+            viewing_threshold
         );
         let defined_asset = server
             .get::<AssetDefinition>(&format!(
-            "newasset/freezekey/{}/tracekey/{}/traceamount/{}/traceaddress/{}/revealthreshold/{}",
-            freeze_key, audit_key, trace_amount, trace_address, reveal_threshold
+            "newasset/freezing_key/{}/viewing_key/{}/view_amount/{}/view_address/{}/viewing_threshold/{}",
+            freezing_key, viewing_key, view_amount, view_address, viewing_threshold
         ))
             .await
             .unwrap();
-        assert_eq!(defined_asset.policy_ref().auditor_pub_key(), audit_key);
-        assert_eq!(defined_asset.policy_ref().freezer_pub_key(), freeze_key);
+        assert_eq!(defined_asset.policy_ref().auditor_pub_key(), viewing_key);
+        assert_eq!(defined_asset.policy_ref().freezer_pub_key(), freezing_key);
         assert_eq!(
             defined_asset.policy_ref().reveal_threshold(),
-            reveal_threshold
+            viewing_threshold
         );
 
         // newasset should return an asset with the default freezer public key if it's not given.
         let sponsored_asset = server
                 .get::<AssetDefinition>(&format!(
-                    "newasset/erc20/{}/issuer/{}/tracekey/{}/traceamount/{}/traceaddress/{}/revealthreshold/{}",
-                    erc20_code, sponsor_addr, audit_key, trace_amount, trace_address, reveal_threshold
+                    "newasset/erc20/{}/sponsor/{}/viewing_key/{}/view_amount/{}/view_address/{}/viewing_threshold/{}",
+                    erc20_code, sponsor_addr, viewing_key, view_amount, view_address, viewing_threshold
                 ))
                 .await
                 .unwrap();
         assert!(!sponsored_asset.policy_ref().is_freezer_pub_key_set());
         let sponsored_asset = server
             .get::<AssetDefinition>(&format!(
-                "newasset/description/{}/tracekey/{}/traceamount/{}/traceaddress/{}/revealthreshold/{}",
-                description, audit_key, trace_amount, trace_address, reveal_threshold
+                "newasset/description/{}/viewing_key/{}/view_amount/{}/view_address/{}/viewing_threshold/{}",
+                description, viewing_key, view_amount, view_address, viewing_threshold
             ))
             .await
             .unwrap();
@@ -608,8 +781,8 @@ mod tests {
         // auditor public key isn't given.
         let sponsored_asset = server
             .get::<AssetDefinition>(&format!(
-                "newasset/erc20/{}/issuer/{}/freezekey/{}",
-                erc20_code, sponsor_addr, freeze_key
+                "newasset/erc20/{}/sponsor/{}/freezing_key/{}",
+                erc20_code, sponsor_addr, freezing_key
             ))
             .await
             .unwrap();
@@ -625,16 +798,16 @@ mod tests {
         // newasset should return an asset with no reveal threshold if it's not given.
         let sponsored_asset = server
                 .get::<AssetDefinition>(&format!(
-                    "newasset/erc20/{}/issuer/{}/freezekey/{}/tracekey/{}/traceamount/{}/traceaddress/{}",
-                    erc20_code, sponsor_addr, freeze_key, audit_key, trace_amount, trace_address
+                    "newasset/erc20/{}/sponsor/{}/freezing_key/{}/viewing_key/{}/view_amount/{}/view_address/{}",
+                    erc20_code, sponsor_addr, freezing_key, viewing_key, view_amount, view_address
                 ))
                 .await
                 .unwrap();
         assert_eq!(sponsored_asset.policy_ref().reveal_threshold(), 0);
         let defined_asset = server
             .get::<AssetDefinition>(&format!(
-                "newasset/description/{}/freezekey/{}/tracekey/{}/traceamount/{}/traceaddress/{}",
-                description, freeze_key, audit_key, trace_amount, trace_address
+                "newasset/description/{}/freezing_key/{}/viewing_key/{}/view_amount/{}/view_address/{}",
+                description, freezing_key, viewing_key, view_amount, view_address
             ))
             .await
             .unwrap();
@@ -663,17 +836,17 @@ mod tests {
         // Sponsor an asset.
         let sponsored_asset = server
             .get::<AssetDefinition>(&format!(
-                "newasset/erc20/{}/issuer/{}",
+                "newasset/erc20/{}/sponsor/{}",
                 erc20_code, sponsor_addr
             ))
             .await
             .unwrap();
 
         // Create an address to receive the wrapped asset.
-        server.get::<PubKey>("newkey/send").await.unwrap();
+        server.get::<PubKey>("newkey/sending").await.unwrap();
         let info = server.get::<WalletSummary>("getinfo").await.unwrap();
-        let spend_key = &info.spend_keys[0];
-        let destination: UserAddress = spend_key.address().into();
+        let sending_key = &info.sending_keys[0];
+        let destination: UserAddress = sending_key.address().into();
 
         // wrap should fail if any of the destination, Ethereum address, and asset is invalid.
         let invalid_destination = UserAddress::from(UserKeyPair::generate(&mut rng).address());
@@ -711,8 +884,10 @@ mod tests {
             .unwrap();
     }
 
+    // Issue: https://github.com/EspressoSystems/cape/issues/600.
     #[async_std::test]
     #[traced_test]
+    #[ignore]
     async fn test_mint() {
         // Set parameters.
         let description = TaggedBase64::new("DESC", &[3u8; 32]).unwrap();
@@ -750,7 +925,7 @@ mod tests {
             .get::<WalletSummary>("getinfo")
             .await
             .unwrap()
-            .spend_keys[0]
+            .sending_keys[0]
             .address()
             .into();
 
@@ -812,8 +987,10 @@ mod tests {
         .await;
     }
 
+    // Issue: https://github.com/EspressoSystems/cape/issues/600.
     #[async_std::test]
     #[traced_test]
+    #[ignore]
     async fn test_unwrap() {
         // Set parameters.
         let eth_addr = DEFAULT_ETH_ADDR;
@@ -836,10 +1013,10 @@ mod tests {
 
         // Get the wrapped asset.
         let info = server.get::<WalletSummary>("getinfo").await.unwrap();
-        let asset = if info.assets[0].asset.code == AssetCode::native() {
-            info.assets[1].asset.code
+        let asset = if info.assets[0].definition.code == AssetCode::native() {
+            info.assets[1].definition.code
         } else {
-            info.assets[0].asset.code
+            info.assets[0].definition.code
         };
 
         // Get the source address with the wrapped asset.
@@ -916,8 +1093,10 @@ mod tests {
         .await;
     }
 
+    // Issue: https://github.com/EspressoSystems/cape/issues/600.
     #[async_std::test]
     #[traced_test]
+    #[ignore]
     async fn test_dummy_populate() {
         let server = TestServer::new().await;
         server
@@ -935,9 +1114,9 @@ mod tests {
 
         let info = server.get::<WalletSummary>("getinfo").await.unwrap();
         assert_eq!(info.addresses.len(), 3);
-        assert_eq!(info.spend_keys.len(), 3);
-        assert_eq!(info.audit_keys.len(), 2);
-        assert_eq!(info.freeze_keys.len(), 2);
+        assert_eq!(info.sending_keys.len(), 3);
+        assert_eq!(info.viewing_keys.len(), 2);
+        assert_eq!(info.freezing_keys.len(), 2);
         assert_eq!(info.assets.len(), 2); // native asset + wrapped asset
 
         // One of the addresses should have a non-zero balance of the native asset type.
@@ -962,10 +1141,10 @@ mod tests {
         // One of the wallet's two assets is the native asset, and the other is the wrapped asset
         // for which we have a nonzero balance, but the order depends on the hash of the wrapped
         // asset code, which is non-deterministic, so we check both.
-        let wrapped_asset = if info.assets[0].asset.code == AssetCode::native() {
-            info.assets[1].asset.code
+        let wrapped_asset = if info.assets[0].definition.code == AssetCode::native() {
+            info.assets[1].definition.code
         } else {
-            info.assets[0].asset.code
+            info.assets[0].definition.code
         };
         assert_ne!(wrapped_asset, AssetCode::native());
         assert_eq!(
@@ -980,8 +1159,10 @@ mod tests {
         );
     }
 
+    // Issue: https://github.com/EspressoSystems/cape/issues/600.
     #[async_std::test]
     #[traced_test]
+    #[ignore]
     async fn test_send() {
         let server = TestServer::new().await;
         let mut rng = ChaChaRng::from_seed([1; 32]);
@@ -1073,5 +1254,185 @@ mod tests {
                 == BalanceInfo::Balance(DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR - 101)
         })
         .await;
+    }
+
+    // Issue: https://github.com/EspressoSystems/cape/issues/600.
+    #[async_std::test]
+    #[traced_test]
+    #[ignore]
+    async fn test_getaccount() {
+        let server = TestServer::new().await;
+        let mut rng = ChaChaRng::from_seed([1; 32]);
+
+        // Should fail if a wallet is not already open.
+        server
+            .requires_wallet::<Account>(&format!(
+                "getaccount/{}",
+                UserKeyPair::generate(&mut rng).address(),
+            ))
+            .await;
+        server
+            .requires_wallet::<Account>(&format!(
+                "getaccount/{}",
+                UserKeyPair::generate(&mut rng).pub_key(),
+            ))
+            .await;
+        server
+            .requires_wallet::<Account>(&format!(
+                "getaccount/{}",
+                AuditorKeyPair::generate(&mut rng).pub_key(),
+            ))
+            .await;
+        server
+            .requires_wallet::<Account>(&format!(
+                "getaccount/{}",
+                FreezerKeyPair::generate(&mut rng).pub_key(),
+            ))
+            .await;
+
+        // Now open a wallet.
+        server
+            .get::<()>(&format!(
+                "newwallet/{}/my-password/path/{}",
+                server.get::<String>("getmnemonic").await.unwrap(),
+                server.path()
+            ))
+            .await
+            .unwrap();
+        // Populate the wallet with some dummy data so we have a balance of an asset to send.
+        server.get::<()>("populatefortest").await.unwrap();
+
+        // Get the wrapped asset type.
+        let info = server.get::<WalletSummary>("getinfo").await.unwrap();
+        let asset = if info.assets[0].definition.code == AssetCode::native() {
+            info.assets[1].clone()
+        } else {
+            info.assets[0].clone()
+        };
+
+        // The wrapper addressœd it so we can check the account interface.
+        let mut addresses = info.addresses.into_iter();
+        let address = loop {
+            let address = addresses.next().unwrap();
+            println!(
+                "{:?}",
+                server
+                    .get::<BalanceInfo>(&format!(
+                        "getbalance/address/{}/asset/{}",
+                        address,
+                        AssetCode::native()
+                    ))
+                    .await
+                    .unwrap()
+            );
+            if let BalanceInfo::Balance(DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR) = server
+                .get::<BalanceInfo>(&format!(
+                    "getbalance/address/{}/asset/{}",
+                    address,
+                    AssetCode::native()
+                ))
+                .await
+                .unwrap()
+            {
+                break address;
+            }
+        };
+
+        let mut account = server
+            .get::<Account>(&format!("getaccount/{}", address))
+            .await
+            .unwrap();
+        assert_eq!(account.records.len(), 2);
+        assert_eq!(account.assets.len(), 2);
+
+        // We don't know what order the records will be reported in, but we know that the native
+        // transfer gets committed before the wrap, so we can figure out the UIDs and sort. The
+        // faucet record should have UID 0, and the change output from the native transfer should be
+        // 1. So our native record should have UID 2 and our wrapped record should be 3.
+        let expected_records = vec![
+            Record {
+                address: address.clone(),
+                asset: AssetCode::native(),
+                amount: DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR,
+                uid: 2,
+            },
+            Record {
+                address,
+                asset: asset.definition.code,
+                amount: DEFAULT_WRAPPED_AMT,
+                uid: 3,
+            },
+        ];
+        account.records.sort_by_key(|rec| rec.uid);
+        assert_eq!(account.records, expected_records);
+
+        assert_eq!(account.assets[&AssetCode::native()], AssetInfo::native());
+        assert_eq!(account.assets[&asset.definition.code], asset);
+    }
+
+    #[async_std::test]
+    #[traced_test]
+    async fn test_recoverkey() {
+        let server = TestServer::new().await;
+
+        // Should fail if a wallet is not already open.
+        server
+            .requires_wallet::<PubKey>(&format!("recoverkey/sending"))
+            .await;
+        server
+            .requires_wallet::<PubKey>(&format!("recoverkey/sending/0"))
+            .await;
+        server
+            .requires_wallet::<PubKey>(&format!("recoverkey/viewing"))
+            .await;
+        server
+            .requires_wallet::<PubKey>(&format!("recoverkey/freezing"))
+            .await;
+
+        // Create a wallet and generate some keys, 2 of each type.
+        let mnemonic = server.get::<String>("getmnemonic").await.unwrap();
+        server
+            .get::<()>(&format!(
+                "newwallet/{}/my-password/path/{}",
+                mnemonic,
+                server.path()
+            ))
+            .await
+            .unwrap();
+        let mut keys = vec![];
+        for ty in &["sending", "viewing", "freezing"] {
+            for _ in 0..2 {
+                keys.push(
+                    server
+                        .get::<PubKey>(&format!("newkey/{}", ty))
+                        .await
+                        .unwrap(),
+                );
+            }
+        }
+
+        // Close the wallet, create a new wallet with the same mnemonic, and recover the keys.
+        let new_dir = TempDir::new("test_recover_key_path2").unwrap();
+        server.get::<()>("closewallet").await.unwrap();
+        server
+            .get::<()>(&format!(
+                "newwallet/{}/my-password/path/{}",
+                mnemonic,
+                fmt_path(new_dir.path())
+            ))
+            .await
+            .unwrap();
+        let mut recovered_keys = vec![];
+        for ty in &["sending", "viewing", "freezing"] {
+            for _ in 0..2 {
+                recovered_keys.push(
+                    server
+                        .get::<PubKey>(&format!("recoverkey/{}", ty))
+                        .await
+                        .unwrap(),
+                );
+            }
+        }
+        assert_eq!(recovered_keys, keys);
     }
 }

@@ -1,3 +1,10 @@
+// Copyright (c) 2022 Espresso Systems (espressosys.com)
+// This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
+
+// This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+// This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+// You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 #![cfg_attr(debug_assertions, allow(dead_code))]
 use crate::{
     deploy::{deploy_cape_test_with_deployer, EthMiddleware},
@@ -33,6 +40,23 @@ impl EthConnection {
         let client = get_funded_client().await.unwrap();
         let contract = deploy_cape_test_with_deployer(client.clone()).await;
         Self::connect(provider, client, contract.address())
+    }
+
+    /// Connect to an existing contract to query its state
+    /// * `contract_address` example: "0x60417B5Ad8629778A46A2cAaA924D7498618622B"
+    /// * `provider_url` example: "http://localhost:8545"
+    pub fn from_config_for_query(contract_address: &str, provider_url: &str) -> Self {
+        let provider =
+            Provider::<Http>::try_from(provider_url).expect("could not instantiate HTTP Provider");
+
+        let dummy_wallet = LocalWallet::new(&mut rand::thread_rng());
+        Self::connect(
+            provider.clone(),
+            Arc::new(SignerMiddleware::new(provider, dummy_wallet)),
+            contract_address
+                .parse::<Address>()
+                .expect("could no parse contract_address"),
+        )
     }
 
     /// Connect to an existing contract at `contract_address`
@@ -116,7 +140,7 @@ async fn load_contract(path: &Path) -> Result<(Abi, BytecodeObject)> {
 
 async fn link_unlinked_libraries<M: 'static + Middleware>(
     bytecode: &mut BytecodeObject,
-    client: Arc<M>,
+    client: &Arc<M>,
 ) -> Result<()> {
     if bytecode.contains_fully_qualified_placeholder("contracts/libraries/RescueLib.sol:RescueLib")
     {
@@ -178,14 +202,9 @@ pub async fn deploy<M: 'static + Middleware, T: Tokenize>(
 ) -> Result<Contract<M>> {
     let (abi, mut bytecode) = load_contract(path).await?;
 
-    // TODO remove client clones, pass reference instead?
-    link_unlinked_libraries(&mut bytecode, client.clone()).await?;
+    link_unlinked_libraries(&mut bytecode, &client).await?;
     let factory = ContractFactory::new(abi.clone(), bytecode.into_bytes().unwrap(), client.clone());
 
-    let contract = factory
-        .deploy(constructor_args)?
-        .legacy() // XXX This is required!
-        .send()
-        .await?;
+    let contract = factory.deploy(constructor_args)?.legacy().send().await?;
     Ok(contract)
 }

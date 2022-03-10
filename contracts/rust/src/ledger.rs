@@ -1,18 +1,27 @@
+// Copyright (c) 2022 Espresso Systems (espressosys.com)
+// This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
+
+// This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+// This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+// You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 use crate::model::*;
 use arbitrary::{Arbitrary, Unstructured};
 use arbitrary_wrappers::*;
+use ark_serialize::*;
 use commit::{Commitment, Committable, RawCommitmentBuilder};
+use espresso_macros::ser_test;
 use jf_cap::{
     keys::{AuditorKeyPair, AuditorPubKey},
     structs::{AssetCode, AssetDefinition, Nullifier, RecordCommitment, RecordOpening},
     TransactionNote,
 };
+use jf_utils::tagged_blob;
 use reef::{cap, traits::*, AuditError, AuditMemoOpening};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::iter::repeat;
-use zerok_macros::ser_test;
 
 // A representation of an unauthenticated sparse set of nullifiers (it is "authenticated" by
 // querying the ultimate source of truth, the CAPE smart contract). The HashMap maps any nullifier
@@ -88,7 +97,7 @@ impl TransactionKind for CapeTransactionKind {
 // CapeTransition models all of the objects which can transition a CAPE ledger. This includes
 // transactions, submitted from users to the validator via the relayer, as well as ERC20 wrap
 // operations, which are submitted directly to the contract but whose outputs end up being included
-// in the next committed block.
+// in the next committed block as well a call to the faucet function of the CAPE contract.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum CapeTransition {
     Transaction(CapeModelTxn),
@@ -170,6 +179,19 @@ impl Transaction for CapeTransition {
 
     fn set_proofs(&mut self, _proofs: Vec<()>) {}
 }
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct CommittedCapeTransition {
+    pub block_id: u64,
+    pub txn_id: u64,
+    pub output_start: u64,
+    pub output_size: u64,
+    pub transition: CapeTransition,
+}
+
+#[tagged_blob("CMTMNT_CAPE_TRNSTN")]
+#[derive(CanonicalSerialize, CanonicalDeserialize, Debug, Clone)]
+pub struct CommitmentToCapeTransition(pub Commitment<CapeTransition>);
 
 impl ValidationError for CapeValidationError {
     fn new(msg: impl Display) -> Self {

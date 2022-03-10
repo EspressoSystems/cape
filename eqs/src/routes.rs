@@ -1,8 +1,15 @@
-use crate::api_server::WebState;
-use crate::route_parsing::*;
-use crate::QueryResultState;
+// Copyright (c) 2022 Espresso Systems (espressosys.com)
+// This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
 
-use cap_rust_sandbox::ledger::CapeLedger;
+// This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+// This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+// You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+use crate::api_server::WebState;
+use crate::query_result_state::QueryResultState;
+use crate::route_parsing::*;
+
+use cap_rust_sandbox::ledger::{CapeLedger, CommitmentToCapeTransition, CommittedCapeTransition};
 use cap_rust_sandbox::model::CapeLedgerState;
 use jf_cap::structs::Nullifier;
 use net::server::response;
@@ -18,7 +25,11 @@ use strum_macros::{AsRefStr, EnumIter, EnumString};
 #[derive(AsRefStr, Copy, Clone, Debug, EnumIter, EnumString)]
 pub enum ApiRouteKey {
     get_cap_state,
+    get_all_nullifiers,
+    check_nullifier,
     get_events_since,
+    get_transaction,
+    get_transaction_by_hash,
 }
 
 /// Verify that every variant of enum ApiRouteKey is defined in api.toml
@@ -78,16 +89,29 @@ pub fn dummy_url_eval(
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CapState {
     pub ledger: CapeLedgerState,
-    pub nullifiers: HashSet<Nullifier>,
     pub num_events: u64,
 }
 
 pub async fn get_cap_state(query_result_state: &QueryResultState) -> Result<CapState, tide::Error> {
     Ok(CapState {
-        ledger: query_result_state.contract_state.ledger.clone(),
-        nullifiers: query_result_state.contract_state.nullifiers.clone(),
+        ledger: query_result_state.ledger_state.clone(),
         num_events: query_result_state.events.len() as u64,
     })
+}
+
+pub async fn get_all_nullifiers(
+    query_result_state: &QueryResultState,
+) -> Result<HashSet<Nullifier>, tide::Error> {
+    Ok(query_result_state.nullifiers.clone())
+}
+
+pub async fn check_nullifier(
+    bindings: &HashMap<String, RouteBinding>,
+    query_result_state: &QueryResultState,
+) -> Result<bool, tide::Error> {
+    Ok(query_result_state
+        .nullifiers
+        .contains(&bindings[":nullifier"].value.to::<Nullifier>()?))
 }
 
 pub async fn get_events_since(
@@ -111,6 +135,42 @@ pub async fn get_events_since(
     Ok(query_result_state.events[first..last].to_vec())
 }
 
+pub async fn get_transaction(
+    bindings: &HashMap<String, RouteBinding>,
+    query_result_state: &QueryResultState,
+) -> Result<Option<CommittedCapeTransition>, tide::Error> {
+    Ok(query_result_state
+        .transaction_by_id
+        .get(&(
+            bindings[":block_id"].value.as_u64()?,
+            bindings[":txn_id"].value.as_u64()?,
+        ))
+        .cloned())
+}
+
+pub async fn get_transaction_by_hash(
+    bindings: &HashMap<String, RouteBinding>,
+    query_result_state: &QueryResultState,
+) -> Result<Option<CommittedCapeTransition>, tide::Error> {
+    if let Some(txn_id) = query_result_state.transaction_id_by_hash.get(
+        &bindings[":hash"]
+            .value
+            .to::<CommitmentToCapeTransition>()?
+            .0,
+    ) {
+        if let Some(txn) = query_result_state.transaction_by_id.get(txn_id).cloned() {
+            Ok(Some(txn))
+        } else {
+            Err(tide::Error::from_str(
+                tide::StatusCode::InternalServerError,
+                "Commitment indexed, but transaction not found",
+            ))
+        }
+    } else {
+        Ok(None)
+    }
+}
+
 pub async fn dispatch_url(
     req: tide::Request<WebState>,
     route_pattern: &str,
@@ -122,8 +182,18 @@ pub async fn dispatch_url(
     let query_state = &*query_state_guard;
     match key {
         ApiRouteKey::get_cap_state => response(&req, get_cap_state(query_state).await?),
+        ApiRouteKey::get_all_nullifiers => response(&req, get_all_nullifiers(query_state).await?),
+        ApiRouteKey::check_nullifier => {
+            response(&req, check_nullifier(bindings, query_state).await?)
+        }
         ApiRouteKey::get_events_since => {
             response(&req, get_events_since(bindings, query_state).await?)
+        }
+        ApiRouteKey::get_transaction => {
+            response(&req, get_transaction(bindings, query_state).await?)
+        }
+        ApiRouteKey::get_transaction_by_hash => {
+            response(&req, get_transaction_by_hash(bindings, query_state).await?)
         }
     }
 }

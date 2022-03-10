@@ -1,13 +1,34 @@
+// Copyright (c) 2022 Espresso Systems (espressosys.com)
+// This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
+
+// This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+// This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+// You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 // A wallet that generates random transactions, for testing purposes.
+// This test is for testing a bunch of wallets in the same process doing random transactions.
+// It allows us to mock parts of the backend like the EQS, until it is ready for use.
+//
+// This test is still a work in progrogress.  See: https://github.com/EspressoSystems/cape/issues/649
+// for everything left before it works properly.
 #![deny(warnings)]
 
 use async_std::sync::{Arc, Mutex};
 use async_std::task::sleep;
-use cape_wallet::backend::create_test_network;
+use cap_rust_sandbox::deploy::deploy_erc20_token;
+use cap_rust_sandbox::ethereum::get_provider;
 use cape_wallet::backend::CapeBackend;
 use cape_wallet::mocks::*;
+use cape_wallet::testing::{
+    burn_token, create_test_network, freeze_token, sponsor_simple_token, transfer_token,
+    unfreeze_token, wrap_simple_token, OperationType,
+};
 use cape_wallet::CapeWallet;
+use cape_wallet::CapeWalletExt;
 use ethers::prelude::Address;
+use ethers::providers::Middleware;
+use ethers::types::TransactionRequest;
+use ethers::types::U256;
 use jf_cap::keys::UserAddress;
 use jf_cap::keys::UserPubKey;
 use jf_cap::proof::UniversalParam;
@@ -28,12 +49,6 @@ use tracing::{event, Level};
 
 #[derive(StructOpt)]
 struct Args {
-    /// Path to a private key file to use for the wallet.
-    ///
-    /// If not given, new keys are generated randomly.
-    // #[structopt(short, long)]
-    // key_path: Option<PathBuf>,
-
     /// Seed for random number generation.
     #[structopt(short, long)]
     seed: Option<u64>,
@@ -41,11 +56,8 @@ struct Args {
     /// Path to a saved wallet, or a new directory where this wallet will be saved.
     storage: PathBuf,
 
-    /// Spin up this many wallets to talk to eachother
+    /// Spin up this many wallets to talk to each other
     num_wallets: u64,
-    // TODO: How many transactions to do in Parallel
-    // #[structopt(short, long)]
-    // batch_size: Option<u64>,
 }
 
 struct NetworkInfo<'a> {
@@ -67,7 +79,7 @@ async fn create_backend_and_sender_wallet<'a>(
 ) -> (NetworkInfo<'a>, CapeWallet<'a, CapeBackend<'a, ()>>) {
     let mut loader = MockCapeWalletLoader {
         path: storage.to_path_buf(),
-        key: KeyTree::random(rng).unwrap().0,
+        key: KeyTree::random(rng).0,
     };
 
     let nework_tuple = create_test_network(rng, universal_param).await;
@@ -111,7 +123,11 @@ async fn create_backend_and_sender_wallet<'a>(
     );
 
     // Wait for initial balance.
-    while wallet.balance(&address, &AssetCode::native()).await == 0 {
+    while wallet
+        .balance_breakdown(&address, &AssetCode::native())
+        .await
+        == 0
+    {
         event!(Level::INFO, "waiting for initial balance");
         retry_delay().await;
     }
@@ -126,7 +142,7 @@ async fn create_wallet<'a>(
 ) -> (UserPubKey, CapeWallet<'a, CapeBackend<'a, ()>>) {
     let mut loader = MockCapeWalletLoader {
         path: storage.to_path_buf(),
-        key: KeyTree::random(rng).unwrap().0,
+        key: KeyTree::random(rng).0,
     };
 
     let backend = CapeBackend::new(
@@ -143,6 +159,24 @@ async fn create_wallet<'a>(
     let mut wallet = CapeWallet::new(backend).await.unwrap();
 
     (wallet.generate_user_key(None).await.unwrap(), wallet)
+}
+
+async fn fund_eth_wallet<'a>(wallet: &mut CapeWallet<'a, CapeBackend<'a, ()>>) {
+    // Fund the Ethereum wallets for contract calls.
+    let provider = get_provider().interval(Duration::from_millis(100u64));
+    let accounts = provider.get_accounts().await.unwrap();
+    assert!(!accounts.is_empty());
+
+    let tx = TransactionRequest::new()
+        .to(Address::from(wallet.eth_address().await.unwrap()))
+        .value(ethers::utils::parse_ether(U256::from(1)).unwrap())
+        .from(accounts[0]);
+    provider
+        .send_transaction(tx, None)
+        .await
+        .unwrap()
+        .await
+        .unwrap();
 }
 
 fn update_balances(
@@ -198,7 +232,7 @@ async fn main() {
     let address = wallet.pub_keys().await[0].address();
 
     // Mint some custom asset
-    if wallet.balance(&address, &my_asset.code).await == 0 {
+    if wallet.balance_breakdown(&address, &my_asset.code).await == 0 {
         event!(Level::INFO, "minting my asset type {}", my_asset.code);
         loop {
             let txn = wallet
@@ -218,92 +252,164 @@ async fn main() {
         }
         event!(Level::INFO, "minted custom asset");
     }
+
+    //sponsor some token
+    let erc20_contract = deploy_erc20_token().await;
+    sponsor_simple_token(&mut wallet, &erc20_contract)
+        .await
+        .unwrap();
+
     balances.insert(address.clone(), HashMap::new());
     balances.get_mut(&address).unwrap().insert(
         my_asset.code,
-        wallet.balance(&address, &my_asset.code).await,
+        wallet.balance_breakdown(&address, &my_asset.code).await,
     );
 
     let mut wallets = vec![];
     let mut public_keys = vec![];
 
     for _i in 0..(args.num_wallets) {
-        // TODO send native asset from sender to all wallets.
-        let (k, w) = create_wallet(&mut rng, &universal_param, &network, &args.storage).await;
+        // Send all wallets some native asset https://github.com/EspressoSystems/cape/issues/650.
+        let (k, mut w) = create_wallet(&mut rng, &universal_param, &network, &args.storage).await;
+
+        fund_eth_wallet(&mut w).await;
 
         public_keys.push(k);
         wallets.push(w);
     }
 
     loop {
-        let sender = wallets.choose_mut(&mut rng).unwrap();
-        let sender_address = wallet.pub_keys().await[0].address();
+        let operation: OperationType = rand::random();
 
-        let recipient_pk = public_keys.choose(&mut rng).unwrap();
-        // Can't choose weighted and check this because async lambda not allowed.
-        // There is probably a betterw way
-        if sender.pub_keys().await[0] == *recipient_pk {
-            continue;
-        }
+        match operation {
+            OperationType::Transfer => {
+                let sender = wallets.choose_mut(&mut rng).unwrap();
+                let sender_address = sender.pub_keys().await[0].address();
 
-        // Get a list of assets for which we have a non-zero balance.
-        let mut asset_balances = vec![];
-        for code in sender.assets().await.keys() {
-            if sender.balance(&sender_address, code).await > 0 {
-                asset_balances.push(*code);
-            }
-        }
-        // Randomly choose an asset type for the transfer.
-        let asset = asset_balances.choose(&mut rng).unwrap();
-        let amount = 1;
-        let fee = 1;
-
-        event!(
-            Level::INFO,
-            "transferring {} units of {} to user {}",
-            amount,
-            if *asset == AssetCode::native() {
-                String::from("the native asset")
-            } else if *asset == my_asset.code {
-                String::from("my asset")
-            } else {
-                asset.to_string()
-            },
-            recipient_pk,
-        );
-        let txn = match sender
-            .transfer(
-                &sender_address,
-                asset,
-                &[(recipient_pk.address(), amount)],
-                fee,
-            )
-            .await
-        {
-            Ok(txn) => txn,
-            Err(err) => {
-                event!(Level::ERROR, "Error generating transfer: {}", err);
-                continue;
-            }
-        };
-        match sender.await_transaction(&txn).await {
-            Ok(status) => {
-                if !status.succeeded() {
-                    // Transfers are allowed to fail. It can happen, for instance, if we get starved
-                    // out until our transfer becomes too old for the validators. Thus we make this
-                    // a warning, not an error.
-                    event!(Level::WARN, "transfer failed!");
+                let recipient_pk = public_keys.choose(&mut rng).unwrap();
+                // Can't choose weighted and check this because async lambda not allowed.
+                // There is probably a betterw way
+                if sender.pub_keys().await[0] == *recipient_pk {
+                    continue;
                 }
-                update_balances(
-                    &sender_address,
-                    &recipient_pk.address(),
+                // Get a list of assets for which we have a non-zero balance.
+                let mut asset_balances = vec![];
+                for asset in sender.assets().await {
+                    if sender
+                        .balance_breakdown(&sender_address, &asset.definition.code)
+                        .await
+                        > 0
+                    {
+                        asset_balances.push(asset.definition.code);
+                    }
+                }
+                // Randomly choose an asset type for the transfer.
+                let asset = asset_balances.choose(&mut rng).unwrap();
+                let amount = 1;
+                let fee = 1;
+
+                event!(
+                    Level::INFO,
+                    "transferring {} units of {} to user {}",
                     amount,
-                    asset,
-                    &mut balances,
-                )
+                    if *asset == AssetCode::native() {
+                        String::from("the native asset")
+                    } else if *asset == my_asset.code {
+                        String::from("my asset")
+                    } else {
+                        asset.to_string()
+                    },
+                    recipient_pk,
+                );
+                match transfer_token(sender, recipient_pk.address(), amount, *asset, fee).await {
+                    Ok(txn) => match sender.await_transaction(&txn).await {
+                        Ok(status) => {
+                            if !status.succeeded() {
+                                // Transfers are allowed to fail. It can happen, for instance, if we
+                                // get starved out until our transfer becomes too old for the
+                                // validators. Thus we make this a warning, not an error.
+                                event!(Level::WARN, "transfer failed!");
+                            }
+                            update_balances(
+                                &sender_address,
+                                &recipient_pk.address(),
+                                amount,
+                                asset,
+                                &mut balances,
+                            )
+                        }
+                        Err(err) => {
+                            event!(Level::ERROR, "error while waiting for transaction: {}", err);
+                        }
+                    },
+                    Err(err) => {
+                        event!(Level::ERROR, "error while building transaction: {}", err);
+                    }
+                }
             }
-            Err(err) => {
-                event!(Level::ERROR, "error while waiting for transaction: {}", err);
+            OperationType::Freeze => {
+                let owner = wallets.choose(&mut rng).unwrap();
+                let owner_address = owner.pub_keys().await[0].address();
+                // move this to helper
+                let mut asset_balances = vec![];
+                for asset in owner.assets().await {
+                    if owner
+                        .balance_breakdown(&owner_address, &asset.definition.code)
+                        .await
+                        > 0
+                    {
+                        asset_balances.push(asset.definition.code);
+                    }
+                }
+                let asset = asset_balances.choose(&mut rng).unwrap();
+
+                let freezer = wallets.choose_mut(&mut rng).unwrap();
+                freeze_token(freezer, asset, 1, owner_address)
+                    .await
+                    .unwrap();
+            }
+            OperationType::Unfreeze => {
+                let owner = wallets.choose(&mut rng).unwrap();
+                let owner_address = owner.pub_keys().await[0].address();
+                // move this to helper
+                let mut asset_balances = vec![];
+                for asset in owner.assets().await {
+                    if owner
+                        .balance_breakdown(&owner_address, &asset.definition.code)
+                        .await
+                        > 0
+                    {
+                        asset_balances.push(asset.definition.code);
+                    }
+                }
+                let asset = asset_balances.choose(&mut rng).unwrap();
+
+                let unfreezer = wallets.choose_mut(&mut rng).unwrap();
+                unfreeze_token(unfreezer, asset, 1, owner_address)
+                    .await
+                    .unwrap();
+            }
+            OperationType::Wrap => {
+                let wrapper = wallets.choose_mut(&mut rng).unwrap();
+                let wrapper_key = wrapper.pub_keys().await[0].clone();
+                let asset_def = wrapper
+                    .define_asset(&[], AssetPolicy::default())
+                    .await
+                    .expect("failed to define asset");
+                wrap_simple_token(
+                    wrapper,
+                    &wrapper_key.address(),
+                    asset_def,
+                    &erc20_contract,
+                    100,
+                )
+                .await
+                .unwrap();
+            }
+            OperationType::Burn => {
+                let burner = wallets.choose_mut(&mut rng).unwrap();
+                let asset = burner.approved_assets().await[0].0.clone();
+                burn_token(burner, asset.clone(), 1).await.unwrap();
             }
         }
     }

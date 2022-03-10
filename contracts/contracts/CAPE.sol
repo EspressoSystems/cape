@@ -1,9 +1,17 @@
-//SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+// Copyright (c) 2022 Espresso Systems (espressosys.com)
+// This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
+
+// This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+// This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+// You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 pragma solidity ^0.8.0;
 
-/// @title Configurable Anonymous Payments on Ethereum
+/// @title Configurable Anonymous Payments for Ethereum
 /// CAPE provides auditable anonymous payments on Ethereum.
-/// @author Translucence Research, Inc.
+/// @author Espresso Systems <hello@espressosys.com>
 
 import "hardhat/console.sol";
 
@@ -32,14 +40,15 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
     address public deployer;
     bool public faucetInitialized;
 
-    bytes public constant CAPE_BURN_MAGIC_BYTES = "TRICAPE burn";
+    bytes public constant CAPE_BURN_MAGIC_BYTES = "EsSCAPE burn";
     uint256 public constant CAPE_BURN_MAGIC_BYTES_SIZE = 12;
     // In order to avoid the contract running out of gas if the queue is too large
     // we set the maximum number of pending deposits record commitments to process
     // when a new block is submitted. This is a temporary solution.
-    // See https://github.com/SpectrumXYZ/cape/issues/400
+    // See https://github.com/EspressoSystems/cape/issues/400
     uint256 public constant MAX_NUM_PENDING_DEPOSIT = 10;
 
+    event FaucetInitialized(bytes roBytes);
     event BlockCommitted(uint64 indexed height, uint256[] depositCommitments);
     event Erc20TokensDeposited(bytes roBytes, address erc20TokenAddress, address from);
 
@@ -170,6 +179,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
         _updateRecordsMerkleTree(recordCommitments);
         _addRoot(_rootValue);
 
+        emit FaucetInitialized(abi.encode(ro));
         faucetInitialized = true;
     }
 
@@ -346,7 +356,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
     /// @dev send the ERC20 tokens equivalent to the asset records being burnt. Recall that the burned record opening is contained inside the note.
     /// @param note note of type *BURN*
     function _handleWithdrawal(BurnNote memory note) internal {
-        address ercTokenAddress = _lookup(note.recordOpening.assetDef);
+        address ercTokenAddress = lookup(note.recordOpening.assetDef);
 
         // Extract recipient address
         address recipientAddress = BytesLib.toAddress(

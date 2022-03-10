@@ -91,10 +91,8 @@ struct ServerState {
     store: FileStore,
 }
 
-pub fn address_book_temp_dir() -> PathBuf {
-    TempDir::new("cape-address-book")
-        .expect("Failed to create temporary directory")
-        .into_path()
+pub fn address_book_temp_dir() -> TempDir {
+    TempDir::new("cape-address-book").expect("Failed to create temporary directory")
 }
 
 pub fn address_book_port() -> String {

@@ -23,7 +23,8 @@ const NOT_FOUND_COUNT: u64 = 100;
 #[async_std::test]
 async fn round_trip() {
     // TODO !corbett find an unused port rather than assuming 50078 is free.
-    init_web_server(LevelFilter::Error, address_book_temp_dir())
+    let temp_dir = address_book_temp_dir();
+    init_web_server(LevelFilter::Error, temp_dir.path().to_path_buf())
         .await
         .expect("Failed to run server.");
     wait_for_server().await;

@@ -6,7 +6,7 @@
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 //! Utilities for writing wallet tests
-#![deny(warnings)]
+// #![deny(warnings)]
 
 use crate::backend::CapeBackend;
 use crate::mocks::*;
@@ -17,9 +17,13 @@ use address_book::init_web_server;
 use address_book::wait_for_server;
 use async_std::sync::{Arc, Mutex};
 use cap_rust_sandbox::deploy::EthMiddleware;
+use cap_rust_sandbox::ethereum::get_provider;
 use cap_rust_sandbox::ledger::CapeLedger;
 use cap_rust_sandbox::types::SimpleToken;
 use ethers::prelude::Address;
+use ethers::providers::Middleware;
+use ethers::types::TransactionRequest;
+use ethers::types::U256;
 use jf_cap::keys::UserAddress;
 use jf_cap::keys::UserKeyPair;
 use jf_cap::proof::UniversalParam;
@@ -39,6 +43,7 @@ use reef::Ledger;
 use relayer::testing::start_minimal_relayer_for_test;
 use seahorse::testing::await_transaction;
 use seahorse::txn_builder::{TransactionReceipt, TransactionStatus};
+use std::time::Duration;
 use surf::Url;
 use tide::log::LevelFilter;
 
@@ -129,6 +134,24 @@ pub async fn create_test_network<'a>(
     (sender_key, relayer_url, contract.address(), mock_eqs)
 }
 
+pub async fn fund_eth_wallet<'a>(wallet: &mut CapeWallet<'a, CapeBackend<'a, ()>>) {
+    // Fund the Ethereum wallets for contract calls.
+    let provider = get_provider().interval(Duration::from_millis(100u64));
+    let accounts = provider.get_accounts().await.unwrap();
+    assert!(!accounts.is_empty());
+
+    let tx = TransactionRequest::new()
+        .to(Address::from(wallet.eth_address().await.unwrap()))
+        .value(ethers::utils::parse_ether(U256::from(1)).unwrap())
+        .from(accounts[0]);
+    provider
+        .send_transaction(tx, None)
+        .await
+        .unwrap()
+        .await
+        .unwrap();
+}
+
 #[derive(Debug)]
 pub enum OperationType {
     Transfer,
@@ -159,8 +182,7 @@ pub async fn freeze_token<'a>(
     let freeze_address = freezer.pub_keys().await[0].address();
     let txn = freezer
         .freeze(&freeze_address, 1, asset, amount, owner_address)
-        .await
-        .unwrap();
+        .await?;
     freezer.await_transaction(&txn).await
 }
 

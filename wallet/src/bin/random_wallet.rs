@@ -11,9 +11,14 @@
 #![deny(warnings)]
 
 use async_std::task::sleep;
+use cap_rust_sandbox::deploy::deploy_erc20_token;
 use cape_wallet::backend::CapeBackend;
 use cape_wallet::mocks::*;
 use cape_wallet::testing::create_test_network;
+use cape_wallet::testing::OperationType;
+use cape_wallet::testing::{
+    burn_token, freeze_token, sponsor_simple_token, unfreeze_token, wrap_simple_token,
+};
 use cape_wallet::CapeWallet;
 use jf_cap::keys::UserKeyPair;
 use jf_cap::structs::AssetCode;
@@ -122,8 +127,6 @@ async fn main() {
 
     let mut wallet = CapeWallet::new(backend).await.unwrap();
     let pub_key = if args.sender {
-        println!("Sender");
-
         wallet
             .add_user_key(sender_key.clone(), EventIndex::default())
             .await
@@ -156,6 +159,11 @@ async fn main() {
             }),
         }
     };
+
+    // fund_eth_wallet()
+
+    let freeze_key = wallet.generate_freeze_key().await.unwrap();
+    let _audit_key = wallet.generate_audit_key().await.unwrap();
 
     println!("Wallet created");
 
@@ -192,8 +200,9 @@ async fn main() {
             asset.definition
         }
         None => {
+            let policy = AssetPolicy::default().set_freezer_pub_key(freeze_key.clone());
             let my_asset = wallet
-                .define_asset(&[], AssetPolicy::default())
+                .define_asset(&[], policy)
                 .await
                 .expect("failed to define asset");
             event!(Level::INFO, "defined a new asset type: {}", my_asset.code);
@@ -222,71 +231,135 @@ async fn main() {
         event!(Level::INFO, "minted custom asset");
     }
 
+    // Keep track where we sent our assets for freezing
+    let mut rec_addresses: Vec<UserPubKey> = vec![];
+    // Keep track of address with our frozen asset.
+    let mut frozen_addresses: Vec<UserPubKey> = vec![];
+
+    // Deploy contract + simple token
+    let erc20_contract = deploy_erc20_token().await;
+    sponsor_simple_token(&mut wallet, &erc20_contract)
+        .await
+        .unwrap();
+
     loop {
         // Use the Address book for this: https://github.com/EspressoSystems/cape/issues/641
         let peers: Vec<UserPubKey> = get_pub_keys_from_file(&args.pub_key_storage).await;
-        let recipient =
-            match peers.choose_weighted(&mut rng, |pk| if *pk == pub_key { 0 } else { 1 }) {
-                Ok(recipient) => recipient,
-                Err(WeightedError::NoItem | WeightedError::AllWeightsZero) => {
-                    event!(Level::WARN, "no peers yet, retrying...");
-                    retry_delay().await;
+        let operation: OperationType = rand::random();
+        match operation {
+            OperationType::Transfer => {
+                let recipient = match peers.choose_weighted(&mut rng, |pk| {
+                    if *pk == pub_key {
+                        0
+                    } else {
+                        1
+                    }
+                }) {
+                    Ok(recipient) => recipient,
+                    Err(WeightedError::NoItem | WeightedError::AllWeightsZero) => {
+                        event!(Level::WARN, "no peers yet, retrying...");
+                        retry_delay().await;
+                        continue;
+                    }
+                    Err(err) => {
+                        panic!("error in weighted choice of peer: {}", err);
+                    }
+                };
+                // Get a list of assets for which we have a non-zero balance.
+                let mut asset_balances = vec![];
+                for asset in wallet.assets().await {
+                    if wallet.balance(&address, &asset.definition.code).await > 0 {
+                        asset_balances.push(asset.definition.code);
+                    }
+                }
+                // Randomly choose an asset type for the transfer.
+                let asset = asset_balances.choose(&mut rng).unwrap();
+
+                // All transfers are the same, small size. This should prevent fragmentation errors and
+                // allow us to make as many transactions as possible with the assets we have.
+                let amount = 1;
+                let fee = 1;
+
+                event!(
+                    Level::INFO,
+                    "transferring {} units of {} to user {}",
+                    amount,
+                    if *asset == AssetCode::native() {
+                        String::from("the native asset")
+                    } else if *asset == my_asset.code {
+                        rec_addresses.push(recipient.clone());
+                        String::from("my asset")
+                    } else {
+                        asset.to_string()
+                    },
+                    recipient,
+                );
+                let txn = match wallet
+                    .transfer(&address, asset, &[(recipient.address(), amount)], fee)
+                    .await
+                {
+                    Ok(txn) => txn,
+                    Err(err) => {
+                        event!(Level::ERROR, "Error generating transfer: {}", err);
+                        continue;
+                    }
+                };
+                match wallet.await_transaction(&txn).await {
+                    Ok(status) => {
+                        if !status.succeeded() {
+                            // Transfers are allowed to fail. It can happen, for instance, if we get starved
+                            // out until our transfer becomes too old for the validators. Thus we make this
+                            // a warning, not an error.
+                            event!(Level::WARN, "transfer failed!");
+                        }
+                    }
+                    Err(err) => {
+                        event!(Level::ERROR, "error while waiting for transaction: {}", err);
+                    }
+                }
+            }
+            OperationType::Freeze => {
+                // Choose a random person who we sent our asset at one point
+                // This may fail if they've transfered that asset
+                if rec_addresses.is_empty() {
                     continue;
                 }
-                Err(err) => {
-                    panic!("error in weighted choice of peer: {}", err);
+                let asset_owner = rec_addresses.choose(&mut rng).unwrap();
+                freeze_token(&mut wallet, &my_asset.code, 1, asset_owner.address())
+                    .await
+                    .unwrap();
+                frozen_addresses.push(asset_owner.clone());
+            }
+            OperationType::Unfreeze => {
+                if frozen_addresses.is_empty() {
+                    continue;
                 }
-            };
-
-        // Get a list of assets for which we have a non-zero balance.
-        let mut asset_balances = vec![];
-        for asset in wallet.assets().await {
-            if wallet.balance(&address, &asset.definition.code).await > 0 {
-                asset_balances.push(asset.definition.code);
+                let asset_owner = frozen_addresses.choose(&mut rng).unwrap();
+                unfreeze_token(&mut wallet, &my_asset.code, 1, asset_owner.address())
+                    .await
+                    .unwrap();
+                let index = frozen_addresses
+                    .iter()
+                    .position(|i| i == asset_owner)
+                    .unwrap();
+                frozen_addresses.remove(index);
             }
-        }
-        // Randomly choose an asset type for the transfer.
-        let asset = asset_balances.choose(&mut rng).unwrap();
-
-        // All transfers are the same, small size. This should prevent fragmentation errors and
-        // allow us to make as many transactions as possible with the assets we have.
-        let amount = 1;
-        let fee = 1;
-
-        event!(
-            Level::INFO,
-            "transferring {} units of {} to user {}",
-            amount,
-            if *asset == AssetCode::native() {
-                String::from("the native asset")
-            } else if *asset == my_asset.code {
-                String::from("my asset")
-            } else {
-                asset.to_string()
-            },
-            recipient,
-        );
-        let txn = match wallet
-            .transfer(&address, asset, &[(recipient.address(), amount)], fee)
-            .await
-        {
-            Ok(txn) => txn,
-            Err(err) => {
-                event!(Level::ERROR, "Error generating transfer: {}", err);
-                continue;
+            OperationType::Wrap => {
+                let asset_def = wallet
+                    .define_asset(&[], AssetPolicy::default())
+                    .await
+                    .expect("failed to define asset");
+                wrap_simple_token(&mut wallet, &address, asset_def, &erc20_contract, 100)
+                    .await
+                    .unwrap();
             }
-        };
-        match wallet.await_transaction(&txn).await {
-            Ok(status) => {
-                if !status.succeeded() {
-                    // Transfers are allowed to fail. It can happen, for instance, if we get starved
-                    // out until our transfer becomes too old for the validators. Thus we make this
-                    // a warning, not an error.
-                    event!(Level::WARN, "transfer failed!");
-                }
-            }
-            Err(err) => {
-                event!(Level::ERROR, "error while waiting for transaction: {}", err);
+            OperationType::Burn => {
+                // Wont' work with using 1 most of the time
+                let assets = wallet.assets().await;
+                let asset = assets.choose(&mut rng).unwrap();
+                burn_token(&mut wallet, asset.definition.clone(), 1)
+                    .await
+                    .unwrap();
             }
         }
     }

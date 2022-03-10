@@ -16,19 +16,15 @@
 use async_std::sync::{Arc, Mutex};
 use async_std::task::sleep;
 use cap_rust_sandbox::deploy::deploy_erc20_token;
-use cap_rust_sandbox::ethereum::get_provider;
 use cape_wallet::backend::CapeBackend;
 use cape_wallet::mocks::*;
 use cape_wallet::testing::{
-    burn_token, create_test_network, freeze_token, sponsor_simple_token, transfer_token,
-    unfreeze_token, wrap_simple_token, OperationType,
+    burn_token, create_test_network, freeze_token, fund_eth_wallet, sponsor_simple_token,
+    transfer_token, unfreeze_token, wrap_simple_token, OperationType,
 };
 use cape_wallet::CapeWallet;
 use cape_wallet::CapeWalletExt;
 use ethers::prelude::Address;
-use ethers::providers::Middleware;
-use ethers::types::TransactionRequest;
-use ethers::types::U256;
 use jf_cap::keys::UserAddress;
 use jf_cap::keys::UserPubKey;
 use jf_cap::proof::UniversalParam;
@@ -155,24 +151,6 @@ async fn create_wallet<'a>(
     let mut wallet = CapeWallet::new(backend).await.unwrap();
 
     (wallet.generate_user_key(None).await.unwrap(), wallet)
-}
-
-async fn fund_eth_wallet<'a>(wallet: &mut CapeWallet<'a, CapeBackend<'a, ()>>) {
-    // Fund the Ethereum wallets for contract calls.
-    let provider = get_provider().interval(Duration::from_millis(100u64));
-    let accounts = provider.get_accounts().await.unwrap();
-    assert!(!accounts.is_empty());
-
-    let tx = TransactionRequest::new()
-        .to(Address::from(wallet.eth_address().await.unwrap()))
-        .value(ethers::utils::parse_ether(U256::from(1)).unwrap())
-        .from(accounts[0]);
-    provider
-        .send_transaction(tx, None)
-        .await
-        .unwrap()
-        .await
-        .unwrap();
 }
 
 fn update_balances(

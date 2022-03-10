@@ -235,18 +235,6 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
         }
     }
 
-    async fn get_transaction(
-        &self,
-        block_id: u64,
-        txn_id: u64,
-    ) -> Result<CapeTransition, CapeWalletError> {
-        self.mock_eqs
-            .lock()
-            .await
-            .network()
-            .get_transaction(block_id, txn_id)
-    }
-
     async fn register_user_key(&mut self, key_pair: &UserKeyPair) -> Result<(), CapeWalletError> {
         let pub_key_bytes = bincode::serialize(&key_pair.pub_key()).unwrap();
         let sig = key_pair.sign(&pub_key_bytes);
@@ -600,7 +588,7 @@ mod test {
         // transfer some native tokens from `wrapper` to `sponsor`.
         let receipt = wrapper
             .transfer(
-                &wrapper_key.address(),
+                Some(&wrapper_key.address()),
                 &AssetCode::native(),
                 &[(sponsor_key.address(), 1)],
                 1,
@@ -632,7 +620,7 @@ mod test {
         // (we'll reuse the `sponsor` wallet, but this could be a separate role).
         let receipt = wrapper
             .transfer(
-                &wrapper_key.address(),
+                Some(&wrapper_key.address()),
                 &cape_asset.code,
                 &[(sponsor_key.address(), 100)],
                 1,

@@ -204,7 +204,11 @@ impl EthPolling {
                             }
                             let memo_event = LedgerEvent::Memos {
                                 outputs,
-                                transaction: Some((meta.block_number.as_u64(), txn_id as u64)),
+                                transaction: Some((
+                                    meta.block_number.as_u64(),
+                                    txn_id as u64,
+                                    transitions[txn_id].kind(),
+                                )),
                             };
                             memo_events.push(memo_event);
                         });

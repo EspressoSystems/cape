@@ -39,9 +39,10 @@
 //! the web server. Most of the functionality, such as API interpretation, request parsing, and
 //! route handling, is defined in the [cape_wallet] crate.
 
-use cape_wallet::web::{default_api_path, default_web_path, init_server, NodeOpt};
+use cape_wallet::web::{
+    default_api_path, default_storage_path, default_web_path, init_server, NodeOpt,
+};
 use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
-use std::path::PathBuf;
 use structopt::StructOpt;
 
 #[async_std::main]
@@ -61,25 +62,15 @@ async fn main() -> Result<(), std::io::Error> {
     // Take the command line option for the web asset directory path
     // provided it is not empty. Otherwise, construct the default from
     // the executable path.
-    let opt_api_path = NodeOpt::from_args().api_path;
-    let opt_web_path = NodeOpt::from_args().web_path;
-    let opt_path_storage = NodeOpt::from_args().path_storage;
-    let web_path = if opt_web_path.is_empty() {
-        default_web_path()
-    } else {
-        PathBuf::from(opt_web_path)
-    };
-    let api_path = if opt_api_path.is_empty() {
-        default_api_path()
-    } else {
-        PathBuf::from(opt_api_path)
-    };
-    let path_storage = if opt_path_storage.is_empty() {
-        None
-    } else {
-        Some(PathBuf::from(opt_path_storage))
-    };
-    println!("Web path: {:?}", web_path);
+    let api_path = NodeOpt::from_args()
+        .api_path
+        .unwrap_or_else(default_api_path);
+    let web_path = NodeOpt::from_args()
+        .web_path
+        .unwrap_or_else(default_web_path);
+    let storage = NodeOpt::from_args()
+        .storage
+        .unwrap_or_else(default_storage_path);
 
     // We use 60000 by default, chosen because it differs from the default ports for the EQS and the
     // Espresso query service.
@@ -89,7 +80,7 @@ async fn main() -> Result<(), std::io::Error> {
         api_path,
         web_path,
         port.parse().unwrap(),
-        path_storage,
+        storage,
     )?
     .await?;
 
@@ -129,7 +120,7 @@ mod tests {
     use std::convert::TryInto;
     use std::fmt::Debug;
     use std::iter::once;
-    use std::path::Path;
+    use std::path::{Path, PathBuf};
     use std::time::Duration;
     use surf::Url;
     use tagged_base64::TaggedBase64;
@@ -156,7 +147,6 @@ mod tests {
     struct TestServer {
         client: surf::Client,
         temp_dir: TempDir,
-        _temp_path_dir: TempDir,
     }
 
     impl TestServer {
@@ -168,13 +158,13 @@ mod tests {
             // the server will continue running until the process is killed, even after the test
             // ends. This is ok, since each test's server task should be idle once
             // the test is over.
-            let temp_path_dir = TempDir::new("wallet_last_used_test").unwrap();
+            let temp_dir = TempDir::new("test_wallet_api_storage").unwrap();
             init_server(
                 ChaChaRng::from_seed([42; 32]),
                 default_api_path(),
                 default_web_path(),
                 port,
-                Some(temp_path_dir.path().to_path_buf()),
+                temp_dir.path().to_path_buf(),
             )
             .unwrap();
             Self::wait(port).await;
@@ -186,8 +176,7 @@ mod tests {
                 .unwrap();
             Self {
                 client: client.with(client::parse_error_body::<CapeAPIError>),
-                temp_dir: TempDir::new("test_cape_wallet").unwrap(),
-                _temp_path_dir: temp_path_dir,
+                temp_dir,
             }
         }
 
@@ -203,7 +192,10 @@ mod tests {
         }
 
         fn path(&self) -> String {
-            fmt_path(self.temp_dir.path())
+            let path = [self.temp_dir.path(), Path::new("keystores/test_wallet")]
+                .iter()
+                .collect::<PathBuf>();
+            fmt_path(&path)
         }
 
         async fn wait(port: u64) {
@@ -1489,5 +1481,59 @@ mod tests {
             }
         }
         assert_eq!(recovered_keys, keys);
+    }
+
+    #[async_std::test]
+    #[traced_test]
+    async fn test_listkeystores() {
+        let server = TestServer::new().await;
+
+        // There are not keystores yet.
+        assert_eq!(
+            Vec::<String>::new(),
+            server.get::<Vec<String>>("listkeystores").await.unwrap()
+        );
+
+        // Create a named key store.
+        server
+            .get::<()>(&format!(
+                "newwallet/{}/my-password/name/named_keystore",
+                server.get::<String>("getmnemonic").await.unwrap()
+            ))
+            .await
+            .unwrap();
+        assert_eq!(
+            vec![String::from("named_keystore")],
+            server.get::<Vec<String>>("listkeystores").await.unwrap()
+        );
+
+        // Create a key store by path, in the directory containing named keystores.
+        server
+            .get::<()>(&format!(
+                "newwallet/{}/my-password/path/{}",
+                server.get::<String>("getmnemonic").await.unwrap(),
+                server.path()
+            ))
+            .await
+            .unwrap();
+        assert_eq!(
+            vec![String::from("named_keystore"), String::from("test_wallet")],
+            server.get::<Vec<String>>("listkeystores").await.unwrap()
+        );
+
+        // Create a wallet in a different directory, and make sure it is not listed.
+        let new_dir = TempDir::new("non_keystoer_dir").unwrap();
+        server
+            .get::<()>(&format!(
+                "newwallet/{}/my-password/path/{}",
+                server.get::<String>("getmnemonic").await.unwrap(),
+                fmt_path(new_dir.path())
+            ))
+            .await
+            .unwrap();
+        assert_eq!(
+            vec![String::from("named_keystore"), String::from("test_wallet")],
+            server.get::<Vec<String>>("listkeystores").await.unwrap()
+        );
     }
 }

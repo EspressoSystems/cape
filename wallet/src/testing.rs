@@ -13,6 +13,7 @@ use crate::mocks::*;
 use crate::wallet::CapeWalletExt;
 use crate::CapeWallet;
 use crate::CapeWalletError;
+use address_book::address_book_temp_dir;
 use address_book::init_web_server;
 use address_book::wait_for_server;
 use async_std::sync::{Arc, Mutex};
@@ -39,7 +40,6 @@ use reef::Ledger;
 use relayer::testing::start_minimal_relayer_for_test;
 use seahorse::testing::await_transaction;
 use seahorse::txn_builder::{TransactionReceipt, TransactionStatus};
-use std::env;
 use surf::Url;
 use tide::log::LevelFilter;
 
@@ -62,7 +62,7 @@ pub async fn create_test_network<'a>(
     rng: &mut ChaChaRng,
     universal_param: &'a UniversalParam,
 ) -> (UserKeyPair, Url, Address, Arc<Mutex<MockCapeLedger<'a>>>) {
-    init_web_server(LevelFilter::Error, env::temp_dir())
+    init_web_server(LevelFilter::Error, address_book_temp_dir())
         .await
         .expect("Failed to run server.");
     wait_for_server().await;

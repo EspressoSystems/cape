@@ -14,6 +14,7 @@ use rand::{distributions::Alphanumeric, Rng};
 use std::env;
 use std::path::PathBuf;
 use std::{fs, time::Duration};
+use tempdir::TempDir;
 use tide::{log::LevelFilter, prelude::*, StatusCode};
 
 pub mod signal;
@@ -88,6 +89,12 @@ pub struct InsertPubKey {
 #[derive(Clone)]
 struct ServerState {
     store: FileStore,
+}
+
+pub fn address_book_temp_dir() -> PathBuf {
+    TempDir::new("cape-address-book")
+        .expect("Failed to create temporary directory")
+        .into_path()
 }
 
 pub fn address_book_port() -> String {

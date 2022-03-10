@@ -41,6 +41,7 @@ dependencies = [
  "signal-hook",
  "signal-hook-async-std",
  "surf",
+ "tempdir",
  "tide",
 ]
 

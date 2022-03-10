@@ -5,9 +5,9 @@
 // This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use std::env;
-
-use address_book::{address_book_port, init_web_server, wait_for_server, InsertPubKey};
+use address_book::{
+    address_book_port, address_book_temp_dir, init_web_server, wait_for_server, InsertPubKey,
+};
 use jf_cap::keys::{UserKeyPair, UserPubKey};
 use rand_chacha::rand_core::SeedableRng;
 use tide::log::LevelFilter;
@@ -23,7 +23,7 @@ const NOT_FOUND_COUNT: u64 = 100;
 #[async_std::test]
 async fn round_trip() {
     // TODO !corbett find an unused port rather than assuming 50078 is free.
-    init_web_server(LevelFilter::Error, env::temp_dir())
+    init_web_server(LevelFilter::Error, address_book_temp_dir())
         .await
         .expect("Failed to run server.");
     wait_for_server().await;

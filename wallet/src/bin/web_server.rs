@@ -128,9 +128,7 @@ mod tests {
     use std::fmt::Debug;
     use std::iter::once;
     use std::path::Path;
-    use std::time::Duration;
     use surf::Url;
-    use tagged_base64::TaggedBase64;
     use tempdir::TempDir;
     use tracing_test::traced_test;
 
@@ -470,8 +468,8 @@ mod tests {
     // Issue: https://github.com/EspressoSystems/cape/issues/600.
     #[async_std::test]
     #[traced_test]
-    #[ignore]
-    async fn test_getrecords() {
+    // #[ignore]
+    async fn ignore_test_getrecords() {
         let server = TestServer::new().await;
 
         // Should fail if a wallet is not already open.
@@ -488,7 +486,10 @@ mod tests {
             ))
             .await
             .unwrap();
-        server.get::<()>("populatefortest").await.unwrap();
+        server
+            .get::<TransactionReceipt<CapeLedger>>("populatefortest")
+            .await
+            .unwrap();
 
         let records = server.get::<Vec<RecordInfo>>("getrecords").await.unwrap();
         let info = server.get::<WalletSummary>("getinfo").await.unwrap();
@@ -887,10 +888,10 @@ mod tests {
     // Issue: https://github.com/EspressoSystems/cape/issues/600.
     #[async_std::test]
     #[traced_test]
-    #[ignore]
-    async fn test_mint() {
+    // #[ignore]
+    async fn ignore_test_mint() {
         // Set parameters.
-        let description = TaggedBase64::new("DESC", &[3u8; 32]).unwrap();
+        let description = base64::encode_config(&[3u8; 32], base64::URL_SAFE_NO_PAD);
         let amount = 10;
         let fee = 1;
         let mut rng = ChaChaRng::from_seed([50u8; 32]);
@@ -918,7 +919,7 @@ mod tests {
             .code;
 
         // Get the faucet address with non-zero balance of the native asset.
-        let minter: UserAddress = receipt.submitter.into();
+        let minter: UserAddress = receipt.submitters[0].clone().into();
 
         // Get an address to receive the minted asset.
         let recipient: UserAddress = server
@@ -990,8 +991,8 @@ mod tests {
     // Issue: https://github.com/EspressoSystems/cape/issues/600.
     #[async_std::test]
     #[traced_test]
-    #[ignore]
-    async fn test_unwrap() {
+    // #[ignore]
+    async fn ignore_test_unwrap() {
         // Set parameters.
         let eth_addr = DEFAULT_ETH_ADDR;
         let fee = 1;
@@ -1096,8 +1097,8 @@ mod tests {
     // Issue: https://github.com/EspressoSystems/cape/issues/600.
     #[async_std::test]
     #[traced_test]
-    #[ignore]
-    async fn test_dummy_populate() {
+    // #[ignore]
+    async fn ignore_test_dummy_populate() {
         let server = TestServer::new().await;
         server
             .get::<()>(&format!(
@@ -1162,8 +1163,8 @@ mod tests {
     // Issue: https://github.com/EspressoSystems/cape/issues/600.
     #[async_std::test]
     #[traced_test]
-    #[ignore]
-    async fn test_send() {
+    // #[ignore]
+    async fn ignore_test_send() {
         let server = TestServer::new().await;
         let mut rng = ChaChaRng::from_seed([1; 32]);
 
@@ -1212,7 +1213,7 @@ mod tests {
                 break;
             }
         }
-        let src_address: UserAddress = receipt.submitter.into();
+        let src_address: UserAddress = receipt.submitters[0].clone().into();
         let dst_address = unfunded_account.unwrap();
 
         // Make a transfer.
@@ -1259,8 +1260,8 @@ mod tests {
     // Issue: https://github.com/EspressoSystems/cape/issues/600.
     #[async_std::test]
     #[traced_test]
-    #[ignore]
-    async fn test_getaccount() {
+    // #[ignore]
+    async fn ignore_test_getaccount() {
         let server = TestServer::new().await;
         let mut rng = ChaChaRng::from_seed([1; 32]);
 
@@ -1300,7 +1301,10 @@ mod tests {
             .await
             .unwrap();
         // Populate the wallet with some dummy data so we have a balance of an asset to send.
-        server.get::<()>("populatefortest").await.unwrap();
+        server
+            .get::<TransactionReceipt<CapeLedger>>("populatefortest")
+            .await
+            .unwrap();
 
         // Get the wrapped asset type.
         let info = server.get::<WalletSummary>("getinfo").await.unwrap();

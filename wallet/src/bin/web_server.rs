@@ -1183,7 +1183,7 @@ mod tests {
     // Issue: https://github.com/EspressoSystems/cape/issues/600.
     #[async_std::test]
     #[traced_test]
-    // #[ignore]
+    #[ignore]
     async fn test_send() {
         let server = TestServer::new().await;
         let mut rng = ChaChaRng::from_seed([1; 32]);

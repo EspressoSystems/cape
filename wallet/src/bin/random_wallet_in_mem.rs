@@ -18,6 +18,7 @@ use async_std::task::sleep;
 use cap_rust_sandbox::deploy::deploy_erc20_token;
 use cape_wallet::backend::CapeBackend;
 use cape_wallet::mocks::*;
+use cape_wallet::testing::get_burn_ammount;
 use cape_wallet::testing::{
     burn_token, create_test_network, freeze_token, fund_eth_wallet, sponsor_simple_token,
     transfer_token, unfreeze_token, wrap_simple_token, OperationType,
@@ -375,7 +376,8 @@ async fn main() {
             OperationType::Burn => {
                 let burner = wallets.choose_mut(&mut rng).unwrap();
                 let asset = burner.approved_assets().await[0].0.clone();
-                burn_token(burner, asset.clone(), 1).await.unwrap();
+                let amount = get_burn_ammount(burner, asset.code).await;
+                burn_token(burner, asset.clone(), amount).await.unwrap();
             }
         }
     }

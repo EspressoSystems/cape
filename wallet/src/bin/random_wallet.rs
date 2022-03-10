@@ -15,6 +15,7 @@ use cap_rust_sandbox::deploy::deploy_erc20_token;
 use cape_wallet::backend::CapeBackend;
 use cape_wallet::mocks::*;
 use cape_wallet::testing::create_test_network;
+use cape_wallet::testing::get_burn_ammount;
 use cape_wallet::testing::OperationType;
 use cape_wallet::testing::{
     burn_token, freeze_token, sponsor_simple_token, unfreeze_token, wrap_simple_token,
@@ -354,10 +355,10 @@ async fn main() {
                     .unwrap();
             }
             OperationType::Burn => {
-                // Wont' work with using 1 most of the time
                 let assets = wallet.assets().await;
                 let asset = assets.choose(&mut rng).unwrap();
-                burn_token(&mut wallet, asset.definition.clone(), 1)
+                let amount = get_burn_ammount(&wallet, asset.definition.code).await;
+                burn_token(&mut wallet, asset.definition.clone(), amount)
                     .await
                     .unwrap();
             }

@@ -152,6 +152,22 @@ pub async fn fund_eth_wallet<'a>(wallet: &mut CapeWallet<'a, CapeBackend<'a, ()>
         .unwrap();
 }
 
+pub async fn get_burn_ammount<'a>(
+    wallet: &CapeWallet<'a, CapeBackend<'a, ()>>,
+    asset: AssetCode,
+) -> u64 {
+    // get records for this this asset type
+    let records = wallet.records().await;
+    let filtered = records
+        .filter(|rec| rec.ro.asset_def.code == asset)
+        .collect::<Vec<_>>();
+    if filtered.is_empty() {
+        0
+    } else {
+        filtered[0].ro.amount
+    }
+}
+
 #[derive(Debug)]
 pub enum OperationType {
     Transfer,

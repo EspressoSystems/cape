@@ -13,6 +13,7 @@ use once_cell::sync::Lazy;
 use rand::{distributions::Alphanumeric, Rng};
 use std::env;
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::{fs, time::Duration};
 use tempdir::TempDir;
 use tide::{log::LevelFilter, prelude::*, StatusCode};
@@ -100,7 +101,7 @@ impl Default for TransientFileStore {
 
 impl Drop for TransientFileStore {
     fn drop(&mut self) {
-        fs::remove_dir_all(self.store.dir.clone()).unwrap()
+        fs::remove_dir_all(self.store.dir.clone()).expect("Failed to remove store path");
     }
 }
 
@@ -122,7 +123,7 @@ pub struct InsertPubKey {
 
 #[derive(Clone)]
 struct ServerState<T: Store> {
-    store: T,
+    store: Arc<T>,
 }
 
 pub fn address_book_temp_dir() -> TempDir {
@@ -159,7 +160,9 @@ pub async fn init_web_server<T: Store + 'static>(
     }
     Lazy::force(&LOGGING);
 
-    let mut app = tide::with_state(ServerState { store });
+    let mut app = tide::with_state(ServerState {
+        store: Arc::new(store),
+    });
     app.at("/insert_pubkey").post(insert_pubkey);
     app.at("/request_pubkey").post(request_pubkey);
     let address = format!("0.0.0.0:{}", address_book_port());

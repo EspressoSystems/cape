@@ -6,14 +6,11 @@
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #[warn(unused_imports)]
-use async_std::sync::{Arc, RwLock};
 use async_std::task::{sleep, spawn, JoinHandle};
-use async_trait::async_trait;
 use jf_cap::keys::{UserAddress, UserPubKey};
 use jf_cap::Signature;
 use once_cell::sync::Lazy;
 use rand::{distributions::Alphanumeric, Rng};
-use std::collections::HashMap;
 use std::env;
 use std::path::PathBuf;
 use std::{fs, time::Duration};
@@ -35,11 +32,9 @@ static LOGGING: Lazy<()> = Lazy::new(|| unsafe {
     tide::log::with_level(LOG_LEVEL);
 });
 
-#[async_trait]
 pub trait Store: Clone + Send + Sync {
-    async fn save(&self, address: &UserAddress, pub_key: &UserPubKey)
-        -> Result<(), std::io::Error>;
-    async fn load(&self, address: &UserAddress) -> Option<UserPubKey>;
+    fn save(&self, address: &UserAddress, pub_key: &UserPubKey) -> Result<(), std::io::Error>;
+    fn load(&self, address: &UserAddress) -> Option<UserPubKey>;
 }
 
 #[derive(Debug, Clone)]
@@ -70,19 +65,14 @@ impl FileStore {
     }
 }
 
-#[async_trait]
 impl Store for FileStore {
-    async fn save(
-        &self,
-        address: &UserAddress,
-        pub_key: &UserPubKey,
-    ) -> Result<(), std::io::Error> {
+    fn save(&self, address: &UserAddress, pub_key: &UserPubKey) -> Result<(), std::io::Error> {
         let tmp_path = self.tmp_path(address);
         fs::write(&tmp_path, bincode::serialize(&pub_key).unwrap())?;
         fs::rename(&tmp_path, self.path(address))
     }
 
-    async fn load(&self, address: &UserAddress) -> Option<UserPubKey> {
+    fn load(&self, address: &UserAddress) -> Option<UserPubKey> {
         match fs::read(self.path(address)) {
             Ok(bytes) => Some(bincode::deserialize(&bytes).unwrap()),
             Err(_) => None,
@@ -90,27 +80,37 @@ impl Store for FileStore {
     }
 }
 
-/// Non-persistent in-memory store. Suitable for testing only.
-#[derive(Debug, Clone, Default)]
-pub struct MemoryStore {
-    map: Arc<RwLock<HashMap<UserAddress, UserPubKey>>>,
+/// Non-persistent store. Suitable for testing only.
+#[derive(Debug, Clone)]
+pub struct TransientFileStore {
+    store: FileStore,
 }
 
-#[async_trait]
-impl Store for MemoryStore {
-    async fn save(
-        &self,
-        address: &UserAddress,
-        pub_key: &UserPubKey,
-    ) -> Result<(), std::io::Error> {
-        let mut hash_map = self.map.write().await;
-        hash_map.insert(address.clone(), pub_key.clone());
-        Ok(())
+impl Default for TransientFileStore {
+    fn default() -> Self {
+        Self {
+            store: FileStore::new(
+                TempDir::new("cape-address-book")
+                    .expect("Failed to create temporary directory")
+                    .into_path(),
+            ),
+        }
+    }
+}
+
+impl Drop for TransientFileStore {
+    fn drop(&mut self) {
+        fs::remove_dir_all(self.store.dir.clone()).unwrap()
+    }
+}
+
+impl Store for TransientFileStore {
+    fn save(&self, address: &UserAddress, pub_key: &UserPubKey) -> Result<(), std::io::Error> {
+        self.store.save(address, pub_key)
     }
 
-    async fn load(&self, address: &UserAddress) -> Option<UserPubKey> {
-        let hash_map = self.map.read().await;
-        Some(hash_map.get(address).unwrap().clone())
+    fn load(&self, address: &UserAddress) -> Option<UserPubKey> {
+        self.store.load(address)
     }
 }
 
@@ -201,7 +201,7 @@ async fn insert_pubkey<T: Store>(
 ) -> Result<tide::Response, tide::Error> {
     let insert_request: InsertPubKey = net::server::request_body(&mut req).await?;
     let pub_key = verify_sig_and_get_pub_key(insert_request)?;
-    req.state().store.save(&pub_key.address(), &pub_key).await?;
+    req.state().store.save(&pub_key.address(), &pub_key)?;
     Ok(tide::Response::new(StatusCode::Ok))
 }
 
@@ -211,7 +211,7 @@ async fn request_pubkey<T: Store>(
     mut req: tide::Request<ServerState<T>>,
 ) -> Result<tide::Response, tide::Error> {
     let address: UserAddress = net::server::request_body(&mut req).await?;
-    let pub_key = req.state().store.load(&address).await;
+    let pub_key = req.state().store.load(&address);
     match pub_key {
         Some(value) => {
             let bytes = bincode::serialize(&value).unwrap();

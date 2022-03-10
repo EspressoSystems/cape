@@ -7,7 +7,7 @@
 
 use address_book::{
     address_book_port, address_book_temp_dir, init_web_server, wait_for_server, FileStore,
-    InsertPubKey, MemoryStore, Store,
+    InsertPubKey, Store, TransientFileStore,
 };
 use jf_cap::keys::{UserKeyPair, UserPubKey};
 use rand_chacha::rand_core::SeedableRng;
@@ -105,6 +105,6 @@ async fn test_address_book() {
     let store = FileStore::new(temp_dir.path().to_path_buf());
     round_trip(store).await;
 
-    let store = MemoryStore::default();
+    let store = TransientFileStore::default();
     round_trip(store).await
 }

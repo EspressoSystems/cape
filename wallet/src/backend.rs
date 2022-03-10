@@ -235,18 +235,6 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
         }
     }
 
-    async fn get_transaction(
-        &self,
-        block_id: u64,
-        txn_id: u64,
-    ) -> Result<CapeTransition, CapeWalletError> {
-        self.mock_eqs
-            .lock()
-            .await
-            .network()
-            .get_transaction(block_id, txn_id)
-    }
-
     async fn register_user_key(&mut self, key_pair: &UserKeyPair) -> Result<(), CapeWalletError> {
         let pub_key_bytes = bincode::serialize(&key_pair.pub_key()).unwrap();
         let sig = key_pair.sign(&pub_key_bytes);
@@ -425,7 +413,7 @@ mod test {
         sender.sync(mock_eqs.lock().await.now()).await.unwrap();
         sender.await_key_scan(&sender_key.address()).await.unwrap();
         let total_balance = sender
-            .balance(&sender_key.address(), &AssetCode::native())
+            .balance_breakdown(&sender_key.address(), &AssetCode::native())
             .await;
         assert!(total_balance > 0);
 
@@ -461,13 +449,13 @@ mod test {
         await_transaction(&txn, &sender, &[&receiver]).await;
         assert_eq!(
             sender
-                .balance(&sender_key.address(), &AssetCode::native())
+                .balance_breakdown(&sender_key.address(), &AssetCode::native())
                 .await,
             total_balance - 3
         );
         assert_eq!(
             receiver
-                .balance(&receiver_key.address(), &AssetCode::native())
+                .balance_breakdown(&receiver_key.address(), &AssetCode::native())
                 .await,
             2
         );
@@ -486,13 +474,13 @@ mod test {
         await_transaction(&txn, &receiver, &[&sender]).await;
         assert_eq!(
             sender
-                .balance(&sender_key.address(), &AssetCode::native())
+                .balance_breakdown(&sender_key.address(), &AssetCode::native())
                 .await,
             total_balance - 2
         );
         assert_eq!(
             receiver
-                .balance(&receiver_key.address(), &AssetCode::native())
+                .balance_breakdown(&receiver_key.address(), &AssetCode::native())
                 .await,
             0
         );
@@ -558,7 +546,7 @@ mod test {
             .await
             .unwrap();
         let total_native_balance = wrapper
-            .balance(&wrapper_key.address(), &AssetCode::native())
+            .balance_breakdown(&wrapper_key.address(), &AssetCode::native())
             .await;
         assert!(total_native_balance > 0);
 
@@ -600,7 +588,7 @@ mod test {
         // transfer some native tokens from `wrapper` to `sponsor`.
         let receipt = wrapper
             .transfer(
-                &wrapper_key.address(),
+                Some(&wrapper_key.address()),
                 &AssetCode::native(),
                 &[(sponsor_key.address(), 1)],
                 1,
@@ -610,20 +598,20 @@ mod test {
         await_transaction(&receipt, &wrapper, &[&sponsor]).await;
         assert_eq!(
             wrapper
-                .balance(&wrapper_key.address(), &AssetCode::native())
+                .balance_breakdown(&wrapper_key.address(), &AssetCode::native())
                 .await,
             total_native_balance - 2
         );
         assert_eq!(
             sponsor
-                .balance(&sponsor_key.address(), &AssetCode::native())
+                .balance_breakdown(&sponsor_key.address(), &AssetCode::native())
                 .await,
             1
         );
         // The transfer transaction caused the wrap record to be created.
         assert_eq!(
             wrapper
-                .balance(&wrapper_key.address(), &cape_asset.code)
+                .balance_breakdown(&wrapper_key.address(), &cape_asset.code)
                 .await,
             100
         );
@@ -632,7 +620,7 @@ mod test {
         // (we'll reuse the `sponsor` wallet, but this could be a separate role).
         let receipt = wrapper
             .transfer(
-                &wrapper_key.address(),
+                Some(&wrapper_key.address()),
                 &cape_asset.code,
                 &[(sponsor_key.address(), 100)],
                 1,
@@ -642,13 +630,13 @@ mod test {
         await_transaction(&receipt, &wrapper, &[&sponsor]).await;
         assert_eq!(
             wrapper
-                .balance(&wrapper_key.address(), &cape_asset.code)
+                .balance_breakdown(&wrapper_key.address(), &cape_asset.code)
                 .await,
             0
         );
         assert_eq!(
             sponsor
-                .balance(&sponsor_key.address(), &cape_asset.code)
+                .balance_breakdown(&sponsor_key.address(), &cape_asset.code)
                 .await,
             100
         );
@@ -667,7 +655,7 @@ mod test {
         await_transaction(&receipt, &sponsor, &[]).await;
         assert_eq!(
             sponsor
-                .balance(&sponsor_key.address(), &cape_asset.code)
+                .balance_breakdown(&sponsor_key.address(), &cape_asset.code)
                 .await,
             0
         );

@@ -187,7 +187,9 @@ pub async fn wrap_simple_token<'a>(
 ) -> Result<(), CapeWalletError> {
     let wrapper_eth_addr = wrapper.eth_address().await.unwrap();
 
-    let total_native_balance = wrapper.balance(wrapper_addr, &AssetCode::native()).await;
+    let total_native_balance = wrapper
+        .balance_breakdown(wrapper_addr, &AssetCode::native())
+        .await;
     assert!(total_native_balance > 0);
 
     // Prepare to wrap: deposit some ERC20 tokens into the wrapper's ETH wallet.
@@ -269,13 +271,7 @@ pub async fn transfer_token<'a>(
     asset_code: AssetCode,
     fee: u64,
 ) -> Result<TransactionReceipt<CapeLedger>, CapeWalletError> {
-    let sender_address = sender.pub_keys().await[0].address();
     sender
-        .transfer(
-            &sender_address,
-            &asset_code,
-            &[(receiver_address, amount)],
-            fee,
-        )
+        .transfer(None, &asset_code, &[(receiver_address, amount)], fee)
         .await
 }

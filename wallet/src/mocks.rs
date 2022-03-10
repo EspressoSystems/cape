@@ -483,7 +483,7 @@ impl<'a> MockNetwork<'a, CapeLedger> for MockCapeNetwork {
         txn.memos = Some((memos.clone(), sig));
         let event = LedgerEvent::Memos {
             outputs: memos,
-            transaction: Some((block_id as u64, txn_id as u64)),
+            transaction: Some((block_id as u64, txn_id as u64, txn.txn.kind())),
         };
         self.generate_event(event);
 
@@ -612,18 +612,6 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
                 Ok((ret, ()))
             }
         }
-    }
-
-    async fn get_transaction(
-        &self,
-        block_id: u64,
-        txn_id: u64,
-    ) -> Result<CapeTransition, WalletError<CapeLedger>> {
-        self.ledger
-            .lock()
-            .await
-            .network()
-            .get_transaction(block_id, txn_id)
     }
 
     fn key_stream(&self) -> KeyTree {
@@ -809,18 +797,26 @@ mod cape_wallet_tests {
         let mut now = Instant::now();
         let num_inputs = 2;
         let num_outputs = 2;
-        let initial_grant = 10;
+        let total_initial_grant = 20;
+        let initial_grant = total_initial_grant / 2;
         let (ledger, mut wallets) = t
-            .create_test_network(&[(num_inputs, num_outputs)], vec![initial_grant], &mut now)
+            .create_test_network(
+                &[(num_inputs, num_outputs)],
+                vec![total_initial_grant],
+                &mut now,
+            )
             .await;
         assert_eq!(wallets.len(), 1);
-        let owner = wallets[0].1.clone();
+        let owner = wallets[0].1[0].clone();
         t.sync(&ledger, &wallets).await;
         println!("CAPE wallet created: {}s", now.elapsed().as_secs_f32());
 
         // Check the balance after CAPE wallet initialization.
         assert_eq!(
-            wallets[0].0.balance(&owner, &AssetCode::native()).await,
+            wallets[0]
+                .0
+                .balance_breakdown(&owner, &AssetCode::native())
+                .await,
             initial_grant
         );
 
@@ -870,7 +866,13 @@ mod cape_wallet_tests {
             .await
             .unwrap();
         println!("Wrap completed: {}s", now.elapsed().as_secs_f32());
-        assert_eq!(wallets[0].0.balance(&owner, &cap_asset.code).await, 0);
+        assert_eq!(
+            wallets[0]
+                .0
+                .balance_breakdown(&owner, &cap_asset.code)
+                .await,
+            0
+        );
 
         // Submit dummy transactions to finalize the wrap.
         now = Instant::now();
@@ -893,11 +895,17 @@ mod cape_wallet_tests {
 
         // Check the balance after the wrap.
         assert_eq!(
-            wallets[0].0.balance(&owner, &AssetCode::native()).await,
+            wallets[0]
+                .0
+                .balance_breakdown(&owner, &AssetCode::native())
+                .await,
             initial_grant - mint_fee
         );
         assert_eq!(
-            wallets[0].0.balance(&owner, &cap_asset.code).await,
+            wallets[0]
+                .0
+                .balance_breakdown(&owner, &cap_asset.code)
+                .await,
             wrap_amount
         );
 
@@ -965,9 +973,18 @@ mod cape_wallet_tests {
         println!("Burn completed: {}s", now.elapsed().as_secs_f32());
 
         // Check the balance after the burn.
-        assert_eq!(wallets[0].0.balance(&owner, &cap_asset.code).await, 0);
         assert_eq!(
-            wallets[0].0.balance(&owner, &AssetCode::native()).await,
+            wallets[0]
+                .0
+                .balance_breakdown(&owner, &cap_asset.code)
+                .await,
+            0
+        );
+        assert_eq!(
+            wallets[0]
+                .0
+                .balance_breakdown(&owner, &AssetCode::native())
+                .await,
             initial_grant - mint_fee - burn_fee
         );
 

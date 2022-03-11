@@ -48,7 +48,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
     // See https://github.com/EspressoSystems/cape/issues/400
     uint256 public constant MAX_NUM_PENDING_DEPOSIT = 10;
 
-    event FaucetInitialized(bytes roBytes, bytes faucetManagerPubKey);
+    event FaucetInitialized(bytes roBytes, string faucetManagerPubKey);
     event BlockCommitted(uint64 indexed height, uint256[] depositCommitments);
     event Erc20TokensDeposited(bytes roBytes, address erc20TokenAddress, address from);
 
@@ -161,7 +161,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
     /// @param faucetManager public key of faucet manager for CAP native token (testnet only!)
     function faucetSetupForTestnet(
         EdOnBN254.EdOnBN254Point memory faucetManager,
-        bytes calldata faucetManagerPubKey
+        string calldata faucetManagerPubKey
     ) public {
         // faucet can only be set up once by the manager
         require(msg.sender == deployer, "Only invocable by deployer");

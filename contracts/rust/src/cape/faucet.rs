@@ -7,6 +7,8 @@
 
 #![cfg(test)]
 
+use std::str::FromStr;
+
 use crate::{
     assertion::Matcher,
     deploy::deploy_cape_test_with_deployer,
@@ -34,14 +36,12 @@ async fn test_faucet() -> Result<()> {
     assert!(!contract.faucet_initialized().call().await?);
     assert_eq!(contract.deployer().call().await?, deployer.address());
 
-    let pub_key_bytes = bincode::serialize(&faucet_manager.pub_key()).unwrap();
-
     // attempts to setup faucet by non deployer should fail
     let contract = TestCAPE::new(contract.address(), non_deployer);
     contract
         .faucet_setup_for_testnet(
             faucet_manager.address().into(),
-            pub_key_bytes.clone().into(),
+            faucet_manager.pub_key().to_string(),
         )
         .send()
         .await
@@ -52,7 +52,7 @@ async fn test_faucet() -> Result<()> {
     contract
         .faucet_setup_for_testnet(
             faucet_manager.address().into(),
-            pub_key_bytes.clone().into(),
+            faucet_manager.pub_key().to_string(),
         )
         .send()
         .await?
@@ -61,7 +61,10 @@ async fn test_faucet() -> Result<()> {
 
     // try to setup again should fail
     contract
-        .faucet_setup_for_testnet(faucet_manager.address().into(), pub_key_bytes.into())
+        .faucet_setup_for_testnet(
+            faucet_manager.address().into(),
+            faucet_manager.pub_key().to_string(),
+        )
         .send()
         .await
         .should_revert_with_message("Faucet already set up");
@@ -83,9 +86,7 @@ async fn test_faucet() -> Result<()> {
         .await?;
     let event_ro: RecordOpeningSol = AbiDecode::decode(events[0].ro_bytes.clone()).unwrap();
     assert_eq!(event_ro, ro.clone().generic_into::<RecordOpeningSol>());
-
-    let event_pub_key: UserPubKey =
-        bincode::deserialize(&events[0].faucet_manager_pub_key.to_vec()).unwrap();
+    let event_pub_key = UserPubKey::from_str(&events[0].faucet_manager_pub_key).unwrap();
     assert_eq!(event_pub_key, faucet_manager.pub_key());
 
     let mut mt = MerkleTree::new(CAPE_MERKLE_HEIGHT).unwrap();

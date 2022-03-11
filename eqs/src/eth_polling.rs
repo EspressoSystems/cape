@@ -27,6 +27,7 @@ use rand_chacha::rand_core::SeedableRng;
 use rand_chacha::ChaChaRng;
 use reef::traits::{Block, Transaction};
 use seahorse::events::LedgerEvent;
+use std::str::FromStr;
 
 pub(crate) struct EthPolling {
     pub query_result_state: Arc<RwLock<QueryResultState>>,
@@ -289,12 +290,10 @@ impl EthPolling {
                     self.pending_commit_event.push(new_transition_wrap);
                 }
                 CAPEEvents::FaucetInitializedFilter(filter_data) => {
-                    let ro_bytes = filter_data.ro_bytes;
-                    let pub_key: UserPubKey =
-                        bincode::deserialize(&filter_data.faucet_manager_pub_key.to_vec()).unwrap();
-
                     // Obtain record opening
-                    let ro_sol: RecordOpeningSol = AbiDecode::decode(ro_bytes).unwrap();
+                    let ro_sol: RecordOpeningSol = AbiDecode::decode(filter_data.ro_bytes).unwrap();
+                    let pub_key =
+                        UserPubKey::from_str(&filter_data.faucet_manager_pub_key).unwrap();
                     let ro = ro_from_pub_key(ro_sol, pub_key);
 
                     // Compute record commmitment

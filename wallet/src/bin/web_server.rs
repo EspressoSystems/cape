@@ -1518,9 +1518,11 @@ mod tests {
             ))
             .await
             .unwrap();
+
+        let from_server_vec = server.get::<Vec<String>>("listkeystores").await.unwrap();
         assert_eq!(
-            vec![String::from("named_keystore"), String::from("test_wallet")],
-            server.get::<Vec<String>>("listkeystores").await.unwrap()
+            expected,
+            HashSet::from_iter(from_server_vec.iter().cloned())
         );
     }
 }

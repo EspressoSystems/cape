@@ -149,7 +149,7 @@ impl EthPolling {
                         .get_list_of_output_record_commitments();
 
                     let state_lock = self.query_result_state.read().await;
-                    let merkle_tree = MerkleTree::restore_from_frontier(
+                    let mut merkle_tree = MerkleTree::restore_from_frontier(
                         state_lock.ledger_state.record_merkle_commitment,
                         &state_lock.ledger_state.record_merkle_frontier,
                     );
@@ -157,7 +157,7 @@ impl EthPolling {
                     //add commitments to merkle tree
                     let mut uids = Vec::new();
                     let mut merkle_paths = Vec::new();
-                    if let Some(mut merkle_tree) = merkle_tree.clone() {
+                    if let Some(merkle_tree) = merkle_tree.as_mut() {
                         for (_record_id, record_commitment) in
                             output_record_commitments.iter().enumerate()
                         {

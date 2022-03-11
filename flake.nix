@@ -57,6 +57,16 @@
           };
         };
       };
+      # A nix base image
+      packages.docker = pkgs.dockerTools.buildImage {
+        name = "nix-base-docker";
+        tag = "latest";
+        contents = with pkgs; [
+          curl
+          coreutils
+          bashInteractive
+        ];
+      };
       devShell =
         let
           mySolc = pkgs.callPackage ./nix/solc-bin { version = "0.8.10"; };

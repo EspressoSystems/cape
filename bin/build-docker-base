@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+nix --experimental-features "nix-command flakes" build .#docker
+docker load --input result

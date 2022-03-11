@@ -180,7 +180,11 @@ async fn main() {
     );
 
     // Wait for initial balance.
-    while wallet.balance(&address, &AssetCode::native()).await == 0 {
+    while wallet
+        .balance_breakdown(&address, &AssetCode::native())
+        .await
+        == 0
+    {
         event!(Level::INFO, "waiting for initial balance");
         retry_delay().await;
     }
@@ -211,7 +215,7 @@ async fn main() {
         }
     };
     // If we don't yet have a balance of our asset type, mint some.
-    if wallet.balance(&address, &my_asset.code).await == 0 {
+    if wallet.balance_breakdown(&address, &my_asset.code).await == 0 {
         event!(Level::INFO, "minting my asset type {}", my_asset.code);
         loop {
             let txn = wallet
@@ -272,7 +276,11 @@ async fn main() {
                 // Get a list of assets for which we have a non-zero balance.
                 let mut asset_balances = vec![];
                 for asset in wallet.assets().await {
-                    if wallet.balance(&address, &asset.definition.code).await > 0 {
+                    if wallet
+                        .balance_breakdown(&address, &asset.definition.code)
+                        .await
+                        > 0
+                    {
                         asset_balances.push(asset.definition.code);
                     }
                 }
@@ -299,7 +307,7 @@ async fn main() {
                     recipient,
                 );
                 let txn = match wallet
-                    .transfer(&address, asset, &[(recipient.address(), amount)], fee)
+                    .transfer(Some(&address), asset, &[(recipient.address(), amount)], fee)
                     .await
                 {
                     Ok(txn) => txn,

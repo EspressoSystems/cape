@@ -114,7 +114,11 @@ async fn create_backend_and_sender_wallet<'a>(
     );
 
     // Wait for initial balance.
-    while wallet.balance(&address, &AssetCode::native()).await == 0 {
+    while wallet
+        .balance_breakdown(&address, &AssetCode::native())
+        .await
+        == 0
+    {
         event!(Level::INFO, "waiting for initial balance");
         retry_delay().await;
     }
@@ -225,10 +229,10 @@ async fn main() {
                 let address = minter.pub_keys().await[0].address();
                 let asset = mint_token(minter).await.unwrap();
                 event!(Level::INFO, "minted custom asset.  Code: {}", asset.code);
-                balances
-                    .get_mut(&address)
-                    .unwrap()
-                    .insert(asset.code, minter.balance(&address, &asset.code).await);
+                balances.get_mut(&address).unwrap().insert(
+                    asset.code,
+                    minter.balance_breakdown(&address, &asset.code).await,
+                );
             }
             OperationType::Transfer => {
                 let sender = wallets.choose_mut(&mut rng).unwrap();
@@ -244,7 +248,7 @@ async fn main() {
                 let mut asset_balances = vec![];
                 for asset in sender.assets().await {
                     if sender
-                        .balance(&sender_address, &asset.definition.code)
+                        .balance_breakdown(&sender_address, &asset.definition.code)
                         .await
                         > 0
                     {
@@ -299,7 +303,11 @@ async fn main() {
                 // move this to helper
                 let mut asset_balances = vec![];
                 for asset in owner.assets().await {
-                    if owner.balance(&owner_address, &asset.definition.code).await > 0 {
+                    if owner
+                        .balance_breakdown(&owner_address, &asset.definition.code)
+                        .await
+                        > 0
+                    {
                         asset_balances.push(asset.definition.code);
                     }
                 }
@@ -316,7 +324,11 @@ async fn main() {
                 // move this to helper
                 let mut asset_balances = vec![];
                 for asset in owner.assets().await {
-                    if owner.balance(&owner_address, &asset.definition.code).await > 0 {
+                    if owner
+                        .balance_breakdown(&owner_address, &asset.definition.code)
+                        .await
+                        > 0
+                    {
                         asset_balances.push(asset.definition.code);
                     }
                 }

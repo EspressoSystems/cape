@@ -207,7 +207,11 @@ impl EthPolling {
                             }
                             let memo_event = LedgerEvent::Memos {
                                 outputs,
-                                transaction: Some((meta.block_number.as_u64(), txn_id as u64)),
+                                transaction: Some((
+                                    meta.block_number.as_u64(),
+                                    txn_id as u64,
+                                    transitions[txn_id].kind(),
+                                )),
                             };
                             memo_events.push(memo_event);
                         });
@@ -225,6 +229,7 @@ impl EthPolling {
                         });
 
                         updated_state.events.append(&mut memo_events);
+                        updated_state.ledger_state.state_number += 1;
 
                         //update merkle tree
                         if let Some(merkle_tree) = merkle_tree {

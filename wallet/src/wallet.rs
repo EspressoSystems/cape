@@ -202,7 +202,7 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
             // need to put some address in the receiver field though, so just use the one we have
             // handy.
             .build_transfer(
-                account,
+                Some(account),
                 cap_asset,
                 &[(account.clone(), amount)],
                 fee,
@@ -214,11 +214,11 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
         // Only generate memos for the fee change output.
         assert!(xfr_info.fee_output.is_some());
         let (memos, sig) = self
-            .generate_memos(vec![xfr_info.fee_output.unwrap()], &xfr_info.sig_keypair)
+            .generate_memos(vec![xfr_info.fee_output.unwrap()], &xfr_info.sig_key_pair)
             .await?;
 
         let mut txn_info = TransactionInfo {
-            account: xfr_info.owner_address,
+            accounts: xfr_info.owner_addresses,
             memos,
             sig,
             freeze_outputs: vec![],

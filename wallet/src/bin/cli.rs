@@ -693,7 +693,7 @@ mod tests {
     #[async_std::test]
     async fn test_cli_burn() {
         let mut t = CapeTest::default();
-        let (ledger, key_streams) = create_cape_network(&mut t, &[1000, 1000, 1000]).await;
+        let (ledger, key_streams) = create_cape_network(&mut t, &[2000, 2000, 2000]).await;
 
         // Create wallets for sponsor, wrapper and receiver.
         let (mut sponsor_input, mut sponsor_output) =

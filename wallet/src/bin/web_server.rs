@@ -1105,7 +1105,7 @@ mod tests {
         assert_eq!(info.assets.len(), 2); // native asset + wrapped asset
 
         // One of the addresses should have a non-zero balance of the native asset type.
-        let mut found = false;
+        let mut found_native = false;
         for address in &info.addresses {
             if let BalanceInfo::Balance(DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR) = server
                 .get::<BalanceInfo>(&format!(
@@ -1116,13 +1116,12 @@ mod tests {
                 .await
                 .unwrap()
             {
-                found = true;
+                found_native = true;
                 break;
             }
         }
-        assert!(found);
+        assert!(found_native);
 
-        let address = info.addresses[0].clone();
         // One of the wallet's two assets is the native asset, and the other is the wrapped asset
         // for which we have a nonzero balance, but the order depends on the hash of the wrapped
         // asset code, which is non-deterministic, so we check both.
@@ -1132,16 +1131,23 @@ mod tests {
             info.assets[0].definition.code
         };
         assert_ne!(wrapped_asset, AssetCode::native());
-        assert_eq!(
-            server
+
+        // One of the addresses should have the expected balance of the wrapped asset type.
+        let mut found_wrapped = false;
+        for address in &info.addresses {
+            if let BalanceInfo::Balance(DEFAULT_WRAPPED_AMT) = server
                 .get::<BalanceInfo>(&format!(
                     "getbalance/address/{}/asset/{}",
                     address, wrapped_asset
                 ))
                 .await
-                .unwrap(),
-            BalanceInfo::Balance(DEFAULT_WRAPPED_AMT)
-        );
+                .unwrap()
+            {
+                found_wrapped = true;
+                break;
+            }
+        }
+        assert!(found_wrapped);
     }
 
     #[async_std::test]

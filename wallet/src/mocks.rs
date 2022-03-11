@@ -521,7 +521,7 @@ pub struct MockCapeBackend<'a, Meta: Serialize + DeserializeOwned> {
     key_stream: KeyTree,
 }
 
-impl<'a, Meta: Serialize + DeserializeOwned + Send> MockCapeBackend<'a, Meta> {
+impl<'a, Meta: Serialize + DeserializeOwned + Send + Clone + PartialEq> MockCapeBackend<'a, Meta> {
     pub fn new(
         ledger: Arc<Mutex<MockCapeLedger<'a>>>,
         loader: &mut impl WalletLoader<CapeLedger, Meta = Meta>,
@@ -703,7 +703,7 @@ impl WalletLoader<CapeLedger> for MockCapeWalletLoader {
         Ok(((), self.key.clone()))
     }
 
-    fn load(&mut self, _meta: &Self::Meta) -> Result<KeyTree, WalletError<CapeLedger>> {
+    fn load(&mut self, _meta: &mut Self::Meta) -> Result<KeyTree, WalletError<CapeLedger>> {
         Ok(self.key.clone())
     }
 }

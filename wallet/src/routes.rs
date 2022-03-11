@@ -254,6 +254,7 @@ pub enum ApiRouteKey {
     newwallet,
     openwallet,
     recoverkey,
+    resetpassword,
     send,
     transaction,
     unfreeze,
@@ -350,14 +351,12 @@ pub async fn read_last_path(storage: &Path) -> Result<Option<PathBuf>, tide::Err
 pub async fn init_wallet(
     rng: &mut ChaChaRng,
     faucet_pub_key: UserPubKey,
-    mnemonic: Option<String>,
-    password: String,
-    path: PathBuf,
+    mut loader: Loader,
     existing: bool,
     storage: &Path,
 ) -> Result<Wallet, tide::Error> {
     // Store the path so we can have a getlastkeystore endpoint
-    write_path(&path, storage).await?;
+    write_path(loader.path(), storage).await?;
 
     let verif_crs = VerifierKeySet {
         mint: TransactionVerifyingKey::Mint(
@@ -420,9 +419,7 @@ pub async fn init_wallet(
     ));
     ledger.set_block_size(1).unwrap();
 
-    let mut loader = Loader::from_literal(mnemonic.map(|s| s.replace('-', " ")), password, path);
     let mut backend = MockCapeBackend::new(Arc::new(Mutex::new(ledger)), &mut loader)?;
-
     if backend.storage().await.exists() != existing {
         return Err(server_error(CapeAPIError::OpenWallet {
             msg: String::from(if existing {
@@ -480,23 +477,13 @@ pub async fn newwallet(
     };
     let mnemonic = bindings[":mnemonic"].value.as_string()?;
     let password = bindings[":password"].value.as_string()?;
+    let loader = Loader::from_literal(Some(mnemonic.replace('-', " ")), password, path);
 
     // If we already have a wallet open, close it before opening a new one, otherwise we can end up
     // with two wallets using the same file at the same time.
     *wallet = None;
 
-    *wallet = Some(
-        init_wallet(
-            rng,
-            faucet_key_pair.pub_key(),
-            Some(mnemonic),
-            password,
-            path,
-            false,
-            storage,
-        )
-        .await?,
-    );
+    *wallet = Some(init_wallet(rng, faucet_key_pair.pub_key(), loader, false, storage).await?);
     Ok(())
 }
 
@@ -515,23 +502,39 @@ pub async fn openwallet(
         },
     };
     let password = bindings[":password"].value.as_string()?;
+    let loader = Loader::from_literal(None, password, path);
 
     // If we already have a wallet open, close it before opening a new one, otherwise we can end up
     // with two wallets using the same file at the same time.
     *wallet = None;
 
-    *wallet = Some(
-        init_wallet(
-            rng,
-            faucet_key_pair.pub_key(),
-            None,
-            password,
-            path,
-            true,
-            storage,
-        )
-        .await?,
-    );
+    *wallet = Some(init_wallet(rng, faucet_key_pair.pub_key(), loader, true, storage).await?);
+    Ok(())
+}
+
+pub async fn resetpassword(
+    bindings: &HashMap<String, RouteBinding>,
+    rng: &mut ChaChaRng,
+    faucet_key_pair: &UserKeyPair,
+    wallet: &mut Option<Wallet>,
+    storage: &Path,
+) -> Result<(), tide::Error> {
+    let path = match bindings.get(":path") {
+        Some(binding) => binding.value.as_path()?,
+        None => match bindings.get(":name") {
+            Some(name) => keystore_path(storage, &name.value.as_string()?),
+            None => keystore_path(storage, "default"),
+        },
+    };
+    let mnemonic = bindings[":mnemonic"].value.as_string()?;
+    let password = bindings[":password"].value.as_string()?;
+    let loader = Loader::recovery(mnemonic.replace('-', " "), password, path);
+
+    // If we already have a wallet open, close it before opening a new one, otherwise we can end up
+    // with two wallets using the same file at the same time.
+    *wallet = None;
+
+    *wallet = Some(init_wallet(rng, faucet_key_pair.pub_key(), loader, true, storage).await?);
     Ok(())
 }
 
@@ -989,6 +992,10 @@ pub async fn dispatch_url(
             openwallet(bindings, rng, faucet_key_pair, wallet, storage).await?,
         ),
         ApiRouteKey::recoverkey => response(&req, recoverkey(segments.1, bindings, wallet).await?),
+        ApiRouteKey::resetpassword => response(
+            &req,
+            resetpassword(bindings, rng, faucet_key_pair, wallet, storage).await?,
+        ),
         ApiRouteKey::send => response(&req, send(bindings, wallet).await?),
         ApiRouteKey::transaction => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::unfreeze => dummy_url_eval(route_pattern, bindings),

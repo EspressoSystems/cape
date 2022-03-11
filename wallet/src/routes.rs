@@ -13,7 +13,7 @@ use crate::{
     wallet::{CapeWalletError, CapeWalletExt},
     web::WebState,
 };
-use async_std::fs::{create_dir_all, File};
+use async_std::fs::{read_dir, File};
 use async_std::sync::{Arc, Mutex};
 use cap_rust_sandbox::{
     ledger::CapeLedger,
@@ -247,6 +247,7 @@ pub enum ApiRouteKey {
     getinfo,
     getmnemonic,
     importkey,
+    listkeystores,
     mint,
     newasset,
     newkey,
@@ -311,45 +312,29 @@ pub fn wallet_error(source: CapeWalletError) -> tide::Error {
         msg: source.to_string(),
     })
 }
-
-pub fn get_home_path() -> Result<PathBuf, tide::Error> {
-    let home = std::env::var("HOME").map_err(|_| {
-        server_error(CapeAPIError::Internal {
-            msg: String::from("HOME directory is not set. Please set the server's HOME directory."),
-        })
-    })?;
-    Ok(PathBuf::from(home))
+pub fn last_used_path_storage(storage: &Path) -> PathBuf {
+    [storage, Path::new("last_wallet_path")].iter().collect()
 }
 
-pub async fn default_storage_path() -> Result<PathBuf, tide::Error> {
-    let mut storage_path = get_home_path().unwrap();
-    storage_path.push(".espresso/cape");
-    create_dir_all(&storage_path).await?;
-    Ok(storage_path)
+pub fn keystores_dir(storage: &Path) -> PathBuf {
+    [storage, Path::new("keystores")].iter().collect()
 }
 
-pub async fn get_storage_path(path_arg: &Option<PathBuf>) -> Result<PathBuf, tide::Error> {
-    let mut path = if path_arg.is_some() {
-        path_arg.as_ref().unwrap().clone()
-    } else {
-        default_storage_path().await?
-    };
-    path.push("last_wallet_path");
-    Ok(path)
+pub fn keystore_path(storage: &Path, name: &str) -> PathBuf {
+    [keystores_dir(storage).as_path(), Path::new(name)]
+        .iter()
+        .collect()
 }
 
-pub async fn write_path(
-    wallet_path: &Path,
-    storage_path: &Option<PathBuf>,
-) -> Result<(), tide::Error> {
-    let path = get_storage_path(storage_path).await?;
+pub async fn write_path(wallet_path: &Path, storage: &Path) -> Result<(), tide::Error> {
+    let path = last_used_path_storage(storage);
     let mut file = File::create(path).await?;
     Ok(file
         .write_all(&bincode::serialize(&wallet_path).unwrap())
         .await?)
 }
-pub async fn read_last_path(path_arg: &Option<PathBuf>) -> Result<Option<PathBuf>, tide::Error> {
-    let path = get_storage_path(path_arg).await?;
+pub async fn read_last_path(storage: &Path) -> Result<Option<PathBuf>, tide::Error> {
+    let path = last_used_path_storage(storage);
     let file_result = File::open(&path).await;
     if file_result.is_err()
         && file_result.as_ref().err().unwrap().kind() == std::io::ErrorKind::NotFound
@@ -367,21 +352,12 @@ pub async fn init_wallet(
     faucet_pub_key: UserPubKey,
     mnemonic: Option<String>,
     password: String,
-    path: Option<PathBuf>,
+    path: PathBuf,
     existing: bool,
-    storage_path: &Option<PathBuf>,
+    storage: &Path,
 ) -> Result<Wallet, tide::Error> {
-    let path = match path {
-        Some(path) => path,
-        None => {
-            let mut path = get_home_path().unwrap();
-            path.push(".espresso/cape/wallet");
-            path
-        }
-    };
-
     // Store the path so we can have a getlastkeystore endpoint
-    write_path(&path, storage_path).await?;
+    write_path(&path, storage).await?;
 
     let verif_crs = VerifierKeySet {
         mint: TransactionVerifyingKey::Mint(
@@ -493,11 +469,14 @@ pub async fn newwallet(
     rng: &mut ChaChaRng,
     faucet_key_pair: &UserKeyPair,
     wallet: &mut Option<Wallet>,
-    storage_path: &Option<PathBuf>,
+    storage: &Path,
 ) -> Result<(), tide::Error> {
     let path = match bindings.get(":path") {
-        Some(binding) => Some(binding.value.as_path()?),
-        None => None,
+        Some(binding) => binding.value.as_path()?,
+        None => match bindings.get(":name") {
+            Some(name) => keystore_path(storage, &name.value.as_string()?),
+            None => keystore_path(storage, "default"),
+        },
     };
     let mnemonic = bindings[":mnemonic"].value.as_string()?;
     let password = bindings[":password"].value.as_string()?;
@@ -514,7 +493,7 @@ pub async fn newwallet(
             password,
             path,
             false,
-            storage_path,
+            storage,
         )
         .await?,
     );
@@ -526,11 +505,14 @@ pub async fn openwallet(
     rng: &mut ChaChaRng,
     faucet_key_pair: &UserKeyPair,
     wallet: &mut Option<Wallet>,
-    storage_path: &Option<PathBuf>,
+    storage: &Path,
 ) -> Result<(), tide::Error> {
     let path = match bindings.get(":path") {
-        Some(binding) => Some(binding.value.as_path()?),
-        None => None,
+        Some(binding) => binding.value.as_path()?,
+        None => match bindings.get(":name") {
+            Some(name) => keystore_path(storage, &name.value.as_string()?),
+            None => keystore_path(storage, "default"),
+        },
     };
     let password = bindings[":password"].value.as_string()?;
 
@@ -546,7 +528,7 @@ pub async fn openwallet(
             password,
             path,
             true,
-            storage_path,
+            storage,
         )
         .await?,
     );
@@ -557,6 +539,16 @@ async fn closewallet(wallet: &mut Option<Wallet>) -> Result<(), tide::Error> {
     require_wallet(wallet)?;
     *wallet = None;
     Ok(())
+}
+
+async fn listkeystores(storage: &Path) -> Result<Vec<String>, tide::Error> {
+    let dir = keystores_dir(storage);
+    let mut entries = read_dir(dir).await?;
+    let mut keystores = vec![];
+    while let Some(entry) = entries.next().await {
+        keystores.push(entry?.file_name().to_str().unwrap().to_owned());
+    }
+    Ok(keystores)
 }
 
 async fn getinfo(wallet: &mut Option<Wallet>) -> Result<WalletSummary, tide::Error> {
@@ -614,8 +606,9 @@ async fn getbalance(
         None => None,
     };
 
-    let one_balance =
-        |address: UserAddress, asset| async move { wallet.balance(&address.into(), &asset).await };
+    let one_balance = |address: UserAddress, asset| async move {
+        wallet.balance_breakdown(&address.into(), &asset).await
+    };
     let account_balances = |address: UserAddress| async move {
         iter(known_assets(wallet).await.into_keys())
             .then(|asset| {
@@ -829,7 +822,6 @@ pub async fn send(
 ) -> Result<TransactionReceipt<CapeLedger>, tide::Error> {
     let wallet = require_wallet(wallet)?;
 
-    let src = bindings.get(":sender").unwrap().value.to::<UserAddress>()?;
     let dst = bindings
         .get(":recipient")
         .unwrap()
@@ -839,10 +831,21 @@ pub async fn send(
     let amount = bindings.get(":amount").unwrap().value.as_u64()?;
     let fee = bindings.get(":fee").unwrap().value.as_u64()?;
 
-    wallet
-        .transfer(&src.into(), &asset, &[(dst.into(), amount)], fee)
-        .await
-        .map_err(wallet_error)
+    match bindings.get(":sender") {
+        Some(addr) => wallet
+            .transfer(
+                Some(&addr.value.to::<UserAddress>()?.into()),
+                &asset,
+                &[(dst.into(), amount)],
+                fee,
+            )
+            .await
+            .map_err(wallet_error),
+        None => wallet
+            .transfer(None, &asset, &[(dst.into(), amount)], fee)
+            .await
+            .map_err(wallet_error),
+    }
 }
 
 pub async fn get_records(wallet: &mut Option<Wallet>) -> Result<Vec<RecordInfo>, tide::Error> {
@@ -850,8 +853,8 @@ pub async fn get_records(wallet: &mut Option<Wallet>) -> Result<Vec<RecordInfo>,
     Ok(wallet.records().await.collect::<Vec<_>>())
 }
 
-pub async fn get_last_keystore(path: &Option<PathBuf>) -> Result<Option<PathBuf>, tide::Error> {
-    Ok(read_last_path(path).await?)
+pub async fn get_last_keystore(storage: &Path) -> Result<Option<PathBuf>, tide::Error> {
+    Ok(read_last_path(storage).await?)
 }
 
 // Get the set of assets associated with the given codes.
@@ -962,7 +965,7 @@ pub async fn dispatch_url(
     let rng = &mut *state.rng.lock().await;
     let faucet_key_pair = &state.faucet_key_pair;
     let wallet = &mut *state.wallet.lock().await;
-    let path_storage = &state.path_storage;
+    let storage = &state.storage;
     let key = ApiRouteKey::from_str(segments.0).expect("Unknown route");
     match key {
         ApiRouteKey::closewallet => response(&req, closewallet(wallet).await?),
@@ -973,16 +976,17 @@ pub async fn dispatch_url(
         ApiRouteKey::getinfo => response(&req, getinfo(wallet).await?),
         ApiRouteKey::getmnemonic => response(&req, getmnemonic(rng).await?),
         ApiRouteKey::importkey => dummy_url_eval(route_pattern, bindings),
+        ApiRouteKey::listkeystores => response(&req, listkeystores(storage).await?),
         ApiRouteKey::mint => response(&req, mint(bindings, wallet).await?),
         ApiRouteKey::newasset => response(&req, newasset(bindings, wallet).await?),
         ApiRouteKey::newkey => response(&req, newkey(segments.1, wallet).await?),
         ApiRouteKey::newwallet => response(
             &req,
-            newwallet(bindings, rng, faucet_key_pair, wallet, path_storage).await?,
+            newwallet(bindings, rng, faucet_key_pair, wallet, storage).await?,
         ),
         ApiRouteKey::openwallet => response(
             &req,
-            openwallet(bindings, rng, faucet_key_pair, wallet, path_storage).await?,
+            openwallet(bindings, rng, faucet_key_pair, wallet, storage).await?,
         ),
         ApiRouteKey::recoverkey => response(&req, recoverkey(segments.1, bindings, wallet).await?),
         ApiRouteKey::send => response(&req, send(bindings, wallet).await?),
@@ -992,6 +996,6 @@ pub async fn dispatch_url(
         ApiRouteKey::view => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::wrap => response(&req, wrap(bindings, wallet).await?),
         ApiRouteKey::getrecords => response(&req, get_records(wallet).await?),
-        ApiRouteKey::lastusedkeystore => response(&req, get_last_keystore(path_storage).await?),
+        ApiRouteKey::lastusedkeystore => response(&req, get_last_keystore(storage).await?),
     }
 }

@@ -38,26 +38,41 @@ PATH = ["getmnemonic"]
 DOC = "Generate a random mnemonic phrase."
 
 [route.newwallet]
-PATH = ["newwallet/:mnemonic/:password", "newwallet/:mnemonic/:password/path/:path"]
+PATH = ["newwallet/:mnemonic/:password", "newwallet/:mnemonic/:password/path/:path", "newwallet/:mnemonic/:password/name/:name"]
 ":password" = "Literal"
 ":path" = "Base64"
+":name" = "Literal"
 ":mnemonic" = "Literal"
 DOC = """
 Creates and opens a new the wallet with the given mnemonic and password.
+
+If `:path` is given, the wallet will be stored in the given location. If `:name` is given, the walllet will be stored in
+`~/.espresso/cape/wallet/keystores/:name`. If neither `:path` nor `:name` is given, the wallet will be stored in
+`~/.espresso/cape/wallet/keystores/default`.
 """
 
 [route.openwallet]
-PATH = ["openwallet/:password", "openwallet/:password/path/:path"]
+PATH = ["openwallet/:password", "openwallet/:password/path/:path", "openwallet/:password/name/:name"]
 ":password" = "Literal"
 ":path" = "Base64"
 DOC = """
 Open the wallet from local storage with the given password and path.
+
+`:path` and `:name` work as they do for `newwallet`.
 """
 
 [route.closewallet]
 PATH = ["closewallet"]
 DOC = """
 Close the current wallet.
+"""
+
+[route.listkeystores]
+PATH = ["listkeystores"]
+DOC = """
+Return a list of all named keystores.
+
+Named keystores are those created with `newwallet/:mnemonic/:password/name/:name`.
 """
 
 [route.getaddress]
@@ -147,14 +162,19 @@ that is, the entire ledger will be scanned.
 """
 
 [route.send]
-PATH = ["send/sender/:sender/asset/:asset/recipient/:recipient/amount/:amount/fee/:fee"]
+PATH = [
+  "send/sender/:sender/asset/:asset/recipient/:recipient/amount/:amount/fee/:fee",
+  "send/asset/:asset/recipient/:recipient/amount/:amount/fee/:fee"
+]
 ":sender" = "TaggedBase64"
 ":asset" = "TaggedBase64"
 ":recipient" = "TaggedBase64"
 ":amount" = "Integer"
 ":fee" = "Integer"
 DOC = """
-Transfer amount units of the given asset from the sender to the recipient. Returns a serialized receipt which can be used to track the transaction through the validation process.
+Transfer amount units of the given asset to the recipient from the sender, or any addresses owned by
+the current wallet if a sender isn't given. Returns a serialized receipt which can be used to track
+the transaction through the validation process.
 """
 
 [route.wrap]

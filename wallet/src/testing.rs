@@ -15,6 +15,7 @@ use crate::CapeWallet;
 use crate::CapeWalletError;
 use address_book::init_web_server;
 use address_book::wait_for_server;
+use address_book::TransientFileStore;
 use async_std::sync::{Arc, Mutex};
 use cap_rust_sandbox::deploy::EthMiddleware;
 use cap_rust_sandbox::ledger::CapeLedger;
@@ -61,7 +62,7 @@ pub async fn create_test_network<'a>(
     rng: &mut ChaChaRng,
     universal_param: &'a UniversalParam,
 ) -> (UserKeyPair, Url, Address, Arc<Mutex<MockCapeLedger<'a>>>) {
-    init_web_server(LevelFilter::Error)
+    init_web_server(LevelFilter::Error, TransientFileStore::default())
         .await
         .expect("Failed to run server.");
     wait_for_server().await;
@@ -187,7 +188,9 @@ pub async fn wrap_simple_token<'a>(
 ) -> Result<(), CapeWalletError> {
     let wrapper_eth_addr = wrapper.eth_address().await.unwrap();
 
-    let total_native_balance = wrapper.balance(wrapper_addr, &AssetCode::native()).await;
+    let total_native_balance = wrapper
+        .balance_breakdown(wrapper_addr, &AssetCode::native())
+        .await;
     assert!(total_native_balance > 0);
 
     // Prepare to wrap: deposit some ERC20 tokens into the wrapper's ETH wallet.
@@ -269,13 +272,7 @@ pub async fn transfer_token<'a>(
     asset_code: AssetCode,
     fee: u64,
 ) -> Result<TransactionReceipt<CapeLedger>, CapeWalletError> {
-    let sender_address = sender.pub_keys().await[0].address();
     sender
-        .transfer(
-            &sender_address,
-            &asset_code,
-            &[(receiver_address, amount)],
-            fee,
-        )
+        .transfer(None, &asset_code, &[(receiver_address, amount)], fee)
         .await
 }

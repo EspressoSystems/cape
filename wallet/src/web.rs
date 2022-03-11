@@ -12,19 +12,24 @@
 //! of the actual routes is defined in [crate::routes].
 
 use crate::routes::{
-    dispatch_url, CapeAPIError, RouteBinding, UrlSegmentType, UrlSegmentValue, Wallet,
+    dispatch_url, keystores_dir, CapeAPIError, RouteBinding, UrlSegmentType, UrlSegmentValue,
+    Wallet,
 };
 use async_std::{
     sync::{Arc, Mutex},
-    task::{spawn, JoinHandle},
+    task::{sleep, spawn, JoinHandle},
 };
 use cap_rust_sandbox::model::EthereumAddr;
+use futures::Future;
 use jf_cap::{keys::UserKeyPair, structs::AssetCode};
 use net::server;
 use rand_chacha::ChaChaRng;
+use seahorse::testing::await_transaction;
 use std::collections::hash_map::HashMap;
+use std::fs::create_dir_all;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
+use std::time::Duration;
 use structopt::StructOpt;
 
 pub const DEFAULT_ETH_ADDR: EthereumAddr = EthereumAddr([2; 20]);
@@ -40,26 +45,19 @@ pub const DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR: u64 = 400;
 )]
 pub struct NodeOpt {
     /// Path to assets including web server files.
-    #[structopt(
-        long = "assets",
-        default_value = ""      // See fn default_web_path().
-    )]
-    pub web_path: String,
+    #[structopt(long = "assets")]
+    pub web_path: Option<PathBuf>,
 
     /// Path to API specification and messages.
-    #[structopt(
-        long = "api",
-        default_value = ""      // See fn default_api_path().
-    )]
-    pub api_path: String,
+    #[structopt(long = "api")]
+    pub api_path: Option<PathBuf>,
 
-    /// Path to store location of most recent wallet
+    /// Path to store keystores and location of most recent wallet
     #[structopt(
-        long = "storage_path",
-        env = "PATH_STORAGE",    // Fallback to env_var or $HOME
-        default_value = "",
+        long = "storage",
+        env = "CAPE_WALLET_STORAGE", // Fallback to env_var or $HOME
     )]
-    pub path_storage: String,
+    pub storage: Option<PathBuf>,
 }
 
 /// Returns the project directory.
@@ -89,6 +87,13 @@ pub fn default_api_path() -> PathBuf {
     [&dir, Path::new(API_FILE)].iter().collect()
 }
 
+/// Returns the default path to store generated files.
+pub fn default_storage_path() -> PathBuf {
+    let home = std::env::var("HOME")
+        .expect("HOME directory is not set. Please set the server's HOME directory.");
+    [&home, ".espresso/cape/wallet"].iter().collect()
+}
+
 /// State maintained by the server, used to handle requests.
 #[derive(Clone)]
 pub struct WebState {
@@ -96,7 +101,7 @@ pub struct WebState {
     pub(crate) wallet: Arc<Mutex<Option<Wallet>>>,
     pub(crate) rng: Arc<Mutex<ChaChaRng>>,
     pub(crate) faucet_key_pair: UserKeyPair,
-    pub(crate) path_storage: Option<PathBuf>,
+    pub(crate) storage: PathBuf,
 }
 
 // Get the route pattern that matches the URL of a request, and the bindings for parameters in the
@@ -229,6 +234,18 @@ async fn entry_page(req: tide::Request<WebState>) -> Result<tide::Response, tide
     }
 }
 
+pub async fn retry<Fut: Future<Output = bool>>(f: impl Fn() -> Fut) {
+    let mut backoff = Duration::from_millis(100);
+    for _ in 0..10 {
+        if f().await {
+            return;
+        }
+        sleep(backoff).await;
+        backoff *= 2;
+    }
+    panic!("retry loop did not complete in {:?}", backoff);
+}
+
 /// Testing route handler which populates a wallet with dummy data.
 ///
 /// This route will modify the wallet by generating 2 of each kind of key (viewing, freezing, and
@@ -242,6 +259,7 @@ async fn populatefortest(req: tide::Request<WebState>) -> Result<tide::Response,
         wallet::CapeWalletExt,
     };
     use cap_rust_sandbox::model::Erc20Code;
+    use rand::{RngCore, SeedableRng};
 
     let wallet = &mut *req.state().wallet.lock().await;
     let wallet = require_wallet(wallet)?;
@@ -254,22 +272,29 @@ async fn populatefortest(req: tide::Request<WebState>) -> Result<tide::Response,
     }
 
     // Add the faucet key, so we get a balance of the native asset.
-    wallet
-        .add_user_key(req.state().faucet_key_pair.clone(), Default::default())
-        .await
-        .unwrap();
-    wallet
-        .await_key_scan(&req.state().faucet_key_pair.address())
-        .await
-        .unwrap();
+    // Check before adding it to avoid the race condition.
+    let faucet_key_pair = req.state().faucet_key_pair.clone();
+    if !wallet.pub_keys().await.contains(&faucet_key_pair.pub_key()) {
+        wallet
+            .add_user_key(faucet_key_pair.clone(), Default::default())
+            .await
+            .unwrap();
+    }
+    let faucet_addr = faucet_key_pair.address();
+    wallet.await_key_scan(&faucet_addr).await.unwrap();
 
     // Add a wrapped asset, and give it some nonzero balance.
-    let erc20_code = Erc20Code(EthereumAddr([1; 20]));
+    // Sample the Ethereum address from entropy to avoid ERC 20 code collision.
+    let mut rng = ChaChaRng::from_entropy();
+    let mut random_addr = [0u8; 20];
+    rng.fill_bytes(&mut random_addr);
+    let erc20_code = Erc20Code(EthereumAddr(random_addr));
     let sponsor_addr = DEFAULT_ETH_ADDR;
     let asset_def = wallet
-        .sponsor(erc20_code, sponsor_addr.clone(), Default::default())
+        .sponsor(erc20_code.clone(), sponsor_addr.clone(), Default::default())
         .await
         .map_err(wallet_error)?;
+
     // Ensure this address is different from the faucet address.
     let mut wrapped_asset_addr = wallet.pub_keys().await[0].address();
     if wrapped_asset_addr == req.state().faucet_key_pair.address() {
@@ -278,7 +303,7 @@ async fn populatefortest(req: tide::Request<WebState>) -> Result<tide::Response,
     wallet
         .wrap(
             sponsor_addr,
-            asset_def,
+            asset_def.clone(),
             wrapped_asset_addr.clone(),
             DEFAULT_WRAPPED_AMT,
         )
@@ -288,17 +313,37 @@ async fn populatefortest(req: tide::Request<WebState>) -> Result<tide::Response,
     // Transfer some native asset from the faucet address to the address with
     // the wrapped asset, so that it can be used for the unwrapping fee.
     // The transfer also finalizes the wrap.
-    wallet
+    let receipt = wallet
         .transfer(
-            &req.state().faucet_key_pair.address(),
+            Some(&faucet_addr),
             &AssetCode::native(),
-            &[(wrapped_asset_addr, DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR)],
+            &[(
+                wrapped_asset_addr.clone(),
+                DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR,
+            )],
             1000 - DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR - DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR,
         )
         .await
         .map_err(wallet_error)?;
 
-    server::response(&req, ())
+    // Wait for transactions to complete.
+    await_transaction(&receipt, wallet, &[]).await;
+    retry(|| async {
+        wallet
+            .balance_breakdown(&wrapped_asset_addr, &AssetCode::native())
+            .await
+            != 0
+    })
+    .await;
+    retry(|| async {
+        wallet
+            .balance_breakdown(&wrapped_asset_addr, &asset_def.code)
+            .await
+            != 0
+    })
+    .await;
+
+    server::response(&req, receipt)
 }
 
 /// Start the CAPE wallet server.
@@ -314,8 +359,11 @@ pub fn init_server(
     api_path: PathBuf,
     web_path: PathBuf,
     port: u64,
-    path_storage: Option<PathBuf>,
+    storage: PathBuf,
 ) -> std::io::Result<JoinHandle<std::io::Result<()>>> {
+    // Make sure relevant sub-directories of `storage` exist.
+    create_dir_all(keystores_dir(&storage))?;
+
     let api = crate::disco::load_messages(&api_path);
     let faucet_key_pair = UserKeyPair::generate(&mut rng);
     let mut web_server = tide::with_state(WebState {
@@ -323,7 +371,7 @@ pub fn init_server(
         wallet: Arc::new(Mutex::new(None)),
         rng: Arc::new(Mutex::new(rng)),
         faucet_key_pair,
-        path_storage,
+        storage,
     });
     web_server
         .with(server::trace)

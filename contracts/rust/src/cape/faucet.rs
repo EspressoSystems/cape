@@ -7,6 +7,8 @@
 
 #![cfg(test)]
 
+use std::str::FromStr;
+
 use crate::{
     assertion::Matcher,
     deploy::deploy_cape_test_with_deployer,
@@ -17,7 +19,7 @@ use crate::{
 use anyhow::Result;
 use ethers::abi::AbiDecode;
 use jf_cap::{
-    keys::UserKeyPair,
+    keys::{UserKeyPair, UserPubKey},
     structs::{AssetDefinition, BlindFactor, FreezeFlag, RecordCommitment, RecordOpening},
     BaseField, MerkleTree,
 };
@@ -37,7 +39,10 @@ async fn test_faucet() -> Result<()> {
     // attempts to setup faucet by non deployer should fail
     let contract = TestCAPE::new(contract.address(), non_deployer);
     contract
-        .faucet_setup_for_testnet(faucet_manager.address().into())
+        .faucet_setup_for_testnet(
+            faucet_manager.address().into(),
+            faucet_manager.pub_key().to_string(),
+        )
         .send()
         .await
         .should_revert_with_message("Only invocable by deployer");
@@ -45,7 +50,10 @@ async fn test_faucet() -> Result<()> {
     // setting up
     let contract = TestCAPE::new(contract.address(), deployer);
     contract
-        .faucet_setup_for_testnet(faucet_manager.address().into())
+        .faucet_setup_for_testnet(
+            faucet_manager.address().into(),
+            faucet_manager.pub_key().to_string(),
+        )
         .send()
         .await?
         .await?;
@@ -53,7 +61,10 @@ async fn test_faucet() -> Result<()> {
 
     // try to setup again should fail
     contract
-        .faucet_setup_for_testnet(faucet_manager.address().into())
+        .faucet_setup_for_testnet(
+            faucet_manager.address().into(),
+            faucet_manager.pub_key().to_string(),
+        )
         .send()
         .await
         .should_revert_with_message("Faucet already set up");
@@ -75,6 +86,8 @@ async fn test_faucet() -> Result<()> {
         .await?;
     let event_ro: RecordOpeningSol = AbiDecode::decode(events[0].ro_bytes.clone()).unwrap();
     assert_eq!(event_ro, ro.clone().generic_into::<RecordOpeningSol>());
+    let event_pub_key = UserPubKey::from_str(&events[0].faucet_manager_pub_key).unwrap();
+    assert_eq!(event_pub_key, faucet_manager.pub_key());
 
     let mut mt = MerkleTree::new(CAPE_MERKLE_HEIGHT).unwrap();
     mt.push(RecordCommitment::from(&ro).to_field_element());

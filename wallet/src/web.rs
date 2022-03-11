@@ -17,16 +17,19 @@ use crate::routes::{
 };
 use async_std::{
     sync::{Arc, Mutex},
-    task::{spawn, JoinHandle},
+    task::{sleep, spawn, JoinHandle},
 };
 use cap_rust_sandbox::model::EthereumAddr;
+use futures::Future;
 use jf_cap::{keys::UserKeyPair, structs::AssetCode};
 use net::server;
 use rand_chacha::ChaChaRng;
+use seahorse::testing::await_transaction;
 use std::collections::hash_map::HashMap;
 use std::fs::create_dir_all;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
+use std::time::Duration;
 use structopt::StructOpt;
 
 pub const DEFAULT_ETH_ADDR: EthereumAddr = EthereumAddr([2; 20]);
@@ -231,6 +234,18 @@ async fn entry_page(req: tide::Request<WebState>) -> Result<tide::Response, tide
     }
 }
 
+pub async fn retry<Fut: Future<Output = bool>>(f: impl Fn() -> Fut) {
+    let mut backoff = Duration::from_millis(100);
+    for _ in 0..10 {
+        if f().await {
+            return;
+        }
+        sleep(backoff).await;
+        backoff *= 2;
+    }
+    panic!("retry loop did not complete in {:?}", backoff);
+}
+
 /// Testing route handler which populates a wallet with dummy data.
 ///
 /// This route will modify the wallet by generating 2 of each kind of key (viewing, freezing, and
@@ -244,6 +259,7 @@ async fn populatefortest(req: tide::Request<WebState>) -> Result<tide::Response,
         wallet::CapeWalletExt,
     };
     use cap_rust_sandbox::model::Erc20Code;
+    use rand::{RngCore, SeedableRng};
 
     let wallet = &mut *req.state().wallet.lock().await;
     let wallet = require_wallet(wallet)?;
@@ -256,22 +272,29 @@ async fn populatefortest(req: tide::Request<WebState>) -> Result<tide::Response,
     }
 
     // Add the faucet key, so we get a balance of the native asset.
-    wallet
-        .add_user_key(req.state().faucet_key_pair.clone(), Default::default())
-        .await
-        .unwrap();
-    wallet
-        .await_key_scan(&req.state().faucet_key_pair.address())
-        .await
-        .unwrap();
+    // Check before adding it to avoid the race condition.
+    let faucet_key_pair = req.state().faucet_key_pair.clone();
+    if !wallet.pub_keys().await.contains(&faucet_key_pair.pub_key()) {
+        wallet
+            .add_user_key(faucet_key_pair.clone(), Default::default())
+            .await
+            .unwrap();
+    }
+    let faucet_addr = faucet_key_pair.address();
+    wallet.await_key_scan(&faucet_addr).await.unwrap();
 
     // Add a wrapped asset, and give it some nonzero balance.
-    let erc20_code = Erc20Code(EthereumAddr([1; 20]));
+    // Sample the Ethereum address from entropy to avoid ERC 20 code collision.
+    let mut rng = ChaChaRng::from_entropy();
+    let mut random_addr = [0u8; 20];
+    rng.fill_bytes(&mut random_addr);
+    let erc20_code = Erc20Code(EthereumAddr(random_addr));
     let sponsor_addr = DEFAULT_ETH_ADDR;
     let asset_def = wallet
-        .sponsor(erc20_code, sponsor_addr.clone(), Default::default())
+        .sponsor(erc20_code.clone(), sponsor_addr.clone(), Default::default())
         .await
         .map_err(wallet_error)?;
+
     // Ensure this address is different from the faucet address.
     let mut wrapped_asset_addr = wallet.pub_keys().await[0].address();
     if wrapped_asset_addr == req.state().faucet_key_pair.address() {
@@ -280,7 +303,7 @@ async fn populatefortest(req: tide::Request<WebState>) -> Result<tide::Response,
     wallet
         .wrap(
             sponsor_addr,
-            asset_def,
+            asset_def.clone(),
             wrapped_asset_addr.clone(),
             DEFAULT_WRAPPED_AMT,
         )
@@ -290,17 +313,37 @@ async fn populatefortest(req: tide::Request<WebState>) -> Result<tide::Response,
     // Transfer some native asset from the faucet address to the address with
     // the wrapped asset, so that it can be used for the unwrapping fee.
     // The transfer also finalizes the wrap.
-    wallet
+    let receipt = wallet
         .transfer(
-            Some(&req.state().faucet_key_pair.address()),
+            Some(&faucet_addr),
             &AssetCode::native(),
-            &[(wrapped_asset_addr, DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR)],
+            &[(
+                wrapped_asset_addr.clone(),
+                DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR,
+            )],
             1000 - DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR - DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR,
         )
         .await
         .map_err(wallet_error)?;
 
-    server::response(&req, ())
+    // Wait for transactions to complete.
+    await_transaction(&receipt, wallet, &[]).await;
+    retry(|| async {
+        wallet
+            .balance_breakdown(&wrapped_asset_addr, &AssetCode::native())
+            .await
+            != 0
+    })
+    .await;
+    retry(|| async {
+        wallet
+            .balance_breakdown(&wrapped_asset_addr, &asset_def.code)
+            .await
+            != 0
+    })
+    .await;
+
+    server::response(&req, receipt)
 }
 
 /// Start the CAPE wallet server.

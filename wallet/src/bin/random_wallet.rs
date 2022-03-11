@@ -248,6 +248,9 @@ async fn main() {
         let peers: Vec<UserPubKey> = get_pub_keys_from_file(&args.pub_key_storage).await;
         let operation: OperationType = rand::random();
         match operation {
+            OperationType::Mint => {
+                // Skip mint, each wallet mints their own token when created
+            }
             OperationType::Transfer => {
                 let recipient = match peers.choose_weighted(&mut rng, |pk| {
                     if *pk == pub_key {

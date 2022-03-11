@@ -16,6 +16,7 @@ use crate::CapeWalletError;
 use address_book::init_web_server;
 use address_book::wait_for_server;
 use async_std::sync::{Arc, Mutex};
+use async_std::task::sleep;
 use cap_rust_sandbox::deploy::EthMiddleware;
 use cap_rust_sandbox::ethereum::get_provider;
 use cap_rust_sandbox::ledger::CapeLedger;
@@ -46,6 +47,7 @@ use seahorse::txn_builder::{TransactionReceipt, TransactionStatus};
 use std::time::Duration;
 use surf::Url;
 use tide::log::LevelFilter;
+use tracing::{event, Level};
 
 lazy_static! {
     static ref PORT: Arc<Mutex<u64>> = {
@@ -59,6 +61,10 @@ pub async fn port() -> u64 {
     let port = *counter;
     *counter += 1;
     port
+}
+
+pub async fn retry_delay() {
+    sleep(Duration::from_secs(1)).await
 }
 
 #[allow(clippy::needless_lifetimes)]
@@ -175,6 +181,7 @@ pub enum OperationType {
     Unfreeze,
     Wrap,
     Burn,
+    Mint,
 }
 
 impl Distribution<OperationType> for Standard {
@@ -184,11 +191,46 @@ impl Distribution<OperationType> for Standard {
             1 => OperationType::Freeze,
             2 => OperationType::Unfreeze,
             3 => OperationType::Wrap,
-            _ => OperationType::Burn,
+            4 => OperationType::Burn,
+            _ => OperationType::Mint,
         }
     }
 }
 
+/// Mint a new token with the given wallet and add it's freezer and audit keys to
+/// to the Asset Policy
+pub async fn mint_token<'a>(
+    wallet: &mut CapeWallet<'a, CapeBackend<'a, ()>>,
+) -> Result<AssetDefinition, CapeWalletError> {
+    let freeze_key = &wallet.freezer_pub_keys().await[0];
+    let audit_key = &wallet.auditor_pub_keys().await[0];
+    let policy = AssetPolicy::default()
+        .set_freezer_pub_key(freeze_key.clone())
+        .set_auditor_pub_key(audit_key.clone());
+    let my_asset = wallet.define_asset(&[], policy).await?;
+    event!(Level::INFO, "defined a new asset type: {}", my_asset.code);
+    let address = wallet.pub_keys().await[0].address();
+
+    // Mint some custom asset
+    event!(Level::INFO, "minting my asset type {}", my_asset.code);
+    loop {
+        let txn = wallet
+            .mint(&address, 1, &my_asset.code, 1u64 << 32, address.clone())
+            .await
+            .expect("failed to generate mint transaction");
+        let status = wallet
+            .await_transaction(&txn)
+            .await
+            .expect("error waiting for mint to complete");
+        if status.succeeded() {
+            break;
+        }
+        // The mint transaction is allowed to fail due to contention from other clients.
+        event!(Level::WARN, "mint transaction failed, retrying...");
+        retry_delay().await;
+    }
+    Ok(my_asset)
+}
 pub async fn freeze_token<'a>(
     freezer: &mut CapeWallet<'a, CapeBackend<'a, ()>>,
     asset: &AssetCode,

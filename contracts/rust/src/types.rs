@@ -347,22 +347,28 @@ impl From<jf_cap::structs::RecordOpening> for RecordOpening {
 
 impl From<RecordOpening> for jf_cap::structs::RecordOpening {
     fn from(ro_sol: RecordOpening) -> Self {
-        let pub_key = UserPubKey::new(ro_sol.user_addr.into(), aead::EncKey::default());
+        let pub_key = UserPubKey::new(ro_sol.user_addr.clone().into(), aead::EncKey::default());
+        ro_from_pub_key(ro_sol, pub_key)
+    }
+}
 
-        Self {
-            amount: ro_sol.amount,
-            asset_def: ro_sol.asset_def.into(),
-            pub_key,
-            freeze_flag: if ro_sol.freeze_flag {
-                FreezeFlag::Frozen
-            } else {
-                FreezeFlag::Unfrozen
-            },
-            blind: ro_sol
-                .blind
-                .generic_into::<BlindFactorSol>()
-                .generic_into::<BlindFactor>(),
-        }
+pub fn ro_from_pub_key(
+    ro_sol: RecordOpening,
+    pub_key: UserPubKey,
+) -> jf_cap::structs::RecordOpening {
+    jf_cap::structs::RecordOpening {
+        amount: ro_sol.amount,
+        asset_def: ro_sol.asset_def.into(),
+        pub_key,
+        freeze_flag: if ro_sol.freeze_flag {
+            FreezeFlag::Frozen
+        } else {
+            FreezeFlag::Unfrozen
+        },
+        blind: ro_sol
+            .blind
+            .generic_into::<BlindFactorSol>()
+            .generic_into::<BlindFactor>(),
     }
 }
 

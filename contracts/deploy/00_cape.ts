@@ -1,6 +1,6 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
-import { BigNumber } from "ethers";
+import { utils, BigNumber } from "ethers";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
@@ -27,19 +27,15 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const treeDepth = 24;
   const nRoots = 1000;
 
-  // Faucet manager wallet public key: USERPUBKEY~muN7VKxj1GbJ4D6rU6gANdvwD05oPKy_XmhkBxSByq0gAAAAAAAAAIRN-Rik8czFiToI8Ft5fsIf9HAEtWHDsOHh-ZBJZl1KxQ
-  // address generation code:
-  // ```rust
-  // use ark_std::str::FromStr;
-  // let result = "USERPUBKEY~muN7VKxj1GbJ4D6rU6gANdvwD05oPKy_XmhkBxSByq0gAAAAAAAAAIRN-Rik8czFiToI8Ft5fsIf9HAEtWHDsOHh-ZBJZl1KxQ";
-  // let pk = UserPubKey::from_str(&result).unwrap_or_default();
-  // ark_std::eprintln!(
-  //     "x: {}, y: {}",
-  //     pk.address().internal().x,
-  //     pk.address().internal().y
-  // );
+  const pubKey =
+    "USERPUBKEY~muN7VKxj1GbJ4D6rU6gANdvwD05oPKy_XmhkBxSByq0gAAAAAAAAAIRN-Rik8czFiToI8Ft5fsIf9HAEtWHDsOHh-ZBJZl1KxQ";
+  // To update, update in `./rust/src/bin/faucet.rs` and run
+  //
+  //     cargo run --bin faucet -p cap-rust-sandbox
+  //
+  // To get the values below.
   // ```
-  const faucetManager = {
+  const faucetManagerAddress = {
     x: BigNumber.from("0x2DCA81140764685EBFAC3C684E0FF0DB3500A853AB3EE0C966D463AC547BE39A"),
     y: BigNumber.from("0x228CF79945E37CFBB3F43F150B977639A12C900C949E23ED1DCD250578314393"),
   };
@@ -59,7 +55,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       from: deployer,
     },
     "faucetSetupForTestnet",
-    faucetManager
+    faucetManagerAddress,
+    // TODO This is probably wrong. How construct the serialized pub key correctly (?)
+    utils.toUtf8Bytes(pubKey)
   );
 };
 

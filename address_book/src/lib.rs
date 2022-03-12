@@ -69,14 +69,26 @@ impl FileStore {
 impl Store for FileStore {
     fn save(&self, address: &UserAddress, pub_key: &UserPubKey) -> Result<(), std::io::Error> {
         let tmp_path = self.tmp_path(address);
-        fs::write(&tmp_path, bincode::serialize(&pub_key).unwrap())?;
+        fs::write(
+            &tmp_path,
+            bincode::serialize(&pub_key).expect("Failed to serialize public key."),
+        )?;
         fs::rename(&tmp_path, self.path(address))
     }
 
     fn load(&self, address: &UserAddress) -> Option<UserPubKey> {
         match fs::read(self.path(address)) {
-            Ok(bytes) => Some(bincode::deserialize(&bytes).unwrap()),
-            Err(_) => None,
+            Ok(bytes) => {
+                Some(bincode::deserialize(&bytes).expect("Failed to deserialize public key."))
+            }
+            Err(err) => {
+                tide::log::error!(
+                    "Attempt to read address {:?} failed. {}",
+                    self.path(address),
+                    err
+                );
+                None
+            }
         }
     }
 }
@@ -92,7 +104,7 @@ impl Default for TransientFileStore {
         Self {
             store: FileStore::new(
                 TempDir::new("cape-address-book")
-                    .expect("Failed to create temporary directory")
+                    .expect("Failed to create temporary directory.")
                     .into_path(),
             ),
         }
@@ -101,7 +113,7 @@ impl Default for TransientFileStore {
 
 impl Drop for TransientFileStore {
     fn drop(&mut self) {
-        fs::remove_dir_all(self.store.dir.clone()).expect("Failed to remove store path");
+        fs::remove_dir_all(self.store.dir.clone()).expect("Failed to remove store path.");
     }
 }
 
@@ -127,7 +139,7 @@ struct ServerState<T: Store> {
 }
 
 pub fn address_book_temp_dir() -> TempDir {
-    TempDir::new("cape-address-book").expect("Failed to create temporary directory")
+    TempDir::new("cape-address-book").expect("Failed to create temporary directory.")
 }
 
 pub fn address_book_port() -> String {

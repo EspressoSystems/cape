@@ -71,7 +71,7 @@ async fn test_faucet() -> Result<()> {
 
     // check the native token record is properly allocated
     let ro = RecordOpening {
-        amount: u64::MAX,
+        amount: u64::MAX / 2,
         asset_def: AssetDefinition::native(),
         pub_key: faucet_manager.pub_key(),
         freeze_flag: FreezeFlag::Unfrozen,

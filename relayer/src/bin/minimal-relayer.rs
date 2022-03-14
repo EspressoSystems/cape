@@ -21,9 +21,11 @@ struct MinimalRelayerOptions {
     rpc_url: String,
 
     /// Address for CAPE submit
+    #[structopt(env = "CAPE_CONTRACT_ADDRESS")]
     cape_address: Address,
 
     /// Mnemonic phrase for ETH wallet, for paying submission gas fees.
+    #[structopt(env = "CAPE_RELAYER_WALLET_MNEMONIC")]
     mnemonic: String,
 }
 
@@ -44,6 +46,7 @@ async fn main() -> std::io::Result<()> {
     let contract = CAPE::new(opt.cape_address, client);
 
     // Start serving CAPE transaction submissions.
-    let port = std::env::var("PORT").unwrap_or_else(|_| DEFAULT_RELAYER_PORT.to_string());
+    let port =
+        std::env::var("CAPE_RELAYER_PORT").unwrap_or_else(|_| DEFAULT_RELAYER_PORT.to_string());
     init_web_server(contract, port).await
 }

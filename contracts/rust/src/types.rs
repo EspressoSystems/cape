@@ -322,14 +322,15 @@ impl From<jf_cap::structs::AssetDefinition> for AssetDefinition {
 
 impl From<AssetDefinition> for jf_cap::structs::AssetDefinition {
     fn from(def_sol: AssetDefinition) -> Self {
-        Self::new(
-            def_sol
-                .code
-                .generic_into::<AssetCodeSol>()
-                .generic_into::<AssetCode>(),
-            def_sol.policy.into(),
-        )
-        .unwrap()
+        let code = def_sol
+            .code
+            .generic_into::<AssetCodeSol>()
+            .generic_into::<AssetCode>();
+        if code == AssetCode::native() {
+            Self::native()
+        } else {
+            Self::new(code, def_sol.policy.into()).unwrap()
+        }
     }
 }
 

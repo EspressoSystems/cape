@@ -28,10 +28,12 @@ use ethers::types::TransactionRequest;
 use ethers::types::U256;
 use jf_cap::keys::UserAddress;
 use jf_cap::keys::UserKeyPair;
+use jf_cap::keys::UserPubKey;
 use jf_cap::proof::UniversalParam;
 use jf_cap::structs::AssetCode;
 use jf_cap::structs::AssetDefinition;
 use jf_cap::structs::AssetPolicy;
+use jf_cap::structs::FreezeFlag;
 use jf_cap::structs::ReceiverMemo;
 use jf_cap::TransactionVerifyingKey;
 use key_set::VerifierKeySet;
@@ -44,7 +46,9 @@ use rand_chacha::ChaChaRng;
 use reef::Ledger;
 use relayer::testing::start_minimal_relayer_for_test;
 use seahorse::testing::await_transaction;
+use seahorse::txn_builder::RecordInfo;
 use seahorse::txn_builder::{TransactionReceipt, TransactionStatus};
+use std::collections::HashSet;
 use std::time::Duration;
 use surf::Url;
 use tide::log::LevelFilter;
@@ -207,7 +211,13 @@ pub async fn mint_token<'a>(
     let audit_key = &wallet.auditor_pub_keys().await[0];
     let policy = AssetPolicy::default()
         .set_freezer_pub_key(freeze_key.clone())
-        .set_auditor_pub_key(audit_key.clone());
+        .set_auditor_pub_key(audit_key.clone())
+        .reveal_user_address()
+        .unwrap()
+        .reveal_amount()
+        .unwrap()
+        .reveal_blinding_factor()
+        .unwrap();
     let my_asset = wallet.define_asset(&[], policy).await?;
     event!(Level::INFO, "defined a new asset type: {}", my_asset.code);
     let address = wallet.pub_keys().await[0].address();
@@ -232,6 +242,27 @@ pub async fn mint_token<'a>(
     }
     Ok(my_asset)
 }
+
+/// Return records the freezer has access to freeze or unfreeze but does not own.
+/// Will only return records with freeze_flag the same as the frozen arg.
+pub async fn find_freezable_records<'a>(
+    freezer: &CapeWallet<'a, CapeBackend<'a, ()>>,
+    frozen: FreezeFlag,
+) -> Vec<RecordInfo> {
+    let pks: HashSet<UserPubKey> = freezer.pub_keys().await.into_iter().collect();
+    let records = freezer.records().await;
+    records
+        .filter(|r| {
+            let ro = &r.ro;
+            // We own the record
+            if pks.contains(&ro.pub_key) {
+                return false;
+            }
+            ro.freeze_flag == frozen
+        })
+        .collect()
+}
+
 pub async fn freeze_token<'a>(
     freezer: &mut CapeWallet<'a, CapeBackend<'a, ()>>,
     asset: &AssetCode,

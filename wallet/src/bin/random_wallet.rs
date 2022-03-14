@@ -18,16 +18,19 @@ use cape_wallet::testing::create_test_network;
 use cape_wallet::testing::get_burn_ammount;
 use cape_wallet::testing::OperationType;
 use cape_wallet::testing::{
-    burn_token, freeze_token, sponsor_simple_token, unfreeze_token, wrap_simple_token,
+    burn_token, find_freezable_records, freeze_token, sponsor_simple_token, unfreeze_token,
+    wrap_simple_token,
 };
 use cape_wallet::CapeWallet;
 use jf_cap::keys::UserKeyPair;
 use jf_cap::structs::AssetCode;
 use jf_cap::structs::AssetPolicy;
+use jf_cap::structs::FreezeFlag;
 use jf_cap::{keys::UserPubKey, testing_apis::universal_setup_for_test};
 use rand::distributions::weighted::WeightedError;
 use rand::seq::SliceRandom;
 use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
+use seahorse::txn_builder::RecordInfo;
 use seahorse::{events::EventIndex, hd::KeyTree};
 use std::fs::File;
 use std::io::{Read, Write};
@@ -164,7 +167,7 @@ async fn main() {
     // fund_eth_wallet()
 
     let freeze_key = wallet.generate_freeze_key().await.unwrap();
-    let _audit_key = wallet.generate_audit_key().await.unwrap();
+    let audit_key = wallet.generate_audit_key().await.unwrap();
 
     println!("Wallet created");
 
@@ -205,7 +208,15 @@ async fn main() {
             asset.definition
         }
         None => {
-            let policy = AssetPolicy::default().set_freezer_pub_key(freeze_key.clone());
+            let policy = AssetPolicy::default()
+                .set_freezer_pub_key(freeze_key.clone())
+                .set_auditor_pub_key(audit_key)
+                .reveal_user_address()
+                .unwrap()
+                .reveal_amount()
+                .unwrap()
+                .reveal_blinding_factor()
+                .unwrap();
             let my_asset = wallet
                 .define_asset(&[], policy)
                 .await
@@ -235,11 +246,6 @@ async fn main() {
         }
         event!(Level::INFO, "minted custom asset");
     }
-
-    // Keep track where we sent our assets for freezing
-    let mut rec_addresses: Vec<UserPubKey> = vec![];
-    // Keep track of address with our frozen asset.
-    let mut frozen_addresses: Vec<UserPubKey> = vec![];
 
     // Deploy contract + simple token
     let erc20_contract = deploy_erc20_token().await;
@@ -299,7 +305,6 @@ async fn main() {
                     if *asset == AssetCode::native() {
                         String::from("the native asset")
                     } else if *asset == my_asset.code {
-                        rec_addresses.push(recipient.clone());
                         String::from("my asset")
                     } else {
                         asset.to_string()
@@ -331,30 +336,32 @@ async fn main() {
                 }
             }
             OperationType::Freeze => {
-                // Choose a random person who we sent our asset at one point
-                // This may fail if they've transfered that asset
-                if rec_addresses.is_empty() {
+                let freezable_records: Vec<RecordInfo> =
+                    find_freezable_records(&wallet, FreezeFlag::Unfrozen).await;
+                if freezable_records.is_empty() {
                     continue;
                 }
-                let asset_owner = rec_addresses.choose(&mut rng).unwrap();
-                freeze_token(&mut wallet, &my_asset.code, 1, asset_owner.address())
+                let record = freezable_records.choose(&mut rng).unwrap();
+                let owner_address = record.ro.pub_key.address().clone();
+                let asset_def = &record.ro.asset_def;
+
+                freeze_token(&mut wallet, &asset_def.code, 1, owner_address)
                     .await
                     .unwrap();
-                frozen_addresses.push(asset_owner.clone());
             }
             OperationType::Unfreeze => {
-                if frozen_addresses.is_empty() {
+                let freezable_records: Vec<RecordInfo> =
+                    find_freezable_records(&wallet, FreezeFlag::Frozen).await;
+                if freezable_records.is_empty() {
                     continue;
                 }
-                let asset_owner = frozen_addresses.choose(&mut rng).unwrap();
-                unfreeze_token(&mut wallet, &my_asset.code, 1, asset_owner.address())
+                let record = freezable_records.choose(&mut rng).unwrap();
+                let owner_address = record.ro.pub_key.address();
+                let asset_def = &record.ro.asset_def;
+
+                unfreeze_token(&mut wallet, &asset_def.code, 1, owner_address)
                     .await
                     .unwrap();
-                let index = frozen_addresses
-                    .iter()
-                    .position(|i| i == asset_owner)
-                    .unwrap();
-                frozen_addresses.remove(index);
             }
             OperationType::Wrap => {
                 let asset_def = wallet

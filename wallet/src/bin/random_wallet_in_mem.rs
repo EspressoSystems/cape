@@ -19,8 +19,9 @@ use cape_wallet::backend::CapeBackend;
 use cape_wallet::mocks::*;
 use cape_wallet::testing::get_burn_ammount;
 use cape_wallet::testing::{
-    burn_token, create_test_network, freeze_token, fund_eth_wallet, mint_token, retry_delay,
-    sponsor_simple_token, transfer_token, unfreeze_token, wrap_simple_token, OperationType,
+    burn_token, create_test_network, find_freezable_records, freeze_token, fund_eth_wallet,
+    mint_token, retry_delay, sponsor_simple_token, transfer_token, unfreeze_token,
+    wrap_simple_token, OperationType,
 };
 use cape_wallet::CapeWallet;
 use cape_wallet::CapeWalletExt;
@@ -30,11 +31,11 @@ use jf_cap::keys::UserPubKey;
 use jf_cap::proof::UniversalParam;
 use jf_cap::structs::AssetCode;
 use jf_cap::structs::AssetPolicy;
+use jf_cap::structs::FreezeFlag;
 use jf_cap::{keys::UserKeyPair, testing_apis::universal_setup_for_test};
-use rand::prelude::IteratorRandom;
 use rand::seq::SliceRandom;
 use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
-use seahorse::AssetInfo;
+use seahorse::txn_builder::RecordInfo;
 use seahorse::{events::EventIndex, hd::KeyTree};
 use std::collections::HashMap;
 use std::path::Path;
@@ -300,100 +301,34 @@ async fn main() {
                 }
             }
             OperationType::Freeze => {
-                let (index, freezer) = wallets.iter().enumerate().choose(&mut rng).unwrap();
-                let freezer_pk = freezer.freezer_pub_keys().await[0].clone();
+                let freezer = wallets.choose_mut(&mut rng).unwrap();
 
-                // get a list of freezable assets
-                let freezable_assets: Vec<AssetInfo> = freezer
-                    .assets()
-                    .await
-                    .iter()
-                    .cloned()
-                    .filter(|asset| {
-                        asset.definition.policy_ref().freezer_pub_key().clone() == freezer_pk
-                    })
-                    .collect();
-                let mut asset_balances = vec![];
-                let owner_address: UserAddress;
-                {
-                    let owner = wallets.iter().choose(&mut rng).unwrap();
-                    owner_address = owner.pub_keys().await[0].address().clone();
-                    for asset in owner.assets().await {
-                        if owner
-                            .balance_breakdown(&owner_address, &asset.definition.code)
-                            .await
-                            > 0
-                        {
-                            asset_balances.push(asset.clone());
-                        }
-                    }
+                let freezable_records: Vec<RecordInfo> =
+                    find_freezable_records(freezer, FreezeFlag::Unfrozen).await;
+                if freezable_records.is_empty() {
+                    continue;
                 }
+                let record = freezable_records.choose(&mut rng).unwrap();
+                let owner_address = record.ro.pub_key.address().clone();
+                let asset_def = &record.ro.asset_def;
 
-                let asset = asset_balances
-                    .choose_weighted(
-                        &mut rng,
-                        |a| {
-                            if freezable_assets.contains(a) {
-                                1
-                            } else {
-                                0
-                            }
-                        },
-                    )
-                    .unwrap();
-
-                let freeze_wallet = &mut wallets[index];
-
-                freeze_token(freeze_wallet, &asset.definition.code, 1, owner_address)
+                freeze_token(freezer, &asset_def.code, 1, owner_address)
                     .await
                     .unwrap();
             }
             OperationType::Unfreeze => {
-                let (index, freezer) = wallets.iter().enumerate().choose(&mut rng).unwrap();
-                let freezer_pk = freezer.freezer_pub_keys().await[0].clone();
+                let freezer = wallets.choose_mut(&mut rng).unwrap();
 
-                // get a list of freezable assets
-                let freezable_assets: Vec<AssetInfo> = freezer
-                    .assets()
-                    .await
-                    .iter()
-                    .cloned()
-                    .filter(|asset| {
-                        asset.definition.policy_ref().freezer_pub_key().clone() == freezer_pk
-                    })
-                    .collect();
-                let mut asset_balances = vec![];
-                let owner_address: UserAddress;
-                {
-                    let owner = wallets.iter().choose(&mut rng).unwrap();
-                    owner_address = owner.pub_keys().await[0].address().clone();
-                    for asset in owner.assets().await {
-                        if owner
-                            .frozen_balance_breakdown(&owner_address, &asset.definition.code)
-                            .await
-                            > 0
-                        {
-                            asset_balances.push(asset.clone());
-                        }
-                    }
+                let freezable_records: Vec<RecordInfo> =
+                    find_freezable_records(freezer, FreezeFlag::Frozen).await;
+                if freezable_records.is_empty() {
+                    continue;
                 }
+                let record = freezable_records.choose(&mut rng).unwrap();
+                let owner_address = record.ro.pub_key.address();
+                let asset_def = &record.ro.asset_def;
 
-                let asset = asset_balances
-                    .choose_weighted(
-                        &mut rng,
-                        |a| {
-                            if freezable_assets.contains(a) {
-                                1
-                            } else {
-                                0
-                            }
-                        },
-                    )
-                    .unwrap();
-
-                let unfreeze_wallet = &mut wallets[index];
-
-                unfreeze_token(unfreeze_wallet, &asset.definition.code, 1, owner_address)
+                unfreeze_token(freezer, &asset_def.code, 1, owner_address)
                     .await
                     .unwrap();
             }

@@ -349,23 +349,51 @@ async fn main() {
                     .unwrap();
             }
             OperationType::Unfreeze => {
-                let owner = wallets.choose(&mut rng).unwrap();
-                let owner_address = owner.pub_keys().await[0].address();
-                // move this to helper
+                let (index, freezer) = wallets.iter().enumerate().choose(&mut rng).unwrap();
+                let freezer_pk = freezer.freezer_pub_keys().await[0].clone();
+
+                // get a list of freezable assets
+                let freezable_assets: Vec<AssetInfo> = freezer
+                    .assets()
+                    .await
+                    .iter()
+                    .cloned()
+                    .filter(|asset| {
+                        asset.definition.policy_ref().freezer_pub_key().clone() == freezer_pk
+                    })
+                    .collect();
                 let mut asset_balances = vec![];
-                for asset in owner.assets().await {
-                    if owner
-                        .balance_breakdown(&owner_address, &asset.definition.code)
-                        .await
-                        > 0
-                    {
-                        asset_balances.push(asset.definition.code);
+                let owner_address: UserAddress;
+                {
+                    let owner = wallets.iter().choose(&mut rng).unwrap();
+                    owner_address = owner.pub_keys().await[0].address().clone();
+                    for asset in owner.assets().await {
+                        if owner
+                            .frozen_balance_breakdown(&owner_address, &asset.definition.code)
+                            .await
+                            > 0
+                        {
+                            asset_balances.push(asset.clone());
+                        }
                     }
                 }
-                let asset = asset_balances.choose(&mut rng).unwrap();
 
-                let unfreezer = wallets.choose_mut(&mut rng).unwrap();
-                unfreeze_token(unfreezer, asset, 1, owner_address)
+                let asset = asset_balances
+                    .choose_weighted(
+                        &mut rng,
+                        |a| {
+                            if freezable_assets.contains(a) {
+                                1
+                            } else {
+                                0
+                            }
+                        },
+                    )
+                    .unwrap();
+
+                let unfreeze_wallet = &mut wallets[index];
+
+                unfreeze_token(unfreeze_wallet, &asset.definition.code, 1, owner_address)
                     .await
                     .unwrap();
             }

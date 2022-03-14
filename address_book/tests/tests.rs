@@ -80,6 +80,10 @@ async fn round_trip<T: Store + 'static>(store: T) {
     }
 
     // Lookup addresses we didn't insert.
+    tide::log::error!(
+        "The following {} 'No such' errors are expected.",
+        NOT_FOUND_COUNT
+    );
     for _ in 0..NOT_FOUND_COUNT {
         let user_key = UserKeyPair::generate(&mut rng2);
         let pub_key = user_key.pub_key();

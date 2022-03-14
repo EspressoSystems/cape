@@ -168,8 +168,9 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
         require(!faucetInitialized, "Faucet already set up");
 
         // allocate maximum possible amount of native CAP token to faucet manager on testnet
+        // max amount len is set to 63 bits: https://github.com/EspressoSystems/cap/blob/main/src/constants.rs#L50-L51
         RecordOpening memory ro = RecordOpening(
-            type(uint64).max,
+            type(uint64).max / 2,
             nativeDomesticAsset(),
             faucetManager,
             false,

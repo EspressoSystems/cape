@@ -74,33 +74,33 @@ impl From<AssetDefinition> for JfAssetDefinition {
         let code = definition.code;
         let mut policy = AssetPolicy::default();
         if let Some(freezing_key) = definition.freezing_key {
-            policy.set_freezer_pub_key(freezing_key);
+            policy = policy.set_freezer_pub_key(freezing_key);
         }
         if let Some(viewing_key) = definition.viewing_key {
-            policy.set_auditor_pub_key(viewing_key);
+            policy = policy.set_auditor_pub_key(viewing_key);
             if definition.address_viewable {
-                policy.reveal_user_address().unwrap();
+                policy = policy.reveal_user_address().unwrap();
             }
             if definition.amount_viewable {
-                policy.reveal_amount().unwrap();
+                policy = policy.reveal_amount().unwrap();
             }
-            policy.set_reveal_threshold(definition.viewing_threshold);
+            policy = policy.set_reveal_threshold(definition.viewing_threshold);
         }
-        JfAssetDefinition { code, policy }
+        JfAssetDefinition::new(code, policy).unwrap()
     }
 }
 
 impl Display for AssetDefinition {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "code:{},", self.code)?;
+        write!(f, "code:{}", self.code)?;
         if let Some(freezing_key) = &self.viewing_key {
-            write!(f, "freezing key:{},", freezing_key,)?;
+            write!(f, ",freezing key:{}", freezing_key,)?;
         }
         if let Some(viewing_key) = &self.viewing_key {
-            write!(f, "viewing key:{},", viewing_key,)?;
-            write!(f, "address viewable:{},", self.address_viewable)?;
-            write!(f, "amount viewable:{},", self.amount_viewable)?;
-            write!(f, "viewing threshold:{}", self.viewing_threshold)?;
+            write!(f, ",viewing key:{}", viewing_key,)?;
+            write!(f, ",address viewable:{}", self.address_viewable)?;
+            write!(f, ",amount viewable:{}", self.amount_viewable)?;
+            write!(f, ",viewing threshold:{}", self.viewing_threshold)?;
         }
         Ok(())
     }

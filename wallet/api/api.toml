@@ -194,7 +194,7 @@ the transaction through the validation process.
 PATH = ["wrap/destination/:destination/ethaddress/:eth_address/asset/:asset/amount/:amount"]
 ":destination" = "TaggedBase64"
 ":eth_address" = "TaggedBase64"
-":asset" = "TaggedBase64"
+":asset" = "Literal"
 ":amount" = "Integer"
 DOC = """
 Wrap amount units of the given asset from the Ethereum address to the destination.

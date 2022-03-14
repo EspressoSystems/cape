@@ -733,11 +733,8 @@ async fn wrap(
         .unwrap()
         .value
         .to::<EthereumAddr>()?;
-    let asset = bindings
-        .get(":asset")
-        .unwrap()
-        .value
-        .to::<AssetDefinition>()?;
+    let asset =
+        AssetDefinition::from_str(&bindings.get(":asset").unwrap().value.as_string()?).unwrap();
     let amount = bindings.get(":amount").unwrap().value.as_u64()?;
 
     Ok(wallet

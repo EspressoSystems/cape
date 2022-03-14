@@ -704,7 +704,7 @@ dependencies = [
 [[package]]
 name = "atomic_store"
 version = "0.1.0"
-source = "git+https://github.com/EspressoSystems/atomicstore.git#a719ad0ec86831fb9b0cb9d9a4889e1bdf0f91e6"
+source = "git+https://github.com/EspressoSystems/atomicstore.git#6c99a05cbca1d253fb5b20fc0ee0cc10159d9da3"
 dependencies = [
  "ark-serialize",
  "bincode",
@@ -3372,7 +3372,7 @@ checksum = "1aab8fc367588b89dcee83ab0fd66b72b50b72fa1904d7095045ace2b0c81c35"
 [[package]]
 name = "jf-cap"
 version = "0.0.1"
-source = "git+https://github.com/EspressoSystems/cap.git#e420ae1efeaa48c6ab0044ed671bcf0729b15212"
+source = "git+https://github.com/EspressoSystems/cap.git#eafcebd8cd4650572451fb84b19f72864b8ad39b"
 dependencies = [
  "anyhow",
  "ark-bn254",
@@ -5063,7 +5063,7 @@ dependencies = [
 [[package]]
 name = "seahorse"
 version = "0.2.0"
-source = "git+https://github.com/EspressoSystems/seahorse.git#c0b7a5dee17fe60bd9b4184eaffba8df3f5a6a2e"
+source = "git+https://github.com/EspressoSystems/seahorse.git#c92ce6e66a545ba1fd45970de9178de001c878f5"
 dependencies = [
  "arbitrary",
  "arbitrary-wrappers",
@@ -5099,6 +5099,7 @@ dependencies = [
  "serde",
  "sha3 0.9.1",
  "snafu 0.6.10",
+ "structopt",
  "strum",
  "strum_macros",
  "surf",

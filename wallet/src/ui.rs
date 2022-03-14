@@ -22,7 +22,6 @@ use std::str::FromStr;
 #[derive(Clone, Debug, Default, Deserialize, Eq, Hash, PartialEq, Serialize)]
 pub struct AssetDefinition {
     pub code: AssetCode,
-    pub verified: bool,
 
     /// Asset policy attributes
     pub freezing_key: Option<FreezerPubKey>,
@@ -49,7 +48,6 @@ impl From<JfAssetDefinition> for AssetDefinition {
         let policy = definition.policy_ref();
         Self {
             code: definition.code,
-            verified: false, // TODO !keyao
             // If the freezer public key is set, i.e., non-default,
             // include it in the asset definition.
             freezing_key: if policy.is_freezer_pub_key_set() {
@@ -95,7 +93,6 @@ impl From<AssetDefinition> for JfAssetDefinition {
 impl Display for AssetDefinition {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "code:{},", self.code)?;
-        write!(f, "verified:{},", self.verified)?;
         if let Some(freezing_key) = &self.viewing_key {
             write!(f, "freezing key:{},", freezing_key,)?;
         }
@@ -114,12 +111,11 @@ impl FromStr for AssetDefinition {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         // This parse method is meant for a friendly, discoverable CLI interface. It parses a comma-
-        // separated list of key-value pairs, like `verified:true`. This allows the fields to be
-        // specified in any order, or not at all. Recognized fields are "code", "verified",
-        // "freezing key", "viewing key", "address viewable", "amount viewable", and
+        // separated list of key-value pairs, like `address_viewable:true`. This allows the fields to be
+        // specified in any order, or not at all. Recognized fields are "code", "freezing key",
+        // "viewing key", "address viewable", "amount viewable", and
         // "viewing threshold".
         let mut code = None;
-        let mut verified = false;
         let mut freezing_key = None;
         let mut viewing_key = None;
         let mut address_viewable = false;
@@ -137,11 +133,6 @@ impl FromStr for AssetDefinition {
                             .parse()
                             .map_err(|_| format!("expected AssetCode, got {}", value))?,
                     )
-                }
-                "verified" => {
-                    verified = value
-                        .parse()
-                        .map_err(|_| format!("expected bool, got {}", value))?;
                 }
                 "freezing_key" => {
                     freezing_key = Some(
@@ -182,7 +173,6 @@ impl FromStr for AssetDefinition {
         };
         Ok(AssetDefinition {
             code,
-            verified,
             freezing_key,
             viewing_key,
             address_viewable,
@@ -197,13 +187,15 @@ impl FromStr for AssetDefinition {
 pub struct AssetInfo {
     pub definition: AssetDefinition,
     pub mint_info: Option<MintInfo>,
+    pub verified: bool,
 }
 
 impl AssetInfo {
-    pub fn new(definition: AssetDefinition, mint_info: MintInfo) -> Self {
+    pub fn new(definition: AssetDefinition, mint_info: MintInfo, verified: bool) -> Self {
         Self {
             definition,
             mint_info: Some(mint_info),
+            verified,
         }
     }
 
@@ -212,6 +204,7 @@ impl AssetInfo {
         Self {
             definition: AssetDefinition::native(),
             mint_info: None,
+            verified: false,
         }
     }
 }
@@ -221,6 +214,7 @@ impl From<AssetDefinition> for AssetInfo {
         Self {
             definition,
             mint_info: None,
+            verified: false,
         }
     }
 }
@@ -230,6 +224,7 @@ impl From<seahorse::AssetInfo> for AssetInfo {
         Self {
             definition: AssetDefinition::from(asset_info.definition),
             mint_info: asset_info.mint_info,
+            verified: asset_info.verified,
         }
     }
 }
@@ -245,6 +240,7 @@ impl Display for AssetInfo {
                 mint_info.fmt_description()
             )?;
         }
+        write!(f, ",verified:{}", self.verified)?;
         Ok(())
     }
 }
@@ -301,6 +297,7 @@ impl FromStr for AssetInfo {
         Ok(AssetInfo {
             definition,
             mint_info,
+            verified: false,
         })
     }
 }

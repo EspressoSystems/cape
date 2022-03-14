@@ -7,4 +7,5 @@ members = [
     "eqs",
     "relayer",
     "wallet",
+    "faucet",
 ]

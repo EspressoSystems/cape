@@ -29,9 +29,9 @@
 //!
 //! You can use `--help` to see a list of the possible values for `[options]`.
 //!
-//! Once started, the web server will serve an HTTP API at `localhost:60000`. You can override the
-//! default port by setting the `PORT` environment variable. The endpoints are documented in
-//! `api/api.toml`.
+//! Once started, the web server will serve an HTTP API at `localhost:60000`.
+//! You can override the default port by setting the `CAPE_WALLET_PORT`
+//! environment variable. The endpoints are documented in `api/api.toml`.
 //!
 //! ## Development
 //!

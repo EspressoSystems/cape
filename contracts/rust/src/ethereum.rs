@@ -80,7 +80,7 @@ impl EthConnection {
 }
 
 pub fn get_provider() -> Provider<Http> {
-    let rpc_url = match env::var("RPC_URL") {
+    let rpc_url = match env::var("CAPE_WEB3_PROVIDER_URL") {
         Ok(url) => url,
         Err(_) => "http://localhost:8545".to_string(),
     };

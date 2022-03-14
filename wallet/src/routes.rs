@@ -24,8 +24,8 @@ use futures::{prelude::*, stream::iter};
 use jf_cap::{
     keys::{AuditorPubKey, FreezerPubKey, UserKeyPair, UserPubKey},
     structs::{
-        AssetCode, AssetDefinition, AssetPolicy, FreezeFlag, ReceiverMemo, RecordCommitment,
-        RecordOpening,
+        AssetCode, AssetDefinition as JfAssetDefinition, AssetPolicy, FreezeFlag, ReceiverMemo,
+        RecordCommitment, RecordOpening,
     },
     MerkleTree, TransactionVerifyingKey,
 };
@@ -39,7 +39,7 @@ use seahorse::{
     loader::{Loader, LoaderMetadata},
     testing::MockLedger,
     txn_builder::{RecordInfo, TransactionReceipt},
-    AssetInfo, WalletBackend, WalletStorage,
+    WalletBackend, WalletStorage,
 };
 use serde::{Deserialize, Serialize};
 use snafu::Snafu;
@@ -406,7 +406,7 @@ pub async fn init_wallet(
     let faucet_ro = RecordOpening::new(
         rng,
         1000,
-        AssetDefinition::native(),
+        JfAssetDefinition::native(),
         faucet_pub_key,
         FreezeFlag::Unfrozen,
     );
@@ -441,7 +441,7 @@ async fn known_assets(wallet: &Wallet) -> HashMap<AssetCode, AssetInfo> {
         .assets()
         .await
         .into_iter()
-        .map(|asset| (asset.definition.code, asset))
+        .map(|asset| (asset.definition.code, AssetInfo::from(asset)))
         .collect()
 }
 
@@ -699,14 +699,17 @@ async fn newasset(
                 .unwrap()
                 .value
                 .to::<EthereumAddr>()?;
-            Ok(wallet.sponsor(erc20_code, sponsor_address, policy).await?)
+            Ok(wallet
+                .sponsor(erc20_code, sponsor_address, policy)
+                .await?
+                .into())
         }
         None => {
             let description = match bindings.get(":description") {
                 Some(description) => description.value.as_base64()?,
                 _ => Vec::new(),
             };
-            Ok(wallet.define_asset(&description, policy).await?)
+            Ok(wallet.define_asset(&description, policy).await?.into())
         }
     }
 }
@@ -735,7 +738,7 @@ async fn wrap(
     let amount = bindings.get(":amount").unwrap().value.as_u64()?;
 
     Ok(wallet
-        .wrap(eth_address, asset, destination.into(), amount)
+        .wrap(eth_address, asset.into(), destination.into(), amount)
         .await?)
 }
 
@@ -862,7 +865,7 @@ pub async fn get_last_keystore(storage: &Path) -> Result<Option<PathBuf>, tide::
 // The caller must ensure that each asset code is known to `wallet`.
 async fn get_assets(wallet: &Wallet, codes: &[AssetCode]) -> HashMap<AssetCode, AssetInfo> {
     iter(codes)
-        .then(|code| async move { (*code, wallet.asset(*code).await.unwrap()) })
+        .then(|code| async move { (*code, AssetInfo::from(wallet.asset(*code).await.unwrap())) })
         .collect()
         .await
 }
@@ -904,7 +907,7 @@ async fn get_viewing_account(wallet: &Wallet, address: AuditorPubKey) -> Account
     // currently have records.
     for asset in wallet.assets().await {
         if asset.definition.policy_ref().auditor_pub_key() == &address {
-            assets.insert(asset.definition.code, asset);
+            assets.insert(asset.definition.code, AssetInfo::from(asset));
         }
     }
 
@@ -928,7 +931,7 @@ async fn get_freezing_account(wallet: &Wallet, address: FreezerPubKey) -> Accoun
     // Make sure assets contains _all_ asset types that are freezableœ
     for asset in wallet.assets().await {
         if asset.definition.policy_ref().freezer_pub_key() == &address {
-            assets.insert(asset.definition.code, asset);
+            assets.insert(asset.definition.code, AssetInfo::from(asset));
         }
     }
 

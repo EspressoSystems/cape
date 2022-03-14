@@ -48,7 +48,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
     // See https://github.com/EspressoSystems/cape/issues/400
     uint256 public constant MAX_NUM_PENDING_DEPOSIT = 10;
 
-    event FaucetInitialized(bytes roBytes);
+    event FaucetInitialized(bytes roBytes, string faucetManagerPubKey);
     event BlockCommitted(uint64 indexed height, uint256[] depositCommitments);
     event Erc20TokensDeposited(bytes roBytes, address erc20TokenAddress, address from);
 
@@ -159,14 +159,18 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
 
     /// @notice Allocate native token faucet to a manager for testnet only
     /// @param faucetManager public key of faucet manager for CAP native token (testnet only!)
-    function faucetSetupForTestnet(EdOnBN254.EdOnBN254Point memory faucetManager) public {
+    function faucetSetupForTestnet(
+        EdOnBN254.EdOnBN254Point memory faucetManager,
+        string calldata faucetManagerPubKey
+    ) public {
         // faucet can only be set up once by the manager
         require(msg.sender == deployer, "Only invocable by deployer");
         require(!faucetInitialized, "Faucet already set up");
 
         // allocate maximum possible amount of native CAP token to faucet manager on testnet
+        // max amount len is set to 63 bits: https://github.com/EspressoSystems/cap/blob/main/src/constants.rs#L50-L51
         RecordOpening memory ro = RecordOpening(
-            type(uint64).max,
+            type(uint64).max / 2,
             nativeDomesticAsset(),
             faucetManager,
             false,
@@ -179,7 +183,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
         _updateRecordsMerkleTree(recordCommitments);
         _addRoot(_rootValue);
 
-        emit FaucetInitialized(abi.encode(ro));
+        emit FaucetInitialized(abi.encode(ro), faucetManagerPubKey);
         faucetInitialized = true;
     }
 

@@ -115,9 +115,11 @@ mod tests {
     };
     use serde::de::DeserializeOwned;
     use std::collections::hash_map::HashMap;
+    use std::collections::HashSet;
     use std::convert::TryInto;
     use std::fmt::Debug;
     use std::iter::once;
+    use std::iter::FromIterator;
     use std::path::{Path, PathBuf};
     use surf::Url;
     use tempdir::TempDir;
@@ -1495,9 +1497,15 @@ mod tests {
             ))
             .await
             .unwrap();
+        let from_server_vec = server.get::<Vec<String>>("listkeystores").await.unwrap();
+        let expected: HashSet<String> =
+            vec![String::from("named_keystore"), String::from("test_wallet")]
+                .into_iter()
+                .collect();
+
         assert_eq!(
-            vec![String::from("named_keystore"), String::from("test_wallet")],
-            server.get::<Vec<String>>("listkeystores").await.unwrap()
+            expected,
+            HashSet::from_iter(from_server_vec.iter().cloned())
         );
 
         // Create a wallet in a different directory, and make sure it is not listed.
@@ -1510,9 +1518,11 @@ mod tests {
             ))
             .await
             .unwrap();
+
+        let from_server_vec = server.get::<Vec<String>>("listkeystores").await.unwrap();
         assert_eq!(
-            vec![String::from("named_keystore"), String::from("test_wallet")],
-            server.get::<Vec<String>>("listkeystores").await.unwrap()
+            expected,
+            HashSet::from_iter(from_server_vec.iter().cloned())
         );
     }
 }

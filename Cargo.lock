@@ -1105,6 +1105,7 @@ dependencies = [
  "sha3 0.9.1",
  "snafu 0.7.0",
  "strum_macros",
+ "tagged-base64",
  "tokio",
 ]
 

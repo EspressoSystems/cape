@@ -599,6 +599,19 @@ mod tests {
         async fn test_asset_policy_and_definition() -> Result<()> {
             let rng = &mut ark_std::test_rng();
             let contract = deploy_test_cape_types_contract().await;
+
+            // The native asset definition has a dedicated constructor.
+            assert_eq!(
+                AssetDefinition::native(),
+                contract
+                    .check_asset_definition(
+                        AssetDefinition::native().generic_into::<sol::AssetDefinition>()
+                    )
+                    .call()
+                    .await?
+                    .generic_into::<AssetDefinition>(),
+            );
+
             for _ in 0..5 {
                 // NOTE: `sol::AssetPolicy` is from abigen! on contract,
                 // it collides with `jf_cap::structs::AssetPolicy`

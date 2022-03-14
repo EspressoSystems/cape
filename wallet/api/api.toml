@@ -61,6 +61,19 @@ Open the wallet from local storage with the given password and path.
 `:path` and `:name` work as they do for `newwallet`.
 """
 
+[route.resetpassword]
+PATH = ["resetpassword/:mnemonic/:password", "resetpassword/:mnemonic/:password/path/:path", "resetpassword/:mnemonic/:password/name/:name"]
+":password" = "Literal"
+":path" = "Base64"
+":name" = "Literal"
+":mnemonic" = "Literal"
+DOC = """
+Reset the password of the given wallet, and open it.
+
+The wallet to open is specified by `:path` or `:name` as in `newwallet`. `:mnemonic` must be the recover phrase used to create the wallet. If
+`:mnemonic` is correct, the wallet's password will be changed to `:password` and the wallet will be opened.
+"""
+
 [route.closewallet]
 PATH = ["closewallet"]
 DOC = """

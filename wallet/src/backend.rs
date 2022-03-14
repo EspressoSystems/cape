@@ -68,7 +68,7 @@ pub struct CapeBackend<'a, Meta: Serialize + DeserializeOwned> {
     mock_eqs: Arc<Mutex<MockCapeLedger<'a>>>,
 }
 
-impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeBackend<'a, Meta> {
+impl<'a, Meta: Serialize + DeserializeOwned + Send + Clone + PartialEq> CapeBackend<'a, Meta> {
     pub async fn new(
         universal_param: &'a UniversalParam,
         relayer_url: Url,

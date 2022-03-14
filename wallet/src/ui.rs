@@ -8,7 +8,7 @@
 //! Type definitions for UI-focused API responses.
 
 use jf_cap::{
-    keys::{AuditorPubKey, FreezerPubKey, UserPubKey},
+    keys::{AuditorKeyPair, AuditorPubKey, FreezerKeyPair, FreezerPubKey, UserKeyPair, UserPubKey},
     structs::AssetCode,
 };
 use net::UserAddress;
@@ -22,6 +22,14 @@ pub enum PubKey {
     Sending(UserPubKey),
     Viewing(AuditorPubKey),
     Freezing(FreezerPubKey),
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+/// Private keys for spending, viewing and freezing assets.
+pub enum PrivateKey {
+    Sending(UserKeyPair),
+    Viewing(AuditorKeyPair),
+    Freezing(FreezerKeyPair),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

@@ -327,6 +327,10 @@ pub fn keystore_path(storage: &Path, name: &str) -> PathBuf {
         .collect()
 }
 
+pub fn assets_path(storage: &Path) -> PathBuf {
+    [storage, Path::new("verified_assets")].iter().collect()
+}
+
 pub async fn write_path(wallet_path: &Path, storage: &Path) -> Result<(), tide::Error> {
     let path = last_used_path_storage(storage);
     let mut file = File::create(path).await?;
@@ -430,7 +434,17 @@ pub async fn init_wallet(
         }));
     }
 
-    Wallet::new(backend).await.map_err(wallet_error)
+    let mut wallet = Wallet::new(backend).await.map_err(wallet_error)?;
+
+    // If we have been provided a verified asset library, load it.
+    let assets_path = assets_path(storage);
+    if Path::is_file(&assets_path) {
+        wallet
+            .verify_cape_assets(&assets_path)
+            .await
+            .map_err(wallet_error)?;
+    }
+    Ok(wallet)
 }
 
 async fn known_assets(wallet: &Wallet) -> HashMap<AssetCode, AssetInfo> {

@@ -20,7 +20,7 @@ use jf_cap::{
     keys::{UserAddress, UserKeyPair, UserPubKey},
     proof::{freeze::FreezeProvingKey, transfer::TransferProvingKey, UniversalParam},
     structs::{AssetDefinition, Nullifier, ReceiverMemo, RecordCommitment, RecordOpening},
-    MerklePath, MerkleTree, Signature, TransactionNote,
+    KeyPair, MerklePath, MerkleTree, Signature, TransactionNote, VerKey,
 };
 use key_set::{OrderByOutputs, ProverKeySet, SizedKey, VerifierKeySet};
 use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
@@ -44,6 +44,10 @@ use std::pin::Pin;
 use std::sync::Arc;
 use tempdir::TempDir;
 use testing::{MockEventSource, MockLedger, MockNetwork, SystemUnderTest};
+
+pub fn test_asset_signing_key() -> KeyPair {
+    KeyPair::generate(&mut ChaChaRng::from_seed([3; 32]))
+}
 
 #[derive(Clone)]
 struct CommittedTransaction {
@@ -525,7 +529,7 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send + Clone + PartialEq> MockCape
     pub fn new(
         ledger: Arc<Mutex<MockCapeLedger<'a>>>,
         loader: &mut impl WalletLoader<CapeLedger, Meta = Meta>,
-    ) -> Result<Self, WalletError<CapeLedger>> {
+    ) -> Result<MockCapeBackend<'a, Meta>, WalletError<CapeLedger>> {
         let storage = AtomicWalletStorage::new(loader, 1024)?;
         Ok(Self {
             key_stream: storage.key_stream(),
@@ -676,6 +680,10 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
         Err(CapeWalletError::Failed {
             msg: String::from("eth_client is not implemented for MockCapeBackend"),
         })
+    }
+
+    fn asset_verifier(&self) -> VerKey {
+        test_asset_signing_key().ver_key()
     }
 }
 

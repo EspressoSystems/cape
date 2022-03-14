@@ -90,12 +90,14 @@ async fn main() -> Result<(), std::io::Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use async_std::fs;
     use cap_rust_sandbox::{
         ledger::CapeLedger,
         model::{Erc20Code, EthereumAddr},
     };
     use cape_wallet::{
-        routes::CapeAPIError,
+        mocks::test_asset_signing_key,
+        routes::{assets_path, CapeAPIError},
         testing::port,
         ui::*,
         web::{
@@ -105,10 +107,11 @@ mod tests {
     };
     use jf_cap::{
         keys::{AuditorKeyPair, FreezerKeyPair, UserKeyPair},
-        structs::{AssetCode, AssetDefinition},
+        structs::{AssetCode, AssetDefinition, AssetPolicy},
     };
     use net::{client, UserAddress};
     use seahorse::{
+        asset_library::VerifiedAssetLibrary,
         hd::{KeyTree, Mnemonic},
         txn_builder::{RecordInfo, TransactionReceipt},
         AssetInfo,
@@ -175,6 +178,10 @@ mod tests {
             self.get::<T>(path)
                 .await
                 .expect_err(&format!("{} succeeded without an open wallet", path));
+        }
+
+        fn storage(&self) -> &Path {
+            self.temp_dir.path()
         }
 
         fn path(&self) -> String {
@@ -1601,5 +1608,46 @@ mod tests {
             ))
             .await
             .unwrap_err();
+    }
+
+    #[async_std::test]
+    #[traced_test]
+    async fn test_verified_assets() {
+        let server = TestServer::new().await;
+        let mut rng = ChaChaRng::from_seed([1; 32]);
+
+        let (code, _) = AssetCode::random(&mut rng);
+        let new_asset = AssetDefinition::new(code, AssetPolicy::default()).unwrap();
+        let assets = VerifiedAssetLibrary::new(
+            vec![AssetDefinition::native(), new_asset.clone()],
+            &test_asset_signing_key(),
+        );
+        let path = assets_path(&server.storage());
+        fs::write(&path, &bincode::serialize(&assets).unwrap())
+            .await
+            .unwrap();
+
+        server
+            .get::<()>(&format!(
+                "newwallet/{}/password1/path/{}",
+                server.get::<String>("getmnemonic").await.unwrap(),
+                server.path(),
+            ))
+            .await
+            .unwrap();
+
+        let info = server.get::<WalletSummary>("getinfo").await.unwrap();
+        let native_info = info
+            .assets
+            .iter()
+            .find(|asset| asset.definition == AssetDefinition::native())
+            .unwrap();
+        assert!(native_info.verified);
+        let asset_info = info
+            .assets
+            .iter()
+            .find(|asset| asset.definition == new_asset)
+            .unwrap();
+        assert!(asset_info.verified);
     }
 }

@@ -1,7 +1,4 @@
-FROM ubuntu:impish
-RUN apt-get update \
-  && apt-get install -y libcurl4 \
-  && rm -rf /var/lib/apt/lists/*
+FROM nix-base-docker
 COPY target/release/web_server /app/web_server
 COPY wallet/api /app/api
 COPY wallet/public /app/public

@@ -5063,7 +5063,7 @@ dependencies = [
 [[package]]
 name = "seahorse"
 version = "0.2.0"
-source = "git+https://github.com/EspressoSystems/seahorse.git#c0b7a5dee17fe60bd9b4184eaffba8df3f5a6a2e"
+source = "git+https://github.com/EspressoSystems/seahorse.git#c92ce6e66a545ba1fd45970de9178de001c878f5"
 dependencies = [
  "arbitrary",
  "arbitrary-wrappers",
@@ -5099,6 +5099,7 @@ dependencies = [
  "serde",
  "sha3 0.9.1",
  "snafu 0.6.10",
+ "structopt",
  "strum",
  "strum_macros",
  "surf",

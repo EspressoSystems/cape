@@ -32,6 +32,7 @@ use jf_cap::{
     keys::{UserAddress, UserKeyPair, UserPubKey},
     proof::UniversalParam,
     structs::{AssetDefinition, Nullifier, RecordOpening},
+    VerKey,
 };
 use net::client::parse_error_body;
 use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
@@ -359,6 +360,13 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
             get_provider(),
             self.eth_wallet.clone(),
         )))
+    }
+
+    fn asset_verifier(&self) -> VerKey {
+        // The verification key for the official asset library signing key.
+        "VERKEY~8LfUa4wqi7wYzWE4IQ8vOpjgUz8Pp5LQoj5Ue0Rwn6je"
+            .parse()
+            .unwrap()
     }
 }
 

@@ -48,7 +48,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
     // See https://github.com/EspressoSystems/cape/issues/400
     uint256 public constant MAX_NUM_PENDING_DEPOSIT = 10;
 
-    event FaucetInitialized(bytes roBytes, string faucetManagerPubKey);
+    event FaucetInitialized(bytes roBytes);
     event BlockCommitted(uint64 indexed height, uint256[] depositCommitments);
     event Erc20TokensDeposited(bytes roBytes, address erc20TokenAddress, address from);
 
@@ -129,6 +129,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
         uint64 amount;
         AssetDefinition assetDef;
         EdOnBN254.EdOnBN254Point userAddr;
+        bytes32 encKey;
         bool freezeFlag;
         uint256 blind;
     }
@@ -158,10 +159,11 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
     }
 
     /// @notice Allocate native token faucet to a manager for testnet only
-    /// @param faucetManager public key of faucet manager for CAP native token (testnet only!)
+    /// @param faucetManagerAddress address of public key of faucet manager for CAP native token (testnet only!)
+    /// @param faucetManagerEncKey public key of faucet manager for CAP native token (testnet only!)
     function faucetSetupForTestnet(
-        EdOnBN254.EdOnBN254Point memory faucetManager,
-        string calldata faucetManagerPubKey
+        EdOnBN254.EdOnBN254Point memory faucetManagerAddress,
+        bytes32 faucetManagerEncKey
     ) public {
         // faucet can only be set up once by the manager
         require(msg.sender == deployer, "Only invocable by deployer");
@@ -172,7 +174,8 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
         RecordOpening memory ro = RecordOpening(
             type(uint64).max / 2,
             nativeDomesticAsset(),
-            faucetManager,
+            faucetManagerAddress,
+            faucetManagerEncKey,
             false,
             0 // arbitrary blind factor
         );
@@ -183,7 +186,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
         _updateRecordsMerkleTree(recordCommitments);
         _addRoot(_rootValue);
 
-        emit FaucetInitialized(abi.encode(ro), faucetManagerPubKey);
+        emit FaucetInitialized(abi.encode(ro));
         faucetInitialized = true;
     }
 

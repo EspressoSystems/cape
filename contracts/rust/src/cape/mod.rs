@@ -653,7 +653,8 @@ mod tests {
                     .generic_into::<RecordOpening>();
                 assert_eq!(ro.amount, res.amount);
                 assert_eq!(ro.asset_def, res.asset_def);
-                assert_eq!(ro.pub_key.address(), res.pub_key.address()); // not recovering pub_key.enc_key
+                assert_eq!(ro.pub_key.address(), res.pub_key.address());
+                assert_eq!(ro.pub_key.enc_key(), res.pub_key.enc_key());
                 assert_eq!(ro.freeze_flag, res.freeze_flag);
                 assert_eq!(ro.blind, res.blind);
             }

@@ -15,19 +15,17 @@ use cap_rust_sandbox::{
     ethereum::EthConnection,
     ledger::CapeTransition,
     model::{CapeModelTxn, Erc20Code, EthereumAddr},
-    types::{ro_from_pub_key, CAPEEvents, RecordOpening as RecordOpeningSol},
+    types::{CAPEEvents, RecordOpening as RecordOpeningSol},
 };
 use commit::Committable;
 use core::mem;
 use ethers::abi::AbiDecode;
 use jf_cap::structs::{ReceiverMemo, RecordCommitment};
 use jf_cap::{structs::RecordOpening, MerkleTree, TransactionNote};
-use net::UserPubKey;
 use rand_chacha::rand_core::SeedableRng;
 use rand_chacha::ChaChaRng;
 use reef::traits::{Block, Transaction};
 use seahorse::events::LedgerEvent;
-use std::str::FromStr;
 
 pub(crate) struct EthPolling {
     pub query_result_state: Arc<RwLock<QueryResultState>>,
@@ -292,9 +290,7 @@ impl EthPolling {
                 CAPEEvents::FaucetInitializedFilter(filter_data) => {
                     // Obtain record opening
                     let ro_sol: RecordOpeningSol = AbiDecode::decode(filter_data.ro_bytes).unwrap();
-                    let pub_key =
-                        UserPubKey::from_str(&filter_data.faucet_manager_pub_key).unwrap();
-                    let ro = ro_from_pub_key(ro_sol, pub_key);
+                    let ro = ro_sol.into();
 
                     // Compute record commmitment
                     let rc = RecordCommitment::from(&ro);

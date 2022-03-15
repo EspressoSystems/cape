@@ -162,6 +162,10 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
             .backend_mut()
             .register_erc20_asset(&asset, erc20_code, sponsor_addr)
             .await?;
+        drop(state);
+
+        // Add the new asset to our asset library.
+        self.import_asset(asset.clone().into()).await?;
 
         Ok(asset)
     }

@@ -843,6 +843,12 @@ mod cape_wallet_tests {
             .unwrap();
         println!("Sponsor completed: {}s", now.elapsed().as_secs_f32());
 
+        // Check that the sponsored asset is added to the asset library.
+        assert_eq!(
+            wallets[0].0.asset(cap_asset.code).await,
+            Some(cap_asset.clone().into())
+        );
+
         // Wrapping an undefined asset should fail.
         let wrap_amount = 6;
         match wallets[0]

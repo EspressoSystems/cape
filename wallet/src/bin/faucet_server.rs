@@ -24,7 +24,7 @@ use jf_cap::{
     structs::AssetCode,
 };
 use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
-
+use seahorse::loader::Loader;
 use serde::{Deserialize, Serialize};
 use snafu::Snafu;
 use std::path::PathBuf;
@@ -125,14 +125,17 @@ pub async fn init_web_server(
 ) -> std::io::Result<JoinHandle<std::io::Result<()>>> {
     let mut rng = ChaChaRng::from_entropy();
     let faucet_key_pair = UserKeyPair::generate(&mut rng);
+    let loader = Loader::from_literal(
+        Some(opt.mnemonic.clone().replace('-', " ")),
+        opt.faucet_password.clone(),
+        opt.faucet_wallet_path.clone(),
+    );
     let state = FaucetState {
         wallet: Arc::new(Mutex::new(
             init_wallet(
                 &mut rng,
                 faucet_key_pair.pub_key(),
-                Some(opt.mnemonic.clone()),
-                opt.faucet_password.clone(),
-                opt.faucet_wallet_path.clone(),
+                loader,
                 true,
                 &default_storage_path(),
             )

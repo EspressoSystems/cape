@@ -12,16 +12,17 @@ fn disp_hex<T: ToString>(x: T) -> String {
 fn main() {
     let result = "USERPUBKEY~muN7VKxj1GbJ4D6rU6gANdvwD05oPKy_XmhkBxSByq0gAAAAAAAAAIRN-Rik8czFiToI8Ft5fsIf9HAEtWHDsOHh-ZBJZl1KxQ";
     let pub_key = UserPubKey::from_str(result).unwrap_or_default();
+    let enc_key_bytes: [u8; 32] = pub_key.enc_key().into();
 
     println!(
         r#"
-const pubKey = "{}";
+const faucetManagerEncKey = "0x{}";
 const faucetManagerAddress = {{
   x: BigNumber.from("0x{}"),
   y: BigNumber.from("0x{}"),
 }};
 "#,
-        result,
+        hex::encode(enc_key_bytes),
         disp_hex(pub_key.address().internal().x),
         disp_hex(pub_key.address().internal().y)
     );

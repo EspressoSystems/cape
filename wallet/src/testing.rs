@@ -26,6 +26,7 @@ use ethers::prelude::Address;
 use ethers::providers::Middleware;
 use ethers::types::TransactionRequest;
 use ethers::types::U256;
+use jf_cap::keys::FreezerPubKey;
 use jf_cap::keys::UserAddress;
 use jf_cap::keys::UserKeyPair;
 use jf_cap::keys::UserPubKey;
@@ -250,12 +251,18 @@ pub async fn find_freezable_records<'a>(
     frozen: FreezeFlag,
 ) -> Vec<RecordInfo> {
     let pks: HashSet<UserPubKey> = freezer.pub_keys().await.into_iter().collect();
+    let freeze_keys: HashSet<FreezerPubKey> =
+        freezer.freezer_pub_keys().await.into_iter().collect();
     let records = freezer.records().await;
     records
         .filter(|r| {
             let ro = &r.ro;
-            // We own the record
+            // Ignore records we own
             if pks.contains(&ro.pub_key) {
+                return false;
+            }
+            // Check we can freeeze
+            if !(freeze_keys.contains(ro.asset_def.policy_ref().freezer_pub_key())) {
                 return false;
             }
             ro.freeze_flag == frozen

@@ -312,7 +312,7 @@ async fn main() {
                 let owner_address = record.ro.pub_key.address().clone();
                 let asset_def = &record.ro.asset_def;
 
-                freeze_token(freezer, &asset_def.code, 1, owner_address)
+                freeze_token(freezer, &asset_def.code, record.ro.amount, owner_address)
                     .await
                     .unwrap();
             }
@@ -328,7 +328,7 @@ async fn main() {
                 let owner_address = record.ro.pub_key.address();
                 let asset_def = &record.ro.asset_def;
 
-                unfreeze_token(freezer, &asset_def.code, 1, owner_address)
+                unfreeze_token(freezer, &asset_def.code, record.ro.amount, owner_address)
                     .await
                     .unwrap();
             }

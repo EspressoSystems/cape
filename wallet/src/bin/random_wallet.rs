@@ -345,9 +345,14 @@ async fn main() {
                 let owner_address = record.ro.pub_key.address().clone();
                 let asset_def = &record.ro.asset_def;
 
-                freeze_token(&mut wallet, &asset_def.code, 1, owner_address)
-                    .await
-                    .unwrap();
+                freeze_token(
+                    &mut wallet,
+                    &asset_def.code,
+                    record.ro.amount,
+                    owner_address,
+                )
+                .await
+                .unwrap();
             }
             OperationType::Unfreeze => {
                 let freezable_records: Vec<RecordInfo> =
@@ -359,9 +364,14 @@ async fn main() {
                 let owner_address = record.ro.pub_key.address();
                 let asset_def = &record.ro.asset_def;
 
-                unfreeze_token(&mut wallet, &asset_def.code, 1, owner_address)
-                    .await
-                    .unwrap();
+                unfreeze_token(
+                    &mut wallet,
+                    &asset_def.code,
+                    record.ro.amount,
+                    owner_address,
+                )
+                .await
+                .unwrap();
             }
             OperationType::Wrap => {
                 let asset_def = wallet

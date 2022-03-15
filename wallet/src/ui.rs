@@ -23,7 +23,7 @@ use std::str::FromStr;
 pub struct AssetDefinition {
     pub code: AssetCode,
 
-    /// Asset policy attributes
+    /// Asset policy attributes.
     pub freezing_key: Option<FreezerPubKey>,
     pub viewing_key: Option<AuditorPubKey>,
     pub address_viewable: bool,
@@ -32,12 +32,12 @@ pub struct AssetDefinition {
 }
 
 impl AssetDefinition {
-    /// Return native asset definition: code is 1, and policy is empty
+    /// Return native asset definition.
     pub fn native() -> Self {
         AssetDefinition::from(JfAssetDefinition::native())
     }
 
-    /// Return the dummy record asset definition: code is 2, and policy is empty
+    /// Return the dummy record asset definition.
     pub fn dummy() -> Self {
         AssetDefinition::from(JfAssetDefinition::dummy())
     }
@@ -110,11 +110,11 @@ impl FromStr for AssetDefinition {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        // This parse method is meant for a friendly, discoverable CLI interface. It parses a comma-
-        // separated list of key-value pairs, like `address_viewable:true`. This allows the fields to be
-        // specified in any order, or not at all. Recognized fields are "code", "freezing key",
-        // "viewing key", "address viewable", "amount viewable", and
-        // "viewing threshold".
+        // This parse method is meant for a friendly, discoverable CLI interface. It parses a
+        // comma-separated list of key-value pairs, like `address_viewable:true`. This allows the
+        // fields to be specified in any order, or not at all. Recognized fields are "code",
+        // "freezing key", "viewing key", "address viewable", "amount viewable", and "viewing
+        // threshold".
         let mut code = None;
         let mut freezing_key = None;
         let mut viewing_key = None;
@@ -171,6 +171,7 @@ impl FromStr for AssetDefinition {
             Some(code) => code,
             None => return Err(String::from("must specify code")),
         };
+
         Ok(AssetDefinition {
             code,
             freezing_key,
@@ -249,10 +250,10 @@ impl FromStr for AssetInfo {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        // This parse method is meant for a friendly, discoverable CLI interface. It parses a comma-
-        // separated list of key-value pairs, like `description:my_asset`. This allows the fields to
-        // be specified in any order, or not at all. Recognized fields are "description", "seed",
-        // and "definition".
+        // This parse method is meant for a friendly, discoverable CLI interface. It parses a
+        // comma-separated list of key-value pairs, like `description:my_asset`. This allows the
+        // fields to be specified in any order, or not at all. Recognized fields are "definition",
+        // "seed", and "description".
         let mut definition = None;
         let mut seed = None;
         let mut description = None;
@@ -294,6 +295,7 @@ impl FromStr for AssetInfo {
                 ))
             }
         };
+
         Ok(AssetInfo {
             definition,
             mint_info,

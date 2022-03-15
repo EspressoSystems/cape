@@ -1525,4 +1525,81 @@ mod tests {
             HashSet::from_iter(from_server_vec.iter().cloned())
         );
     }
+
+    #[async_std::test]
+    #[traced_test]
+    async fn test_resetpassword() {
+        let server = TestServer::new().await;
+
+        // Create a wallet with `password1`.
+        let mnemonic = server.get::<String>("getmnemonic").await.unwrap();
+        server
+            .get::<()>(&format!(
+                "newwallet/{}/password1/path/{}",
+                mnemonic,
+                server.path(),
+            ))
+            .await
+            .unwrap();
+
+        // Create some data.
+        let key = match server.get::<PubKey>("newkey/sending").await.unwrap() {
+            PubKey::Sending(key) => key,
+            key => panic!("expected PubKey::Sending, got {:?}", key),
+        };
+        assert_eq!(
+            vec![key.clone()],
+            server
+                .get::<WalletSummary>("getinfo")
+                .await
+                .unwrap()
+                .sending_keys
+        );
+
+        // Check that the wallet does not open with the wrong password.
+        server
+            .get::<()>(&format!("openwallet/password2/path/{}", server.path()))
+            .await
+            .unwrap_err();
+
+        // Change the password and check that our data is still there.
+        server
+            .get::<()>(&format!(
+                "resetpassword/{}/password2/path/{}",
+                mnemonic,
+                server.path()
+            ))
+            .await
+            .unwrap();
+        assert_eq!(
+            vec![key],
+            server
+                .get::<WalletSummary>("getinfo")
+                .await
+                .unwrap()
+                .sending_keys
+        );
+
+        // Check that we can't open the wallet with the old password.
+        server
+            .get::<()>(&format!("openwallet/password1/path/{}", server.path()))
+            .await
+            .unwrap_err();
+
+        // Check that we can open the wallet with the new password.
+        server
+            .get::<()>(&format!("openwallet/password2/path/{}", server.path()))
+            .await
+            .unwrap();
+
+        // Check that we can't reset the password using the wrong mnemonic.
+        server
+            .get::<()>(&format!(
+                "resetpassword/{}/password3/path/{}",
+                server.get::<String>("getmnemonic").await.unwrap(),
+                server.path()
+            ))
+            .await
+            .unwrap_err();
+    }
 }

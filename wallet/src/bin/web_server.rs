@@ -90,7 +90,6 @@ async fn main() -> Result<(), std::io::Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use async_std::task::sleep;
     use cap_rust_sandbox::{
         ledger::CapeLedger,
         model::{Erc20Code, EthereumAddr},
@@ -100,11 +99,10 @@ mod tests {
         testing::port,
         ui::*,
         web::{
-            DEFAULT_ETH_ADDR, DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR,
+            retry, DEFAULT_ETH_ADDR, DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR,
             DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR, DEFAULT_WRAPPED_AMT,
         },
     };
-    use futures::Future;
     use jf_cap::{
         keys::{AuditorKeyPair, FreezerKeyPair, UserKeyPair},
         structs::{AssetCode, AssetDefinition},
@@ -117,27 +115,15 @@ mod tests {
     };
     use serde::de::DeserializeOwned;
     use std::collections::hash_map::HashMap;
+    use std::collections::HashSet;
     use std::convert::TryInto;
     use std::fmt::Debug;
     use std::iter::once;
+    use std::iter::FromIterator;
     use std::path::{Path, PathBuf};
-    use std::time::Duration;
     use surf::Url;
-    use tagged_base64::TaggedBase64;
     use tempdir::TempDir;
     use tracing_test::traced_test;
-
-    async fn retry<Fut: Future<Output = bool>>(f: impl Fn() -> Fut) {
-        let mut backoff = Duration::from_millis(100);
-        for _ in 0..10 {
-            if f().await {
-                return;
-            }
-            sleep(backoff).await;
-            backoff *= 2;
-        }
-        panic!("retry loop did not complete in {:?}", backoff);
-    }
 
     fn fmt_path(path: &Path) -> String {
         let bytes = path.as_os_str().to_str().unwrap().as_bytes();
@@ -473,10 +459,8 @@ mod tests {
         assert_eq!(addresses, vec![]);
     }
 
-    // Issue: https://github.com/EspressoSystems/cape/issues/600.
     #[async_std::test]
     #[traced_test]
-    #[ignore]
     async fn test_getrecords() {
         let server = TestServer::new().await;
 
@@ -494,7 +478,10 @@ mod tests {
             ))
             .await
             .unwrap();
-        server.get::<()>("populatefortest").await.unwrap();
+        server
+            .get::<TransactionReceipt<CapeLedger>>("populatefortest")
+            .await
+            .unwrap();
 
         let records = server.get::<Vec<RecordInfo>>("getrecords").await.unwrap();
         let info = server.get::<WalletSummary>("getinfo").await.unwrap();
@@ -890,13 +877,11 @@ mod tests {
             .unwrap();
     }
 
-    // Issue: https://github.com/EspressoSystems/cape/issues/600.
     #[async_std::test]
     #[traced_test]
-    #[ignore]
     async fn test_mint() {
         // Set parameters.
-        let description = TaggedBase64::new("DESC", &[3u8; 32]).unwrap();
+        let description = base64::encode_config(&[3u8; 32], base64::URL_SAFE_NO_PAD);
         let amount = 10;
         let fee = 1;
         let mut rng = ChaChaRng::from_seed([50u8; 32]);
@@ -911,7 +896,10 @@ mod tests {
             ))
             .await
             .unwrap();
-        server.get::<()>("populatefortest").await.unwrap();
+        let receipt = server
+            .get::<TransactionReceipt<CapeLedger>>("populatefortest")
+            .await
+            .unwrap();
 
         // Define an asset.
         let asset = server
@@ -920,24 +908,8 @@ mod tests {
             .unwrap()
             .code;
 
-        // Get the address with non-zero balance of the native asset.
-        let info = server.get::<WalletSummary>("getinfo").await.unwrap();
-        let mut minter_addr: Option<UserAddress> = None;
-        for address in info.addresses {
-            if let BalanceInfo::Balance(DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR) = server
-                .get::<BalanceInfo>(&format!(
-                    "getbalance/address/{}/asset/{}",
-                    address,
-                    AssetCode::native()
-                ))
-                .await
-                .unwrap()
-            {
-                minter_addr = Some(address);
-                break;
-            }
-        }
-        let minter = minter_addr.unwrap();
+        // Get the faucet address with non-zero balance of the native asset.
+        let minter: UserAddress = receipt.submitters[0].clone().into();
 
         // Get an address to receive the minted asset.
         let recipient: UserAddress = server
@@ -1006,10 +978,8 @@ mod tests {
         .await;
     }
 
-    // Issue: https://github.com/EspressoSystems/cape/issues/600.
     #[async_std::test]
     #[traced_test]
-    #[ignore]
     async fn test_unwrap() {
         // Set parameters.
         let eth_addr = DEFAULT_ETH_ADDR;
@@ -1025,7 +995,10 @@ mod tests {
             ))
             .await
             .unwrap();
-        server.get::<()>("populatefortest").await.unwrap();
+        server
+            .get::<TransactionReceipt<CapeLedger>>("populatefortest")
+            .await
+            .unwrap();
 
         // Get the wrapped asset.
         let info = server.get::<WalletSummary>("getinfo").await.unwrap();
@@ -1109,10 +1082,8 @@ mod tests {
         .await;
     }
 
-    // Issue: https://github.com/EspressoSystems/cape/issues/600.
     #[async_std::test]
     #[traced_test]
-    #[ignore]
     async fn test_dummy_populate() {
         let server = TestServer::new().await;
         server
@@ -1123,7 +1094,10 @@ mod tests {
             ))
             .await
             .unwrap();
-        server.get::<()>("populatefortest").await.unwrap();
+        server
+            .get::<TransactionReceipt<CapeLedger>>("populatefortest")
+            .await
+            .unwrap();
 
         let info = server.get::<WalletSummary>("getinfo").await.unwrap();
         assert_eq!(info.addresses.len(), 3);
@@ -1133,7 +1107,7 @@ mod tests {
         assert_eq!(info.assets.len(), 2); // native asset + wrapped asset
 
         // One of the addresses should have a non-zero balance of the native asset type.
-        let mut found = false;
+        let mut found_native = false;
         for address in &info.addresses {
             if let BalanceInfo::Balance(DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR) = server
                 .get::<BalanceInfo>(&format!(
@@ -1144,13 +1118,12 @@ mod tests {
                 .await
                 .unwrap()
             {
-                found = true;
+                found_native = true;
                 break;
             }
         }
-        assert!(found);
+        assert!(found_native);
 
-        let address = info.addresses[0].clone();
         // One of the wallet's two assets is the native asset, and the other is the wrapped asset
         // for which we have a nonzero balance, but the order depends on the hash of the wrapped
         // asset code, which is non-deterministic, so we check both.
@@ -1160,22 +1133,27 @@ mod tests {
             info.assets[0].definition.code
         };
         assert_ne!(wrapped_asset, AssetCode::native());
-        assert_eq!(
-            server
+
+        // One of the addresses should have the expected balance of the wrapped asset type.
+        let mut found_wrapped = false;
+        for address in &info.addresses {
+            if let BalanceInfo::Balance(DEFAULT_WRAPPED_AMT) = server
                 .get::<BalanceInfo>(&format!(
                     "getbalance/address/{}/asset/{}",
                     address, wrapped_asset
                 ))
                 .await
-                .unwrap(),
-            BalanceInfo::Balance(DEFAULT_WRAPPED_AMT)
-        );
+                .unwrap()
+            {
+                found_wrapped = true;
+                break;
+            }
+        }
+        assert!(found_wrapped);
     }
 
-    // Issue: https://github.com/EspressoSystems/cape/issues/600.
     #[async_std::test]
     #[traced_test]
-    #[ignore]
     async fn test_send() {
         let server = TestServer::new().await;
         let mut rng = ChaChaRng::from_seed([1; 32]);
@@ -1208,7 +1186,10 @@ mod tests {
             .unwrap();
 
         // Populate the wallet with some dummy data so we have a balance of an asset to send.
-        server.get::<()>("populatefortest").await.unwrap();
+        let receipt = server
+            .get::<TransactionReceipt<CapeLedger>>("populatefortest")
+            .await
+            .unwrap();
         let info = server.get::<WalletSummary>("getinfo").await.unwrap();
 
         // One of the wallet's addresses (the faucet address) should have a nonzero balance of the
@@ -1216,10 +1197,9 @@ mod tests {
         // transfer from an account with non-zero balance to one with 0 balance. Note that in the
         // current setup, we can't easily transfer from one wallet to another, because each instance
         // of the server uses its own ledger. So we settle for an intra-wallet transfer.
-        let mut funded_account = None;
         let mut unfunded_account = None;
         for address in info.addresses {
-            if let BalanceInfo::Balance(DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR) = server
+            if let BalanceInfo::Balance(0) = server
                 .get::<BalanceInfo>(&format!(
                     "getbalance/address/{}/asset/{}",
                     address,
@@ -1228,12 +1208,11 @@ mod tests {
                 .await
                 .unwrap()
             {
-                funded_account = Some(address);
-            } else {
                 unfunded_account = Some(address);
+                break;
             }
         }
-        let src_address = funded_account.unwrap();
+        let src_address: UserAddress = receipt.submitters[0].clone().into();
         let dst_address = unfunded_account.unwrap();
 
         // Make a transfer with a given sender address.
@@ -1264,8 +1243,7 @@ mod tests {
         .await;
 
         // Check that the balance was deducted from the sending account.
-        assert_eq!(
-            BalanceInfo::Balance(DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR - 101),
+        retry(|| async {
             server
                 .get::<BalanceInfo>(&format!(
                     "getbalance/address/{}/asset/{}",
@@ -1274,7 +1252,9 @@ mod tests {
                 ))
                 .await
                 .unwrap()
-        );
+                == BalanceInfo::Balance(DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR - 101)
+        })
+        .await;
 
         // Make a transfer without a sender address.
         server
@@ -1303,10 +1283,8 @@ mod tests {
         .await;
     }
 
-    // Issue: https://github.com/EspressoSystems/cape/issues/600.
     #[async_std::test]
     #[traced_test]
-    #[ignore]
     async fn test_getaccount() {
         let server = TestServer::new().await;
         let mut rng = ChaChaRng::from_seed([1; 32]);
@@ -1347,7 +1325,10 @@ mod tests {
             .await
             .unwrap();
         // Populate the wallet with some dummy data so we have a balance of an asset to send.
-        server.get::<()>("populatefortest").await.unwrap();
+        server
+            .get::<TransactionReceipt<CapeLedger>>("populatefortest")
+            .await
+            .unwrap();
 
         // Get the wrapped asset type.
         let info = server.get::<WalletSummary>("getinfo").await.unwrap();
@@ -1516,9 +1497,15 @@ mod tests {
             ))
             .await
             .unwrap();
+        let from_server_vec = server.get::<Vec<String>>("listkeystores").await.unwrap();
+        let expected: HashSet<String> =
+            vec![String::from("named_keystore"), String::from("test_wallet")]
+                .into_iter()
+                .collect();
+
         assert_eq!(
-            vec![String::from("named_keystore"), String::from("test_wallet")],
-            server.get::<Vec<String>>("listkeystores").await.unwrap()
+            expected,
+            HashSet::from_iter(from_server_vec.iter().cloned())
         );
 
         // Create a wallet in a different directory, and make sure it is not listed.
@@ -1531,9 +1518,88 @@ mod tests {
             ))
             .await
             .unwrap();
+
+        let from_server_vec = server.get::<Vec<String>>("listkeystores").await.unwrap();
         assert_eq!(
-            vec![String::from("named_keystore"), String::from("test_wallet")],
-            server.get::<Vec<String>>("listkeystores").await.unwrap()
+            expected,
+            HashSet::from_iter(from_server_vec.iter().cloned())
         );
+    }
+
+    #[async_std::test]
+    #[traced_test]
+    async fn test_resetpassword() {
+        let server = TestServer::new().await;
+
+        // Create a wallet with `password1`.
+        let mnemonic = server.get::<String>("getmnemonic").await.unwrap();
+        server
+            .get::<()>(&format!(
+                "newwallet/{}/password1/path/{}",
+                mnemonic,
+                server.path(),
+            ))
+            .await
+            .unwrap();
+
+        // Create some data.
+        let key = match server.get::<PubKey>("newkey/sending").await.unwrap() {
+            PubKey::Sending(key) => key,
+            key => panic!("expected PubKey::Sending, got {:?}", key),
+        };
+        assert_eq!(
+            vec![key.clone()],
+            server
+                .get::<WalletSummary>("getinfo")
+                .await
+                .unwrap()
+                .sending_keys
+        );
+
+        // Check that the wallet does not open with the wrong password.
+        server
+            .get::<()>(&format!("openwallet/password2/path/{}", server.path()))
+            .await
+            .unwrap_err();
+
+        // Change the password and check that our data is still there.
+        server
+            .get::<()>(&format!(
+                "resetpassword/{}/password2/path/{}",
+                mnemonic,
+                server.path()
+            ))
+            .await
+            .unwrap();
+        assert_eq!(
+            vec![key],
+            server
+                .get::<WalletSummary>("getinfo")
+                .await
+                .unwrap()
+                .sending_keys
+        );
+
+        // Check that we can't open the wallet with the old password.
+        server
+            .get::<()>(&format!("openwallet/password1/path/{}", server.path()))
+            .await
+            .unwrap_err();
+
+        // Check that we can open the wallet with the new password.
+        server
+            .get::<()>(&format!("openwallet/password2/path/{}", server.path()))
+            .await
+            .unwrap();
+
+        // Check that we can't reset the password using the wrong mnemonic.
+        server
+            .get::<()>(&format!(
+                "resetpassword/{}/password3/path/{}",
+                server.get::<String>("getmnemonic").await.unwrap(),
+                server.path()
+            ))
+            .await
+            .unwrap_err();
     }
 }

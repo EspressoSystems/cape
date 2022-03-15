@@ -19,7 +19,7 @@ use tide::log::LevelFilter;
 /// var. If the directory does not exist the server will try to create it.
 #[async_std::main]
 async fn main() -> Result<(), std::io::Error> {
-    let signals = Signals::new(&[SIGINT, SIGTERM]).unwrap();
+    let signals = Signals::new(&[SIGINT, SIGTERM]).expect("Failed to create signals.");
     let handle = signals.handle();
     let signals_task = async_std::task::spawn(handle_signals(signals));
 

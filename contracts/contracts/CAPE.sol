@@ -129,6 +129,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
         uint64 amount;
         AssetDefinition assetDef;
         EdOnBN254.EdOnBN254Point userAddr;
+        bytes32 encKey;
         bool freezeFlag;
         uint256 blind;
     }
@@ -158,17 +159,23 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
     }
 
     /// @notice Allocate native token faucet to a manager for testnet only
-    /// @param faucetManager public key of faucet manager for CAP native token (testnet only!)
-    function faucetSetupForTestnet(EdOnBN254.EdOnBN254Point memory faucetManager) public {
+    /// @param faucetManagerAddress address of public key of faucet manager for CAP native token (testnet only!)
+    /// @param faucetManagerEncKey public key of faucet manager for CAP native token (testnet only!)
+    function faucetSetupForTestnet(
+        EdOnBN254.EdOnBN254Point memory faucetManagerAddress,
+        bytes32 faucetManagerEncKey
+    ) public {
         // faucet can only be set up once by the manager
         require(msg.sender == deployer, "Only invocable by deployer");
         require(!faucetInitialized, "Faucet already set up");
 
         // allocate maximum possible amount of native CAP token to faucet manager on testnet
+        // max amount len is set to 63 bits: https://github.com/EspressoSystems/cap/blob/main/src/constants.rs#L50-L51
         RecordOpening memory ro = RecordOpening(
-            type(uint64).max,
+            type(uint64).max / 2,
             nativeDomesticAsset(),
-            faucetManager,
+            faucetManagerAddress,
+            faucetManagerEncKey,
             false,
             0 // arbitrary blind factor
         );

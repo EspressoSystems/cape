@@ -22,10 +22,7 @@ use jf_cap::{
     BaseField, CurveParam, NodeValue, VerKey,
 };
 use jf_plonk::proof_system::structs::Proof;
-use jf_primitives::{
-    aead,
-    elgamal::{self, EncKey},
-};
+use jf_primitives::elgamal::{self, EncKey};
 use std::convert::TryInto;
 
 pub use crate::bindings::{
@@ -322,14 +319,15 @@ impl From<jf_cap::structs::AssetDefinition> for AssetDefinition {
 
 impl From<AssetDefinition> for jf_cap::structs::AssetDefinition {
     fn from(def_sol: AssetDefinition) -> Self {
-        Self::new(
-            def_sol
-                .code
-                .generic_into::<AssetCodeSol>()
-                .generic_into::<AssetCode>(),
-            def_sol.policy.into(),
-        )
-        .unwrap()
+        let code = def_sol
+            .code
+            .generic_into::<AssetCodeSol>()
+            .generic_into::<AssetCode>();
+        if code == AssetCode::native() {
+            Self::native()
+        } else {
+            Self::new(code, def_sol.policy.into()).unwrap()
+        }
     }
 }
 
@@ -339,6 +337,7 @@ impl From<jf_cap::structs::RecordOpening> for RecordOpening {
             amount: ro.amount,
             asset_def: ro.asset_def.into(),
             user_addr: ro.pub_key.address().into(),
+            enc_key: ro.pub_key.enc_key().into(),
             freeze_flag: ro.freeze_flag == FreezeFlag::Frozen,
             blind: ro.blind.generic_into::<BlindFactorSol>().0,
         }
@@ -347,12 +346,10 @@ impl From<jf_cap::structs::RecordOpening> for RecordOpening {
 
 impl From<RecordOpening> for jf_cap::structs::RecordOpening {
     fn from(ro_sol: RecordOpening) -> Self {
-        let pub_key = UserPubKey::new(ro_sol.user_addr.into(), aead::EncKey::default());
-
         Self {
             amount: ro_sol.amount,
             asset_def: ro_sol.asset_def.into(),
-            pub_key,
+            pub_key: UserPubKey::new(ro_sol.user_addr.into(), ro_sol.enc_key.into()),
             freeze_flag: if ro_sol.freeze_flag {
                 FreezeFlag::Frozen
             } else {

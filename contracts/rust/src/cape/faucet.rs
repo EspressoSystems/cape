@@ -6,7 +6,6 @@
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #![cfg(test)]
-
 use crate::{
     assertion::Matcher,
     deploy::deploy_cape_test_with_deployer,
@@ -37,7 +36,10 @@ async fn test_faucet() -> Result<()> {
     // attempts to setup faucet by non deployer should fail
     let contract = TestCAPE::new(contract.address(), non_deployer);
     contract
-        .faucet_setup_for_testnet(faucet_manager.address().into())
+        .faucet_setup_for_testnet(
+            faucet_manager.address().into(),
+            faucet_manager.pub_key().enc_key().into(),
+        )
         .send()
         .await
         .should_revert_with_message("Only invocable by deployer");
@@ -45,7 +47,10 @@ async fn test_faucet() -> Result<()> {
     // setting up
     let contract = TestCAPE::new(contract.address(), deployer);
     contract
-        .faucet_setup_for_testnet(faucet_manager.address().into())
+        .faucet_setup_for_testnet(
+            faucet_manager.address().into(),
+            faucet_manager.pub_key().enc_key().into(),
+        )
         .send()
         .await?
         .await?;
@@ -53,14 +58,17 @@ async fn test_faucet() -> Result<()> {
 
     // try to setup again should fail
     contract
-        .faucet_setup_for_testnet(faucet_manager.address().into())
+        .faucet_setup_for_testnet(
+            faucet_manager.address().into(),
+            faucet_manager.pub_key().enc_key().into(),
+        )
         .send()
         .await
         .should_revert_with_message("Faucet already set up");
 
     // check the native token record is properly allocated
     let ro = RecordOpening {
-        amount: u64::MAX,
+        amount: u64::MAX / 2,
         asset_def: AssetDefinition::native(),
         pub_key: faucet_manager.pub_key(),
         freeze_flag: FreezeFlag::Unfrozen,
@@ -74,7 +82,7 @@ async fn test_faucet() -> Result<()> {
         .query()
         .await?;
     let event_ro: RecordOpeningSol = AbiDecode::decode(events[0].ro_bytes.clone()).unwrap();
-    assert_eq!(event_ro, ro.clone().generic_into::<RecordOpeningSol>());
+    assert_eq!(event_ro.generic_into::<RecordOpening>(), ro);
 
     let mut mt = MerkleTree::new(CAPE_MERKLE_HEIGHT).unwrap();
     mt.push(RecordCommitment::from(&ro).to_field_element());

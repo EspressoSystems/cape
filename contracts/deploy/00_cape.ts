@@ -32,8 +32,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   //     cargo run --bin faucet -p cap-rust-sandbox
   //
   // and copy/paste the output.
-  const pubKey =
-    "USERPUBKEY~muN7VKxj1GbJ4D6rU6gANdvwD05oPKy_XmhkBxSByq0gAAAAAAAAAIRN-Rik8czFiToI8Ft5fsIf9HAEtWHDsOHh-ZBJZl1KxQ";
+  const faucetManagerEncKey = "0x844df918a4f1ccc5893a08f05b797ec21ff47004b561c3b0e1e1f99049665d4a";
   const faucetManagerAddress = {
     x: BigNumber.from("0x2DCA81140764685EBFAC3C684E0FF0DB3500A853AB3EE0C966D463AC547BE39A"),
     y: BigNumber.from("0x228CF79945E37CFBB3F43F150B977639A12C900C949E23ED1DCD250578314393"),
@@ -55,7 +54,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     },
     "faucetSetupForTestnet",
     faucetManagerAddress,
-    pubKey
+    faucetManagerEncKey
   );
 };
 

@@ -114,7 +114,7 @@ async fn main() {
     };
 
     // Everyone creates own relayer and EQS, not sure it works without EQS
-    let (sender_key, relayer_url, contract_address, mock_eqs) =
+    let (sender_key, relayer_url, contract_address, _) =
         create_test_network(&mut rng, &universal_param).await;
     // Spawn our own EQS since we have our own relayer and contract connection.
     // TODO connect to an existing EQS.
@@ -126,7 +126,6 @@ async fn main() {
         relayer_url.clone(),
         contract_address,
         None,
-        mock_eqs.clone(),
         &mut loader,
     )
     .await

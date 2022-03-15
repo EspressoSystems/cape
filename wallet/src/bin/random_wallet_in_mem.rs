@@ -13,7 +13,6 @@
 // for everything left before it works properly.
 #![deny(warnings)]
 
-use async_std::sync::{Arc, Mutex};
 use cap_rust_sandbox::deploy::deploy_erc20_token;
 use cape_wallet::backend::CapeBackend;
 use cape_wallet::mocks::*;
@@ -59,12 +58,11 @@ struct Args {
     num_wallets: u64,
 }
 
-struct NetworkInfo<'a> {
+struct NetworkInfo {
     sender_key: UserKeyPair,
     eqs_url: Url,
     relayer_url: Url,
     contract_address: Address,
-    mock_eqs: Arc<Mutex<MockCapeLedger<'a>>>,
 }
 
 #[allow(clippy::needless_lifetimes)]
@@ -72,7 +70,7 @@ async fn create_backend_and_sender_wallet<'a>(
     rng: &mut ChaChaRng,
     universal_param: &'a UniversalParam,
     storage: &Path,
-) -> (NetworkInfo<'a>, CapeWallet<'a, CapeBackend<'a, ()>>) {
+) -> (NetworkInfo, CapeWallet<'a, CapeBackend<'a, ()>>) {
     let mut loader = MockCapeWalletLoader {
         path: storage.to_path_buf(),
         key: KeyTree::random(rng).0,
@@ -85,7 +83,6 @@ async fn create_backend_and_sender_wallet<'a>(
         eqs_url,
         relayer_url: network_tuple.1,
         contract_address: network_tuple.2,
-        mock_eqs: network_tuple.3,
     };
 
     let backend = CapeBackend::new(
@@ -94,7 +91,6 @@ async fn create_backend_and_sender_wallet<'a>(
         network.relayer_url.clone(),
         network.contract_address,
         None,
-        network.mock_eqs.clone(),
         &mut loader,
     )
     .await
@@ -136,7 +132,7 @@ async fn create_backend_and_sender_wallet<'a>(
 async fn create_wallet<'a>(
     rng: &mut ChaChaRng,
     universal_param: &'a UniversalParam,
-    network: &NetworkInfo<'a>,
+    network: &NetworkInfo,
     storage: &Path,
 ) -> (UserPubKey, CapeWallet<'a, CapeBackend<'a, ()>>) {
     let mut loader = MockCapeWalletLoader {
@@ -150,7 +146,6 @@ async fn create_wallet<'a>(
         network.relayer_url.clone(),
         network.contract_address,
         None,
-        network.mock_eqs.clone(),
         &mut loader,
     )
     .await

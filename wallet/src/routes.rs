@@ -237,7 +237,7 @@ pub struct RouteBinding {
 
 /// Index entries for documentation fragments
 #[allow(non_camel_case_types)]
-#[derive(AsRefStr, Copy, Clone, Debug, EnumIter, EnumString)]
+#[derive(AsRefStr, Copy, Clone, Debug, EnumIter, EnumString, strum_macros::Display)]
 pub enum ApiRouteKey {
     closewallet,
     freeze,
@@ -265,20 +265,45 @@ pub enum ApiRouteKey {
     lastusedkeystore,
 }
 
-/// Verifiy that every variant of enum ApiRouteKey is defined in api.toml
-pub fn check_api(api: toml::Value) -> bool {
-    let mut missing_definition = false;
+/// Check consistency of `api.toml`
+///
+/// * Verify that every variant of [ApiRouteKey] is defined
+/// * Check that every URL parameter has a valid type
+pub fn check_api(api: toml::Value) -> Result<(), String> {
     for key in ApiRouteKey::iter() {
-        let key_str = key.as_ref();
-        if api["route"].get(key_str).is_none() {
-            println!("Missing API definition for [route.{}]", key_str);
-            missing_definition = true;
+        let route = api["route"]
+            .get(key.as_ref())
+            .ok_or_else(|| format!("Missing API definition for [route.{}]", key))?;
+        let paths = route["PATH"]
+            .as_array()
+            .ok_or_else(|| format!("Malformed PATH for [route.{}] (expected array)", key))?;
+        for path in paths {
+            for segment in path
+                .as_str()
+                .ok_or_else(|| format!("Malformed pattern for [route.{}] (expected string)", key))?
+                .split('/')
+            {
+                if segment.starts_with(':') {
+                    let ty = route
+                        .get(segment)
+                        .ok_or_else(|| {
+                            format!("Missing parameter type for {} in [route.{}]", segment, key)
+                        })?
+                        .as_str()
+                        .ok_or_else(|| {
+                            format!(
+                                "Malformed parameter type for {} in [route.{}] (expected string)",
+                                segment, key
+                            )
+                        })?;
+                    UrlSegmentType::from_str(ty).map_err(|err| {
+                        format!("Invalid type for {} in [route.{}] ({})", segment, key, err)
+                    })?;
+                }
+            }
         }
     }
-    if missing_definition {
-        panic!("api.toml is inconsistent with enum ApiRoutKey");
-    }
-    !missing_definition
+    Ok(())
 }
 
 pub fn dummy_url_eval(

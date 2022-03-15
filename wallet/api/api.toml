@@ -55,6 +55,7 @@ If `:path` is given, the wallet will be stored in the given location. If `:name`
 PATH = ["openwallet/:password", "openwallet/:password/path/:path", "openwallet/:password/name/:name"]
 ":password" = "Literal"
 ":path" = "Base64"
+":name" = "Literal"
 DOC = """
 Open the wallet from local storage with the given password and path.
 
@@ -116,6 +117,7 @@ Get all records related to the current wallet.
 
 [route.getinfo]
 PATH = ["getinfo", "getinfo/address", "getinfo/key", "getinfo/asset", "getinfo/asset/:asset", "getinfo/freezing_key", "getinfo/sending_key", "getinfo/viewing_key"]
+":asset" = "TaggedBase64"
 DOC = """
 Get the addresses, public keys, and asset types for the current wallet.
 """
@@ -328,9 +330,9 @@ View the given asset or view the asset associated with the given viewing key.
 """
 
 [route.transaction]
-PATH = ["transaction/list", "transaction/list/:from/:count", "transaction/status/:receipt", "transaction/await/:reciept"]
+PATH = ["transaction/list", "transaction/list/:from/:count", "transaction/status/:receipt", "transaction/await/:receipt"]
 ":from" = "TaggedBase64"
-":reciept" = "TaggedBase64"
+":receipt" = "TaggedBase64"
 ":count" = "Integer"
 DOC = """
 List transactions, poll the status of a given transaction, or await events for a given transaction.

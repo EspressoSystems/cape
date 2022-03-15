@@ -6,7 +6,7 @@
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 //! Utilities for writing wallet tests
-#![deny(warnings)]
+// #![deny(warnings)]
 
 use crate::backend::CapeBackend;
 use crate::mocks::*;
@@ -17,16 +17,24 @@ use address_book::init_web_server;
 use address_book::wait_for_server;
 use address_book::TransientFileStore;
 use async_std::sync::{Arc, Mutex};
+use async_std::task::sleep;
 use cap_rust_sandbox::deploy::EthMiddleware;
+use cap_rust_sandbox::ethereum::get_provider;
 use cap_rust_sandbox::ledger::CapeLedger;
 use cap_rust_sandbox::types::SimpleToken;
 use ethers::prelude::Address;
+use ethers::providers::Middleware;
+use ethers::types::TransactionRequest;
+use ethers::types::U256;
+use jf_cap::keys::FreezerPubKey;
 use jf_cap::keys::UserAddress;
 use jf_cap::keys::UserKeyPair;
+use jf_cap::keys::UserPubKey;
 use jf_cap::proof::UniversalParam;
 use jf_cap::structs::AssetCode;
 use jf_cap::structs::AssetDefinition;
 use jf_cap::structs::AssetPolicy;
+use jf_cap::structs::FreezeFlag;
 use jf_cap::structs::ReceiverMemo;
 use jf_cap::TransactionVerifyingKey;
 use key_set::VerifierKeySet;
@@ -39,9 +47,13 @@ use rand_chacha::ChaChaRng;
 use reef::Ledger;
 use relayer::testing::start_minimal_relayer_for_test;
 use seahorse::testing::await_transaction;
+use seahorse::txn_builder::RecordInfo;
 use seahorse::txn_builder::{TransactionReceipt, TransactionStatus};
+use std::collections::HashSet;
+use std::time::Duration;
 use surf::Url;
 use tide::log::LevelFilter;
+use tracing::{event, Level};
 
 lazy_static! {
     static ref PORT: Arc<Mutex<u64>> = {
@@ -55,6 +67,10 @@ pub async fn port() -> u64 {
     let port = *counter;
     *counter += 1;
     port
+}
+
+pub async fn retry_delay() {
+    sleep(Duration::from_secs(1)).await
 }
 
 #[allow(clippy::needless_lifetimes)]
@@ -130,6 +146,40 @@ pub async fn create_test_network<'a>(
     (sender_key, relayer_url, contract.address(), mock_eqs)
 }
 
+pub async fn fund_eth_wallet<'a>(wallet: &mut CapeWallet<'a, CapeBackend<'a, ()>>) {
+    // Fund the Ethereum wallets for contract calls.
+    let provider = get_provider().interval(Duration::from_millis(100u64));
+    let accounts = provider.get_accounts().await.unwrap();
+    assert!(!accounts.is_empty());
+
+    let tx = TransactionRequest::new()
+        .to(Address::from(wallet.eth_address().await.unwrap()))
+        .value(ethers::utils::parse_ether(U256::from(1)).unwrap())
+        .from(accounts[0]);
+    provider
+        .send_transaction(tx, None)
+        .await
+        .unwrap()
+        .await
+        .unwrap();
+}
+
+pub async fn get_burn_ammount<'a>(
+    wallet: &CapeWallet<'a, CapeBackend<'a, ()>>,
+    asset: AssetCode,
+) -> u64 {
+    // get records for this this asset type
+    let records = wallet.records().await;
+    let filtered = records
+        .filter(|rec| rec.ro.asset_def.code == asset)
+        .collect::<Vec<_>>();
+    if filtered.is_empty() {
+        0
+    } else {
+        filtered[0].ro.amount
+    }
+}
+
 #[derive(Debug)]
 pub enum OperationType {
     Transfer,
@@ -137,6 +187,7 @@ pub enum OperationType {
     Unfreeze,
     Wrap,
     Burn,
+    Mint,
 }
 
 impl Distribution<OperationType> for Standard {
@@ -146,9 +197,77 @@ impl Distribution<OperationType> for Standard {
             1 => OperationType::Freeze,
             2 => OperationType::Unfreeze,
             3 => OperationType::Wrap,
-            _ => OperationType::Burn,
+            4 => OperationType::Burn,
+            _ => OperationType::Mint,
         }
     }
+}
+
+/// Mint a new token with the given wallet and add it's freezer and audit keys to
+/// to the Asset Policy
+pub async fn mint_token<'a>(
+    wallet: &mut CapeWallet<'a, CapeBackend<'a, ()>>,
+) -> Result<AssetDefinition, CapeWalletError> {
+    let freeze_key = &wallet.freezer_pub_keys().await[0];
+    let audit_key = &wallet.auditor_pub_keys().await[0];
+    let policy = AssetPolicy::default()
+        .set_freezer_pub_key(freeze_key.clone())
+        .set_auditor_pub_key(audit_key.clone())
+        .reveal_user_address()
+        .unwrap()
+        .reveal_amount()
+        .unwrap()
+        .reveal_blinding_factor()
+        .unwrap();
+    let my_asset = wallet.define_asset(&[], policy).await?;
+    event!(Level::INFO, "defined a new asset type: {}", my_asset.code);
+    let address = wallet.pub_keys().await[0].address();
+
+    // Mint some custom asset
+    event!(Level::INFO, "minting my asset type {}", my_asset.code);
+    loop {
+        let txn = wallet
+            .mint(&address, 1, &my_asset.code, 1u64 << 32, address.clone())
+            .await
+            .expect("failed to generate mint transaction");
+        let status = wallet
+            .await_transaction(&txn)
+            .await
+            .expect("error waiting for mint to complete");
+        if status.succeeded() {
+            break;
+        }
+        // The mint transaction is allowed to fail due to contention from other clients.
+        event!(Level::WARN, "mint transaction failed, retrying...");
+        retry_delay().await;
+    }
+    Ok(my_asset)
+}
+
+/// Return records the freezer has access to freeze or unfreeze but does not own.
+/// Will only return records with freeze_flag the same as the frozen arg.
+pub async fn find_freezable_records<'a>(
+    freezer: &CapeWallet<'a, CapeBackend<'a, ()>>,
+    frozen: FreezeFlag,
+) -> Vec<RecordInfo> {
+    let pks: HashSet<UserPubKey> = freezer.pub_keys().await.into_iter().collect();
+    let freeze_keys: HashSet<FreezerPubKey> =
+        freezer.freezer_pub_keys().await.into_iter().collect();
+    let records = freezer.records().await;
+    records
+        .filter(|r| {
+            let ro = &r.ro;
+            // Ignore records we own
+            if pks.contains(&ro.pub_key) {
+                return false;
+            }
+            // Check we can freeeze
+            if !(freeze_keys.contains(ro.asset_def.policy_ref().freezer_pub_key())) {
+                return false;
+            }
+            ro.freeze_flag == frozen
+        })
+        .collect()
 }
 
 pub async fn freeze_token<'a>(
@@ -160,8 +279,7 @@ pub async fn freeze_token<'a>(
     let freeze_address = freezer.pub_keys().await[0].address();
     let txn = freezer
         .freeze(&freeze_address, 1, asset, amount, owner_address)
-        .await
-        .unwrap();
+        .await?;
     freezer.await_transaction(&txn).await
 }
 

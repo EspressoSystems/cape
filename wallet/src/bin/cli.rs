@@ -28,29 +28,23 @@
 //! you can execute.
 
 extern crate cape_wallet;
-use async_std::sync::Mutex;
+use async_std::task::block_on;
 use cap_rust_sandbox::{
     ledger::CapeLedger,
     model::{Erc20Code, EthereumAddr},
 };
-use cape_wallet::{
-    mocks::{MockCapeBackend, MockCapeNetwork},
-    wallet::CapeWalletExt,
-};
+use cape_wallet::{backend::CapeBackend, wallet::CapeWalletExt};
+use ethers::prelude::Address;
 use jf_cap::{
     keys::{AuditorPubKey, FreezerPubKey},
     proof::UniversalParam,
     structs::{AssetCode, AssetDefinition, AssetPolicy},
-    MerkleTree, TransactionVerifyingKey,
 };
-use key_set::{KeySet, VerifierKeySet};
 use net::UserAddress;
-use reef::Ledger;
 use seahorse::{
     cli::*,
     io::SharedIO,
     loader::{LoaderMetadata, WalletLoader},
-    testing::MockLedger,
     WalletError,
 };
 use std::any::type_name;
@@ -58,58 +52,30 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::process::exit;
 use std::str::FromStr;
-use std::sync::Arc;
 use structopt::StructOpt;
+use surf::Url;
 
 /// Implementation of the [seahorse] [CLI] interface for CAPE.
 pub struct CapeCli;
 
 impl<'a> CLI<'a> for CapeCli {
     type Ledger = CapeLedger;
-    type Backend = MockCapeBackend<'a, LoaderMetadata>;
+    type Backend = CapeBackend<'a, LoaderMetadata>;
     type Args = CapeArgs;
 
     fn init_backend(
         univ_param: &'a UniversalParam,
-        _args: Self::Args,
+        args: Self::Args,
         loader: &mut impl WalletLoader<CapeLedger, Meta = LoaderMetadata>,
     ) -> Result<Self::Backend, WalletError<CapeLedger>> {
-        let verif_crs = VerifierKeySet {
-            mint: TransactionVerifyingKey::Mint(
-                jf_cap::proof::mint::preprocess(&*univ_param, CapeLedger::merkle_height())
-                    .unwrap()
-                    .1,
-            ),
-            xfr: KeySet::new(
-                vec![TransactionVerifyingKey::Transfer(
-                    jf_cap::proof::transfer::preprocess(
-                        &*univ_param,
-                        3,
-                        3,
-                        CapeLedger::merkle_height(),
-                    )
-                    .unwrap()
-                    .1,
-                )]
-                .into_iter(),
-            )
-            .unwrap(),
-            freeze: KeySet::new(
-                vec![TransactionVerifyingKey::Freeze(
-                    jf_cap::proof::freeze::preprocess(&*univ_param, 2, CapeLedger::merkle_height())
-                        .unwrap()
-                        .1,
-                )]
-                .into_iter(),
-            )
-            .unwrap(),
-        };
-        let ledger = Arc::new(Mutex::new(MockLedger::new(MockCapeNetwork::new(
-            verif_crs,
-            MerkleTree::new(CapeLedger::merkle_height()).unwrap(),
-            vec![],
-        ))));
-        MockCapeBackend::new(ledger, loader)
+        block_on(CapeBackend::new(
+            univ_param,
+            args.eqs_url,
+            args.relayer_url,
+            args.contract_address,
+            args.eth_mnemonic,
+            loader,
+        ))
     }
 
     fn extra_commands() -> Vec<Command<'a, Self>> {
@@ -136,7 +102,7 @@ impl<'a> CLIInput<'a, CapeCli> for Erc20Code {
 }
 
 /// The instantiation of [seahorse::Wallet] for CAPE used by the CLI.
-type CapeWallet<'a> = seahorse::Wallet<'a, MockCapeBackend<'a, LoaderMetadata>, CapeLedger>;
+type CapeWallet<'a> = seahorse::Wallet<'a, CapeBackend<'a, LoaderMetadata>, CapeLedger>;
 
 /// Implementation of the `sponsor` command for the CAPE wallet CLI.
 #[allow(clippy::too_many_arguments)]
@@ -320,6 +286,50 @@ pub struct CapeArgs {
     /// Instead of prompting the user for input with a line editor, the prompt will be printed,
     /// followed by a newline, and the input will be read without an editor.
     pub non_interactive: bool,
+
+    /// URL for the Ethereum Query Service.
+    #[structopt(
+        short,
+        long,
+        env = "CAPE_EQS_URL",
+        default_value = "https://localhost:50087"
+    )]
+    pub eqs_url: Url,
+
+    /// URL for the CAPE relayer.
+    #[structopt(
+        short,
+        long,
+        env = "CAPE_RELAYER_URL",
+        default_value = "https://localhost:50077"
+    )]
+    pub relayer_url: Url,
+
+    /// URL for the Ethereum Query Service.
+    #[structopt(
+        short,
+        long,
+        env = "CAPE_ADDRESS_BOOK_URL",
+        default_value = "https://localhost:50078"
+    )]
+    pub address_book_url: Url,
+
+    /// Address of the CAPE smart contract.
+    #[structopt(short, long, env = "CAPE_CONTRACT_ADDRESS")]
+    pub contract_address: Address,
+
+    /// URL for Ethers HTTP Provider
+    #[structopt(
+        short,
+        long,
+        env = "CAPE_WEB3_PROVIDER_URL",
+        default_value = "http://localhost:8545"
+    )]
+    pub rpc_url: String,
+
+    /// Mnemonic for a local Ethereum wallet for direct contract calls.
+    #[structopt(long, env = "ETH_MNEMONIC")]
+    pub eth_mnemonic: Option<String>,
 }
 
 impl CLIArgs for CapeArgs {

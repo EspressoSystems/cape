@@ -161,13 +161,15 @@
 <hr />
 <h2 id="faucetsetupfortestnet"><a class="header" href="#faucetsetupfortestnet">faucetSetupForTestnet</a></h2>
 <pre><code class="language-solidity">  function faucetSetupForTestnet(
-    struct EdOnBN254.EdOnBN254Point faucetManager
+    struct EdOnBN254.EdOnBN254Point faucetManagerAddress,
+    bytes32 faucetManagerEncKey
   ) public
 </code></pre>
 <p>Allocate native token faucet to a manager for testnet only</p>
 <h3 id="parameters-1"><a class="header" href="#parameters-1">Parameters</a></h3>
 <table><thead><tr><th align="left">Name</th><th align="left">Type</th><th align="left">Description</th></tr></thead><tbody>
-<tr><td align="left"><code>faucetManager</code></td><td align="left">struct EdOnBN254.EdOnBN254Point</td><td align="left">public key of faucet manager for CAP native token (testnet only!)</td></tr>
+<tr><td align="left"><code>faucetManagerAddress</code></td><td align="left">struct EdOnBN254.EdOnBN254Point</td><td align="left">address of public key of faucet manager for CAP native token (testnet only!)</td></tr>
+<tr><td align="left"><code>faucetManagerEncKey</code></td><td align="left">bytes32</td><td align="left">public key of faucet manager for CAP native token (testnet only!)</td></tr>
 </tbody></table>
 <hr />
 <h2 id="_publish"><a class="header" href="#_publish">_publish</a></h2>

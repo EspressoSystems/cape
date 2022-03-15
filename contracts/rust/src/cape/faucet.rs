@@ -6,9 +6,6 @@
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #![cfg(test)]
-
-use std::str::FromStr;
-
 use crate::{
     assertion::Matcher,
     deploy::deploy_cape_test_with_deployer,
@@ -19,7 +16,7 @@ use crate::{
 use anyhow::Result;
 use ethers::abi::AbiDecode;
 use jf_cap::{
-    keys::{UserKeyPair, UserPubKey},
+    keys::UserKeyPair,
     structs::{AssetDefinition, BlindFactor, FreezeFlag, RecordCommitment, RecordOpening},
     BaseField, MerkleTree,
 };
@@ -41,7 +38,7 @@ async fn test_faucet() -> Result<()> {
     contract
         .faucet_setup_for_testnet(
             faucet_manager.address().into(),
-            faucet_manager.pub_key().to_string(),
+            faucet_manager.pub_key().enc_key().into(),
         )
         .send()
         .await
@@ -52,7 +49,7 @@ async fn test_faucet() -> Result<()> {
     contract
         .faucet_setup_for_testnet(
             faucet_manager.address().into(),
-            faucet_manager.pub_key().to_string(),
+            faucet_manager.pub_key().enc_key().into(),
         )
         .send()
         .await?
@@ -63,7 +60,7 @@ async fn test_faucet() -> Result<()> {
     contract
         .faucet_setup_for_testnet(
             faucet_manager.address().into(),
-            faucet_manager.pub_key().to_string(),
+            faucet_manager.pub_key().enc_key().into(),
         )
         .send()
         .await
@@ -85,9 +82,7 @@ async fn test_faucet() -> Result<()> {
         .query()
         .await?;
     let event_ro: RecordOpeningSol = AbiDecode::decode(events[0].ro_bytes.clone()).unwrap();
-    assert_eq!(event_ro, ro.clone().generic_into::<RecordOpeningSol>());
-    let event_pub_key = UserPubKey::from_str(&events[0].faucet_manager_pub_key).unwrap();
-    assert_eq!(event_pub_key, faucet_manager.pub_key());
+    assert_eq!(event_ro.generic_into::<RecordOpening>(), ro);
 
     let mut mt = MerkleTree::new(CAPE_MERKLE_HEIGHT).unwrap();
     mt.push(RecordCommitment::from(&ro).to_field_element());

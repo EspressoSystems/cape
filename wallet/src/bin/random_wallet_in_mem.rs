@@ -26,6 +26,7 @@ use cape_wallet::testing::{
 use cape_wallet::CapeWallet;
 use cape_wallet::CapeWalletExt;
 use ethers::prelude::Address;
+use futures::stream::{iter, StreamExt};
 use jf_cap::keys::UserAddress;
 use jf_cap::keys::UserPubKey;
 use jf_cap::proof::UniversalParam;
@@ -98,7 +99,11 @@ async fn create_backend_and_sender_wallet<'a>(
     let mut wallet = CapeWallet::new(backend).await.unwrap();
 
     wallet
-        .add_user_key(network.sender_key.clone(), EventIndex::default())
+        .add_user_key(
+            network.sender_key.clone(),
+            "sending account".into(),
+            EventIndex::default(),
+        )
         .await
         .unwrap();
 
@@ -152,7 +157,13 @@ async fn create_wallet<'a>(
 
     let mut wallet = CapeWallet::new(backend).await.unwrap();
 
-    (wallet.generate_user_key(None).await.unwrap(), wallet)
+    (
+        wallet
+            .generate_user_key("sending account".into(), None)
+            .await
+            .unwrap(),
+        wallet,
+    )
 }
 
 fn update_balances(
@@ -351,9 +362,16 @@ async fn main() {
             }
             OperationType::Burn => {
                 let burner = wallets.choose_mut(&mut rng).unwrap();
-                let asset = burner.approved_assets().await[0].0.clone();
-                let amount = get_burn_ammount(burner, asset.code).await;
-                burn_token(burner, asset.clone(), amount).await.unwrap();
+                let asset = iter(burner.assets().await)
+                    .filter(|asset| burner.is_wrapped_asset(asset.definition.code))
+                    .next()
+                    .await;
+                if let Some(asset) = asset {
+                    let amount = get_burn_ammount(burner, asset.definition.code).await;
+                    burn_token(burner, asset.definition, amount).await.unwrap();
+                } else {
+                    println!("no burnable assets, skipping burn operation");
+                }
             }
         }
     }

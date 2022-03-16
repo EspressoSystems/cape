@@ -1756,65 +1756,92 @@ mod tests {
             .unwrap();
         assert!(asset_info.verified);
     }
-}
+    #[async_std::test]
+    #[traced_test]
+    async fn test_getprivatekey() {
+        let server = TestServer::new().await;
+        let mut rng = ChaChaRng::from_seed([1; 32]);
 
-#[async_std::test]
-#[traced_test]
-async fn test_getprivatekey() {
-    let server = TestServer::new().await;
-    let keypairs = vec![];
-    keypairs.push(UserKeyPair::generate(&mut rng));
-    keypairs.push(AuditorKeyPair::generate(&mut rng));
-    keypairs.push(FreezerKeyPair::generate(&mut rng));
+        let keypair_send = UserKeyPair::generate(&mut rng);
+        let keypair_view = AuditorKeyPair::generate(&mut rng);
+        let keypair_freeze = FreezerKeyPair::generate(&mut rng);
 
-    // Should fail if a wallet is not already open.
-    server
-        .requires_wallet::<PrivateKey>(&format!("getprivatekey/{}", keypairs[0].address(),))
-        .await;
-    server
-        .requires_wallet::<PrivateKey>(&format!("getprivatekey/{}", keypairs[0].pub_key(),))
-        .await;
-    server
-        .requires_wallet::<PrivateKey>(&format!("getprivatekey/{}", keypairs[1].pub_key(),))
-        .await;
-    server
-        .requires_wallet::<PrivateKey>(&format!("getprivatekey/{}", keypairs[2].pub_key(),))
-        .await;
+        // Should fail if a wallet is not already open.
+        server
+            .requires_wallet::<PrivateKey>(&format!("getprivatekey/{}", keypair_send.address(),))
+            .await;
+        server
+            .requires_wallet::<PrivateKey>(&format!("getprivatekey/{}", keypair_send.pub_key(),))
+            .await;
+        server
+            .requires_wallet::<PrivateKey>(&format!("getprivatekey/{}", keypair_view.pub_key(),))
+            .await;
+        server
+            .requires_wallet::<PrivateKey>(&format!("getprivatekey/{}", keypair_freeze.pub_key(),))
+            .await;
 
-    // Now open a wallet.
-    server
-        .get::<()>(&format!(
-            "newwallet/{}/my-password/path/{}",
-            server.get::<String>("getmnemonic").await.unwrap(),
-            server.path()
-        ))
-        .await
-        .unwrap();
+        // Now open a wallet.
+        server
+            .get::<()>(&format!(
+                "newwallet/{}/my-password/path/{}",
+                server.get::<String>("getmnemonic").await.unwrap(),
+                server.path()
+            ))
+            .await
+            .unwrap();
 
-    let sending_key_addr = server
-        .get::<PrivateKey>("getprivatekey/{}", keypairs[0].address())
-        .await
-        .unwrap();
-    let sending_key_addr = server
-        .get::<PrivateKey>("getprivatekey/{}", keypairs[0].pubkey())
-        .await
-        .unwrap();
-    let auditor_key = server
-        .get::<PrivateKey>("getprivatekey/{}", keypairs[1].pubkey())
-        .await
-        .unwrap();
-    let freezer_key = server
-        .get::<PrivateKey>("getprivatekey/{}", keypairs[2].pubkey())
-        .await
-        .unwrap();
+        let sending_key_addr = server
+            .get::<PrivateKey>(&format!("getprivatekey/{}", keypair_send.address()))
+            .await
+            .unwrap();
+        let sending_key_pub = server
+            .get::<PrivateKey>(&format!("getprivatekey/{}", keypair_send.pub_key()))
+            .await
+            .unwrap();
+        let auditor_key = server
+            .get::<PrivateKey>(&format!("getprivatekey/{}", keypair_view.pub_key()))
+            .await
+            .unwrap();
+        let freezer_key = server
+            .get::<PrivateKey>(&format!("getprivatekey/{}", keypair_freeze.pub_key()))
+            .await
+            .unwrap();
+        server
+            .get::<PrivateKey>(&format!("getprivatekey/{}", "invalid_address"))
+            .await
+            .expect_err("getprivatekey succeeded with invalid address");
 
-    match sending_key_addr {
-        PrivateKey::Sending(key) => {
-            assert_eq!(key, keypairs[0]);
+        match sending_key_addr {
+            PrivateKey::Sending(key) => {
+                assert_eq!(key.pub_key(), keypair_send.pub_key());
+            }
+            _ => {
+                panic!("Expected PrivateKey::Sending, found {:?}", sending_key_addr);
+            }
         }
-        _ => {
-            panic!("Expected PrivateKey::Sending, found {:?}", sending_key_addr);
+        match sending_key_pub {
+            PrivateKey::Sending(key) => {
+                assert_eq!(key.pub_key(), keypair_send.pub_key());
+            }
+            _ => {
+                panic!("Expected PrivateKey::Sending, found {:?}", sending_key_pub);
+            }
+        }
+        match auditor_key {
+            PrivateKey::Viewing(key) => {
+                assert_eq!(key.pub_key(), keypair_view.pub_key());
+            }
+            _ => {
+                panic!("Expected PrivateKey::Viewing, found {:?}", auditor_key);
+            }
+        }
+        match freezer_key {
+            PrivateKey::Freezing(key) => {
+                assert_eq!(key.pub_key(), keypair_freeze.pub_key());
+            }
+            _ => {
+                panic!("Expected PrivateKey::Freezing, found {:?}", freezer_key);
+            }
         }
     }
-    //assert_eq!(recovered_keys, keys);
 }

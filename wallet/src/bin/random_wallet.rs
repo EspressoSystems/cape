@@ -132,7 +132,11 @@ async fn main() {
     let mut wallet = CapeWallet::new(backend).await.unwrap();
     let pub_key = if args.sender {
         wallet
-            .add_user_key(sender_key.clone(), EventIndex::default())
+            .add_user_key(
+                sender_key.clone(),
+                "sending account".into(),
+                EventIndex::default(),
+            )
             .await
             .unwrap();
         wallet.await_key_scan(&sender_key.address()).await.unwrap();
@@ -151,23 +155,32 @@ async fn main() {
                     panic!("invalid private key file: {}", err);
                 });
                 wallet
-                    .add_user_key(key.clone(), EventIndex::default())
+                    .add_user_key(key.clone(), "sending account".into(), EventIndex::default())
                     .await
                     .unwrap_or_else(|err| {
                         panic!("error loading key: {}", err);
                     });
                 key.pub_key()
             }
-            None => wallet.generate_user_key(None).await.unwrap_or_else(|err| {
-                panic!("error generating random key: {}", err);
-            }),
+            None => wallet
+                .generate_user_key("sending account".into(), None)
+                .await
+                .unwrap_or_else(|err| {
+                    panic!("error generating random key: {}", err);
+                }),
         }
     };
 
     // fund_eth_wallet()
 
-    let freeze_key = wallet.generate_freeze_key().await.unwrap();
-    let audit_key = wallet.generate_audit_key().await.unwrap();
+    let freeze_key = wallet
+        .generate_freeze_key("freezing account".into())
+        .await
+        .unwrap();
+    let audit_key = wallet
+        .generate_audit_key("viewing account".into())
+        .await
+        .unwrap();
 
     println!("Wallet created");
 

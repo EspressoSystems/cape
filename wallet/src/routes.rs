@@ -733,12 +733,17 @@ async fn wrap(
         .unwrap()
         .value
         .to::<EthereumAddr>()?;
-    let asset =
-        AssetDefinition::from_str(&bindings.get(":asset").unwrap().value.as_string()?).unwrap();
+    let asset_code = bindings.get(":asset").unwrap().value.to::<AssetCode>()?;
+    let asset_definition = wallet.asset(asset_code).await.unwrap().definition;
     let amount = bindings.get(":amount").unwrap().value.as_u64()?;
 
     Ok(wallet
-        .wrap(eth_address, asset.into(), destination.into(), amount)
+        .wrap(
+            eth_address,
+            asset_definition.into(),
+            destination.into(),
+            amount,
+        )
         .await?)
 }
 

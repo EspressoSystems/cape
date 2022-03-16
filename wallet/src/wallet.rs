@@ -204,7 +204,7 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
             .build_transfer(
                 Some(account),
                 cap_asset,
-                &[(account.clone(), amount)],
+                &[(account.clone(), amount, true)],
                 fee,
                 bound_data,
                 Some((2, 2)),

@@ -861,7 +861,7 @@ mod tests {
         server
             .get::<()>(&format!(
                 "wrap/destination/{}/ethaddress/{}/asset/{}/amount/{}",
-                destination, sponsor_addr, sponsored_asset, 10
+                destination, sponsor_addr, sponsored_asset.code, 10
             ))
             .await
             .unwrap();

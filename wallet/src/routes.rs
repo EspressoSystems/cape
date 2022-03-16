@@ -237,7 +237,7 @@ pub struct RouteBinding {
 
 /// Index entries for documentation fragments
 #[allow(non_camel_case_types)]
-#[derive(AsRefStr, Copy, Clone, Debug, EnumIter, EnumString)]
+#[derive(AsRefStr, Copy, Clone, Debug, EnumIter, EnumString, strum_macros::Display)]
 pub enum ApiRouteKey {
     closewallet,
     freeze,
@@ -265,20 +265,45 @@ pub enum ApiRouteKey {
     lastusedkeystore,
 }
 
-/// Verifiy that every variant of enum ApiRouteKey is defined in api.toml
-pub fn check_api(api: toml::Value) -> bool {
-    let mut missing_definition = false;
+/// Check consistency of `api.toml`
+///
+/// * Verify that every variant of [ApiRouteKey] is defined
+/// * Check that every URL parameter has a valid type
+pub fn check_api(api: toml::Value) -> Result<(), String> {
     for key in ApiRouteKey::iter() {
-        let key_str = key.as_ref();
-        if api["route"].get(key_str).is_none() {
-            println!("Missing API definition for [route.{}]", key_str);
-            missing_definition = true;
+        let route = api["route"]
+            .get(key.as_ref())
+            .ok_or_else(|| format!("Missing API definition for [route.{}]", key))?;
+        let paths = route["PATH"]
+            .as_array()
+            .ok_or_else(|| format!("Malformed PATH for [route.{}] (expected array)", key))?;
+        for path in paths {
+            for segment in path
+                .as_str()
+                .ok_or_else(|| format!("Malformed pattern for [route.{}] (expected string)", key))?
+                .split('/')
+            {
+                if segment.starts_with(':') {
+                    let ty = route
+                        .get(segment)
+                        .ok_or_else(|| {
+                            format!("Missing parameter type for {} in [route.{}]", segment, key)
+                        })?
+                        .as_str()
+                        .ok_or_else(|| {
+                            format!(
+                                "Malformed parameter type for {} in [route.{}] (expected string)",
+                                segment, key
+                            )
+                        })?;
+                    UrlSegmentType::from_str(ty).map_err(|err| {
+                        format!("Invalid type for {} in [route.{}] ({})", segment, key, err)
+                    })?;
+                }
+            }
         }
     }
-    if missing_definition {
-        panic!("api.toml is inconsistent with enum ApiRoutKey");
-    }
-    !missing_definition
+    Ok(())
 }
 
 pub fn dummy_url_eval(
@@ -325,6 +350,10 @@ pub fn keystore_path(storage: &Path, name: &str) -> PathBuf {
     [keystores_dir(storage).as_path(), Path::new(name)]
         .iter()
         .collect()
+}
+
+pub fn assets_path(storage: &Path) -> PathBuf {
+    [storage, Path::new("verified_assets")].iter().collect()
 }
 
 pub async fn write_path(wallet_path: &Path, storage: &Path) -> Result<(), tide::Error> {
@@ -430,7 +459,17 @@ pub async fn init_wallet(
         }));
     }
 
-    Wallet::new(backend).await.map_err(wallet_error)
+    let mut wallet = Wallet::new(backend).await.map_err(wallet_error)?;
+
+    // If we have been provided a verified asset library, load it.
+    let assets_path = assets_path(storage);
+    if Path::is_file(&assets_path) {
+        wallet
+            .verify_cape_assets(&assets_path)
+            .await
+            .map_err(wallet_error)?;
+    }
+    Ok(wallet)
 }
 
 async fn known_assets(wallet: &Wallet) -> HashMap<AssetCode, AssetInfo> {
@@ -645,14 +684,28 @@ async fn getbalance(
     }
 }
 
-async fn newkey(key_type: &str, wallet: &mut Option<Wallet>) -> Result<PubKey, tide::Error> {
+async fn newkey(
+    route_params: &[&str],
+    bindings: &HashMap<String, RouteBinding>,
+    wallet: &mut Option<Wallet>,
+) -> Result<PubKey, tide::Error> {
     let wallet = require_wallet(wallet)?;
+    let description = match bindings.get(":description") {
+        Some(param) => std::str::from_utf8(param.value.as_base64()?.as_slice())?.into(),
+        None => String::new(),
+    };
 
-    match key_type {
-        "send" | "sending" => Ok(PubKey::Sending(wallet.generate_user_key(None).await?)),
-        "view" | "viewing" => Ok(PubKey::Viewing(wallet.generate_audit_key().await?)),
-        "freeze" | "freezing" => Ok(PubKey::Freezing(wallet.generate_freeze_key().await?)),
-        _ => Err(server_error(CapeAPIError::Param {
+    match route_params[0] {
+        "send" | "sending" => Ok(PubKey::Sending(
+            wallet.generate_user_key(description, None).await?,
+        )),
+        "view" | "viewing" => Ok(PubKey::Viewing(
+            wallet.generate_audit_key(description).await?,
+        )),
+        "freeze" | "freezing" => Ok(PubKey::Freezing(
+            wallet.generate_freeze_key(description).await?,
+        )),
+        key_type => Err(server_error(CapeAPIError::Param {
             expected: String::from("key type (sending, viewing or freezing)"),
             actual: String::from(key_type),
         })),
@@ -794,13 +847,17 @@ async fn unwrap(
 }
 
 async fn recoverkey(
-    key_type: &str,
+    route_params: &[&str],
     bindings: &HashMap<String, RouteBinding>,
     wallet: &mut Option<Wallet>,
 ) -> Result<PubKey, tide::Error> {
     let wallet = require_wallet(wallet)?;
+    let description = match bindings.get(":description") {
+        Some(param) => std::str::from_utf8(param.value.as_base64()?.as_slice())?.into(),
+        None => String::new(),
+    };
 
-    match key_type {
+    match route_params[0] {
         "send" | "sending" => {
             let scan_from = match bindings.get(":scan_from") {
                 Some(param) => param.value.as_usize()?,
@@ -808,16 +865,23 @@ async fn recoverkey(
             };
             Ok(PubKey::Sending(
                 wallet
-                    .generate_user_key(Some(EventIndex::from_source(
-                        EventSource::QueryService,
-                        scan_from,
-                    )))
+                    .generate_user_key(
+                        description,
+                        Some(EventIndex::from_source(
+                            EventSource::QueryService,
+                            scan_from,
+                        )),
+                    )
                     .await?,
             ))
         }
-        "view" | "viewing" => Ok(PubKey::Viewing(wallet.generate_audit_key().await?)),
-        "freeze" | "freezing" => Ok(PubKey::Freezing(wallet.generate_freeze_key().await?)),
-        _ => Err(server_error(CapeAPIError::Param {
+        "view" | "viewing" => Ok(PubKey::Viewing(
+            wallet.generate_audit_key(description).await?,
+        )),
+        "freeze" | "freezing" => Ok(PubKey::Freezing(
+            wallet.generate_freeze_key(description).await?,
+        )),
+        key_type => Err(server_error(CapeAPIError::Param {
             expected: String::from("key type (sending, viewing or freezing)"),
             actual: String::from(key_type),
         })),
@@ -865,84 +929,6 @@ pub async fn get_last_keystore(storage: &Path) -> Result<Option<PathBuf>, tide::
     Ok(read_last_path(storage).await?)
 }
 
-// Get the set of assets associated with the given codes.
-//
-// The caller must ensure that each asset code is known to `wallet`.
-async fn get_assets(wallet: &Wallet, codes: &[AssetCode]) -> HashMap<AssetCode, AssetInfo> {
-    iter(codes)
-        .then(|code| async move { (*code, AssetInfo::from(wallet.asset(*code).await.unwrap())) })
-        .collect()
-        .await
-}
-
-async fn get_sending_account(wallet: &Wallet, address: UserAddress) -> Account {
-    let (records, asset_codes): (Vec<_>, Vec<_>) = wallet
-        .records()
-        .await
-        .filter_map(|record| {
-            if record.ro.pub_key.address() == address.0 {
-                Some((record.clone().into(), record.ro.asset_def.code))
-            } else {
-                None
-            }
-        })
-        .unzip();
-
-    Account {
-        records,
-        assets: get_assets(wallet, &asset_codes).await,
-    }
-}
-
-async fn get_viewing_account(wallet: &Wallet, address: AuditorPubKey) -> Account {
-    let (records, asset_codes): (Vec<_>, Vec<_>) = wallet
-        .records()
-        .await
-        .filter_map(|record| {
-            if record.ro.asset_def.policy_ref().auditor_pub_key() == &address {
-                Some((record.clone().into(), record.ro.asset_def.code))
-            } else {
-                None
-            }
-        })
-        .unzip();
-    let mut assets = get_assets(wallet, &asset_codes).await;
-
-    // Make sure assets contains _all_ asset types that are viewable, not just the ones for which we
-    // currently have records.
-    for asset in wallet.assets().await {
-        if asset.definition.policy_ref().auditor_pub_key() == &address {
-            assets.insert(asset.definition.code, AssetInfo::from(asset));
-        }
-    }
-
-    Account { records, assets }
-}
-
-async fn get_freezing_account(wallet: &Wallet, address: FreezerPubKey) -> Account {
-    let (records, asset_codes): (Vec<_>, Vec<_>) = wallet
-        .records()
-        .await
-        .filter_map(|record| {
-            if record.ro.asset_def.policy_ref().freezer_pub_key() == &address {
-                Some((record.clone().into(), record.ro.asset_def.code))
-            } else {
-                None
-            }
-        })
-        .unzip();
-    let mut assets = get_assets(wallet, &asset_codes).await;
-
-    // Make sure assets contains _all_ asset types that are freezableœ
-    for asset in wallet.assets().await {
-        if asset.definition.policy_ref().freezer_pub_key() == &address {
-            assets.insert(asset.definition.code, AssetInfo::from(asset));
-        }
-    }
-
-    Account { records, assets }
-}
-
 async fn getaccount(
     bindings: &HashMap<String, RouteBinding>,
     wallet: &mut Option<Wallet>,
@@ -950,12 +936,16 @@ async fn getaccount(
     let wallet = require_wallet(wallet)?;
     let address = bindings[":address"].value.clone();
     match address.as_identifier()?.tag().as_str() {
-        "ADDR" => Ok(get_sending_account(wallet, address.to()?).await),
-        "USERPUBKEY" => {
-            Ok(get_sending_account(wallet, address.to::<UserPubKey>()?.address().into()).await)
-        }
-        "AUDPUBKEY" => Ok(get_viewing_account(wallet, address.to()?).await),
-        "FREEZEPUBKEY" => Ok(get_freezing_account(wallet, address.to()?).await),
+        "ADDR" => Ok(wallet
+            .sending_account(&address.to::<UserAddress>()?.0)
+            .await?
+            .into()),
+        "USERPUBKEY" => Ok(wallet
+            .sending_account(&address.to::<UserPubKey>()?.address())
+            .await?
+            .into()),
+        "AUDPUBKEY" => Ok(wallet.viewing_account(&address.to()?).await?.into()),
+        "FREEZEPUBKEY" => Ok(wallet.freezing_account(&address.to()?).await?.into()),
         tag => Err(server_error(CapeAPIError::Tag {
             expected: String::from("ADDR | USERPUBKEY | AUDPUBKEY | FREEZEPUBKEY"),
             actual: String::from(tag),
@@ -969,6 +959,7 @@ pub async fn dispatch_url(
     bindings: &HashMap<String, RouteBinding>,
 ) -> Result<tide::Response, tide::Error> {
     let segments = route_pattern.split_once('/').unwrap_or((route_pattern, ""));
+    let route_params = segments.1.split('/').collect::<Vec<_>>();
     let state = req.state();
     let rng = &mut *state.rng.lock().await;
     let faucet_key_pair = &state.faucet_key_pair;
@@ -987,7 +978,7 @@ pub async fn dispatch_url(
         ApiRouteKey::listkeystores => response(&req, listkeystores(storage).await?),
         ApiRouteKey::mint => response(&req, mint(bindings, wallet).await?),
         ApiRouteKey::newasset => response(&req, newasset(bindings, wallet).await?),
-        ApiRouteKey::newkey => response(&req, newkey(segments.1, wallet).await?),
+        ApiRouteKey::newkey => response(&req, newkey(&route_params, bindings, wallet).await?),
         ApiRouteKey::newwallet => response(
             &req,
             newwallet(bindings, rng, faucet_key_pair, wallet, storage).await?,
@@ -996,7 +987,9 @@ pub async fn dispatch_url(
             &req,
             openwallet(bindings, rng, faucet_key_pair, wallet, storage).await?,
         ),
-        ApiRouteKey::recoverkey => response(&req, recoverkey(segments.1, bindings, wallet).await?),
+        ApiRouteKey::recoverkey => {
+            response(&req, recoverkey(&route_params, bindings, wallet).await?)
+        }
         ApiRouteKey::resetpassword => response(
             &req,
             resetpassword(bindings, rng, faucet_key_pair, wallet, storage).await?,

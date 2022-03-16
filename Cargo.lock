@@ -173,7 +173,7 @@ dependencies = [
 [[package]]
 name = "arbitrary-wrappers"
 version = "0.2.0"
-source = "git+https://github.com/EspressoSystems/arbitrary-wrappers.git#101280b4ec74636405df383d583c62131bd5217b"
+source = "git+https://github.com/EspressoSystems/arbitrary-wrappers.git#a6d0de1d283d1455eff666ca693ddda8e24fa422"
 dependencies = [
  "arbitrary",
  "ark-std",
@@ -704,7 +704,7 @@ dependencies = [
 [[package]]
 name = "atomic_store"
 version = "0.1.0"
-source = "git+https://github.com/EspressoSystems/atomicstore.git#6c99a05cbca1d253fb5b20fc0ee0cc10159d9da3"
+source = "git+https://github.com/EspressoSystems/atomicstore.git#a719ad0ec86831fb9b0cb9d9a4889e1bdf0f91e6"
 dependencies = [
  "ark-serialize",
  "bincode",
@@ -5063,7 +5063,7 @@ dependencies = [
 [[package]]
 name = "seahorse"
 version = "0.2.0"
-source = "git+https://github.com/EspressoSystems/seahorse.git#a233e2a0934687b3a079215a4cefca520a6fe302"
+source = "git+https://github.com/EspressoSystems/seahorse.git#7ff0f82b317320d9bbebe6cc0ab93d65e2a7e611"
 dependencies = [
  "arbitrary",
  "arbitrary-wrappers",

@@ -7,17 +7,16 @@
 
 //! Instantiation of [seahorse::Wallet] for CAPE.
 
-use async_std::sync::Arc;
+use async_std::{fs, sync::Arc};
 use async_trait::async_trait;
 use cap_rust_sandbox::{deploy::EthMiddleware, ledger::*, model::*};
 use jf_cap::{
     keys::UserAddress,
     structs::{AssetCode, AssetDefinition, AssetPolicy, FreezeFlag, RecordOpening},
+    VerKey,
 };
-use seahorse::{
-    txn_builder::{TransactionInfo, TransactionReceipt},
-    Wallet, WalletBackend, WalletError,
-};
+use seahorse::{txn_builder::TransactionReceipt, AssetInfo, Wallet, WalletBackend, WalletError};
+use std::path::Path;
 
 pub type CapeWalletError = WalletError<CapeLedger>;
 
@@ -61,6 +60,9 @@ pub trait CapeWalletBackend<'a>: WalletBackend<'a, CapeLedger> {
 
     /// Get the underlying Ethereum connection.
     fn eth_client(&self) -> Result<Arc<EthMiddleware>, CapeWalletError>;
+
+    /// Get the official verification key used to verify asset libraries.
+    fn asset_verifier(&self) -> VerKey;
 }
 
 pub type CapeWallet<'a, Backend> = Wallet<'a, Backend, CapeLedger>;
@@ -120,14 +122,20 @@ pub trait CapeWalletExt<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> {
         fee: u64,
     ) -> Result<TransactionReceipt<CapeLedger>, CapeWalletError>;
 
-    /// Return the list of Espresso-approved CAPE asset types.
-    async fn approved_assets(&self) -> Vec<(AssetDefinition, Erc20Code)>;
+    /// Determine if an asset is a wrapped ERC-20 asset (as opposed to a domestic CAPE asset).
+    async fn is_wrapped_asset(&self, asset: AssetCode) -> bool;
 
     /// Get the underlying Ethereum connection.
     async fn eth_client(&self) -> Result<Arc<EthMiddleware>, CapeWalletError>;
 
     /// Get an address owned by the underlying Ethereum wallet.
     async fn eth_address(&self) -> Result<EthereumAddr, CapeWalletError>;
+
+    /// Import an asset library signed by the official CAPE asset signing key.
+    async fn verify_cape_assets(
+        &mut self,
+        library: &Path,
+    ) -> Result<Vec<AssetInfo>, CapeWalletError>;
 }
 
 #[async_trait]
@@ -151,6 +159,10 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
             .backend_mut()
             .register_erc20_asset(&asset, erc20_code, sponsor_addr)
             .await?;
+        drop(state);
+
+        // Add the new asset to our asset library.
+        self.import_asset(asset.clone().into()).await?;
 
         Ok(asset)
     }
@@ -197,7 +209,7 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
             .chain(dst_addr.as_bytes())
             .cloned()
             .collect::<Vec<_>>();
-        let xfr_info = self
+        let (note, mut info) = self
             // The owner public key of the new record opening is ignored when processing a burn. We
             // need to put some address in the receiver field though, so just use the one we have
             // handy.
@@ -211,37 +223,31 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
             )
             .await?;
 
-        // Only generate memos for the fee change output.
-        assert!(xfr_info.fee_output.is_some());
-        let (memos, sig) = self
-            .generate_memos(vec![xfr_info.fee_output.unwrap()], &xfr_info.sig_key_pair)
-            .await?;
-
-        let mut txn_info = TransactionInfo {
-            accounts: xfr_info.owner_addresses,
-            memos,
-            sig,
-            freeze_outputs: vec![],
-            history: Some(xfr_info.history),
-            uid: None,
-            inputs: xfr_info.inputs,
-            outputs: xfr_info.outputs,
-        };
-        assert_eq!(xfr_info.note.inputs_nullifiers.len(), 2);
-        assert_eq!(xfr_info.note.output_commitments.len(), 2);
-        if let Some(history) = &mut txn_info.history {
+        assert_eq!(note.inputs_nullifiers.len(), 2);
+        assert_eq!(note.output_commitments.len(), 2);
+        if let Some(history) = &mut info.history {
             history.kind = CapeTransactionKind::Burn;
         }
 
         let txn = CapeTransition::Transaction(CapeModelTxn::Burn {
-            xfr: Box::new(xfr_info.note),
-            ro: Box::new(txn_info.outputs[0].clone()),
+            xfr: Box::new(note),
+            ro: Box::new(info.outputs[1].clone()),
         });
-        self.submit(txn, txn_info).await
+        self.submit(txn, info).await
     }
 
-    async fn approved_assets(&self) -> Vec<(AssetDefinition, Erc20Code)> {
-        unimplemented!()
+    /// Determine if an asset is a wrapped asset (as opposed to a domestic CAPE asset).
+    async fn is_wrapped_asset(&self, asset: AssetCode) -> bool {
+        let state = self.lock().await;
+        let definition = match self.asset(asset).await {
+            Some(asset) => asset.definition,
+            None => return false,
+        };
+        state
+            .backend()
+            .get_wrapped_erc20_code(&definition)
+            .await
+            .is_ok()
     }
 
     async fn eth_client(&self) -> Result<Arc<EthMiddleware>, CapeWalletError> {
@@ -250,5 +256,17 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
 
     async fn eth_address(&self) -> Result<EthereumAddr, CapeWalletError> {
         Ok(self.eth_client().await?.address().into())
+    }
+
+    async fn verify_cape_assets(
+        &mut self,
+        library: &Path,
+    ) -> Result<Vec<AssetInfo>, CapeWalletError> {
+        let bytes = fs::read(library)
+            .await
+            .map_err(|source| CapeWalletError::IoError { source })?;
+        let library = bincode::deserialize(&bytes)?;
+        let ver_key = self.lock().await.backend().asset_verifier();
+        self.verify_assets(&ver_key, library).await
     }
 }

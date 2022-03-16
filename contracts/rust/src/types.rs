@@ -22,10 +22,7 @@ use jf_cap::{
     BaseField, CurveParam, NodeValue, VerKey,
 };
 use jf_plonk::proof_system::structs::Proof;
-use jf_primitives::{
-    aead,
-    elgamal::{self, EncKey},
-};
+use jf_primitives::elgamal::{self, EncKey};
 use std::convert::TryInto;
 
 pub use crate::bindings::{
@@ -340,6 +337,7 @@ impl From<jf_cap::structs::RecordOpening> for RecordOpening {
             amount: ro.amount,
             asset_def: ro.asset_def.into(),
             user_addr: ro.pub_key.address().into(),
+            enc_key: ro.pub_key.enc_key().into(),
             freeze_flag: ro.freeze_flag == FreezeFlag::Frozen,
             blind: ro.blind.generic_into::<BlindFactorSol>().0,
         }
@@ -348,28 +346,20 @@ impl From<jf_cap::structs::RecordOpening> for RecordOpening {
 
 impl From<RecordOpening> for jf_cap::structs::RecordOpening {
     fn from(ro_sol: RecordOpening) -> Self {
-        let pub_key = UserPubKey::new(ro_sol.user_addr.clone().into(), aead::EncKey::default());
-        ro_from_pub_key(ro_sol, pub_key)
-    }
-}
-
-pub fn ro_from_pub_key(
-    ro_sol: RecordOpening,
-    pub_key: UserPubKey,
-) -> jf_cap::structs::RecordOpening {
-    jf_cap::structs::RecordOpening {
-        amount: ro_sol.amount,
-        asset_def: ro_sol.asset_def.into(),
-        pub_key,
-        freeze_flag: if ro_sol.freeze_flag {
-            FreezeFlag::Frozen
-        } else {
-            FreezeFlag::Unfrozen
-        },
-        blind: ro_sol
-            .blind
-            .generic_into::<BlindFactorSol>()
-            .generic_into::<BlindFactor>(),
+        Self {
+            amount: ro_sol.amount,
+            asset_def: ro_sol.asset_def.into(),
+            pub_key: UserPubKey::new(ro_sol.user_addr.into(), ro_sol.enc_key.into()),
+            freeze_flag: if ro_sol.freeze_flag {
+                FreezeFlag::Frozen
+            } else {
+                FreezeFlag::Unfrozen
+            },
+            blind: ro_sol
+                .blind
+                .generic_into::<BlindFactorSol>()
+                .generic_into::<BlindFactor>(),
+        }
     }
 }
 

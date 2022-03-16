@@ -38,27 +38,43 @@ use tide::StatusCode;
 )]
 pub struct FaucetOptions {
     /// mnemonic for the faucet wallet
-    #[structopt(long = "mnemonic", env = "MNEMONIC", default_value = "")]
+    #[structopt(
+        long = "mnemonic",
+        env = "CAPE_FAUCET_WALLET_MNEMONIC",
+        default_value = ""
+    )]
     pub mnemonic: String,
 
     /// path to the faucet wallet
-    #[structopt(long = "faucet_wallet_path", env = "FAUCET_WALLET_PATH")]
+    #[structopt(long = "wallet_path", env = "CAPE_FAUCET_WALLET_PATH")]
     pub faucet_wallet_path: PathBuf,
 
     /// password on the faucet account keyfile
-    #[structopt(long = "faucet_password", env = "FAUCET_PASSWORD", default_value = "")]
+    #[structopt(
+        long = "wallet_password",
+        env = "CAPE_FAUCET_WALLET_PASSWORD",
+        default_value = ""
+    )]
     pub faucet_password: String,
 
     /// binding port for the faucet service
-    #[structopt(long = "faucet_port", env = "FAUCET_PORT", default_value = "50079")]
+    #[structopt(
+        long = "faucet_port",
+        env = "CAPE_FAUCET_PORT",
+        default_value = "50079"
+    )]
     pub faucet_port: String,
 
     /// size of transfer for faucet grant
-    #[structopt(long = "grant_size", env = "FAUCET_GRANT", default_value = "5000")]
+    #[structopt(
+        long = "grant_size",
+        env = "CAPE_FAUCET_GRANT_SIZE",
+        default_value = "5000"
+    )]
     pub grant_size: u64,
 
     /// fee for faucet grant
-    #[structopt(long = "fee_size", env = "FAUCET_FEE", default_value = "100")]
+    #[structopt(long = "fee_size", env = "CAPE_FAUCET_FEE_SIZE", default_value = "100")]
     pub fee_size: u64,
 }
 
@@ -157,7 +173,7 @@ async fn main() -> Result<(), std::io::Error> {
 
     // Initialize the faucet web server.
     //
-    init_web_server(&FaucetOptions::from_args()).await?;
+    init_web_server(&FaucetOptions::from_args()).await?.await?;
 
     Ok(())
 }

@@ -107,14 +107,13 @@ mod tests {
     };
     use jf_cap::{
         keys::{AuditorKeyPair, FreezerKeyPair, UserKeyPair},
-        structs::{AssetCode, AssetDefinition, AssetPolicy},
+        structs::{AssetCode, AssetDefinition as JfAssetDefinition, AssetPolicy},
     };
     use net::{client, UserAddress};
     use seahorse::{
         asset_library::VerifiedAssetLibrary,
         hd::{KeyTree, Mnemonic},
         txn_builder::{RecordInfo, TransactionReceipt},
-        AssetInfo,
     };
     use serde::de::DeserializeOwned;
     use std::collections::hash_map::HashMap;
@@ -777,12 +776,9 @@ mod tests {
             ))
             .await
             .unwrap();
-        assert_eq!(sponsored_asset.policy_ref().auditor_pub_key(), viewing_key);
-        assert_eq!(sponsored_asset.policy_ref().freezer_pub_key(), freezing_key);
-        assert_eq!(
-            sponsored_asset.policy_ref().reveal_threshold(),
-            viewing_threshold
-        );
+        assert_eq!(&sponsored_asset.viewing_key.unwrap(), viewing_key);
+        assert_eq!(&sponsored_asset.freezing_key.unwrap(), freezing_key);
+        assert_eq!(sponsored_asset.viewing_threshold, viewing_threshold);
 
         // newasset should return a defined asset with the correct policy if no ERC20 code is given.
         let defined_asset = server
@@ -792,12 +788,9 @@ mod tests {
             ))
             .await
             .unwrap();
-        assert_eq!(defined_asset.policy_ref().auditor_pub_key(), viewing_key);
-        assert_eq!(defined_asset.policy_ref().freezer_pub_key(), freezing_key);
-        assert_eq!(
-            defined_asset.policy_ref().reveal_threshold(),
-            viewing_threshold
-        );
+        assert_eq!(&defined_asset.viewing_key.unwrap(), viewing_key);
+        assert_eq!(&defined_asset.freezing_key.unwrap(), freezing_key);
+        assert_eq!(defined_asset.viewing_threshold, viewing_threshold);
         let defined_asset = server
             .get::<AssetDefinition>(&format!(
             "newasset/freezing_key/{}/viewing_key/{}/view_amount/{}/view_address/{}/viewing_threshold/{}",
@@ -805,12 +798,9 @@ mod tests {
         ))
             .await
             .unwrap();
-        assert_eq!(defined_asset.policy_ref().auditor_pub_key(), viewing_key);
-        assert_eq!(defined_asset.policy_ref().freezer_pub_key(), freezing_key);
-        assert_eq!(
-            defined_asset.policy_ref().reveal_threshold(),
-            viewing_threshold
-        );
+        assert_eq!(&defined_asset.viewing_key.unwrap(), viewing_key);
+        assert_eq!(&defined_asset.freezing_key.unwrap(), freezing_key);
+        assert_eq!(defined_asset.viewing_threshold, viewing_threshold);
 
         // newasset should return an asset with the default freezer public key if it's not given.
         let sponsored_asset = server
@@ -820,7 +810,7 @@ mod tests {
                 ))
                 .await
                 .unwrap();
-        assert!(!sponsored_asset.policy_ref().is_freezer_pub_key_set());
+        assert!(sponsored_asset.freezing_key.is_none());
         let sponsored_asset = server
             .get::<AssetDefinition>(&format!(
                 "newasset/description/{}/viewing_key/{}/view_amount/{}/view_address/{}/viewing_threshold/{}",
@@ -828,7 +818,7 @@ mod tests {
             ))
             .await
             .unwrap();
-        assert!(!sponsored_asset.policy_ref().is_freezer_pub_key_set());
+        assert!(sponsored_asset.freezing_key.is_none());
 
         // newasset should return an asset with the default auditor public key and no reveal threshold if an
         // auditor public key isn't given.
@@ -839,14 +829,14 @@ mod tests {
             ))
             .await
             .unwrap();
-        assert!(!sponsored_asset.policy_ref().is_auditor_pub_key_set());
-        assert_eq!(sponsored_asset.policy_ref().reveal_threshold(), 0);
+        assert!(sponsored_asset.viewing_key.is_none());
+        assert_eq!(sponsored_asset.viewing_threshold, 0);
         let sponsored_asset = server
             .get::<AssetDefinition>(&format!("newasset/description/{}", description))
             .await
             .unwrap();
-        assert!(!sponsored_asset.policy_ref().is_auditor_pub_key_set());
-        assert_eq!(sponsored_asset.policy_ref().reveal_threshold(), 0);
+        assert!(sponsored_asset.viewing_key.is_none());
+        assert_eq!(sponsored_asset.viewing_threshold, 0);
 
         // newasset should return an asset with no reveal threshold if it's not given.
         let sponsored_asset = server
@@ -856,7 +846,7 @@ mod tests {
                 ))
                 .await
                 .unwrap();
-        assert_eq!(sponsored_asset.policy_ref().reveal_threshold(), 0);
+        assert_eq!(sponsored_asset.viewing_threshold, 0);
         let defined_asset = server
             .get::<AssetDefinition>(&format!(
                 "newasset/description/{}/freezing_key/{}/viewing_key/{}/view_amount/{}/view_address/{}",
@@ -864,7 +854,7 @@ mod tests {
             ))
             .await
             .unwrap();
-        assert_eq!(defined_asset.policy_ref().reveal_threshold(), 0);
+        assert_eq!(defined_asset.viewing_threshold, 0);
     }
 
     #[async_std::test]
@@ -931,7 +921,7 @@ mod tests {
         server
             .get::<()>(&format!(
                 "wrap/destination/{}/ethaddress/{}/asset/{}/amount/{}",
-                destination, sponsor_addr, sponsored_asset, 10
+                destination, sponsor_addr, sponsored_asset.code, 10
             ))
             .await
             .unwrap();
@@ -1723,9 +1713,9 @@ mod tests {
         let mut rng = ChaChaRng::from_seed([1; 32]);
 
         let (code, _) = AssetCode::random(&mut rng);
-        let new_asset = AssetDefinition::new(code, AssetPolicy::default()).unwrap();
+        let new_asset = JfAssetDefinition::new(code, AssetPolicy::default()).unwrap();
         let assets = VerifiedAssetLibrary::new(
-            vec![AssetDefinition::native(), new_asset.clone()],
+            vec![JfAssetDefinition::native(), new_asset.clone()],
             &test_asset_signing_key(),
         );
         let path = assets_path(&server.storage());
@@ -1752,7 +1742,7 @@ mod tests {
         let asset_info = info
             .assets
             .iter()
-            .find(|asset| asset.definition == new_asset)
+            .find(|asset| asset.definition == AssetDefinition::from(new_asset.clone()))
             .unwrap();
         assert!(asset_info.verified);
     }

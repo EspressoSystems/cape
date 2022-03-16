@@ -11,6 +11,9 @@
 - [Configurable Asset Privacy for Ethereum (CAPE)](#configurable-asset-privacy-for-ethereum-cape)
   - [Obtaining the source code](#obtaining-the-source-code)
   - [Providing feedback](#providing-feedback)
+- [Documentation](#documentation)
+  - [CAP protocol specification](#cap-protocol-specification)
+  - [CAPE Contract specification](#cape-contract-specification)
 - [Environment](#environment)
   - [1. Install nix](#1-install-nix)
   - [2. Activate the nix environment](#2-activate-the-nix-environment)
@@ -18,35 +21,34 @@
   - [4. direnv (Optional, but recommended for development)](#4-direnv-optional-but-recommended-for-development)
 - [Build](#build)
   - [Wallet Docker image](#wallet-docker-image)
-- [Develop](#develop)
-- [Test](#test)
+- [Development](#development)
+  - [Running Tests](#running-tests)
+  - [Interactive development](#interactive-development)
+  - [Linting & Formatting](#linting--formatting)
+  - [Updating dependencies](#updating-dependencies)
+  - [Rust specific development notes](#rust-specific-development-notes)
+  - [Ethereum contracts](#ethereum-contracts)
   - [Testing against go-ethereum node](#testing-against-go-ethereum-node)
   - [Testing against hardhat node](#testing-against-hardhat-node)
     - [Separate hardhat node](#separate-hardhat-node)
     - [Hardhat node integrated in test command](#hardhat-node-integrated-in-test-command)
-  - [Deployment](#deployment)
-    - [Linking to deployed contracts](#linking-to-deployed-contracts)
   - [Precompiled solidity binaries](#precompiled-solidity-binaries)
     - [Details about solidity compiler (solc) management](#details-about-solidity-compiler-solc-management)
-  - [Ethereum contracts](#ethereum-contracts)
-  - [Rust](#rust)
-  - [Linting & Formatting](#linting--formatting)
-  - [Updating dependencies](#updating-dependencies)
   - [Alternative nix installation methods](#alternative-nix-installation-methods)
     - [Nix on debian/ubuntu](#nix-on-debianubuntu)
   - [Git hooks](#git-hooks)
   - [Ethereum key management](#ethereum-key-management)
   - [Python tools](#python-tools)
-- [Rinkeby](#rinkeby)
-- [Goerli](#goerli)
-- [Gas Usage](#gas-usage)
-  - [Gas Reporter](#gas-reporter)
-  - [Gas usage of block submissions](#gas-usage-of-block-submissions)
-- [CI](#ci)
-  - [Nightly CI builds](#nightly-ci-builds)
-- [Documentation](#documentation)
-  - [CAP protocol specification](#cap-protocol-specification)
-  - [CAPE Contract specification](#cape-contract-specification)
+  - [Gas Usage](#gas-usage)
+    - [Gas Reporter](#gas-reporter)
+    - [Gas usage of block submissions](#gas-usage-of-block-submissions)
+  - [CI](#ci)
+    - [Nightly CI builds](#nightly-ci-builds)
+- [Deployment](#deployment)
+  - [Linking to deployed contracts](#linking-to-deployed-contracts)
+  - [Testnets](#testnets)
+    - [Rinkeby](#rinkeby)
+    - [Goerli](#goerli)
 
 ## Obtaining the source code
 
@@ -55,6 +57,25 @@
 ## Providing feedback
 
 Feedback is welcome and can be provided by [creating a ticket](https://github.com/EspressoSystems/cape/issues/new).
+
+# Documentation
+
+## CAP protocol specification
+
+A formal specification of the Configurable Asset Policy protocol can be found at [our CAP github repo](https://github.com/EspressoSystems/cap/blob/main/cap-specification.pdf)
+
+## CAPE Contract specification
+
+A specification of the CAPE _smart contract logic_ written in Rust can be found at `./doc/workflow/lib.rs`.
+
+Extracting _API documentation_ from the solidity source is done using a javascript
+tool called `solidity-docgen`.
+
+To generate the documentation run
+
+    make-doc
+
+and observe the CLI output.
 
 # Environment
 
@@ -137,18 +158,9 @@ To build the wallet Docker container locally run
 inside a nix shell from the root directory of the repo. For the CI build see the
 `docker` job in [.github/workflows/build.yml](.github/workflows/build.yml).
 
-# Develop
+# Development
 
-To start the background services to support interactive development run the command
-
-    hivemind
-
-For the time being this is a `geth` node and a contract compilation watcher.
-
-To add additional processes add lines to `Procfile` and (if desired) scripts to
-run in the `./bin` directory.
-
-# Test
+## Running Tests
 
 An running ethereum node is needed to run the tests. We support running against
 a go-ethereum (`geth`) or hardhat node running on `localhost:8545`.
@@ -175,6 +187,83 @@ The port of the node can be changed with `RPC_PORT`. For example,
 To run all the tests against both nodes
 
     cape-test-all
+
+## Interactive development
+
+To start the background services to support interactive development run the command
+
+    hivemind
+
+For the time being this is a `geth` node and a contract compilation watcher.
+
+To add additional processes add lines to `Procfile` and (if desired) scripts to
+run in the `./bin` directory.
+
+## Linting & Formatting
+
+Lint the code using all formatters and linters in one shot
+
+    lint-fix
+
+## Updating dependencies
+
+Run `nix flake update` if you would like to pin other version edit `flake.nix`
+beforehand. Commit the lock file when happy.
+
+To update only a single input specify it as argument, for example
+
+    nix flake update github:oxalica/rust-overlay
+
+To make use of newly released `solc` version run
+
+    cd nix/solc-bin
+    ./update-sources.sh
+
+## Rust specific development notes
+
+To run only the rust tests run
+
+    cargo test --release
+
+Note that this requires compiled solidity contracts and a running geth node. For
+development it's convenient to keep `hivemind` running in a separate terminal
+for that purpose.
+
+To connect to various chains use `RPC_URL` and `MNEMONIC` env vars. For example
+
+    env MNEMONIC="$RINKEBY_MNEMONIC" RPC_URL=$RINKEBY_URL cargo test
+
+To watch the rust files and compile on changes
+
+    cargo watch
+
+The command (`check` by default) can be changed with `-x` (for example `cargo watch -x test`).
+
+## Ethereum contracts
+
+To compile the contracts to extract the abi run the following command from the
+root of the `cape` repo checkout:
+
+    build-abi
+
+Note: structs will only be included in the ABI if there is a public function
+that uses them.
+
+Instead of running `geth` and `build-abi` one can also run
+
+    hivemind
+
+From the root directory of the repo checkout. This will watch and recompile the
+contracts when there are changes to any of the contract files.
+
+To recompile all contracts
+
+    hardhat compile --force
+
+When removing or renaming contracts it can be useful to first remove the
+artifacts directory and the compilation cache with
+
+    hardhat clean
 
 ## Testing against go-ethereum node
 
@@ -228,23 +317,6 @@ It's also possible to run the hardhat node and tests in one command
 - The `console.log` statements are shown in in the terminal.
 - Failing `require` statements are shown in human readable form in the terminal.
 
-## Deployment
-
-The CAPE contract can be deployed with
-
-    hardhat deploy
-
-The deployments are saved in `contracts/deployments`. If you deploy to localhost
-you have to use `hardhat deploy --reset` after you restart the geth node in
-order to re-deploy.
-
-### Linking to deployed contracts
-
-In order to avoid re-deploying the library contracts for each test you can pass
-the address obtained by running `hardhat deploy` as an env var
-
-    env RESCUE_LIB_ADDRESS=0x5FbDB2315678afecb367f032d93F642f64180aa3 cargo test --release
-
 ## Precompiled solidity binaries
 
 Hardhat is configured to use the solc binary installed with nix (see
@@ -270,75 +342,6 @@ Hardhat always "works" because it falls back to solcjs silently (unless running 
 
 The solcjs compiler is a lot slower than native solc and brownie (using py-solc-x),
 solc-select do not have such a fallback mechanisms.
-
-## Ethereum contracts
-
-To compile the contracts to extract the abi for the ethers abigen macro
-run the following command from the root of the `cape` repo checkout:
-
-    build-abi
-
-Note: structs will only be included in the ABI if there is a public function
-that uses them.
-
-To have rust typings, add the contract to the `abigen!` macro call in
-`./contracts/rust/src/types.rs`.
-
-Instead of running `geth` and `build-abi` one can also just run
-
-    hivemind
-
-From the root directory of the repo checkout. This will also recompile the
-contracts when there are changes to any of the contract files.
-
-To recompile all contracts
-
-    hardhat compile --force
-
-When removing or renaming contracts it can be useful to first remove the
-artifacts directory and the compilation cache with
-
-    hardhat clean
-
-## Rust
-
-To run the rust tests
-
-    cargo test
-
-Note that this requires compiled solidity contracts and a running geth node. For
-development it's convenient to keep `hivemind` running in a separate terminal
-for that purpose.
-
-To connect to various chains use `RPC_URL` and `MNEMONIC` env vars. For example
-
-    env MNEMONIC="$RINKEBY_MNEMONIC" RPC_URL=$RINKEBY_URL cargo test
-
-To watch the rust files and compile on changes
-
-    cargo watch
-
-The command (`check` by default) can be changed with `-x` (for example `cargo watch -x test`).
-
-## Linting & Formatting
-
-Lint the code using all formatters and linters in one shot
-
-    lint-fix
-
-## Updating dependencies
-
-Run `nix flake update` if you would like to pin other version edit `flake.nix`
-beforehand. Commit the lock file when happy.
-
-To update only a single input specify it as argument, for example
-
-    nix flake update github:oxalica/rust-overlay
-
-To make use of newly released `solc` version run
-
-    cd nix/solc-bin
-    ./update-sources.sh
 
 ## Alternative nix installation methods
 
@@ -379,7 +382,7 @@ To remove `nix` (careful with the `rm` commands)
 
 ## Git hooks
 
-Pre-commit hooks are managed by nix. Edit `./nix/precommit.nix` to manage the
+Pre-commit hooks are managed by nix. Edit [flake.nix](flake.nix) to manage the
 hooks.
 
 ## Ethereum key management
@@ -399,37 +402,16 @@ in the nix-shell development environment.
 
 Use any poetry command e. g. `poetry add --dev ipython` to add packages.
 
-# Rinkeby
+## Gas Usage
 
-- Set the RINKEBY_URL in the .env file. A project can be created at
-  https://infura.io/dashboard/ethereum.
-- Set the RINKEBY_MNEMONIC in the .env file.
-- Run the following command
-
-To run the hardhat tests against rinkeby
-
-    hardhat test --network rinkeby
-
-To run an end-to-end test against rinkeby
-
-    cape-test-rinkeby
-
-# Goerli
-
-- Similar to Rinkeby section (replace RINKEBY with GOERLI) and use `--network goerli`.
-- Faucets: [Simple](https://goerli-faucet.slock.it),
-  [Social](https://faucet.goerli.mudit.blog/).
-
-# Gas Usage
-
-## Gas Reporter
+### Gas Reporter
 
 Set the env var `REPORT_GAS` to get extra output about the gas consumption of
 contract functions called in the tests.
 
     env REPORT_GAS=1 hardhat test
 
-## Gas usage of block submissions
+### Gas usage of block submissions
 
 Run
 
@@ -437,13 +419,13 @@ Run
 
 To show gas usage of sending various notes to the contract.
 
-# CI
+## CI
 
 To locally spin up a docker container like the one used in the CI
 
     TODO: how to run CI locally?
 
-## Nightly CI builds
+### Nightly CI builds
 
 There's a CI nightly job that runs the test suite via hardhat against the Rinkeby testnet.
 
@@ -459,21 +441,42 @@ Based on a few successful test runs, the entire suite should consume roughly 0.0
 0x2FB18F4b4519a5fc792cb6508C6505675BA659E9
 ```
 
-# Documentation
+# Deployment
 
-## CAP protocol specification
+The CAPE contract can be deployed with
 
-A formal specification of the Configurable Asset Policy protocol can be found at [our CAP github repo](https://github.com/EspressoSystems/cap/blob/main/cap-specification.pdf)
+    hardhat deploy
 
-## CAPE Contract specification
+The deployments are saved in `contracts/deployments`. If you deploy to localhost
+you have to use `hardhat deploy --reset` after you restart the geth node in
+order to re-deploy.
 
-A specification of the CAPE _smart contract logic_ written in Rust can be found at `./doc/workflow/lib.rs`.
+## Linking to deployed contracts
 
-Extracting _API documentation_ from the solidity source is done using a javascript
-tool called `solidity-docgen`.
+In order to avoid re-deploying the library contracts for each test you can pass
+the address obtained by running `hardhat deploy` as an env var
 
-To generate the documentation run
+    env RESCUE_LIB_ADDRESS=0x5FbDB2315678afecb367f032d93F642f64180aa3 cargo test --release
 
-    make-doc
+## Testnets
 
-and observe the CLI output.
+### Rinkeby
+
+- Set the RINKEBY_URL in the .env file. A project can be created at
+  https://infura.io/dashboard/ethereum.
+- Set the RINKEBY_MNEMONIC in the .env file.
+- Run the following command
+
+To run the hardhat tests against rinkeby
+
+    hardhat test --network rinkeby
+
+To run an end-to-end test against rinkeby
+
+    cape-test-rinkeby
+
+### Goerli
+
+- Similar to Rinkeby section (replace RINKEBY with GOERLI) and use `--network goerli`.
+- Faucets: [Simple](https://goerli-faucet.slock.it),
+  [Social](https://faucet.goerli.mudit.blog/).

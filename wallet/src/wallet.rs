@@ -15,10 +15,7 @@ use jf_cap::{
     structs::{AssetCode, AssetDefinition, AssetPolicy, FreezeFlag, RecordOpening},
     VerKey,
 };
-use seahorse::{
-    txn_builder::{TransactionInfo, TransactionReceipt},
-    AssetInfo, Wallet, WalletBackend, WalletError,
-};
+use seahorse::{txn_builder::TransactionReceipt, AssetInfo, Wallet, WalletBackend, WalletError};
 use std::path::Path;
 
 pub type CapeWalletError = WalletError<CapeLedger>;
@@ -212,47 +209,31 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
             .chain(dst_addr.as_bytes())
             .cloned()
             .collect::<Vec<_>>();
-        let xfr_info = self
+        let (note, mut info) = self
             // The owner public key of the new record opening is ignored when processing a burn. We
             // need to put some address in the receiver field though, so just use the one we have
             // handy.
             .build_transfer(
                 Some(account),
                 cap_asset,
-                &[(account.clone(), amount)],
+                &[(account.clone(), amount, true)],
                 fee,
                 bound_data,
                 Some((2, 2)),
             )
             .await?;
 
-        // Only generate memos for the fee change output.
-        assert!(xfr_info.fee_output.is_some());
-        let (memos, sig) = self
-            .generate_memos(vec![xfr_info.fee_output.unwrap()], &xfr_info.sig_key_pair)
-            .await?;
-
-        let mut txn_info = TransactionInfo {
-            accounts: xfr_info.owner_addresses,
-            memos,
-            sig,
-            freeze_outputs: vec![],
-            history: Some(xfr_info.history),
-            uid: None,
-            inputs: xfr_info.inputs,
-            outputs: xfr_info.outputs,
-        };
-        assert_eq!(xfr_info.note.inputs_nullifiers.len(), 2);
-        assert_eq!(xfr_info.note.output_commitments.len(), 2);
-        if let Some(history) = &mut txn_info.history {
+        assert_eq!(note.inputs_nullifiers.len(), 2);
+        assert_eq!(note.output_commitments.len(), 2);
+        if let Some(history) = &mut info.history {
             history.kind = CapeTransactionKind::Burn;
         }
 
         let txn = CapeTransition::Transaction(CapeModelTxn::Burn {
-            xfr: Box::new(xfr_info.note),
-            ro: Box::new(txn_info.outputs[0].clone()),
+            xfr: Box::new(note),
+            ro: Box::new(info.outputs[1].clone()),
         });
-        self.submit(txn, txn_info).await
+        self.submit(txn, info).await
     }
 
     /// Determine if an asset is a wrapped asset (as opposed to a domestic CAPE asset).

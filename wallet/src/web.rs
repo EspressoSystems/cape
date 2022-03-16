@@ -265,10 +265,19 @@ async fn populatefortest(req: tide::Request<WebState>) -> Result<tide::Response,
     let wallet = require_wallet(wallet)?;
 
     // Generate two of each kind of key, to simulate multiple accounts.
-    for _ in 0..2 {
-        wallet.generate_user_key(None).await.map_err(wallet_error)?;
-        wallet.generate_audit_key().await.map_err(wallet_error)?;
-        wallet.generate_freeze_key().await.map_err(wallet_error)?;
+    for i in 0..2 {
+        wallet
+            .generate_user_key(format!("test sending account {}", i), None)
+            .await
+            .map_err(wallet_error)?;
+        wallet
+            .generate_audit_key(format!("test viewing account {}", i))
+            .await
+            .map_err(wallet_error)?;
+        wallet
+            .generate_freeze_key(format!("test freezing account {}", i))
+            .await
+            .map_err(wallet_error)?;
     }
 
     // Add the faucet key, so we get a balance of the native asset.
@@ -276,7 +285,11 @@ async fn populatefortest(req: tide::Request<WebState>) -> Result<tide::Response,
     let faucet_key_pair = req.state().faucet_key_pair.clone();
     if !wallet.pub_keys().await.contains(&faucet_key_pair.pub_key()) {
         wallet
-            .add_user_key(faucet_key_pair.clone(), Default::default())
+            .add_user_key(
+                faucet_key_pair.clone(),
+                "faucet account".into(),
+                Default::default(),
+            )
             .await
             .unwrap();
     }

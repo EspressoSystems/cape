@@ -8,7 +8,7 @@
 
 **Table of Contents**
 
-- [CAPE](#cape)
+- [Configurable Asset Privacy for Ethereum (CAPE)](#configurable-asset-privacy-for-ethereum-cape)
   - [Obtaining the source code](#obtaining-the-source-code)
   - [Providing feedback](#providing-feedback)
 - [Environment](#environment)
@@ -17,6 +17,7 @@
   - [3. Verify installation](#3-verify-installation)
   - [4. direnv (Optional, but recommended for development)](#4-direnv-optional-but-recommended-for-development)
 - [Build](#build)
+  - [Wallet Docker image](#wallet-docker-image)
 - [Develop](#develop)
 - [Test](#test)
   - [Testing against go-ethereum node](#testing-against-go-ethereum-node)
@@ -126,6 +127,15 @@ To build the project run
 
 The `--release` flag is recommended because without it many cryptographic
 computations the project relies one become unbearably slow.
+
+## Wallet Docker image
+
+To build the wallet Docker container locally run
+
+    build-docker-wallet
+
+inside a nix shell from the root directory of the repo. For the CI build see the
+`docker` job in [.github/workflows/build.yml](.github/workflows/build.yml).
 
 # Develop
 

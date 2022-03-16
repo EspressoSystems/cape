@@ -33,7 +33,10 @@ use cap_rust_sandbox::{
     ledger::CapeLedger,
     model::{Erc20Code, EthereumAddr},
 };
-use cape_wallet::{backend::CapeBackend, wallet::CapeWalletExt};
+use cape_wallet::{
+    backend::CapeBackend,
+    wallet::{CapeWalletBackend, CapeWalletExt},
+};
 use ethers::prelude::Address;
 use jf_cap::{
     keys::{AuditorPubKey, FreezerPubKey},
@@ -102,13 +105,13 @@ impl<'a> CLIInput<'a, CapeCli> for Erc20Code {
 }
 
 /// The instantiation of [seahorse::Wallet] for CAPE used by the CLI.
-type CapeWallet<'a> = seahorse::Wallet<'a, CapeBackend<'a, LoaderMetadata>, CapeLedger>;
+type CapeWallet<'a, Backend> = seahorse::Wallet<'a, Backend, CapeLedger>;
 
 /// Implementation of the `sponsor` command for the CAPE wallet CLI.
 #[allow(clippy::too_many_arguments)]
-async fn cli_sponsor<'a>(
+async fn cli_sponsor<'a, C: CLI<'a>>(
     io: &mut SharedIO,
-    wallet: &mut CapeWallet<'_>,
+    wallet: &mut CapeWallet<'a, C::Backend>,
     erc20_code: Erc20Code,
     sponsor_addr: EthereumAddr,
     viewer: Option<AuditorPubKey>,
@@ -117,7 +120,9 @@ async fn cli_sponsor<'a>(
     view_address: Option<bool>,
     view_blind: Option<bool>,
     viewing_threshold: Option<u64>,
-) {
+) where
+    C::Backend: CapeWalletBackend<'a> + Sync + 'a,
+{
     let mut policy = AssetPolicy::default();
     if let Some(viewer) = viewer {
         policy = policy.set_auditor_pub_key(viewer);
@@ -166,14 +171,16 @@ async fn cli_sponsor<'a>(
 }
 
 /// Implementation of the `wrap` command for the CAPE wallet CLI.
-async fn cli_wrap<'a>(
+async fn cli_wrap<'a, C: CLI<'a, Ledger = CapeLedger>>(
     io: &mut SharedIO,
-    wallet: &mut CapeWallet<'_>,
+    wallet: &mut CapeWallet<'a, C::Backend>,
     asset_def: AssetDefinition,
     from: EthereumAddr,
     to: UserAddress,
     amount: u64,
-) {
+) where
+    C::Backend: CapeWalletBackend<'a> + Sync + 'a,
+{
     match wallet.wrap(from, asset_def.clone(), to.0, amount).await {
         Ok(()) => {
             cli_writeln!(io, "\nAsset wrapped: {}", asset_def.code);
@@ -186,20 +193,22 @@ async fn cli_wrap<'a>(
 
 /// Implementation of the `burn` command for the CAPE wallet CLI.
 #[allow(clippy::too_many_arguments)]
-async fn cli_burn<'a>(
+async fn cli_burn<'a, C: CLI<'a, Ledger = CapeLedger>>(
     io: &mut SharedIO,
-    wallet: &mut CapeWallet<'_>,
+    wallet: &mut CapeWallet<'a, C::Backend>,
     asset: ListItem<AssetCode>,
     from: UserAddress,
     to: EthereumAddr,
     amount: u64,
     fee: u64,
     wait: Option<bool>,
-) {
+) where
+    C::Backend: CapeWalletBackend<'a> + Sync + 'a,
+{
     let res = wallet.burn(&from.0, to, &asset.item, amount, fee).await;
     cli_writeln!(io, "{}", asset.item);
 
-    finish_transaction::<CapeCli>(io, wallet, res, wait, "burned").await;
+    finish_transaction::<C>(io, wallet, res, wait, "burned").await;
 }
 
 /// The collection of CLI commands which are specific to CAPE.
@@ -222,7 +231,18 @@ fn cape_specific_cli_commands<'a>() -> Vec<Command<'a, CapeCli>> {
              view_address: Option<bool>,
              view_blind: Option<bool>,
              viewing_threshold: Option<u64>| {
-                cli_sponsor(io, wallet, erc20_code, sponsor_addr, viewer, freezer, view_amount, view_address, view_blind, viewing_threshold).await;
+                cli_sponsor::<CapeCli>(
+                    io,
+                    wallet,
+                    erc20_code,
+                    sponsor_addr,
+                    viewer,
+                    freezer,
+                    view_amount,
+                    view_address,
+                    view_blind,
+                    viewing_threshold,
+                ).await;
             }
         ),
         command!(
@@ -235,7 +255,7 @@ fn cape_specific_cli_commands<'a>() -> Vec<Command<'a, CapeCli>> {
              from: EthereumAddr,
              to: UserAddress,
              amount: u64| {
-                cli_wrap(io, wallet, asset_def, from, to, amount).await;
+                cli_wrap::<CapeCli>(io, wallet, asset_def, from, to, amount).await;
             }
         ),
         command!(
@@ -250,7 +270,7 @@ fn cape_specific_cli_commands<'a>() -> Vec<Command<'a, CapeCli>> {
              amount: u64,
              fee: u64;
              wait: Option<bool>| {
-                cli_burn(io, wallet, asset, from, to, amount, fee, wait).await;
+                cli_burn::<CapeCli>(io, wallet, asset, from, to, amount, fee, wait).await;
             }
         ),
     ]
@@ -378,7 +398,7 @@ mod tests {
     };
     use cape_wallet::{
         cli_client::CliClient,
-        mocks::{CapeTest, MockCapeLedger},
+        mocks::{CapeTest, MockCapeBackend, MockCapeLedger},
     };
     use futures::stream::{iter, StreamExt};
     use pipe::{PipeReader, PipeWriter};
@@ -424,7 +444,18 @@ mod tests {
                      view_address: Option<bool>,
                      view_blind: Option<bool>,
                      viewing_threshold: Option<u64>| {
-                        cli_sponsor(io, wallet, erc20_code, sponsor_addr, viewer, freezer, view_amount, view_address, view_blind, viewing_threshold).await;
+                        cli_sponsor::<MockCapeCli>(
+                            io,
+                            wallet,
+                            erc20_code,
+                            sponsor_addr,
+                            viewer,
+                            freezer,
+                            view_amount,
+                            view_address,
+                            view_blind,
+                            viewing_threshold,
+                        ).await;
                     }
                 ),
                 command!(
@@ -437,7 +468,7 @@ mod tests {
                      from: EthereumAddr,
                      to: UserAddress,
                      amount: u64| {
-                        cli_wrap(io, wallet, asset_def, from, to, amount).await;
+                        cli_wrap::<MockCapeCli>(io, wallet, asset_def, from, to, amount).await;
                     }
                 ),
                 command!(
@@ -452,7 +483,7 @@ mod tests {
                      amount: u64,
                      fee: u64;
                      wait: Option<bool>| {
-                        cli_burn(io, wallet, asset, from, to, amount, fee, wait).await;
+                        cli_burn::<MockCapeCli>(io, wallet, asset, from, to, amount, fee, wait).await;
                     }
                 ),
             ]

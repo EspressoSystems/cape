@@ -32,6 +32,7 @@ use jf_cap::{
     keys::{UserAddress, UserKeyPair, UserPubKey},
     proof::UniversalParam,
     structs::{AssetDefinition, Nullifier, RecordOpening},
+    VerKey,
 };
 use net::client::parse_error_body;
 use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
@@ -141,7 +142,7 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
                     .post("submit")
                     .body_json(&SubmitBody {
                         transaction: txn.clone(),
-                        memos: info.memos.clone(),
+                        memos: info.memos.clone().into_iter().flatten().collect(),
                         signature: info.sig.clone(),
                     })
                     .map_err(|err| CapeWalletError::Failed {
@@ -169,7 +170,7 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
         let mut mock_eqs = self.mock_eqs.lock().await;
         mock_eqs.network().store_call_data(
             info.uid.unwrap_or_else(|| TransactionUID(txn.hash())),
-            info.memos,
+            info.memos.into_iter().flatten().collect(),
             info.sig,
         );
         mock_eqs.submit(txn).unwrap();
@@ -360,6 +361,13 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
             self.eth_wallet.clone(),
         )))
     }
+
+    fn asset_verifier(&self) -> VerKey {
+        // The verification key for the official asset library signing key.
+        "VERKEY~8LfUa4wqi7wYzWE4IQ8vOpjgUz8Pp5LQoj5Ue0Rwn6je"
+            .parse()
+            .unwrap()
+    }
 }
 
 #[cfg(test)]
@@ -403,7 +411,7 @@ mod test {
         .unwrap();
         let mut sender = CapeWallet::new(sender_backend).await.unwrap();
         sender
-            .add_user_key(sender_key.clone(), EventIndex::default())
+            .add_user_key(sender_key.clone(), "sender".into(), EventIndex::default())
             .await
             .unwrap();
         // Wait for the wallet to register the balance belonging to the key, from the initial grant
@@ -434,7 +442,10 @@ mod test {
         .await
         .unwrap();
         let mut receiver = CapeWallet::new(receiver_backend).await.unwrap();
-        let receiver_key = receiver.generate_user_key(None).await.unwrap();
+        let receiver_key = receiver
+            .generate_user_key("receiver".into(), None)
+            .await
+            .unwrap();
 
         // Transfer from sender to receiver.
         let txn = transfer_token(
@@ -511,7 +522,10 @@ mod test {
         .await
         .unwrap();
         let mut sponsor = CapeWallet::new(sponsor_backend).await.unwrap();
-        let sponsor_key = sponsor.generate_user_key(None).await.unwrap();
+        let sponsor_key = sponsor
+            .generate_user_key("sponsor".into(), None)
+            .await
+            .unwrap();
         let sponsor_eth_addr = sponsor.eth_address().await.unwrap();
 
         let wrapper_dir = TempDir::new("cape_wallet_backend_test").unwrap();
@@ -533,7 +547,7 @@ mod test {
         // Add the faucet key to the wrapper wallet, so that they have the native tokens they need
         // to pay the fee to transfer the wrapped tokens.
         wrapper
-            .add_user_key(wrapper_key.clone(), EventIndex::default())
+            .add_user_key(wrapper_key.clone(), "wrapper".into(), EventIndex::default())
             .await
             .unwrap();
         // Wait for the wrapper to register the balance belonging to the key, from the initial grant

@@ -16,7 +16,9 @@ pub fn load_messages(path: &Path) -> toml::Value {
     let messages = read_to_string(&path).unwrap_or_else(|_| panic!("Unable to read {:?}.", &path));
     let api: toml::Value =
         toml::from_str(&messages).unwrap_or_else(|_| panic!("Unable to parse {:?}.", &path));
-    check_api(api.clone());
+    if let Err(err) = check_api(api.clone()) {
+        panic!("{}", err);
+    }
     api
 }
 

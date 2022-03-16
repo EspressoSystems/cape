@@ -312,7 +312,7 @@ pub struct CapeArgs {
         short,
         long,
         env = "CAPE_EQS_URL",
-        default_value = "https://localhost:50087"
+        default_value = "http://localhost:50087"
     )]
     pub eqs_url: Url,
 
@@ -321,7 +321,7 @@ pub struct CapeArgs {
         short,
         long,
         env = "CAPE_RELAYER_URL",
-        default_value = "https://localhost:50077"
+        default_value = "http://localhost:50077"
     )]
     pub relayer_url: Url,
 
@@ -330,7 +330,7 @@ pub struct CapeArgs {
         short,
         long,
         env = "CAPE_ADDRESS_BOOK_URL",
-        default_value = "https://localhost:50078"
+        default_value = "http://localhost:50078"
     )]
     pub address_book_url: Url,
 

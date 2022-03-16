@@ -1752,16 +1752,22 @@ mod tests {
         let server = TestServer::new().await;
         let mut rng = ChaChaRng::from_seed([1; 32]);
 
-        let keypair_send = UserKeyPair::generate(&mut rng);
+        let keypair_send_addr = UserKeyPair::generate(&mut rng);
+        let keypair_send_key = UserKeyPair::generate(&mut rng);
         let keypair_view = AuditorKeyPair::generate(&mut rng);
         let keypair_freeze = FreezerKeyPair::generate(&mut rng);
 
         // Should fail if a wallet is not already open.
         server
-            .requires_wallet::<PrivateKey>(&format!("getprivatekey/{}", keypair_send.address(),))
+            .requires_wallet::<PrivateKey>(&format!(
+                "getprivatekey/{}",
+                keypair_send_addr.address(),
+            ))
             .await;
         server
-            .requires_wallet::<PrivateKey>(&format!("getprivatekey/{}", keypair_send.pub_key(),))
+            .requires_wallet::<PrivateKey>(
+                &format!("getprivatekey/{}", keypair_send_key.pub_key(),),
+            )
             .await;
         server
             .requires_wallet::<PrivateKey>(&format!("getprivatekey/{}", keypair_view.pub_key(),))
@@ -1781,19 +1787,22 @@ mod tests {
             .unwrap();
 
         let sending_key_addr = server
-            .get::<PrivateKey>(&format!("getprivatekey/{}", keypair_send.address()))
+            .get::<PrivateKey>(&format!(
+                "getprivatekey/{}",
+                UserAddress(keypair_send_addr.address()),
+            ))
             .await
             .unwrap();
         let sending_key_pub = server
-            .get::<PrivateKey>(&format!("getprivatekey/{}", keypair_send.pub_key()))
+            .get::<PrivateKey>(&format!("getprivatekey/{}", keypair_send_key.pub_key(),))
             .await
             .unwrap();
         let auditor_key = server
-            .get::<PrivateKey>(&format!("getprivatekey/{}", keypair_view.pub_key()))
+            .get::<PrivateKey>(&format!("getprivatekey/{}", keypair_view.pub_key(),))
             .await
             .unwrap();
         let freezer_key = server
-            .get::<PrivateKey>(&format!("getprivatekey/{}", keypair_freeze.pub_key()))
+            .get::<PrivateKey>(&format!("getprivatekey/{}", keypair_freeze.pub_key(),))
             .await
             .unwrap();
         server
@@ -1803,7 +1812,7 @@ mod tests {
 
         match sending_key_addr {
             PrivateKey::Sending(key) => {
-                assert_eq!(key.pub_key(), keypair_send.pub_key());
+                assert_eq!(key.pub_key(), keypair_send_addr.pub_key());
             }
             _ => {
                 panic!("Expected PrivateKey::Sending, found {:?}", sending_key_addr);
@@ -1811,7 +1820,7 @@ mod tests {
         }
         match sending_key_pub {
             PrivateKey::Sending(key) => {
-                assert_eq!(key.pub_key(), keypair_send.pub_key());
+                assert_eq!(key.pub_key(), keypair_send_key.pub_key());
             }
             _ => {
                 panic!("Expected PrivateKey::Sending, found {:?}", sending_key_pub);

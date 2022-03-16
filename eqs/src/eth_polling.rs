@@ -30,9 +30,6 @@ use seahorse::events::LedgerEvent;
 pub(crate) struct EthPolling {
     pub query_result_state: Arc<RwLock<QueryResultState>>,
     pub state_persistence: StatePersistence,
-    pub last_fetched_block: u64,
-    pub last_fetched_log_index: u64,
-    pub pending_commit_event: Vec<CapeTransition>,
     pub connection: EthConnection,
 }
 
@@ -46,84 +43,75 @@ impl EthPolling {
             return EthPolling {
                 query_result_state,
                 state_persistence,
-                last_fetched_block: 0u64,
-                last_fetched_log_index: 0u64,
-                pending_commit_event: Vec::new(),
                 connection: EthConnection::for_test().await,
             };
         }
 
-        let (connection, last_fetched_block, last_fetched_log_index) =
-            if let Some(contract_address) = opt.cape_address() {
-                let mut state_updater = query_result_state.write().await;
-                let last_fetched_block = state_updater.last_fetched_block;
-                let last_fetched_log_index = state_updater.last_fetched_log_index;
+        let connection = if let Some(contract_address) = opt.cape_address() {
+            let mut state_updater = query_result_state.write().await;
+            let next_block = state_updater.next_block;
+            let next_log_index = state_updater.next_log_index;
 
-                if state_updater.contract_address.is_none()
-                    && (last_fetched_block > 0 || last_fetched_log_index > 0)
-                {
-                    panic!(
+            if state_updater.contract_address.is_none() && (next_block > 0 || next_log_index > 0) {
+                panic!(
                     "Persisted state is malformed! Run again with --reset_store_state to repair"
                 );
-                }
+            }
 
-                if let Some(persisted_contract_address) = state_updater.contract_address {
-                    if persisted_contract_address != contract_address {
-                        panic!(
-                            "The specified persisted state was generated for a different contract."
-                        );
-                    }
-                } else {
-                    state_updater.contract_address = Some(contract_address);
+            if let Some(persisted_contract_address) = state_updater.contract_address {
+                if persisted_contract_address != contract_address {
+                    panic!("The specified persisted state was generated for a different contract.");
                 }
-
-                (
-                    EthConnection::from_config_for_query(
-                        &format!("{:?}", contract_address),
-                        opt.rpc_url(),
-                    ),
-                    last_fetched_block,
-                    last_fetched_log_index,
-                )
             } else {
-                panic!("Invocation Error! Address required unless launched for testing");
-            };
+                state_updater.contract_address = Some(contract_address);
+            }
+
+            EthConnection::from_config_for_query(&format!("{:?}", contract_address), opt.rpc_url())
+        } else {
+            panic!("Invocation Error! Address required unless launched for testing");
+        };
 
         EthPolling {
             query_result_state,
             state_persistence,
-            last_fetched_block,
-            last_fetched_log_index,
-            pending_commit_event: Vec::new(),
             connection,
         }
     }
 
     pub async fn check(&mut self) -> Result<u64, async_std::io::Error> {
         // do eth poll, unpack updates
-        //select cape events, last block + 1 to avoid grabbing the same event twice
+        // select cape events starting from the next block which we haven't finished processing
+        let next_block = self.query_result_state.read().await.next_block;
         let new_event = self
             .connection
             .contract
             .events()
-            .from_block(self.last_fetched_block)
+            .from_block(next_block)
             .query_with_meta()
             .await
             .unwrap();
 
-        // don't refetch events against a block that was previously successfully processed
-        let mut block_cursor_advanced = false;
+        let mut latest_block = None;
         for (filter, meta) in new_event {
-            let last_fetched_block = meta.block_number.as_u64();
-            let last_fetched_log_index = meta.log_index.as_u64();
-            // for some reason, we're seeing repeats in spite of the .from_block(last + 1) filter. Maybe ethers bug?
-            if last_fetched_block <= self.last_fetched_block
-                && last_fetched_log_index <= self.last_fetched_log_index
+            let current_block = meta.block_number.as_u64();
+            let current_log_index = meta.log_index.as_u64();
+
+            // We sometimes see repeat events in spite of the `from_block(next_block)` filter. This
+            // appears to be a hardhat bug.
+            let (next_block, next_log_index) = {
+                let state = self.query_result_state.read().await;
+                (state.next_block, state.next_log_index)
+            };
+            if current_block < next_block
+                || (current_block == next_block && current_log_index < next_log_index)
             {
                 continue;
             }
-            block_cursor_advanced = true;
-            match filter {
+            latest_block = Some(current_block);
+            // Each event handler makes updates to the `query_result_state` and then returns the
+            // handle to it, locked for writing. At the end, we advance the indices into the
+            // Ethereum event stream and persist the updated state.
+            let mut updated_state = match filter {
                 CAPEEvents::BlockCommittedFilter(_) => {
                     let fetched_block_with_memos =
                         fetch_cape_block(&self.connection, meta.transaction_hash)
@@ -148,7 +136,10 @@ impl EthPolling {
                         );
                     }
 
-                    let mut wraps = mem::take(&mut self.pending_commit_event);
+                    let wraps = {
+                        let mut state = self.query_result_state.write().await;
+                        mem::take(&mut state.pending_commit_event)
+                    };
 
                     //add transactions followed by wraps to pending commit
                     let mut transitions = Vec::new();
@@ -156,11 +147,9 @@ impl EthPolling {
                         transitions.push(CapeTransition::Transaction(tx.clone()));
                     }
 
-                    self.pending_commit_event.append(&mut transitions.clone());
-                    self.pending_commit_event.append(&mut wraps);
-
-                    let output_record_commitments = self
-                        .pending_commit_event
+                    let pending_commit =
+                        transitions.iter().cloned().chain(wraps).collect::<Vec<_>>();
+                    let output_record_commitments = pending_commit
                         .iter()
                         .flat_map(|txn| txn.output_commitments())
                         .collect::<Vec<_>>();
@@ -205,8 +194,6 @@ impl EthPolling {
                         .collect();
 
                     let mut updated_state = self.query_result_state.write().await;
-                    // update the state block
-                    let pending_commit = mem::take(&mut self.pending_commit_event);
 
                     //create/push pending commit to QueryResultState events
                     let block_id = updated_state.ledger_state.state_number;
@@ -264,7 +251,7 @@ impl EthPolling {
                         .enumerate()
                         .for_each(|(txn_id, transition)| {
                             updated_state.transaction_by_id.insert(
-                                (last_fetched_block, txn_id as u64),
+                                (block_id, txn_id as u64),
                                 cap_rust_sandbox::ledger::CommittedCapeTransition {
                                     block_id,
                                     txn_id: txn_id as u64,
@@ -275,7 +262,7 @@ impl EthPolling {
                             );
                             updated_state
                                 .transaction_id_by_hash
-                                .insert(transition.commit(), (last_fetched_block, txn_id as u64));
+                                .insert(transition.commit(), (block_id, txn_id as u64));
                             for nullifier in transition.proven_nullifiers().iter() {
                                 updated_state.nullifiers.insert(nullifier.0);
                             }
@@ -284,13 +271,7 @@ impl EthPolling {
                         });
 
                     updated_state.ledger_state.state_number += 1;
-                    updated_state.last_fetched_block = last_fetched_block;
-                    updated_state.last_fetched_log_index = last_fetched_log_index;
-                    self.last_fetched_block = last_fetched_block;
-                    self.last_fetched_log_index = last_fetched_log_index;
-
-                    // persist the state block updates (will be more fine grained in r3)
-                    self.state_persistence.store_latest_state(&*updated_state);
+                    updated_state
                 }
 
                 CAPEEvents::Erc20TokensDepositedFilter(filter_data) => {
@@ -307,9 +288,10 @@ impl EthPolling {
                         erc20_code,
                         src_addr: EthereumAddr(filter_data.from.to_fixed_bytes()),
                     };
-                    self.pending_commit_event.push(new_transition_wrap);
-                    self.last_fetched_block = last_fetched_block;
-                    self.last_fetched_log_index = last_fetched_log_index;
+
+                    let mut updated_state = self.query_result_state.write().await;
+                    updated_state.pending_commit_event.push(new_transition_wrap);
+                    updated_state
                 }
                 CAPEEvents::FaucetInitializedFilter(filter_data) => {
                     // Obtain record opening
@@ -367,7 +349,7 @@ impl EthPolling {
 
                     //update transaction_by_id and transaction_id_by_hash hashmap
                     updated_state.transaction_by_id.insert(
-                        (last_fetched_block, 0),
+                        (0, 0),
                         cap_rust_sandbox::ledger::CommittedCapeTransition {
                             block_id: 0,
                             txn_id: 0,
@@ -378,23 +360,26 @@ impl EthPolling {
                     );
                     updated_state
                         .transaction_id_by_hash
-                        .insert(transition.commit(), (last_fetched_block, 0));
+                        .insert(transition.commit(), (0, 0));
 
                     updated_state.ledger_state.state_number += 1;
-                    updated_state.last_fetched_block = last_fetched_block;
-                    updated_state.last_fetched_log_index = last_fetched_log_index;
-                    self.last_fetched_block = last_fetched_block;
-                    self.last_fetched_log_index = last_fetched_log_index;
-
-                    // persist the state block updates (will be more fine grained in r3)
-                    self.state_persistence.store_latest_state(&*updated_state);
+                    updated_state
                 }
-            }
+            };
+
+            updated_state.advance(current_block, current_log_index);
+            // persist the state block updates (will be more fine grained in r3)
+            self.state_persistence.store_latest_state(&*updated_state);
         }
-        if block_cursor_advanced {
-            self.last_fetched_block += 1;
-            self.last_fetched_log_index = 0;
+
+        // If we finished processing a block, advance the state.
+        if let Some(latest_block) = latest_block {
+            let mut updated_state = self.query_result_state.write().await;
+            updated_state.next_block = latest_block + 1;
+            updated_state.next_log_index = 0;
+            self.state_persistence.store_latest_state(&*updated_state);
         }
+
         Ok(0)
     }
 }

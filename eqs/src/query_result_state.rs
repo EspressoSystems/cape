@@ -22,8 +22,9 @@ pub struct QueryResultState {
     pub ledger_state: CapeLedgerState,
     pub nullifiers: HashSet<Nullifier>,
     pub verifier_keys: VerifierKeySet,
-    pub last_fetched_block: u64,
-    pub last_fetched_log_index: u64,
+    pub next_block: u64,
+    pub next_log_index: u64,
+    pub pending_commit_event: Vec<CapeTransition>,
     pub contract_address: Option<Address>,
 
     // accumulated list of CAPE events
@@ -50,14 +51,22 @@ impl QueryResultState {
             },
             nullifiers: HashSet::new(),
             verifier_keys,
-            last_fetched_block: 0u64,
-            last_fetched_log_index: 0u64,
+            next_block: 0u64,
+            next_log_index: 0u64,
+            pending_commit_event: Vec::new(),
             contract_address: None,
 
             events: Vec::new(),
 
             transaction_by_id: HashMap::new(),
             transaction_id_by_hash: HashMap::new(),
+        }
+    }
+
+    pub fn advance(&mut self, last_block: u64, last_log_index: u64) {
+        if last_block >= self.next_block {
+            self.next_block = last_block;
+            self.next_log_index = last_log_index + 1;
         }
     }
 }

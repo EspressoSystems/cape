@@ -14,34 +14,33 @@
 #![deny(warnings)]
 
 use async_std::sync::{Arc, Mutex};
-use async_std::task::sleep;
 use cap_rust_sandbox::deploy::deploy_erc20_token;
-use cap_rust_sandbox::ethereum::get_provider;
 use cape_wallet::backend::CapeBackend;
 use cape_wallet::mocks::*;
+use cape_wallet::testing::get_burn_ammount;
 use cape_wallet::testing::{
-    burn_token, create_test_network, freeze_token, sponsor_simple_token, transfer_token,
-    unfreeze_token, wrap_simple_token, OperationType,
+    burn_token, create_test_network, find_freezable_records, freeze_token, fund_eth_wallet,
+    mint_token, retry_delay, sponsor_simple_token, transfer_token, unfreeze_token,
+    wrap_simple_token, OperationType,
 };
 use cape_wallet::CapeWallet;
 use cape_wallet::CapeWalletExt;
 use ethers::prelude::Address;
-use ethers::providers::Middleware;
-use ethers::types::TransactionRequest;
-use ethers::types::U256;
+use futures::stream::{iter, StreamExt};
 use jf_cap::keys::UserAddress;
 use jf_cap::keys::UserPubKey;
 use jf_cap::proof::UniversalParam;
 use jf_cap::structs::AssetCode;
 use jf_cap::structs::AssetPolicy;
+use jf_cap::structs::FreezeFlag;
 use jf_cap::{keys::UserKeyPair, testing_apis::universal_setup_for_test};
 use rand::seq::SliceRandom;
 use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
+use seahorse::txn_builder::RecordInfo;
 use seahorse::{events::EventIndex, hd::KeyTree};
 use std::collections::HashMap;
 use std::path::Path;
 use std::path::PathBuf;
-use std::time::Duration;
 use structopt::StructOpt;
 use surf::Url;
 use tracing::{event, Level};
@@ -65,10 +64,6 @@ struct NetworkInfo<'a> {
     relayer_url: Url,
     contract_address: Address,
     mock_eqs: Arc<Mutex<MockCapeLedger<'a>>>,
-}
-
-async fn retry_delay() {
-    sleep(Duration::from_secs(1)).await
 }
 
 #[allow(clippy::needless_lifetimes)]
@@ -104,7 +99,11 @@ async fn create_backend_and_sender_wallet<'a>(
     let mut wallet = CapeWallet::new(backend).await.unwrap();
 
     wallet
-        .add_user_key(network.sender_key.clone(), EventIndex::default())
+        .add_user_key(
+            network.sender_key.clone(),
+            "sending account".into(),
+            EventIndex::default(),
+        )
         .await
         .unwrap();
 
@@ -158,25 +157,13 @@ async fn create_wallet<'a>(
 
     let mut wallet = CapeWallet::new(backend).await.unwrap();
 
-    (wallet.generate_user_key(None).await.unwrap(), wallet)
-}
-
-async fn fund_eth_wallet<'a>(wallet: &mut CapeWallet<'a, CapeBackend<'a, ()>>) {
-    // Fund the Ethereum wallets for contract calls.
-    let provider = get_provider().interval(Duration::from_millis(100u64));
-    let accounts = provider.get_accounts().await.unwrap();
-    assert!(!accounts.is_empty());
-
-    let tx = TransactionRequest::new()
-        .to(Address::from(wallet.eth_address().await.unwrap()))
-        .value(ethers::utils::parse_ether(U256::from(1)).unwrap())
-        .from(accounts[0]);
-    provider
-        .send_transaction(tx, None)
-        .await
-        .unwrap()
-        .await
-        .unwrap();
+    (
+        wallet
+            .generate_user_key("sending account".into(), None)
+            .await
+            .unwrap(),
+        wallet,
+    )
 }
 
 fn update_balances(
@@ -224,55 +211,24 @@ async fn main() {
     let (network, mut wallet) =
         create_backend_and_sender_wallet(&mut rng, &universal_param, &args.storage).await;
 
-    let my_asset = wallet
-        .define_asset(&[], AssetPolicy::default())
-        .await
-        .expect("failed to define asset");
-    event!(Level::INFO, "defined a new asset type: {}", my_asset.code);
-    let address = wallet.pub_keys().await[0].address();
-
-    // Mint some custom asset
-    if wallet.balance_breakdown(&address, &my_asset.code).await == 0 {
-        event!(Level::INFO, "minting my asset type {}", my_asset.code);
-        loop {
-            let txn = wallet
-                .mint(&address, 1, &my_asset.code, 1u64 << 32, address.clone())
-                .await
-                .expect("failed to generate mint transaction");
-            let status = wallet
-                .await_transaction(&txn)
-                .await
-                .expect("error waiting for mint to complete");
-            if status.succeeded() {
-                break;
-            }
-            // The mint transaction is allowed to fail due to contention from other clients.
-            event!(Level::WARN, "mint transaction failed, retrying...");
-            retry_delay().await;
-        }
-        event!(Level::INFO, "minted custom asset");
-    }
-
     //sponsor some token
     let erc20_contract = deploy_erc20_token().await;
     sponsor_simple_token(&mut wallet, &erc20_contract)
         .await
         .unwrap();
-
+    let address = wallet.pub_keys().await[0].address();
     balances.insert(address.clone(), HashMap::new());
-    balances.get_mut(&address).unwrap().insert(
-        my_asset.code,
-        wallet.balance_breakdown(&address, &my_asset.code).await,
-    );
 
     let mut wallets = vec![];
     let mut public_keys = vec![];
 
     for _i in 0..(args.num_wallets) {
-        // Send all wallets some native asset https://github.com/EspressoSystems/cape/issues/650.
         let (k, mut w) = create_wallet(&mut rng, &universal_param, &network, &args.storage).await;
-
         fund_eth_wallet(&mut w).await;
+        // Fund the wallet with some native asset for paying fees
+        transfer_token(&mut wallet, k.address(), 100, AssetCode::native(), 1)
+            .await
+            .unwrap();
 
         public_keys.push(k);
         wallets.push(w);
@@ -282,6 +238,16 @@ async fn main() {
         let operation: OperationType = rand::random();
 
         match operation {
+            OperationType::Mint => {
+                let minter = wallets.choose_mut(&mut rng).unwrap();
+                let address = minter.pub_keys().await[0].address();
+                let asset = mint_token(minter).await.unwrap();
+                event!(Level::INFO, "minted custom asset.  Code: {}", asset.code);
+                balances.get_mut(&address).unwrap().insert(
+                    asset.code,
+                    minter.balance_breakdown(&address, &asset.code).await,
+                );
+            }
             OperationType::Transfer => {
                 let sender = wallets.choose_mut(&mut rng).unwrap();
                 let sender_address = sender.pub_keys().await[0].address();
@@ -314,8 +280,6 @@ async fn main() {
                     amount,
                     if *asset == AssetCode::native() {
                         String::from("the native asset")
-                    } else if *asset == my_asset.code {
-                        String::from("my asset")
                     } else {
                         asset.to_string()
                     },
@@ -348,44 +312,34 @@ async fn main() {
                 }
             }
             OperationType::Freeze => {
-                let owner = wallets.choose(&mut rng).unwrap();
-                let owner_address = owner.pub_keys().await[0].address();
-                // move this to helper
-                let mut asset_balances = vec![];
-                for asset in owner.assets().await {
-                    if owner
-                        .balance_breakdown(&owner_address, &asset.definition.code)
-                        .await
-                        > 0
-                    {
-                        asset_balances.push(asset.definition.code);
-                    }
-                }
-                let asset = asset_balances.choose(&mut rng).unwrap();
-
                 let freezer = wallets.choose_mut(&mut rng).unwrap();
-                freeze_token(freezer, asset, 1, owner_address)
+
+                let freezable_records: Vec<RecordInfo> =
+                    find_freezable_records(freezer, FreezeFlag::Unfrozen).await;
+                if freezable_records.is_empty() {
+                    continue;
+                }
+                let record = freezable_records.choose(&mut rng).unwrap();
+                let owner_address = record.ro.pub_key.address().clone();
+                let asset_def = &record.ro.asset_def;
+
+                freeze_token(freezer, &asset_def.code, record.ro.amount, owner_address)
                     .await
                     .unwrap();
             }
             OperationType::Unfreeze => {
-                let owner = wallets.choose(&mut rng).unwrap();
-                let owner_address = owner.pub_keys().await[0].address();
-                // move this to helper
-                let mut asset_balances = vec![];
-                for asset in owner.assets().await {
-                    if owner
-                        .balance_breakdown(&owner_address, &asset.definition.code)
-                        .await
-                        > 0
-                    {
-                        asset_balances.push(asset.definition.code);
-                    }
-                }
-                let asset = asset_balances.choose(&mut rng).unwrap();
+                let freezer = wallets.choose_mut(&mut rng).unwrap();
 
-                let unfreezer = wallets.choose_mut(&mut rng).unwrap();
-                unfreeze_token(unfreezer, asset, 1, owner_address)
+                let freezable_records: Vec<RecordInfo> =
+                    find_freezable_records(freezer, FreezeFlag::Frozen).await;
+                if freezable_records.is_empty() {
+                    continue;
+                }
+                let record = freezable_records.choose(&mut rng).unwrap();
+                let owner_address = record.ro.pub_key.address();
+                let asset_def = &record.ro.asset_def;
+
+                unfreeze_token(freezer, &asset_def.code, record.ro.amount, owner_address)
                     .await
                     .unwrap();
             }
@@ -408,8 +362,16 @@ async fn main() {
             }
             OperationType::Burn => {
                 let burner = wallets.choose_mut(&mut rng).unwrap();
-                let asset = burner.approved_assets().await[0].0.clone();
-                burn_token(burner, asset.clone(), 1).await.unwrap();
+                let asset = iter(burner.assets().await)
+                    .filter(|asset| burner.is_wrapped_asset(asset.definition.code))
+                    .next()
+                    .await;
+                if let Some(asset) = asset {
+                    let amount = get_burn_ammount(burner, asset.definition.code).await;
+                    burn_token(burner, asset.definition, amount).await.unwrap();
+                } else {
+                    println!("no burnable assets, skipping burn operation");
+                }
             }
         }
     }

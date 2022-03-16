@@ -12,7 +12,11 @@ use jf_cap::{
     structs::AssetCode,
 };
 use net::UserAddress;
-use seahorse::{txn_builder::RecordInfo, AssetInfo};
+use seahorse::{
+    accounts::{AccountInfo, KeyPair},
+    txn_builder::RecordInfo,
+    AssetInfo,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -73,5 +77,24 @@ impl From<RecordInfo> for Record {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Account {
     pub records: Vec<Record>,
+    pub balance: u64,
     pub assets: HashMap<AssetCode, AssetInfo>,
+    pub description: String,
+    pub used: bool,
+}
+
+impl<Key: KeyPair> From<AccountInfo<Key>> for Account {
+    fn from(info: AccountInfo<Key>) -> Self {
+        Self {
+            records: info.records.into_iter().map(|rec| rec.into()).collect(),
+            assets: info
+                .assets
+                .into_iter()
+                .map(|asset| (asset.definition.code, asset))
+                .collect(),
+            balance: info.balance,
+            description: info.description,
+            used: info.used,
+        }
+    }
 }

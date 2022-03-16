@@ -73,6 +73,7 @@ impl<'a> CLI<'a> for CapeCli {
     ) -> Result<Self::Backend, WalletError<CapeLedger>> {
         block_on(CapeBackend::new(
             univ_param,
+            args.rpc_url,
             args.eqs_url,
             args.relayer_url,
             args.contract_address,
@@ -345,7 +346,7 @@ pub struct CapeArgs {
         env = "CAPE_WEB3_PROVIDER_URL",
         default_value = "http://localhost:8545"
     )]
-    pub rpc_url: String,
+    pub rpc_url: Url,
 
     /// Mnemonic for a local Ethereum wallet for direct contract calls.
     #[structopt(long, env = "ETH_MNEMONIC")]

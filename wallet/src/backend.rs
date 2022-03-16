@@ -58,16 +58,13 @@ use std::pin::Pin;
 use std::time::Duration;
 use surf::Url;
 
-fn get_provider() -> Provider<Http> {
-    let rpc_url = match std::env::var("RPC_URL") {
-        Ok(val) => val,
-        Err(_) => "http://localhost:8545".to_string(),
-    };
-    Provider::<Http>::try_from(rpc_url).expect("could not instantiate HTTP Provider")
+fn get_provider(rpc_url: &Url) -> Provider<Http> {
+    Provider::<Http>::try_from(rpc_url.to_string()).expect("could not instantiate HTTP Provider")
 }
 
 pub struct CapeBackend<'a, Meta: Serialize + DeserializeOwned> {
     universal_param: &'a UniversalParam,
+    rpc_url: Url,
     eqs: surf::Client,
     relayer: surf::Client,
     contract: CAPE<EthMiddleware>,
@@ -79,6 +76,7 @@ pub struct CapeBackend<'a, Meta: Serialize + DeserializeOwned> {
 impl<'a, Meta: Serialize + DeserializeOwned + Send + Clone + PartialEq> CapeBackend<'a, Meta> {
     pub async fn new(
         universal_param: &'a UniversalParam,
+        rpc_url: Url,
         eqs_url: Url,
         relayer_url: Url,
         contract_address: Address,
@@ -97,7 +95,7 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send + Clone + PartialEq> CapeBack
         let relayer = relayer.with(parse_error_body::<relayer::Error>);
 
         // Create an Ethereum wallet to talk to the CAPE contract.
-        let provider = get_provider();
+        let provider = get_provider(&rpc_url);
         let chain_id = provider.get_chainid().await.unwrap().as_u64();
         // If mnemonic is set, try to use it to create a wallet, otherwise create a random wallet.
         let eth_wallet = match eth_mnemonic {
@@ -118,6 +116,7 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send + Clone + PartialEq> CapeBack
 
         Ok(Self {
             universal_param,
+            rpc_url,
             eqs,
             relayer,
             contract,
@@ -463,7 +462,7 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
 
     fn eth_client(&self) -> Result<Arc<EthMiddleware>, CapeWalletError> {
         Ok(Arc::new(SignerMiddleware::new(
-            get_provider(),
+            get_provider(&self.rpc_url),
             self.eth_wallet.clone(),
         )))
     }
@@ -509,8 +508,8 @@ fn gen_proving_keys(srs: &UniversalParam) -> ProverKeySet<key_set::OrderByOutput
 mod test {
     use super::*;
     use crate::testing::{
-        create_test_network, retry, spawn_eqs, sponsor_simple_token, transfer_token,
-        wrap_simple_token,
+        create_test_network, retry, rpc_url_for_test, spawn_eqs, sponsor_simple_token,
+        transfer_token, wrap_simple_token,
     };
     use crate::{mocks::MockCapeWalletLoader, CapeWallet, CapeWalletExt};
     use cap_rust_sandbox::{deploy::deploy_erc20_token, universal_param::UNIVERSAL_PARAM};
@@ -538,6 +537,7 @@ mod test {
         };
         let sender_backend = CapeBackend::new(
             universal_param,
+            rpc_url_for_test(),
             eqs_url.clone(),
             relayer_url.clone(),
             contract_address,
@@ -573,6 +573,7 @@ mod test {
         };
         let receiver_backend = CapeBackend::new(
             universal_param,
+            rpc_url_for_test(),
             eqs_url.clone(),
             relayer_url.clone(),
             contract_address,
@@ -654,6 +655,7 @@ mod test {
         };
         let sponsor_backend = CapeBackend::new(
             universal_param,
+            rpc_url_for_test(),
             eqs_url.clone(),
             relayer_url.clone(),
             contract_address.clone(),
@@ -676,6 +678,7 @@ mod test {
         };
         let wrapper_backend = CapeBackend::new(
             universal_param,
+            rpc_url_for_test(),
             eqs_url.clone(),
             relayer_url.clone(),
             contract_address.clone(),
@@ -705,7 +708,7 @@ mod test {
             .await;
 
         // Fund the Ethereum wallets for contract calls.
-        let provider = get_provider().interval(Duration::from_millis(100u64));
+        let provider = get_provider(&rpc_url_for_test()).interval(Duration::from_millis(100u64));
         let accounts = provider.get_accounts().await.unwrap();
         assert!(!accounts.is_empty());
         for wallet in [&sponsor, &wrapper] {

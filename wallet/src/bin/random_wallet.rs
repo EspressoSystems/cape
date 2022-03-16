@@ -18,8 +18,8 @@ use cape_wallet::testing::create_test_network;
 use cape_wallet::testing::get_burn_ammount;
 use cape_wallet::testing::OperationType;
 use cape_wallet::testing::{
-    burn_token, find_freezable_records, freeze_token, spawn_eqs, sponsor_simple_token,
-    unfreeze_token, wrap_simple_token,
+    burn_token, find_freezable_records, freeze_token, rpc_url_for_test, spawn_eqs,
+    sponsor_simple_token, unfreeze_token, wrap_simple_token,
 };
 use cape_wallet::CapeWallet;
 use jf_cap::keys::UserKeyPair;
@@ -122,6 +122,7 @@ async fn main() {
     println!("Ledger Created");
     let backend = CapeBackend::new(
         &universal_param,
+        rpc_url_for_test(),
         eqs_url,
         relayer_url.clone(),
         contract_address,

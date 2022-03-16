@@ -19,8 +19,8 @@ use cape_wallet::mocks::*;
 use cape_wallet::testing::get_burn_ammount;
 use cape_wallet::testing::{
     burn_token, create_test_network, find_freezable_records, freeze_token, fund_eth_wallet,
-    mint_token, retry_delay, spawn_eqs, sponsor_simple_token, transfer_token, unfreeze_token,
-    wrap_simple_token, OperationType,
+    mint_token, retry_delay, rpc_url_for_test, spawn_eqs, sponsor_simple_token, transfer_token,
+    unfreeze_token, wrap_simple_token, OperationType,
 };
 use cape_wallet::CapeWallet;
 use cape_wallet::CapeWalletExt;
@@ -87,6 +87,7 @@ async fn create_backend_and_sender_wallet<'a>(
 
     let backend = CapeBackend::new(
         universal_param,
+        rpc_url_for_test(),
         network.eqs_url.clone(),
         network.relayer_url.clone(),
         network.contract_address,
@@ -146,6 +147,7 @@ async fn create_wallet<'a>(
 
     let backend = CapeBackend::new(
         universal_param,
+        rpc_url_for_test(),
         network.eqs_url.clone(),
         network.relayer_url.clone(),
         network.contract_address,

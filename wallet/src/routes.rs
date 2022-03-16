@@ -8,13 +8,11 @@
 //! Web server endpoint handlers.
 
 use crate::{
-    mocks::{MockCapeBackend, MockCapeNetwork},
     ui::*,
     wallet::{CapeWalletError, CapeWalletExt},
-    web::WebState,
+    web::{NodeOpt, WebState},
 };
 use async_std::fs::{read_dir, File};
-use async_std::sync::{Arc, Mutex};
 use cap_rust_sandbox::{
     ledger::CapeLedger,
     model::{Erc20Code, EthereumAddr},
@@ -23,21 +21,14 @@ use cap_rust_sandbox::{
 use futures::{prelude::*, stream::iter};
 use jf_cap::{
     keys::{AuditorPubKey, FreezerPubKey, UserKeyPair, UserPubKey},
-    structs::{
-        AssetCode, AssetDefinition, AssetPolicy, FreezeFlag, ReceiverMemo, RecordCommitment,
-        RecordOpening,
-    },
-    MerkleTree, TransactionVerifyingKey,
+    structs::{AssetCode, AssetDefinition, AssetPolicy},
 };
-use key_set::{KeySet, VerifierKeySet};
 use net::{server::response, TaggedBlob, UserAddress};
 use rand_chacha::ChaChaRng;
-use reef::traits::Ledger;
 use seahorse::{
     events::{EventIndex, EventSource},
     hd::KeyTree,
     loader::{Loader, LoaderMetadata},
-    testing::MockLedger,
     txn_builder::{RecordInfo, TransactionReceipt},
     AssetInfo, WalletBackend, WalletStorage,
 };
@@ -98,7 +89,125 @@ pub fn server_error<E: Into<CapeAPIError>>(err: E) -> tide::Error {
     net::server_error(err)
 }
 
-pub type Wallet = seahorse::Wallet<'static, MockCapeBackend<'static, LoaderMetadata>, CapeLedger>;
+#[cfg(test)]
+mod backend {
+    use super::*;
+    use crate::mocks::{MockCapeBackend, MockCapeNetwork};
+    use async_std::sync::{Arc, Mutex};
+    use jf_cap::{
+        structs::{FreezeFlag, ReceiverMemo, RecordCommitment, RecordOpening},
+        MerkleTree, TransactionVerifyingKey,
+    };
+    use key_set::{KeySet, VerifierKeySet};
+    use reef::traits::Ledger;
+    use seahorse::testing::MockLedger;
+
+    pub type Backend = MockCapeBackend<'static, LoaderMetadata>;
+
+    pub async fn new(
+        _options: &NodeOpt,
+        rng: &mut ChaChaRng,
+        faucet_pub_key: UserPubKey,
+        loader: &mut Loader,
+    ) -> Result<Backend, CapeWalletError> {
+        let verif_crs = VerifierKeySet {
+            mint: TransactionVerifyingKey::Mint(
+                jf_cap::proof::mint::preprocess(&*UNIVERSAL_PARAM, CapeLedger::merkle_height())
+                    .unwrap()
+                    .1,
+            ),
+            xfr: KeySet::new(
+                vec![
+                    TransactionVerifyingKey::Transfer(
+                        jf_cap::proof::transfer::preprocess(
+                            &*UNIVERSAL_PARAM,
+                            2,
+                            2,
+                            CapeLedger::merkle_height(),
+                        )
+                        .unwrap()
+                        .1,
+                    ),
+                    TransactionVerifyingKey::Transfer(
+                        jf_cap::proof::transfer::preprocess(
+                            &*UNIVERSAL_PARAM,
+                            3,
+                            3,
+                            CapeLedger::merkle_height(),
+                        )
+                        .unwrap()
+                        .1,
+                    ),
+                ]
+                .into_iter(),
+            )
+            .unwrap(),
+            freeze: KeySet::new(
+                vec![TransactionVerifyingKey::Freeze(
+                    jf_cap::proof::freeze::preprocess(
+                        &*UNIVERSAL_PARAM,
+                        2,
+                        CapeLedger::merkle_height(),
+                    )
+                    .unwrap()
+                    .1,
+                )]
+                .into_iter(),
+            )
+            .unwrap(),
+        };
+
+        // Set up a faucet record.
+        let mut records = MerkleTree::new(CapeLedger::merkle_height()).unwrap();
+        let faucet_ro = RecordOpening::new(
+            rng,
+            1000,
+            AssetDefinition::native(),
+            faucet_pub_key,
+            FreezeFlag::Unfrozen,
+        );
+        records.push(RecordCommitment::from(&faucet_ro).to_field_element());
+        let faucet_memo = ReceiverMemo::from_ro(rng, &faucet_ro, &[]).unwrap();
+
+        let mut ledger = MockLedger::new(MockCapeNetwork::new(
+            verif_crs,
+            records,
+            vec![(faucet_memo, 0)],
+        ));
+        ledger.set_block_size(1).unwrap();
+
+        MockCapeBackend::new(Arc::new(Mutex::new(ledger)), loader)
+    }
+}
+
+#[cfg(not(test))]
+mod backend {
+    use super::*;
+    use crate::backend::CapeBackend;
+
+    pub type Backend = CapeBackend<'static, LoaderMetadata>;
+
+    pub async fn new(
+        options: &NodeOpt,
+        _rng: &mut ChaChaRng,
+        _faucet_pub_key: UserPubKey,
+        loader: &mut Loader,
+    ) -> Result<Backend, CapeWalletError> {
+        CapeBackend::new(
+            &*UNIVERSAL_PARAM,
+            options.rpc_url(),
+            options.eqs_url(),
+            options.relayer_url(),
+            options.contract_address(),
+            options.eth_mnemonic(),
+            loader,
+        )
+        .await
+    }
+}
+
+pub use backend::Backend;
+pub type Wallet = seahorse::Wallet<'static, Backend, CapeLedger>;
 
 #[derive(Clone, Copy, Debug, EnumString)]
 pub enum UrlSegmentType {
@@ -338,34 +447,16 @@ pub fn wallet_error(source: CapeWalletError) -> tide::Error {
         msg: source.to_string(),
     })
 }
-pub fn last_used_path_storage(storage: &Path) -> PathBuf {
-    [storage, Path::new("last_wallet_path")].iter().collect()
-}
 
-pub fn keystores_dir(storage: &Path) -> PathBuf {
-    [storage, Path::new("keystores")].iter().collect()
-}
-
-pub fn keystore_path(storage: &Path, name: &str) -> PathBuf {
-    [keystores_dir(storage).as_path(), Path::new(name)]
-        .iter()
-        .collect()
-}
-
-pub fn assets_path(storage: &Path) -> PathBuf {
-    [storage, Path::new("verified_assets")].iter().collect()
-}
-
-pub async fn write_path(wallet_path: &Path, storage: &Path) -> Result<(), tide::Error> {
-    let path = last_used_path_storage(storage);
-    let mut file = File::create(path).await?;
+pub async fn write_path(options: &NodeOpt, wallet_path: &Path) -> Result<(), tide::Error> {
+    let mut file = File::create(options.last_used_path()).await?;
     Ok(file
         .write_all(&bincode::serialize(&wallet_path).unwrap())
         .await?)
 }
-pub async fn read_last_path(storage: &Path) -> Result<Option<PathBuf>, tide::Error> {
-    let path = last_used_path_storage(storage);
-    let file_result = File::open(&path).await;
+
+pub async fn read_last_path(options: &NodeOpt) -> Result<Option<PathBuf>, tide::Error> {
+    let file_result = File::open(options.last_used_path()).await;
     if file_result.is_err()
         && file_result.as_ref().err().unwrap().kind() == std::io::ErrorKind::NotFound
     {
@@ -376,79 +467,21 @@ pub async fn read_last_path(storage: &Path) -> Result<Option<PathBuf>, tide::Err
     file.read_to_end(&mut bytes).await?;
     Ok(Some(bincode::deserialize(&bytes)?))
 }
+
 // Create a wallet (if !existing) or open an existing one.
 pub async fn init_wallet(
+    options: &NodeOpt,
     rng: &mut ChaChaRng,
     faucet_pub_key: UserPubKey,
     mut loader: Loader,
     existing: bool,
-    storage: &Path,
 ) -> Result<Wallet, tide::Error> {
     // Store the path so we can have a getlastkeystore endpoint
-    write_path(loader.path(), storage).await?;
+    write_path(options, loader.path()).await?;
 
-    let verif_crs = VerifierKeySet {
-        mint: TransactionVerifyingKey::Mint(
-            jf_cap::proof::mint::preprocess(&*UNIVERSAL_PARAM, CapeLedger::merkle_height())?.1,
-        ),
-        xfr: KeySet::new(
-            vec![
-                TransactionVerifyingKey::Transfer(
-                    jf_cap::proof::transfer::preprocess(
-                        &*UNIVERSAL_PARAM,
-                        2,
-                        2,
-                        CapeLedger::merkle_height(),
-                    )?
-                    .1,
-                ),
-                TransactionVerifyingKey::Transfer(
-                    jf_cap::proof::transfer::preprocess(
-                        &*UNIVERSAL_PARAM,
-                        3,
-                        3,
-                        CapeLedger::merkle_height(),
-                    )?
-                    .1,
-                ),
-            ]
-            .into_iter(),
-        )
-        .unwrap(),
-        freeze: KeySet::new(
-            vec![TransactionVerifyingKey::Freeze(
-                jf_cap::proof::freeze::preprocess(
-                    &*UNIVERSAL_PARAM,
-                    2,
-                    CapeLedger::merkle_height(),
-                )?
-                .1,
-            )]
-            .into_iter(),
-        )
-        .unwrap(),
-    };
-
-    // Set up a faucet record.
-    let mut records = MerkleTree::new(CapeLedger::merkle_height()).unwrap();
-    let faucet_ro = RecordOpening::new(
-        rng,
-        1000,
-        AssetDefinition::native(),
-        faucet_pub_key,
-        FreezeFlag::Unfrozen,
-    );
-    records.push(RecordCommitment::from(&faucet_ro).to_field_element());
-    let faucet_memo = ReceiverMemo::from_ro(rng, &faucet_ro, &[]).unwrap();
-
-    let mut ledger = MockLedger::new(MockCapeNetwork::new(
-        verif_crs,
-        records,
-        vec![(faucet_memo, 0)],
-    ));
-    ledger.set_block_size(1).unwrap();
-
-    let mut backend = MockCapeBackend::new(Arc::new(Mutex::new(ledger)), &mut loader)?;
+    let mut backend = backend::new(options, rng, faucet_pub_key, &mut loader)
+        .map_err(wallet_error)
+        .await?;
     if backend.storage().await.exists() != existing {
         return Err(server_error(CapeAPIError::OpenWallet {
             msg: String::from(if existing {
@@ -462,7 +495,7 @@ pub async fn init_wallet(
     let mut wallet = Wallet::new(backend).await.map_err(wallet_error)?;
 
     // If we have been provided a verified asset library, load it.
-    let assets_path = assets_path(storage);
+    let assets_path = options.assets_path();
     if Path::is_file(&assets_path) {
         wallet
             .verify_cape_assets(&assets_path)
@@ -501,17 +534,17 @@ pub async fn getmnemonic(rng: &mut ChaChaRng) -> Result<String, tide::Error> {
 }
 
 pub async fn newwallet(
+    options: &NodeOpt,
     bindings: &HashMap<String, RouteBinding>,
     rng: &mut ChaChaRng,
     faucet_key_pair: &UserKeyPair,
     wallet: &mut Option<Wallet>,
-    storage: &Path,
 ) -> Result<(), tide::Error> {
     let path = match bindings.get(":path") {
         Some(binding) => binding.value.as_path()?,
         None => match bindings.get(":name") {
-            Some(name) => keystore_path(storage, &name.value.as_string()?),
-            None => keystore_path(storage, "default"),
+            Some(name) => options.keystore_path(&name.value.as_string()?),
+            None => options.keystore_path("default"),
         },
     };
     let mnemonic = bindings[":mnemonic"].value.as_string()?;
@@ -522,22 +555,22 @@ pub async fn newwallet(
     // with two wallets using the same file at the same time.
     *wallet = None;
 
-    *wallet = Some(init_wallet(rng, faucet_key_pair.pub_key(), loader, false, storage).await?);
+    *wallet = Some(init_wallet(options, rng, faucet_key_pair.pub_key(), loader, false).await?);
     Ok(())
 }
 
 pub async fn openwallet(
+    options: &NodeOpt,
     bindings: &HashMap<String, RouteBinding>,
     rng: &mut ChaChaRng,
     faucet_key_pair: &UserKeyPair,
     wallet: &mut Option<Wallet>,
-    storage: &Path,
 ) -> Result<(), tide::Error> {
     let path = match bindings.get(":path") {
         Some(binding) => binding.value.as_path()?,
         None => match bindings.get(":name") {
-            Some(name) => keystore_path(storage, &name.value.as_string()?),
-            None => keystore_path(storage, "default"),
+            Some(name) => options.keystore_path(&name.value.as_string()?),
+            None => options.keystore_path("default"),
         },
     };
     let password = bindings[":password"].value.as_string()?;
@@ -547,22 +580,22 @@ pub async fn openwallet(
     // with two wallets using the same file at the same time.
     *wallet = None;
 
-    *wallet = Some(init_wallet(rng, faucet_key_pair.pub_key(), loader, true, storage).await?);
+    *wallet = Some(init_wallet(options, rng, faucet_key_pair.pub_key(), loader, true).await?);
     Ok(())
 }
 
 pub async fn resetpassword(
+    options: &NodeOpt,
     bindings: &HashMap<String, RouteBinding>,
     rng: &mut ChaChaRng,
     faucet_key_pair: &UserKeyPair,
     wallet: &mut Option<Wallet>,
-    storage: &Path,
 ) -> Result<(), tide::Error> {
     let path = match bindings.get(":path") {
         Some(binding) => binding.value.as_path()?,
         None => match bindings.get(":name") {
-            Some(name) => keystore_path(storage, &name.value.as_string()?),
-            None => keystore_path(storage, "default"),
+            Some(name) => options.keystore_path(&name.value.as_string()?),
+            None => options.keystore_path("default"),
         },
     };
     let mnemonic = bindings[":mnemonic"].value.as_string()?;
@@ -573,7 +606,7 @@ pub async fn resetpassword(
     // with two wallets using the same file at the same time.
     *wallet = None;
 
-    *wallet = Some(init_wallet(rng, faucet_key_pair.pub_key(), loader, true, storage).await?);
+    *wallet = Some(init_wallet(options, rng, faucet_key_pair.pub_key(), loader, true).await?);
     Ok(())
 }
 
@@ -583,9 +616,8 @@ async fn closewallet(wallet: &mut Option<Wallet>) -> Result<(), tide::Error> {
     Ok(())
 }
 
-async fn listkeystores(storage: &Path) -> Result<Vec<String>, tide::Error> {
-    let dir = keystores_dir(storage);
-    let mut entries = read_dir(dir).await?;
+async fn listkeystores(options: &NodeOpt) -> Result<Vec<String>, tide::Error> {
+    let mut entries = read_dir(options.keystores_dir()).await?;
     let mut keystores = vec![];
     while let Some(entry) = entries.next().await {
         keystores.push(entry?.file_name().to_str().unwrap().to_owned());
@@ -920,8 +952,8 @@ pub async fn get_records(wallet: &mut Option<Wallet>) -> Result<Vec<RecordInfo>,
     Ok(wallet.records().await.collect::<Vec<_>>())
 }
 
-pub async fn get_last_keystore(storage: &Path) -> Result<Option<PathBuf>, tide::Error> {
-    Ok(read_last_path(storage).await?)
+pub async fn get_last_keystore(options: &NodeOpt) -> Result<Option<PathBuf>, tide::Error> {
+    Ok(read_last_path(options).await?)
 }
 
 async fn getaccount(
@@ -956,10 +988,10 @@ pub async fn dispatch_url(
     let segments = route_pattern.split_once('/').unwrap_or((route_pattern, ""));
     let route_params = segments.1.split('/').collect::<Vec<_>>();
     let state = req.state();
+    let options = &state.options;
     let rng = &mut *state.rng.lock().await;
     let faucet_key_pair = &state.faucet_key_pair;
     let wallet = &mut *state.wallet.lock().await;
-    let storage = &state.storage;
     let key = ApiRouteKey::from_str(segments.0).expect("Unknown route");
     match key {
         ApiRouteKey::closewallet => response(&req, closewallet(wallet).await?),
@@ -970,24 +1002,24 @@ pub async fn dispatch_url(
         ApiRouteKey::getinfo => response(&req, getinfo(wallet).await?),
         ApiRouteKey::getmnemonic => response(&req, getmnemonic(rng).await?),
         ApiRouteKey::importkey => dummy_url_eval(route_pattern, bindings),
-        ApiRouteKey::listkeystores => response(&req, listkeystores(storage).await?),
+        ApiRouteKey::listkeystores => response(&req, listkeystores(options).await?),
         ApiRouteKey::mint => response(&req, mint(bindings, wallet).await?),
         ApiRouteKey::newasset => response(&req, newasset(bindings, wallet).await?),
         ApiRouteKey::newkey => response(&req, newkey(&route_params, bindings, wallet).await?),
         ApiRouteKey::newwallet => response(
             &req,
-            newwallet(bindings, rng, faucet_key_pair, wallet, storage).await?,
+            newwallet(options, bindings, rng, faucet_key_pair, wallet).await?,
         ),
         ApiRouteKey::openwallet => response(
             &req,
-            openwallet(bindings, rng, faucet_key_pair, wallet, storage).await?,
+            openwallet(options, bindings, rng, faucet_key_pair, wallet).await?,
         ),
         ApiRouteKey::recoverkey => {
             response(&req, recoverkey(&route_params, bindings, wallet).await?)
         }
         ApiRouteKey::resetpassword => response(
             &req,
-            resetpassword(bindings, rng, faucet_key_pair, wallet, storage).await?,
+            resetpassword(options, bindings, rng, faucet_key_pair, wallet).await?,
         ),
         ApiRouteKey::send => response(&req, send(bindings, wallet).await?),
         ApiRouteKey::transaction => dummy_url_eval(route_pattern, bindings),
@@ -996,6 +1028,6 @@ pub async fn dispatch_url(
         ApiRouteKey::view => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::wrap => response(&req, wrap(bindings, wallet).await?),
         ApiRouteKey::getrecords => response(&req, get_records(wallet).await?),
-        ApiRouteKey::lastusedkeystore => response(&req, get_last_keystore(storage).await?),
+        ApiRouteKey::lastusedkeystore => response(&req, get_last_keystore(options).await?),
     }
 }

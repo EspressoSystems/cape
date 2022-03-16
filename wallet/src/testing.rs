@@ -205,6 +205,13 @@ pub async fn get_burn_ammount<'a>(
     }
 }
 
+pub fn rpc_url_for_test() -> Url {
+    match std::env::var("CAPE_WEB3_PROVIDER_URL") {
+        Ok(val) => val.parse().unwrap(),
+        Err(_) => "http://localhost:8545".parse().unwrap(),
+    }
+}
+
 pub async fn spawn_eqs(cape_address: Address) -> (Url, TempDir, JoinHandle<std::io::Result<()>>) {
     let dir = TempDir::new("wallet_testing_eqs").unwrap();
     let eqs_port = port().await;
@@ -225,7 +232,7 @@ pub async fn spawn_eqs(cape_address: Address) -> (Url, TempDir, JoinHandle<std::
         query_frequency: 500,
         eqs_port: eqs_port as u16,
         cape_address: Some(cape_address),
-        rpc_url: String::from("http://localhost:8545"),
+        rpc_url: rpc_url_for_test().to_string(),
         temp_test_run: false,
     };
     let join = spawn(async move { run_eqs(&opt).await });

@@ -30,7 +30,8 @@ use seahorse::events::LedgerEvent;
 pub(crate) struct EthPolling {
     pub query_result_state: Arc<RwLock<QueryResultState>>,
     pub state_persistence: StatePersistence,
-    pub last_updated_block_height: u64,
+    pub last_fetched_block: u64,
+    pub last_fetched_log_index: u64,
     pub pending_commit_event: Vec<CapeTransition>,
     pub connection: EthConnection,
 }
@@ -45,49 +46,54 @@ impl EthPolling {
             return EthPolling {
                 query_result_state,
                 state_persistence,
-                last_updated_block_height: 0u64,
+                last_fetched_block: 0u64,
+                last_fetched_log_index: 0u64,
                 pending_commit_event: Vec::new(),
                 connection: EthConnection::for_test().await,
             };
         }
 
-        let (connection, last_updated_block_height) = if let Some(contract_address) =
-            opt.cape_address()
-        {
-            let mut state_updater = query_result_state.write().await;
-            let last_updated_block_height = state_updater.last_updated_block_height;
+        let (connection, last_fetched_block, last_fetched_log_index) =
+            if let Some(contract_address) = opt.cape_address() {
+                let mut state_updater = query_result_state.write().await;
+                let last_fetched_block = state_updater.last_fetched_block;
+                let last_fetched_log_index = state_updater.last_fetched_log_index;
 
-            if state_updater.contract_address.is_none()
-                && state_updater.last_updated_block_height > 0
-            {
-                panic!(
+                if state_updater.contract_address.is_none()
+                    && (last_fetched_block > 0 || last_fetched_log_index > 0)
+                {
+                    panic!(
                     "Persisted state is malformed! Run again with --reset_store_state to repair"
                 );
-            }
-
-            if let Some(persisted_contract_address) = state_updater.contract_address {
-                if persisted_contract_address != contract_address {
-                    panic!("The specified persisted state was generated for a different contract.");
                 }
-            } else {
-                state_updater.contract_address = Some(contract_address);
-            }
 
-            (
-                EthConnection::from_config_for_query(
-                    &format!("{:?}", contract_address),
-                    opt.rpc_url(),
-                ),
-                last_updated_block_height,
-            )
-        } else {
-            panic!("Invocation Error! Address required unless launched for testing");
-        };
+                if let Some(persisted_contract_address) = state_updater.contract_address {
+                    if persisted_contract_address != contract_address {
+                        panic!(
+                            "The specified persisted state was generated for a different contract."
+                        );
+                    }
+                } else {
+                    state_updater.contract_address = Some(contract_address);
+                }
+
+                (
+                    EthConnection::from_config_for_query(
+                        &format!("{:?}", contract_address),
+                        opt.rpc_url(),
+                    ),
+                    last_fetched_block,
+                    last_fetched_log_index,
+                )
+            } else {
+                panic!("Invocation Error! Address required unless launched for testing");
+            };
 
         EthPolling {
             query_result_state,
             state_persistence,
-            last_updated_block_height,
+            last_fetched_block,
+            last_fetched_log_index,
             pending_commit_event: Vec::new(),
             connection,
         }
@@ -100,12 +106,23 @@ impl EthPolling {
             .connection
             .contract
             .events()
-            .from_block(self.last_updated_block_height + 1)
+            .from_block(self.last_fetched_block)
             .query_with_meta()
             .await
             .unwrap();
 
+        // don't refetch events against a block that was previously successfully processed
+        let mut block_cursor_advanced = false;
         for (filter, meta) in new_event {
+            let last_fetched_block = meta.block_number.as_u64();
+            let last_fetched_log_index = meta.log_index.as_u64();
+            // for some reason, we're seeing repeats in spite of the .from_block(last + 1) filter. Maybe ethers bug?
+            if last_fetched_block <= self.last_fetched_block
+                && last_fetched_log_index <= self.last_fetched_log_index
+            {
+                continue;
+            }
+            block_cursor_advanced = true;
             match filter {
                 CAPEEvents::BlockCommittedFilter(_) => {
                     let fetched_block_with_memos =
@@ -145,8 +162,7 @@ impl EthPolling {
                     let output_record_commitments = self
                         .pending_commit_event
                         .iter()
-                        .map(|txn| txn.output_commitments())
-                        .flatten()
+                        .flat_map(|txn| txn.output_commitments())
                         .collect::<Vec<_>>();
 
                     let mut merkle_tree = {
@@ -188,96 +204,93 @@ impl EthPolling {
                         })
                         .collect();
 
-                    let new_updated_block_height = meta.block_number.as_u64();
-                    if new_updated_block_height > self.last_updated_block_height {
-                        let mut updated_state = self.query_result_state.write().await;
-                        // update the state block
-                        let pending_commit = mem::take(&mut self.pending_commit_event);
+                    let mut updated_state = self.query_result_state.write().await;
+                    // update the state block
+                    let pending_commit = mem::take(&mut self.pending_commit_event);
 
-                        //create/push pending commit to QueryResultState events
-                        let block_id = updated_state.ledger_state.state_number;
-                        updated_state.events.push(LedgerEvent::Commit {
-                            block: cap_rust_sandbox::ledger::CapeBlock::new(pending_commit),
-                            block_id,
-                            state_comm: block_id + 1,
+                    //create/push pending commit to QueryResultState events
+                    let block_id = updated_state.ledger_state.state_number;
+                    updated_state.events.push(LedgerEvent::Commit {
+                        block: cap_rust_sandbox::ledger::CapeBlock::new(pending_commit),
+                        block_id,
+                        state_comm: block_id + 1,
+                    });
+
+                    // Create LedgerEvent::Memos if memo signature is valid, skip otherwise
+                    let mut memo_events = Vec::new();
+                    let mut index = 0;
+                    fetched_block_with_memos
+                        .memos
+                        .iter()
+                        .enumerate()
+                        .filter_map(|(txn_id, (txn_memo, _))| match memos_sig_valid[txn_id] {
+                            true => Some((txn_id, txn_memo)),
+                            false => None,
+                        })
+                        .for_each(|(txn_id, txn_memo)| {
+                            let mut outputs = Vec::new();
+                            for memo in txn_memo.iter() {
+                                outputs.push((
+                                    memo.clone(),
+                                    output_record_commitments[index],
+                                    uids[index],
+                                    merkle_paths[index].clone(),
+                                ));
+                                index += 1;
+                            }
+                            let memo_event = LedgerEvent::Memos {
+                                outputs,
+                                transaction: Some((
+                                    block_id,
+                                    txn_id as u64,
+                                    transitions[txn_id].kind(),
+                                )),
+                            };
+                            memo_events.push(memo_event);
+                        });
+                    updated_state.events.append(&mut memo_events);
+
+                    //update merkle tree
+                    if let Some(merkle_tree) = merkle_tree {
+                        updated_state.ledger_state.record_merkle_commitment =
+                            merkle_tree.commitment();
+                        updated_state.ledger_state.record_merkle_frontier = merkle_tree.frontier();
+                    }
+
+                    //update transaction_by_id and transaction_id_by_hash hashmap
+                    let mut record_index = 0;
+                    transitions
+                        .iter()
+                        .enumerate()
+                        .for_each(|(txn_id, transition)| {
+                            updated_state.transaction_by_id.insert(
+                                (last_fetched_block, txn_id as u64),
+                                cap_rust_sandbox::ledger::CommittedCapeTransition {
+                                    block_id,
+                                    txn_id: txn_id as u64,
+                                    output_start: uids[record_index],
+                                    output_size: transition.output_len() as u64,
+                                    transition: transition.clone(),
+                                },
+                            );
+                            updated_state
+                                .transaction_id_by_hash
+                                .insert(transition.commit(), (last_fetched_block, txn_id as u64));
+                            for nullifier in transition.proven_nullifiers().iter() {
+                                updated_state.nullifiers.insert(nullifier.0);
+                            }
+
+                            record_index += transition.output_len();
                         });
 
-                        // Create LedgerEvent::Memos if memo signature is valid, skip otherwise
-                        let mut memo_events = Vec::new();
-                        let mut index = 0;
-                        fetched_block_with_memos
-                            .memos
-                            .iter()
-                            .enumerate()
-                            .filter_map(|(txn_id, (txn_memo, _))| match memos_sig_valid[txn_id] {
-                                true => Some((txn_id, txn_memo)),
-                                false => None,
-                            })
-                            .for_each(|(txn_id, txn_memo)| {
-                                let mut outputs = Vec::new();
-                                for memo in txn_memo.iter() {
-                                    outputs.push((
-                                        memo.clone(),
-                                        output_record_commitments[index],
-                                        uids[index],
-                                        merkle_paths[index].clone(),
-                                    ));
-                                    index += 1;
-                                }
-                                let memo_event = LedgerEvent::Memos {
-                                    outputs,
-                                    transaction: Some((
-                                        block_id,
-                                        txn_id as u64,
-                                        transitions[txn_id].kind(),
-                                    )),
-                                };
-                                memo_events.push(memo_event);
-                            });
-                        updated_state.events.append(&mut memo_events);
+                    updated_state.ledger_state.state_number += 1;
+                    updated_state.last_fetched_block = last_fetched_block;
+                    updated_state.last_fetched_log_index = last_fetched_log_index;
+                    self.last_fetched_block = last_fetched_block;
+                    self.last_fetched_log_index = last_fetched_log_index;
 
-                        //update merkle tree
-                        if let Some(merkle_tree) = merkle_tree {
-                            updated_state.ledger_state.record_merkle_commitment =
-                                merkle_tree.commitment();
-                            updated_state.ledger_state.record_merkle_frontier =
-                                merkle_tree.frontier();
-                        }
-
-                        //update transaction_by_id and transaction_id_by_hash hashmap
-                        let mut record_index = 0;
-                        transitions
-                            .iter()
-                            .enumerate()
-                            .for_each(|(txn_id, transition)| {
-                                updated_state.transaction_by_id.insert(
-                                    (meta.block_number.as_u64(), txn_id as u64),
-                                    cap_rust_sandbox::ledger::CommittedCapeTransition {
-                                        block_id,
-                                        txn_id: txn_id as u64,
-                                        output_start: uids[record_index],
-                                        output_size: transition.output_len() as u64,
-                                        transition: transition.clone(),
-                                    },
-                                );
-                                updated_state.transaction_id_by_hash.insert(
-                                    transition.commit(),
-                                    (meta.block_number.as_u64(), txn_id as u64),
-                                );
-                                for nullifier in transition.proven_nullifiers().iter() {
-                                    updated_state.nullifiers.insert(nullifier.0);
-                                }
-
-                                record_index += transition.output_len();
-                            });
-
-                        updated_state.ledger_state.state_number += 1;
-                        updated_state.last_updated_block_height = new_updated_block_height;
-                        self.last_updated_block_height = new_updated_block_height;
-
-                        // persist the state block updates (will be more fine grained in r3)
-                        self.state_persistence.store_latest_state(&*updated_state);
-                    }
+                    // persist the state block updates (will be more fine grained in r3)
+                    self.state_persistence.store_latest_state(&*updated_state);
                 }
 
                 CAPEEvents::Erc20TokensDepositedFilter(filter_data) => {
@@ -295,7 +308,8 @@ impl EthPolling {
                         src_addr: EthereumAddr(filter_data.from.to_fixed_bytes()),
                     };
                     self.pending_commit_event.push(new_transition_wrap);
-                    self.last_updated_block_height = meta.block_number.as_u64();
+                    self.last_fetched_block = last_fetched_block;
+                    self.last_fetched_log_index = last_fetched_log_index;
                 }
                 CAPEEvents::FaucetInitializedFilter(filter_data) => {
                     // Obtain record opening
@@ -353,7 +367,7 @@ impl EthPolling {
 
                     //update transaction_by_id and transaction_id_by_hash hashmap
                     updated_state.transaction_by_id.insert(
-                        (meta.block_number.as_u64(), 0),
+                        (last_fetched_block, 0),
                         cap_rust_sandbox::ledger::CommittedCapeTransition {
                             block_id: 0,
                             txn_id: 0,
@@ -364,16 +378,22 @@ impl EthPolling {
                     );
                     updated_state
                         .transaction_id_by_hash
-                        .insert(transition.commit(), (meta.block_number.as_u64(), 0));
+                        .insert(transition.commit(), (last_fetched_block, 0));
 
                     updated_state.ledger_state.state_number += 1;
-                    updated_state.last_updated_block_height = meta.block_number.as_u64();
-                    self.last_updated_block_height = meta.block_number.as_u64();
+                    updated_state.last_fetched_block = last_fetched_block;
+                    updated_state.last_fetched_log_index = last_fetched_log_index;
+                    self.last_fetched_block = last_fetched_block;
+                    self.last_fetched_log_index = last_fetched_log_index;
 
                     // persist the state block updates (will be more fine grained in r3)
                     self.state_persistence.store_latest_state(&*updated_state);
                 }
             }
+        }
+        if block_cursor_advanced {
+            self.last_fetched_block += 1;
+            self.last_fetched_log_index = 0;
         }
         Ok(0)
     }

@@ -22,7 +22,8 @@ pub struct QueryResultState {
     pub ledger_state: CapeLedgerState,
     pub nullifiers: HashSet<Nullifier>,
     pub verifier_keys: VerifierKeySet,
-    pub last_updated_block_height: u64,
+    pub last_fetched_block: u64,
+    pub last_fetched_log_index: u64,
     pub contract_address: Option<Address>,
 
     // accumulated list of CAPE events
@@ -49,7 +50,8 @@ impl QueryResultState {
             },
             nullifiers: HashSet::new(),
             verifier_keys,
-            last_updated_block_height: 0,
+            last_fetched_block: 0u64,
+            last_fetched_log_index: 0u64,
             contract_address: None,
 
             events: Vec::new(),

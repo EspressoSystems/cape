@@ -234,9 +234,9 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
             key_scans: Default::default(),
             key_state: Default::default(),
             assets: Default::default(),
-            audit_keys: Default::default(),
-            freeze_keys: Default::default(),
-            user_keys: Default::default(),
+            viewing_accounts: Default::default(),
+            freezing_accounts: Default::default(),
+            sending_accounts: Default::default(),
         })
     }
 
@@ -548,7 +548,7 @@ mod test {
         .unwrap();
         let mut sender = CapeWallet::new(sender_backend).await.unwrap();
         sender
-            .add_user_key(sender_key.clone(), EventIndex::default())
+            .add_user_key(sender_key.clone(), "sender".into(), EventIndex::default())
             .await
             .unwrap();
 
@@ -582,7 +582,10 @@ mod test {
         .await
         .unwrap();
         let mut receiver = CapeWallet::new(receiver_backend).await.unwrap();
-        let receiver_key = receiver.generate_user_key(None).await.unwrap();
+        let receiver_key = receiver
+            .generate_user_key("receiver".into(), None)
+            .await
+            .unwrap();
 
         // Transfer from sender to receiver.
         let txn = transfer_token(
@@ -660,7 +663,10 @@ mod test {
         .await
         .unwrap();
         let mut sponsor = CapeWallet::new(sponsor_backend).await.unwrap();
-        let sponsor_key = sponsor.generate_user_key(None).await.unwrap();
+        let sponsor_key = sponsor
+            .generate_user_key("sponsor".into(), None)
+            .await
+            .unwrap();
         let sponsor_eth_addr = sponsor.eth_address().await.unwrap();
 
         let wrapper_dir = TempDir::new("cape_wallet_backend_test").unwrap();
@@ -682,7 +688,7 @@ mod test {
         // Add the faucet key to the wrapper wallet, so that they have the native tokens they need
         // to pay the fee to transfer the wrapped tokens.
         wrapper
-            .add_user_key(wrapper_key.clone(), EventIndex::default())
+            .add_user_key(wrapper_key.clone(), "wrapper".into(), EventIndex::default())
             .await
             .unwrap();
         // Wait for the wrapper to register the balance belonging to the key, from the initial grant

@@ -143,24 +143,35 @@ Each record contains the following fields:
 """
 
 [route.newkey]
-PATH = ["newkey/sending", "newkey/viewing", "newkey/freezing"]
+PATH = ["newkey/sending", "newkey/sending/description/:description",
+        "newkey/viewing", "newkey/viewing/description/:description",
+        "newkey/freezing", "newkey/freezing/description/:description"]
+":description" = "Base64"
 DOC = """
 Generate and return a key of the given type.
 """
 
 [route.importkey]
-PATH = ["importkey/freezing/:freezing", "importkey/sending/:sending", "importkey/sending/:sending/:index", "importkey/viewing/:viewing" ]
+PATH = ["importkey/freezing/:freezing", "importkey/freezing/:freezing/description/:description",
+        "importkey/sending/:sending", "importkey/sending/:sending/description/:description",
+        "importkey/sending/:sending/description/:description/scan_from/:index", "importkey/sending/:sending/scan_from/:index",
+        "importkey/viewing/:viewing", "importkey/viewing/:viewing/description/:description" ]
 ":freezing" = "TaggedBase64"
 ":sending" = "TaggedBase64"
 ":index" = "Integer"
 ":viewing" = "TaggedBase64"
+":description" = "Base64"
 DOC = """
 Import the given key into the current wallet. For sending keys, the optional scan index give a block index at which to begin scanning. If omitted, the entire ledger is scanned for transactions using the key.
 """
 
 [route.recoverkey]
-PATH = ["recoverkey/sending", "recoverkey/sending/:scan_from", "recoverkey/viewing", "recoverkey/freezing"]
+PATH = ["recoverkey/sending", "recoverkey/sending/description/:description", 
+        "recoverkey/sending/:scan_from", "recoverkey/sending/:scan_from/description/:description",
+        "recoverkey/viewing", "recoverkey/viewing/description/:description",
+        "recoverkey/freezing", "recoverkey/freezing/description/:description"]
 ":scan_from" = "Integer"
+":description" = "Base64"
 DOC = """
 Regenerate an old key in a recovered wallet.
 

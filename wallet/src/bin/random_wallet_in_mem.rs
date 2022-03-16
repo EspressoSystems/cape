@@ -99,7 +99,11 @@ async fn create_backend_and_sender_wallet<'a>(
     let mut wallet = CapeWallet::new(backend).await.unwrap();
 
     wallet
-        .add_user_key(network.sender_key.clone(), EventIndex::default())
+        .add_user_key(
+            network.sender_key.clone(),
+            "sending account".into(),
+            EventIndex::default(),
+        )
         .await
         .unwrap();
 
@@ -153,7 +157,13 @@ async fn create_wallet<'a>(
 
     let mut wallet = CapeWallet::new(backend).await.unwrap();
 
-    (wallet.generate_user_key(None).await.unwrap(), wallet)
+    (
+        wallet
+            .generate_user_key("sending account".into(), None)
+            .await
+            .unwrap(),
+        wallet,
+    )
 }
 
 fn update_balances(

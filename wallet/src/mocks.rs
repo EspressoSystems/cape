@@ -224,9 +224,9 @@ impl MockCapeNetwork {
             key_scans: Default::default(),
             key_state: Default::default(),
             assets: Default::default(),
-            audit_keys: Default::default(),
-            freeze_keys: Default::default(),
-            user_keys: Default::default(),
+            viewing_accounts: Default::default(),
+            freezing_accounts: Default::default(),
+            sending_accounts: Default::default(),
         })
     }
 

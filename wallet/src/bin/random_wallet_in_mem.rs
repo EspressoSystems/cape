@@ -11,7 +11,7 @@
 //
 // This test is still a work in progrogress.  See: https://github.com/EspressoSystems/cape/issues/649
 // for everything left before it works properly.
-#![deny(warnings)]
+// #![deny(warnings)]
 
 use async_std::sync::{Arc, Mutex};
 use cap_rust_sandbox::deploy::deploy_erc20_token;
@@ -39,9 +39,10 @@ use seahorse::txn_builder::RecordInfo;
 use seahorse::{events::EventIndex, hd::KeyTree};
 use std::collections::HashMap;
 use std::path::Path;
-use std::path::PathBuf;
+// use std::path::PathBuf;
 use structopt::StructOpt;
 use surf::Url;
+use tempdir::TempDir;
 use tracing::{event, Level};
 // use seahorse::WalletBackend;
 
@@ -52,7 +53,7 @@ struct Args {
     seed: Option<u64>,
 
     /// Path to a saved wallet, or a new directory where this wallet will be saved.
-    storage: PathBuf,
+    // storage: PathBuf,
 
     /// Spin up this many wallets to talk to each other
     num_wallets: u64,
@@ -71,17 +72,17 @@ async fn create_backend_and_sender_wallet<'a>(
     universal_param: &'a UniversalParam,
     storage: &Path,
 ) -> (NetworkInfo<'a>, CapeWallet<'a, CapeBackend<'a, ()>>) {
-    let mut loader = MockCapeWalletLoader {
-        path: storage.to_path_buf(),
-        key: KeyTree::random(rng).0,
-    };
-
     let nework_tuple = create_test_network(rng, universal_param).await;
     let network = NetworkInfo {
         sender_key: nework_tuple.0,
         relayer_url: nework_tuple.1,
         contract_address: nework_tuple.2,
         mock_eqs: nework_tuple.3,
+    };
+
+    let mut loader = MockCapeWalletLoader {
+        path: storage.to_path_buf(),
+        key: KeyTree::random(rng).0,
     };
 
     let backend = CapeBackend::new(
@@ -115,6 +116,10 @@ async fn create_backend_and_sender_wallet<'a>(
         address,
         pub_key,
     );
+    wallet
+        .sync(network.mock_eqs.lock().await.now())
+        .await
+        .unwrap();
 
     // Wait for initial balance.
     while wallet
@@ -197,10 +202,14 @@ async fn main() {
     let args = Args::from_args();
     let mut rng = ChaChaRng::seed_from_u64(args.seed.unwrap_or(0));
     let universal_param = universal_setup_for_test(2usize.pow(16), &mut rng).unwrap();
+    let tmp_dir = TempDir::new("random_in_mem_test_sender").unwrap();
     let (network, mut wallet) =
-        create_backend_and_sender_wallet(&mut rng, &universal_param, &args.storage).await;
+        create_backend_and_sender_wallet(&mut rng, &universal_param, tmp_dir.path()).await;
+    event!(Level::INFO, "Sender wallet has some initial balance");
+    fund_eth_wallet(&mut wallet).await;
+    event!(Level::INFO, "Funded Sender wallet with eth");
 
-    //sponsor some token
+    // sponsor some token
     let erc20_contract = deploy_erc20_token().await;
     sponsor_simple_token(&mut wallet, &erc20_contract)
         .await
@@ -212,13 +221,21 @@ async fn main() {
     let mut public_keys = vec![];
 
     for _i in 0..(args.num_wallets) {
-        let (k, mut w) = create_wallet(&mut rng, &universal_param, &network, &args.storage).await;
+        let tmp_dir = TempDir::new("random_in_mem_test").unwrap();
+        let (k, mut w) = create_wallet(&mut rng, &universal_param, &network, tmp_dir.path()).await;
+        event!(
+            Level::INFO,
+            "initialized new wallet\n  address: {}\n  pub key: {}",
+            k.address(),
+            k,
+        );
         fund_eth_wallet(&mut w).await;
+        event!(Level::INFO, "Funded new wallet with eth");
         // Fund the wallet with some native asset for paying fees
-        transfer_token(&mut wallet, k.address(), 100, AssetCode::native(), 1)
+        transfer_token(&mut wallet, k.address(), 2, AssetCode::native(), 1)
             .await
             .unwrap();
-
+        event!(Level::INFO, "Sent native token to new wallet");
         public_keys.push(k);
         wallets.push(w);
     }

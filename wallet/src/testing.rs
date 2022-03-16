@@ -146,6 +146,25 @@ pub async fn create_test_network<'a>(
     (sender_key, relayer_url, contract.address(), mock_eqs)
 }
 
+// pub async fn fund_eth_from<'a>(
+//     from: &mut CapeWallet<'a, CapeBackend<'a, ()>>,
+//     to: &mut CapeWallet<'a, CapeBackend<'a, ()>>,
+// ) {
+//     // Fund the Ethereum wallets for contract calls.
+//     let provider = get_provider().interval(Duration::from_millis(100u64));
+
+//     let tx = TransactionRequest::new()
+//         .to(Address::from(to.eth_address().await.unwrap()))
+//         .value(ethers::utils::parse_ether(U256::from(1)).unwrap())
+//         .from(from.eth_address().await.unwrap());
+//     provider
+//         .send_transaction(tx, None)
+//         .await
+//         .unwrap()
+//         .await
+//         .unwrap();
+// }
+
 pub async fn fund_eth_wallet<'a>(wallet: &mut CapeWallet<'a, CapeBackend<'a, ()>>) {
     // Fund the Ethereum wallets for contract calls.
     let provider = get_provider().interval(Duration::from_millis(100u64));
@@ -154,7 +173,7 @@ pub async fn fund_eth_wallet<'a>(wallet: &mut CapeWallet<'a, CapeBackend<'a, ()>
 
     let tx = TransactionRequest::new()
         .to(Address::from(wallet.eth_address().await.unwrap()))
-        .value(ethers::utils::parse_ether(U256::from(1)).unwrap())
+        .value(ethers::utils::parse_ether(U256::from(1000)).unwrap())
         .from(accounts[0]);
     provider
         .send_transaction(tx, None)
@@ -390,6 +409,14 @@ pub async fn transfer_token<'a>(
     asset_code: AssetCode,
     fee: u64,
 ) -> Result<TransactionReceipt<CapeLedger>, CapeWalletError> {
+    event!(
+        Level::INFO,
+        "Sending {} to: {} from {}.  Asset: code {}",
+        amount,
+        sender.pub_keys().await[0].address(),
+        receiver_address,
+        asset_code
+    );
     sender
         .transfer(None, &asset_code, &[(receiver_address, amount)], fee)
         .await

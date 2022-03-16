@@ -15,6 +15,7 @@ use net::UserAddress;
 use seahorse::{
     accounts::{AccountInfo, KeyPair},
     txn_builder::RecordInfo,
+    MintInfo,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -369,7 +370,7 @@ impl<Key: KeyPair> From<AccountInfo<Key>> for Account {
             assets: info
                 .assets
                 .into_iter()
-                .map(|asset| (asset.definition.code, asset))
+                .map(|asset| (asset.definition.code, AssetInfo::from(asset)))
                 .collect(),
             balance: info.balance,
             description: info.description,

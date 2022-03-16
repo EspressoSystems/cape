@@ -791,12 +791,7 @@ async fn wrap(
     let amount = bindings.get(":amount").unwrap().value.as_u64()?;
 
     Ok(wallet
-        .wrap(
-            eth_address,
-            asset_definition.into(),
-            destination.into(),
-            amount,
-        )
+        .wrap(eth_address, asset_definition, destination.into(), amount)
         .await?)
 }
 

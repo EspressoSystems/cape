@@ -107,7 +107,7 @@ mod tests {
     };
     use jf_cap::{
         keys::{AuditorKeyPair, FreezerKeyPair, UserKeyPair},
-        structs::{AssetCode, AssetPolicy},
+        structs::{AssetCode, AssetDefinition as JfAssetDefinition, AssetPolicy},
     };
     use net::{client, UserAddress};
     use seahorse::{
@@ -1713,9 +1713,9 @@ mod tests {
         let mut rng = ChaChaRng::from_seed([1; 32]);
 
         let (code, _) = AssetCode::random(&mut rng);
-        let new_asset = AssetDefinition::new(code, AssetPolicy::default()).unwrap();
+        let new_asset = JfAssetDefinition::new(code, AssetPolicy::default()).unwrap();
         let assets = VerifiedAssetLibrary::new(
-            vec![AssetDefinition::native(), new_asset.clone()],
+            vec![JfAssetDefinition::native(), new_asset.clone()],
             &test_asset_signing_key(),
         );
         let path = assets_path(&server.storage());
@@ -1742,7 +1742,7 @@ mod tests {
         let asset_info = info
             .assets
             .iter()
-            .find(|asset| asset.definition == new_asset)
+            .find(|asset| asset.definition == AssetDefinition::from(new_asset.clone()))
             .unwrap();
         assert!(asset_info.verified);
     }

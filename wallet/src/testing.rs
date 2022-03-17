@@ -320,14 +320,6 @@ pub async fn wrap_simple_token<'a>(
         .unwrap()
         .await
         .unwrap();
-    assert_eq!(
-        erc20_contract
-            .balance_of(wrapper_eth_addr.clone().into())
-            .call()
-            .await
-            .unwrap(),
-        amount.into()
-    );
 
     // Deposit some ERC20 into the CAPE contract.
     wrapper

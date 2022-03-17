@@ -16,7 +16,7 @@ use async_std::{
 };
 use cap_rust_sandbox::universal_param::UNIVERSAL_PARAM;
 use cape_wallet::{
-    backend::CapeBackend,
+    backend::{CapeBackend, CapeBackendConfig},
     wallet::{CapeWallet, CapeWalletError},
 };
 use ethers::prelude::Address;
@@ -26,6 +26,7 @@ use seahorse::loader::{Loader, LoaderMetadata};
 use serde::{Deserialize, Serialize};
 use snafu::Snafu;
 use std::path::PathBuf;
+use std::time::Duration;
 use structopt::StructOpt;
 use surf::Url;
 use tide::StatusCode;
@@ -103,6 +104,10 @@ pub struct FaucetOptions {
         default_value = "http://localhost:8545"
     )]
     pub rpc_url: Url,
+
+    /// Minimum amount of time to wait between polling requests to EQS.
+    #[structopt(long, env = "CAPE_WALLET_MIN_POLLING_DELAY", default_value = "500")]
+    pub min_polling_delay_ms: u64,
 }
 
 #[derive(Clone)]
@@ -177,13 +182,17 @@ pub async fn init_web_server(
     );
     let backend = CapeBackend::new(
         &*UNIVERSAL_PARAM,
-        opt.rpc_url.clone(),
-        opt.eqs_url.clone(),
-        opt.relayer_url.clone(),
-        opt.contract_address,
-        // We don't use an Ethereum wallet. The faucet only has to do transfers. It should not have
-        // to do any operations that go directly to the contract and thus require an ETH fee.
-        None,
+        CapeBackendConfig {
+            rpc_url: opt.rpc_url.clone(),
+            eqs_url: opt.eqs_url.clone(),
+            relayer_url: opt.relayer_url.clone(),
+            address_book_url: opt.address_book_url.clone(),
+            contract_address: opt.contract_address,
+            // We don't use an Ethereum wallet. The faucet only has to do transfers. It should not have
+            // to do any operations that go directly to the contract and thus require an ETH fee.
+            eth_mnemonic: None,
+            min_polling_delay: Duration::from_millis(opt.min_polling_delay_ms),
+        },
         &mut loader,
     )
     .await

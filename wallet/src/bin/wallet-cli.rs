@@ -34,7 +34,7 @@ use cap_rust_sandbox::{
     model::{Erc20Code, EthereumAddr},
 };
 use cape_wallet::{
-    backend::CapeBackend,
+    backend::{CapeBackend, CapeBackendConfig},
     wallet::{CapeWalletBackend, CapeWalletExt},
 };
 use ethers::prelude::Address;
@@ -55,6 +55,7 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::process::exit;
 use std::str::FromStr;
+use std::time::Duration;
 use structopt::StructOpt;
 use surf::Url;
 
@@ -73,11 +74,15 @@ impl<'a> CLI<'a> for CapeCli {
     ) -> Result<Self::Backend, WalletError<CapeLedger>> {
         block_on(CapeBackend::new(
             univ_param,
-            args.rpc_url,
-            args.eqs_url,
-            args.relayer_url,
-            args.contract_address,
-            args.eth_mnemonic,
+            CapeBackendConfig {
+                rpc_url: args.rpc_url,
+                eqs_url: args.eqs_url,
+                relayer_url: args.relayer_url,
+                address_book_url: args.address_book_url,
+                contract_address: args.contract_address,
+                eth_mnemonic: args.eth_mnemonic,
+                min_polling_delay: Duration::from_millis(args.min_polling_delay_ms),
+            },
             loader,
         ))
     }
@@ -351,6 +356,10 @@ pub struct CapeArgs {
     /// Mnemonic for a local Ethereum wallet for direct contract calls.
     #[structopt(long, env = "ETH_MNEMONIC")]
     pub eth_mnemonic: Option<String>,
+
+    /// Minimum amount of time to wait between polling requests to EQS.
+    #[structopt(long, env = "CAPE_WALLET_MIN_POLLING_DELAY", default_value = "500")]
+    pub min_polling_delay_ms: u64,
 }
 
 impl CLIArgs for CapeArgs {

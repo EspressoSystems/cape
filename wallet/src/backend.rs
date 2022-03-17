@@ -9,7 +9,7 @@
 #![deny(warnings)]
 
 use crate::{CapeWalletBackend, CapeWalletError};
-use address_book::{address_book_port, InsertPubKey};
+use address_book::InsertPubKey;
 use async_std::{
     sync::{Arc, Mutex, MutexGuard},
     task::sleep,
@@ -62,43 +62,55 @@ fn get_provider(rpc_url: &Url) -> Provider<Http> {
     Provider::<Http>::try_from(rpc_url.to_string()).expect("could not instantiate HTTP Provider")
 }
 
+pub struct CapeBackendConfig {
+    pub rpc_url: Url,
+    pub eqs_url: Url,
+    pub relayer_url: Url,
+    pub address_book_url: Url,
+    pub contract_address: Address,
+    pub eth_mnemonic: Option<String>,
+    pub min_polling_delay: Duration,
+}
+
 pub struct CapeBackend<'a, Meta: Serialize + DeserializeOwned> {
     universal_param: &'a UniversalParam,
     rpc_url: Url,
     eqs: surf::Client,
     relayer: surf::Client,
+    address_book: surf::Client,
     contract: CAPE<EthMiddleware>,
     storage: Arc<Mutex<AtomicWalletStorage<'a, CapeLedger, Meta>>>,
     key_stream: hd::KeyTree,
     eth_wallet: EthWallet<SigningKey>,
+    min_polling_delay: Duration,
 }
 
 impl<'a, Meta: Serialize + DeserializeOwned + Send + Clone + PartialEq> CapeBackend<'a, Meta> {
     pub async fn new(
         universal_param: &'a UniversalParam,
-        rpc_url: Url,
-        eqs_url: Url,
-        relayer_url: Url,
-        contract_address: Address,
-        eth_mnemonic: Option<String>,
+        config: CapeBackendConfig,
         loader: &mut impl WalletLoader<CapeLedger, Meta = Meta>,
     ) -> Result<CapeBackend<'a, Meta>, CapeWalletError> {
         let eqs: surf::Client = surf::Config::default()
-            .set_base_url(eqs_url)
+            .set_base_url(config.eqs_url)
             .try_into()
             .unwrap();
         let eqs = eqs.with(parse_error_body::<relayer::Error>);
         let relayer: surf::Client = surf::Config::default()
-            .set_base_url(relayer_url)
+            .set_base_url(config.relayer_url)
             .try_into()
             .unwrap();
         let relayer = relayer.with(parse_error_body::<relayer::Error>);
+        let address_book: surf::Client = surf::Config::default()
+            .set_base_url(config.address_book_url)
+            .try_into()
+            .unwrap();
 
         // Create an Ethereum wallet to talk to the CAPE contract.
-        let provider = get_provider(&rpc_url);
+        let provider = get_provider(&config.rpc_url);
         let chain_id = provider.get_chainid().await.unwrap().as_u64();
         // If mnemonic is set, try to use it to create a wallet, otherwise create a random wallet.
-        let eth_wallet = match eth_mnemonic {
+        let eth_wallet = match config.eth_mnemonic {
             Some(mnemonic) => MnemonicBuilder::<English>::default()
                 .phrase(mnemonic.as_str())
                 .build()
@@ -109,20 +121,22 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send + Clone + PartialEq> CapeBack
         }
         .with_chain_id(chain_id);
         let client = Arc::new(SignerMiddleware::new(provider, eth_wallet.clone()));
-        let contract = CAPE::new(contract_address, client);
+        let contract = CAPE::new(config.contract_address, client);
 
         let storage = AtomicWalletStorage::new(loader, 1024)?;
         let key_stream = storage.key_stream();
 
         Ok(Self {
             universal_param,
-            rpc_url,
+            rpc_url: config.rpc_url,
             eqs,
             relayer,
             contract,
+            address_book,
             storage: Arc::new(Mutex::new(storage)),
             key_stream,
             eth_wallet,
+            min_polling_delay: config.min_polling_delay,
         })
     }
 }
@@ -240,9 +254,6 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
     }
 
     async fn subscribe(&self, from: EventIndex, to: Option<EventIndex>) -> Self::EventStream {
-        // Sleep at least 500ms between each request. This should try to match the EQS polling
-        // frequency.
-        let min_backoff = Duration::from_millis(500);
         // To avoid overloading the EQS with spurious network traffic, we will increase the backoff
         // time as long as we are not getting any new events, up to a maximum of 1 minute.
         let max_backoff = Duration::from_secs(60);
@@ -259,8 +270,8 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
             from: from.index(EventSource::QueryService),
             to: to.map(|to| to.index(EventSource::QueryService)),
             eqs: self.eqs.clone(),
-            backoff: min_backoff,
-            min_backoff,
+            backoff: self.min_polling_delay,
+            min_backoff: self.min_polling_delay,
             max_backoff,
         };
 
@@ -321,16 +332,15 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
 
     async fn get_public_key(&self, address: &UserAddress) -> Result<UserPubKey, CapeWalletError> {
         let address_bytes = bincode::serialize(address).unwrap();
-        let mut response = surf::post(format!(
-            "http://localhost:{}/request_pubkey",
-            address_book_port()
-        ))
-        .content_type(surf::http::mime::BYTE_STREAM)
-        .body_bytes(&address_bytes)
-        .await
-        .map_err(|err| CapeWalletError::Failed {
-            msg: format!("error requesting public key: {}", err),
-        })?;
+        let mut response = self
+            .address_book
+            .post("request_pubkey")
+            .content_type(surf::http::mime::BYTE_STREAM)
+            .body_bytes(&address_bytes)
+            .await
+            .map_err(|err| CapeWalletError::Failed {
+                msg: format!("error requesting public key: {}", err),
+            })?;
         let bytes = response.body_bytes().await.unwrap();
         let pub_key: UserPubKey = bincode::deserialize(&bytes).unwrap();
         Ok(pub_key)
@@ -362,14 +372,13 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
         let pub_key_bytes = bincode::serialize(&key_pair.pub_key()).unwrap();
         let sig = key_pair.sign(&pub_key_bytes);
         let json_request = InsertPubKey { pub_key_bytes, sig };
-        match surf::post(format!(
-            "http://localhost:{}/insert_pubkey",
-            address_book_port()
-        ))
-        .content_type(surf::http::mime::JSON)
-        .body_json(&json_request)
-        .unwrap()
-        .await
+        match self
+            .address_book
+            .post("insert_pubkey")
+            .content_type(surf::http::mime::JSON)
+            .body_json(&json_request)
+            .unwrap()
+            .await
         {
             Ok(_) => Ok(()),
             Err(err) => Err(CapeWalletError::Failed {
@@ -525,7 +534,7 @@ mod test {
     async fn test_transfer() {
         let mut rng = ChaChaRng::from_seed([1u8; 32]);
         let universal_param = &*UNIVERSAL_PARAM;
-        let (sender_key, relayer_url, contract_address, _) =
+        let (sender_key, relayer_url, address_book_url, contract_address, _) =
             create_test_network(&mut rng, universal_param).await;
         let (eqs_url, _eqs_dir, _join_eqs) = spawn_eqs(contract_address).await;
 
@@ -537,11 +546,15 @@ mod test {
         };
         let sender_backend = CapeBackend::new(
             universal_param,
-            rpc_url_for_test(),
-            eqs_url.clone(),
-            relayer_url.clone(),
-            contract_address,
-            None,
+            CapeBackendConfig {
+                rpc_url: rpc_url_for_test(),
+                eqs_url: eqs_url.clone(),
+                relayer_url: relayer_url.clone(),
+                address_book_url: address_book_url.clone(),
+                contract_address,
+                eth_mnemonic: None,
+                min_polling_delay: Duration::from_millis(500),
+            },
             &mut sender_loader,
         )
         .await
@@ -573,11 +586,15 @@ mod test {
         };
         let receiver_backend = CapeBackend::new(
             universal_param,
-            rpc_url_for_test(),
-            eqs_url.clone(),
-            relayer_url.clone(),
-            contract_address,
-            None,
+            CapeBackendConfig {
+                rpc_url: rpc_url_for_test(),
+                eqs_url: eqs_url.clone(),
+                relayer_url: relayer_url.clone(),
+                address_book_url: address_book_url.clone(),
+                contract_address,
+                eth_mnemonic: None,
+                min_polling_delay: Duration::from_millis(500),
+            },
             &mut receiver_loader,
         )
         .await
@@ -642,7 +659,7 @@ mod test {
     async fn test_anonymous_erc20_transfer() {
         let mut rng = ChaChaRng::from_seed([1u8; 32]);
         let universal_param = &*UNIVERSAL_PARAM;
-        let (wrapper_key, relayer_url, contract_address, _) =
+        let (wrapper_key, relayer_url, address_book_url, contract_address, _) =
             create_test_network(&mut rng, universal_param).await;
         let (eqs_url, _eqs_dir, _join_eqs) = spawn_eqs(contract_address).await;
 
@@ -655,11 +672,15 @@ mod test {
         };
         let sponsor_backend = CapeBackend::new(
             universal_param,
-            rpc_url_for_test(),
-            eqs_url.clone(),
-            relayer_url.clone(),
-            contract_address.clone(),
-            None,
+            CapeBackendConfig {
+                rpc_url: rpc_url_for_test(),
+                eqs_url: eqs_url.clone(),
+                relayer_url: relayer_url.clone(),
+                address_book_url: address_book_url.clone(),
+                contract_address,
+                eth_mnemonic: None,
+                min_polling_delay: Duration::from_millis(500),
+            },
             &mut sponsor_loader,
         )
         .await
@@ -678,11 +699,15 @@ mod test {
         };
         let wrapper_backend = CapeBackend::new(
             universal_param,
-            rpc_url_for_test(),
-            eqs_url.clone(),
-            relayer_url.clone(),
-            contract_address.clone(),
-            None,
+            CapeBackendConfig {
+                rpc_url: rpc_url_for_test(),
+                eqs_url: eqs_url.clone(),
+                relayer_url: relayer_url.clone(),
+                address_book_url: address_book_url.clone(),
+                contract_address,
+                eth_mnemonic: None,
+                min_polling_delay: Duration::from_millis(500),
+            },
             &mut wrapper_loader,
         )
         .await

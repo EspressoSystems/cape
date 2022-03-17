@@ -183,7 +183,7 @@ mod backend {
 #[cfg(not(test))]
 mod backend {
     use super::*;
-    use cape_wallet::backend::CapeBackend;
+    use cape_wallet::backend::{CapeBackend, CapeBackendConfig};
 
     pub type Backend = CapeBackend<'static, LoaderMetadata>;
 
@@ -195,11 +195,15 @@ mod backend {
     ) -> Result<Backend, CapeWalletError> {
         CapeBackend::new(
             &*UNIVERSAL_PARAM,
-            options.rpc_url(),
-            options.eqs_url(),
-            options.relayer_url(),
-            options.contract_address(),
-            options.eth_mnemonic(),
+            CapeBackendConfig {
+                rpc_url: options.rpc_url(),
+                eqs_url: options.eqs_url(),
+                relayer_url: options.relayer_url(),
+                address_book_url: options.address_book_url(),
+                contract_address: options.contract_address(),
+                eth_mnemonic: options.eth_mnemonic(),
+                min_polling_delay: options.min_polling_delay(),
+            },
             loader,
         )
         .await

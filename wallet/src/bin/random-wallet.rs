@@ -12,7 +12,7 @@
 
 use async_std::task::sleep;
 use cap_rust_sandbox::deploy::deploy_erc20_token;
-use cape_wallet::backend::CapeBackend;
+use cape_wallet::backend::{CapeBackend, CapeBackendConfig};
 use cape_wallet::mocks::*;
 use cape_wallet::testing::create_test_network;
 use cape_wallet::testing::get_burn_ammount;
@@ -114,7 +114,7 @@ async fn main() {
     };
 
     // Everyone creates own relayer and EQS, not sure it works without EQS
-    let (sender_key, relayer_url, contract_address, _) =
+    let (sender_key, relayer_url, address_book_url, contract_address, _) =
         create_test_network(&mut rng, &universal_param).await;
     // Spawn our own EQS since we have our own relayer and contract connection.
     // TODO connect to an existing EQS.
@@ -122,11 +122,15 @@ async fn main() {
     println!("Ledger Created");
     let backend = CapeBackend::new(
         &universal_param,
-        rpc_url_for_test(),
-        eqs_url,
-        relayer_url.clone(),
-        contract_address,
-        None,
+        CapeBackendConfig {
+            rpc_url: rpc_url_for_test(),
+            eqs_url,
+            relayer_url: relayer_url.clone(),
+            address_book_url,
+            contract_address,
+            eth_mnemonic: None,
+            min_polling_delay: Duration::from_millis(500),
+        },
         &mut loader,
     )
     .await

@@ -27,6 +27,7 @@ use std::collections::hash_map::HashMap;
 use std::fs::create_dir_all;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
+use std::time::Duration;
 use structopt::StructOpt;
 use tide::http::Url;
 
@@ -104,6 +105,10 @@ pub struct NodeOpt {
     /// Mnemonic for a local Ethereum wallet for direct contract calls.
     #[structopt(long, env = "ETH_MNEMONIC")]
     pub eth_mnemonic: Option<String>,
+
+    /// Minimum amount of time to wait between polling requests to EQS.
+    #[structopt(long, env = "CAPE_WALLET_MIN_POLLING_DELAY", default_value = "500")]
+    pub min_polling_delay_ms: u64,
 }
 
 impl Default for NodeOpt {
@@ -119,6 +124,7 @@ impl Default for NodeOpt {
             contract_address: Address::default(),
             rpc_url: "http://localhost:8545".parse().unwrap(),
             eth_mnemonic: None,
+            min_polling_delay_ms: 500,
         }
     }
 }
@@ -191,12 +197,20 @@ impl NodeOpt {
         self.relayer_url.clone()
     }
 
+    pub fn address_book_url(&self) -> Url {
+        self.address_book_url.clone()
+    }
+
     pub fn contract_address(&self) -> Address {
         self.contract_address
     }
 
     pub fn eth_mnemonic(&self) -> Option<String> {
         self.eth_mnemonic.clone()
+    }
+
+    pub fn min_polling_delay(&self) -> Duration {
+        Duration::from_millis(self.min_polling_delay_ms)
     }
 }
 

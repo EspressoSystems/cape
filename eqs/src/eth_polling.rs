@@ -108,7 +108,8 @@ impl EthPolling {
 
     pub async fn check(&mut self) -> Result<u64, async_std::io::Error> {
         // do eth poll, unpack updates
-        // select cape events starting from the next block which we haven't finished processing
+        // select cape events starting from the first block for which we do not have confirmed
+        // completion of processing
         let new_event = self
             .connection
             .contract
@@ -173,11 +174,16 @@ impl EthPolling {
                         .flat_map(|txn| txn.output_commitments())
                         .collect::<Vec<_>>();
 
-                    let mut merkle_tree = {
+                    // Read from the persisted state anything that we need to compute the state
+                    // update below.
+                    let (block_id, mut merkle_tree) = {
                         let state_lock = self.query_result_state.read().await;
-                        MerkleTree::restore_from_frontier(
-                            state_lock.ledger_state.record_merkle_commitment,
-                            &state_lock.ledger_state.record_merkle_frontier,
+                        (
+                            state_lock.ledger_state.state_number,
+                            MerkleTree::restore_from_frontier(
+                                state_lock.ledger_state.record_merkle_commitment,
+                                &state_lock.ledger_state.record_merkle_frontier,
+                            ),
                         )
                     };
 
@@ -212,16 +218,12 @@ impl EthPolling {
                         })
                         .collect();
 
-                    let mut updated_state = self.query_result_state.write().await;
-
-                    //create/push pending commit to QueryResultState events
-                    let block_id = updated_state.ledger_state.state_number;
-                    updated_state.events.push(LedgerEvent::Commit {
+                    // Create events to be added to the query state.
+                    let commit_event = LedgerEvent::Commit {
                         block: cap_rust_sandbox::ledger::CapeBlock::new(pending_commit),
                         block_id,
                         state_comm: block_id + 1,
-                    });
-
+                    };
                     // Create LedgerEvent::Memos if memo signature is valid, skip otherwise
                     let mut memo_events = Vec::new();
                     let mut index = 0;
@@ -254,6 +256,9 @@ impl EthPolling {
                             };
                             memo_events.push(memo_event);
                         });
+
+                    let mut updated_state = self.query_result_state.write().await;
+                    updated_state.events.push(commit_event);
                     updated_state.events.append(&mut memo_events);
 
                     //update merkle tree

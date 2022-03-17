@@ -14,7 +14,7 @@
 #![deny(warnings)]
 
 use cap_rust_sandbox::deploy::deploy_erc20_token;
-use cape_wallet::backend::CapeBackend;
+use cape_wallet::backend::{CapeBackend, CapeBackendConfig};
 use cape_wallet::mocks::*;
 use cape_wallet::testing::get_burn_ammount;
 use cape_wallet::testing::{
@@ -40,6 +40,7 @@ use seahorse::{events::EventIndex, hd::KeyTree};
 use std::collections::HashMap;
 use std::path::Path;
 use std::path::PathBuf;
+use std::time::Duration;
 use structopt::StructOpt;
 use surf::Url;
 use tracing::{event, Level};
@@ -62,6 +63,7 @@ struct NetworkInfo {
     sender_key: UserKeyPair,
     eqs_url: Url,
     relayer_url: Url,
+    address_book_url: Url,
     contract_address: Address,
 }
 
@@ -77,21 +79,26 @@ async fn create_backend_and_sender_wallet<'a>(
     };
 
     let network_tuple = create_test_network(rng, universal_param).await;
-    let (eqs_url, _eqs_dir, _join_eqs) = spawn_eqs(network_tuple.2).await;
+    let (eqs_url, _eqs_dir, _join_eqs) = spawn_eqs(network_tuple.3).await;
     let network = NetworkInfo {
         sender_key: network_tuple.0,
         eqs_url,
         relayer_url: network_tuple.1,
-        contract_address: network_tuple.2,
+        address_book_url: network_tuple.2,
+        contract_address: network_tuple.3,
     };
 
     let backend = CapeBackend::new(
         universal_param,
-        rpc_url_for_test(),
-        network.eqs_url.clone(),
-        network.relayer_url.clone(),
-        network.contract_address,
-        None,
+        CapeBackendConfig {
+            rpc_url: rpc_url_for_test(),
+            eqs_url: network.eqs_url.clone(),
+            relayer_url: network.relayer_url.clone(),
+            address_book_url: network.address_book_url.clone(),
+            contract_address: network.contract_address,
+            eth_mnemonic: None,
+            min_polling_delay: Duration::from_millis(500),
+        },
         &mut loader,
     )
     .await
@@ -147,11 +154,15 @@ async fn create_wallet<'a>(
 
     let backend = CapeBackend::new(
         universal_param,
-        rpc_url_for_test(),
-        network.eqs_url.clone(),
-        network.relayer_url.clone(),
-        network.contract_address,
-        None,
+        CapeBackendConfig {
+            rpc_url: rpc_url_for_test(),
+            eqs_url: network.eqs_url.clone(),
+            relayer_url: network.relayer_url.clone(),
+            address_book_url: network.address_book_url.clone(),
+            contract_address: network.contract_address,
+            eth_mnemonic: None,
+            min_polling_delay: Duration::from_millis(500),
+        },
         &mut loader,
     )
     .await

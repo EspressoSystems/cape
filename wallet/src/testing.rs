@@ -13,6 +13,7 @@ use crate::mocks::*;
 use crate::wallet::CapeWalletExt;
 use crate::CapeWallet;
 use crate::CapeWalletError;
+use address_book::address_book_port;
 use address_book::init_web_server;
 use address_book::wait_for_server;
 use address_book::TransientFileStore;
@@ -91,11 +92,19 @@ pub async fn retry<Fut: Future<Output = bool>>(f: impl Fn() -> Fut) {
 pub async fn create_test_network<'a>(
     rng: &mut ChaChaRng,
     universal_param: &'a UniversalParam,
-) -> (UserKeyPair, Url, Address, Arc<Mutex<MockCapeLedger<'a>>>) {
+) -> (
+    UserKeyPair,
+    Url,
+    Url,
+    Address,
+    Arc<Mutex<MockCapeLedger<'a>>>,
+) {
     init_web_server(LevelFilter::Error, TransientFileStore::default())
         .await
         .expect("Failed to run server.");
     wait_for_server().await;
+    let address_book_url =
+        Url::parse(&format!("http://localhost:{}", address_book_port())).unwrap();
 
     // Set up a network that includes a minimal relayer, connected to a real Ethereum
     // blockchain, as well as a mock EQS which will track the blockchain in parallel, since we
@@ -168,7 +177,13 @@ pub async fn create_test_network<'a>(
     // either.
     let mock_eqs = Arc::new(Mutex::new(mock_eqs));
 
-    (sender_key, relayer_url, contract.address(), mock_eqs)
+    (
+        sender_key,
+        relayer_url,
+        address_book_url,
+        contract.address(),
+        mock_eqs,
+    )
 }
 
 pub async fn fund_eth_wallet<'a>(wallet: &mut CapeWallet<'a, CapeBackend<'a, ()>>) {

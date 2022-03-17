@@ -146,25 +146,6 @@ pub async fn create_test_network<'a>(
     (sender_key, relayer_url, contract.address(), mock_eqs)
 }
 
-// pub async fn fund_eth_from<'a>(
-//     from: &mut CapeWallet<'a, CapeBackend<'a, ()>>,
-//     to: &mut CapeWallet<'a, CapeBackend<'a, ()>>,
-// ) {
-//     // Fund the Ethereum wallets for contract calls.
-//     let provider = get_provider().interval(Duration::from_millis(100u64));
-
-//     let tx = TransactionRequest::new()
-//         .to(Address::from(to.eth_address().await.unwrap()))
-//         .value(ethers::utils::parse_ether(U256::from(1)).unwrap())
-//         .from(from.eth_address().await.unwrap());
-//     provider
-//         .send_transaction(tx, None)
-//         .await
-//         .unwrap()
-//         .await
-//         .unwrap();
-// }
-
 pub async fn fund_eth_wallet<'a>(wallet: &mut CapeWallet<'a, CapeBackend<'a, ()>>) {
     // Fund the Ethereum wallets for contract calls.
     let provider = get_provider().interval(Duration::from_millis(100u64));

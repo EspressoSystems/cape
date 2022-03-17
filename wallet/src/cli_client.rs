@@ -206,7 +206,7 @@ impl Wallet {
     }
 
     fn key_gen(key_path: &Path) -> Result<(), String> {
-        cargo_run("cli")?
+        cargo_run("wallet-cli")?
             .args([
                 "-g",
                 key_path
@@ -247,7 +247,7 @@ impl Wallet {
         if self.process.is_some() {
             return Err(String::from("wallet is already open"));
         }
-        let mut child = cargo_run("cli")?
+        let mut child = cargo_run("wallet-cli")?
             .args([
                 "--storage",
                 self.storage.path().as_os_str().to_str().ok_or_else(|| {

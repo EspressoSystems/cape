@@ -29,7 +29,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   // To update, update `pub_key` in `./rust/src/bin/faucet.rs` and run
   //
-  //     cargo run --bin faucet -p cap-rust-sandbox
+  //     cargo run --bin faucet-gen-typescript
   //
   // and copy/paste the output.
   const faucetManagerEncKey = "0x844df918a4f1ccc5893a08f05b797ec21ff47004b561c3b0e1e1f99049665d4a";

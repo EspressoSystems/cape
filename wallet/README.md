@@ -11,7 +11,7 @@ The wallet provides a REPL-style CLI for interacting with CAPE wallets using the
 start the CLI, run
 
 ```
-cargo run --release -p cape_wallet --bin cli -- [options]
+cargo run --release --bin wallet-cli -- [options]
 ```
 
 You can use `--help` to see a list of the possible values for `[options]`. A particularly useful

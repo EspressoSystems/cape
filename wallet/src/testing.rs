@@ -164,7 +164,7 @@ pub async fn fund_eth_wallet<'a>(wallet: &mut CapeWallet<'a, CapeBackend<'a, ()>
         .unwrap();
 }
 
-pub async fn get_burn_ammount<'a>(
+pub async fn get_burn_amount<'a>(
     wallet: &CapeWallet<'a, CapeBackend<'a, ()>>,
     asset: AssetCode,
 ) -> u64 {

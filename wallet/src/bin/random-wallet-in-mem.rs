@@ -17,7 +17,7 @@ use async_std::sync::{Arc, Mutex};
 use cap_rust_sandbox::deploy::deploy_erc20_token;
 use cape_wallet::backend::CapeBackend;
 use cape_wallet::mocks::*;
-use cape_wallet::testing::get_burn_ammount;
+use cape_wallet::testing::get_burn_amount;
 use cape_wallet::testing::{
     burn_token, create_test_network, find_freezable_records, freeze_token, fund_eth_wallet,
     mint_token, retry_delay, sponsor_simple_token, transfer_token, unfreeze_token,
@@ -419,7 +419,7 @@ async fn main() {
                     .await;
                 if let Some(asset) = asset {
                     event!(Level::INFO, "Can burn something");
-                    let amount = get_burn_ammount(burner, asset.definition.code).await;
+                    let amount = get_burn_amount(burner, asset.definition.code).await;
                     if amount > 0 {
                         event!(
                             Level::INFO,

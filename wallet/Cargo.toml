@@ -5,6 +5,10 @@ authors = ["Espresso Systems <hello@espressosys.com>"]
 edition = "2018"
 license = "GPL-3.0-or-later"
 
+[[bin]]
+name = "web_server"
+path = "src/web_server/web_server.rs"
+
 [dependencies]
 async-std = { version = "1.9.0", features = ["unstable", "attributes"] }
 async-trait = "0.1.51"

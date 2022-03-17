@@ -13,16 +13,11 @@
 //! and unwrapping ERC-20 tokens.
 //!
 //! The instantiation of [seahorse] for CAPE is contained in the modules [wallet] and [backend]. As
-//! entrypoints to the wallet, we provide a CLI and a web server as separate executables, but much
-//! of the functionality of the web server is included in this crate as a library, in the modules
-//! [disco], [routes], and [web].
+//! entrypoints to the wallet, we provide a CLI and a web server as separate executables.
 
 pub mod backend;
-pub mod disco;
-pub mod routes;
 pub mod ui;
 pub mod wallet;
-pub mod web;
 
 #[cfg(any(test, feature = "testing"))]
 pub mod cli_client;

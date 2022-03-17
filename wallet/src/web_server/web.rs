@@ -108,10 +108,24 @@ pub struct NodeOpt {
 
 impl Default for NodeOpt {
     fn default() -> Self {
-        Self::from_iter(Vec::<String>::new())
+        Self {
+            web_path: None,
+            api_path: None,
+            storage: None,
+            port: 60000,
+            eqs_url: "http://localhost:50087".parse().unwrap(),
+            relayer_url: "http://localhost:50077".parse().unwrap(),
+            address_book_url: "http://localhost:50078".parse().unwrap(),
+            contract_address: Address::default(),
+            rpc_url: "http://localhost:8545".parse().unwrap(),
+            eth_mnemonic: None,
+        }
     }
 }
 
+// Some of these functions are only used in non-test configs. Rather than annotate each such
+// function with #[cfg(not(test))], it's easier just to allow them to be unused.
+#[allow(dead_code)]
 impl NodeOpt {
     #[cfg(any(test, feature = "testing"))]
     pub fn for_test(port: u16, tmp_storage: PathBuf) -> Self {
@@ -368,12 +382,9 @@ async fn entry_page(req: tide::Request<WebState>) -> Result<tide::Response, tide
 /// ERC-20 asset for that same address.
 #[cfg(any(test, feature = "testing"))]
 async fn populatefortest(req: tide::Request<WebState>) -> Result<tide::Response, tide::Error> {
-    use crate::{
-        routes::{require_wallet, wallet_error},
-        testing::retry,
-        wallet::CapeWalletExt,
-    };
+    use crate::routes::{require_wallet, wallet_error};
     use cap_rust_sandbox::model::Erc20Code;
+    use cape_wallet::{testing::retry, wallet::CapeWalletExt};
     use rand::{RngCore, SeedableRng};
     use seahorse::testing::await_transaction;
 

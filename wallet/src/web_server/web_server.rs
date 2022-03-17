@@ -39,7 +39,11 @@
 //! the web server. Most of the functionality, such as API interpretation, request parsing, and
 //! route handling, is defined in the [cape_wallet] crate.
 
-use cape_wallet::web::{init_server, NodeOpt};
+mod disco;
+mod routes;
+mod web;
+
+use crate::web::{init_server, NodeOpt};
 use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
 use structopt::StructOpt;
 
@@ -53,6 +57,13 @@ async fn main() -> Result<(), std::io::Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{
+        routes::CapeAPIError,
+        web::{
+            DEFAULT_ETH_ADDR, DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR,
+            DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR, DEFAULT_WRAPPED_AMT,
+        },
+    };
     use async_std::fs;
     use cap_rust_sandbox::{
         ledger::CapeLedger,
@@ -60,13 +71,8 @@ mod tests {
     };
     use cape_wallet::{
         mocks::test_asset_signing_key,
-        routes::CapeAPIError,
         testing::{port, retry},
         ui::*,
-        web::{
-            DEFAULT_ETH_ADDR, DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR,
-            DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR, DEFAULT_WRAPPED_AMT,
-        },
     };
     use jf_cap::{
         keys::{AuditorKeyPair, FreezerKeyPair, UserKeyPair},

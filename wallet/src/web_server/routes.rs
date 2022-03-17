@@ -7,16 +7,16 @@
 
 //! Web server endpoint handlers.
 
-use crate::{
-    ui::*,
-    wallet::{CapeWalletError, CapeWalletExt},
-    web::{NodeOpt, WebState},
-};
+use crate::web::{NodeOpt, WebState};
 use async_std::fs::{read_dir, File};
 use cap_rust_sandbox::{
     ledger::CapeLedger,
     model::{Erc20Code, EthereumAddr},
     universal_param::UNIVERSAL_PARAM,
+};
+use cape_wallet::{
+    ui::*,
+    wallet::{CapeWalletError, CapeWalletExt},
 };
 use futures::{prelude::*, stream::iter};
 use jf_cap::{
@@ -92,8 +92,8 @@ pub fn server_error<E: Into<CapeAPIError>>(err: E) -> tide::Error {
 #[cfg(test)]
 mod backend {
     use super::*;
-    use crate::mocks::{MockCapeBackend, MockCapeNetwork};
     use async_std::sync::{Arc, Mutex};
+    use cape_wallet::mocks::{MockCapeBackend, MockCapeNetwork};
     use jf_cap::{
         structs::{FreezeFlag, ReceiverMemo, RecordCommitment, RecordOpening},
         MerkleTree, TransactionVerifyingKey,
@@ -183,7 +183,7 @@ mod backend {
 #[cfg(not(test))]
 mod backend {
     use super::*;
-    use crate::backend::CapeBackend;
+    use cape_wallet::backend::CapeBackend;
 
     pub type Backend = CapeBackend<'static, LoaderMetadata>;
 

@@ -52,7 +52,7 @@ pub struct NodeOpt {
 
     /// Path to store keystores and location of most recent wallet
     #[structopt(
-        long = "storage",
+        long,
         env = "CAPE_WALLET_STORAGE", // Fallback to env_var or $HOME
     )]
     pub storage: Option<PathBuf>,

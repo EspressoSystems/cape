@@ -16,7 +16,7 @@
 //!
 //! ## Usage
 //! ```
-//! cargo run --release -p cape_wallet --bin cli -- [options]
+//! cargo run --release --bin wallet-cli -- [options]
 //! ```
 //!
 //! You can use `--help` to see a list of the possible values for `[options]`. A particularly useful
@@ -599,7 +599,7 @@ mod tests {
             .output("Retype password:")?
             .command(wallet, "test_password")?
             .output("connecting...")?
-            .command(wallet, format!("load_key spend {}", key_path))?
+            .command(wallet, format!("load_key send {}", key_path))?
             .output(format!("(?P<default_addr{}>ADDR~.*)", wallet))
     }
 
@@ -752,7 +752,7 @@ mod tests {
         writeln!(sponsor_input, "gen_key viewing").unwrap();
         let viewing_key =
             match_output(&mut sponsor_output, &["(?P<viewing>AUDPUBKEY~.*)"]).get("viewing");
-        writeln!(receiver_input, "gen_key spending scan_from=start wait=true").unwrap();
+        writeln!(receiver_input, "gen_key sending scan_from=start wait=true").unwrap();
         let receiver_addr = match_output(&mut receiver_output, &["(?P<addr>ADDR~.*)"]).get("addr");
         writeln!(receiver_input, "balance 0").unwrap();
         match_output(&mut receiver_output, &[format!("{} 1000", receiver_addr)]);

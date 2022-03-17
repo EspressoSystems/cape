@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -e
+build-docker-base
+docker build .

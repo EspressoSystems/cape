@@ -21,7 +21,7 @@ use cape_wallet::{
 use futures::{prelude::*, stream::iter};
 use jf_cap::{
     keys::{AuditorPubKey, FreezerPubKey, UserKeyPair, UserPubKey},
-    structs::{AssetCode, AssetDefinition, AssetPolicy},
+    structs::{AssetCode, AssetPolicy},
 };
 use net::{server::response, TaggedBlob, UserAddress};
 use rand_chacha::ChaChaRng;
@@ -30,7 +30,7 @@ use seahorse::{
     hd::KeyTree,
     loader::{Loader, LoaderMetadata},
     txn_builder::{RecordInfo, TransactionReceipt},
-    AssetInfo, WalletBackend, WalletStorage,
+    WalletBackend, WalletStorage,
 };
 use serde::{Deserialize, Serialize};
 use snafu::Snafu;
@@ -162,7 +162,7 @@ mod backend {
         let faucet_ro = RecordOpening::new(
             rng,
             1000,
-            AssetDefinition::native(),
+            jf_cap::structs::AssetDefinition::native(),
             faucet_pub_key,
             FreezeFlag::Unfrozen,
         );
@@ -510,7 +510,7 @@ async fn known_assets(wallet: &Wallet) -> HashMap<AssetCode, AssetInfo> {
         .assets()
         .await
         .into_iter()
-        .map(|asset| (asset.definition.code, asset))
+        .map(|asset| (asset.definition.code, AssetInfo::from(asset)))
         .collect()
 }
 
@@ -787,14 +787,17 @@ async fn newasset(
                 .unwrap()
                 .value
                 .to::<EthereumAddr>()?;
-            Ok(wallet.sponsor(erc20_code, sponsor_address, policy).await?)
+            Ok(wallet
+                .sponsor(erc20_code, sponsor_address, policy)
+                .await?
+                .into())
         }
         None => {
             let description = match bindings.get(":description") {
                 Some(description) => description.value.as_base64()?,
                 _ => Vec::new(),
             };
-            Ok(wallet.define_asset(&description, policy).await?)
+            Ok(wallet.define_asset(&description, policy).await?.into())
         }
     }
 }
@@ -815,15 +818,12 @@ async fn wrap(
         .unwrap()
         .value
         .to::<EthereumAddr>()?;
-    let asset = bindings
-        .get(":asset")
-        .unwrap()
-        .value
-        .to::<AssetDefinition>()?;
+    let asset_code = bindings.get(":asset").unwrap().value.to::<AssetCode>()?;
+    let asset_definition = wallet.asset(asset_code).await.unwrap().definition;
     let amount = bindings.get(":amount").unwrap().value.as_u64()?;
 
     Ok(wallet
-        .wrap(eth_address, asset, destination.into(), amount)
+        .wrap(eth_address, asset_definition, destination.into(), amount)
         .await?)
 }
 

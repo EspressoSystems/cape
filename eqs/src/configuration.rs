@@ -31,37 +31,33 @@ pub struct EQSOptions {
     /// Path to persistence files.
     ///
     /// Persistence files will be nested under the specified directory
-    #[structopt(long = "store_path", short = "s", default_value = "")]
+    #[structopt(long, short, default_value = "")]
     pub store_path: String,
 
     /// URL for Ethers HTTP Provider
-    #[structopt(
-        long = "rpc_url",
-        env = "RPC_URL",
-        default_value = "http://localhost:8545"
-    )]
+    #[structopt(long, env = "RPC_URL", default_value = "http://localhost:8545")]
     pub rpc_url: String,
 
     /// Address for CAPE contract
-    #[structopt(long = "cape_address", env = "CAPE_ADDRESS")]
+    #[structopt(long, env = "CAPE_ADDRESS")]
     pub cape_address: Option<Address>,
 
     /// Invoke as a test-only instance; will create and use test contract
     /// Will also use a temp persistence path and not restore history
-    #[structopt(long = "temp_test_run")]
+    #[structopt(long)]
     pub temp_test_run: bool,
 
     /// Flag to reset persisted state.
-    #[structopt(long = "reset_store_state")]
+    #[structopt(long)]
     pub reset_store_state: bool,
 
     /// Polling frequency, in milliseconds, for commits to the contract.
-    #[structopt(long = "query_frequency", default_value = "500")]
+    #[structopt(long, default_value = "500")]
     pub query_frequency: u64,
 
     // Ethereum connection is specified by env variable.
     /// Web service port .
-    #[structopt(long = "eqs_port", default_value = "50087")]
+    #[structopt(long, default_value = "50087")]
     pub eqs_port: u16,
 }
 

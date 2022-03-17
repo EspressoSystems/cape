@@ -1,8 +1,8 @@
 FROM nix-base-docker
-COPY target/release/web_server /app/web_server
+COPY target/release/wallet-api /app/wallet-api
 COPY wallet/api /app/api
 COPY wallet/public /app/public
-RUN chmod +x /app/web_server
+RUN chmod +x /app/wallet-api
 WORKDIR /app/
-CMD ./web_server
+CMD ./wallet-api
 EXPOSE 60000

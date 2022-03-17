@@ -39,21 +39,16 @@ use seahorse::txn_builder::RecordInfo;
 use seahorse::{events::EventIndex, hd::KeyTree};
 use std::collections::HashMap;
 use std::path::Path;
-// use std::path::PathBuf;
 use structopt::StructOpt;
 use surf::Url;
 use tempdir::TempDir;
 use tracing::{event, Level};
-// use seahorse::WalletBackend;
 
 #[derive(StructOpt)]
 struct Args {
     /// Seed for random number generation.
     #[structopt(short, long)]
     seed: Option<u64>,
-
-    /// Path to a saved wallet, or a new directory where this wallet will be saved.
-    // storage: PathBuf,
 
     /// Spin up this many wallets to talk to each other
     num_wallets: u64,
@@ -365,6 +360,13 @@ async fn main() {
                 let record = freezable_records.choose(&mut rng).unwrap();
                 let owner_address = record.ro.pub_key.address().clone();
                 let asset_def = &record.ro.asset_def;
+                event!(
+                    Level::INFO,
+                    "Freezing Asset: {}, Amount: {}, Owner: {}",
+                    asset_def.code,
+                    record.ro.amount,
+                    owner_address
+                );
 
                 freeze_token(freezer, &asset_def.code, record.ro.amount, owner_address)
                     .await
@@ -418,13 +420,13 @@ async fn main() {
                 if let Some(asset) = asset {
                     event!(Level::INFO, "Can burn something");
                     let amount = get_burn_ammount(burner, asset.definition.code).await;
-                    event!(
-                        Level::INFO,
-                        "Buring {} asset: {}",
-                        amount,
-                        asset.definition.code
-                    );
                     if amount > 0 {
+                        event!(
+                            Level::INFO,
+                            "Buring {} asset: {}",
+                            amount,
+                            asset.definition.code
+                        );
                         burn_token(burner, asset.definition.clone(), amount)
                             .await
                             .unwrap();

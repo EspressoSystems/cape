@@ -78,7 +78,7 @@ pub async fn create_test_network<'a>(
     rng: &mut ChaChaRng,
     universal_param: &'a UniversalParam,
 ) -> (UserKeyPair, Url, Address, Arc<Mutex<MockCapeLedger<'a>>>) {
-    init_web_server(LevelFilter::Error, TransientFileStore::default())
+    init_web_server(LevelFilter::Info, TransientFileStore::default())
         .await
         .expect("Failed to run server.");
     wait_for_server().await;
@@ -193,6 +193,7 @@ pub async fn get_burn_ammount<'a>(
         .filter(|rec| rec.ro.asset_def.code == asset)
         .collect::<Vec<_>>();
     if filtered.is_empty() {
+        event!(Level::INFO, "No records to burn");
         0
     } else {
         filtered[0].ro.amount
@@ -381,6 +382,14 @@ pub async fn sponsor_simple_token<'a>(
         )
         .await
 }
+
+// pub async fn get_burn_record<'a>(burner: &mut CapeWallet<'a, CapeBackend<'a, ()>>) {
+//     let asset = iter(burner.assets().await)
+//         .filter(|asset| burner.is_wrapped_asset(asset.definition.code))
+//         .next()
+//         .await;
+//     if
+// }
 
 pub async fn burn_token<'a>(
     burner: &mut CapeWallet<'a, CapeBackend<'a, ()>>,

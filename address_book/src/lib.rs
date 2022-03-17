@@ -9,7 +9,7 @@
 use async_std::task::{sleep, spawn, JoinHandle};
 use jf_cap::keys::{UserAddress, UserPubKey};
 use jf_cap::Signature;
-// use once_cell::sync::Lazy;
+use once_cell::sync::Lazy;
 use rand::{distributions::Alphanumeric, Rng};
 use std::env;
 use std::path::PathBuf;
@@ -29,9 +29,9 @@ pub static mut LOG_LEVEL: LevelFilter = LevelFilter::Info;
 ///
 /// Accessing `LOG_LEVEL` is considered unsafe since it is a static mutable
 /// variable, but we need this to ensure that only one logger is running.
-// static LOGGING: Lazy<()> = Lazy::new(|| unsafe {
-//     tide::log::with_level(LOG_LEVEL);
-// });
+static LOGGING: Lazy<()> = Lazy::new(|| unsafe {
+    tide::log::with_level(LOG_LEVEL);
+});
 
 pub trait Store: Clone + Send + Sync {
     fn save(&self, address: &UserAddress, pub_key: &UserPubKey) -> Result<(), std::io::Error>;
@@ -170,7 +170,7 @@ pub async fn init_web_server<T: Store + 'static>(
     unsafe {
         LOG_LEVEL = log_level;
     }
-    // Lazy::force(&LOGGING);
+    Lazy::force(&LOGGING);
 
     let mut app = tide::with_state(ServerState {
         store: Arc::new(store),

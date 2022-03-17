@@ -31,6 +31,7 @@ use jf_cap::keys::UserAddress;
 use jf_cap::keys::UserPubKey;
 use jf_cap::proof::UniversalParam;
 use jf_cap::structs::AssetCode;
+use jf_cap::structs::AssetDefinition;
 use jf_cap::structs::AssetPolicy;
 use jf_cap::structs::FreezeFlag;
 use jf_cap::{keys::UserKeyPair, testing_apis::universal_setup_for_test};
@@ -206,23 +207,26 @@ fn update_balances(
 
 #[async_std::main]
 async fn main() {
-    tracing_subscriber::fmt().pretty().init();
-
+    let mut tmp_dirs: Vec<TempDir> = vec![];
     let mut balances = HashMap::new();
-
     let args = Args::from_args();
     let mut rng = ChaChaRng::seed_from_u64(args.seed.unwrap_or(0));
     let universal_param = universal_setup_for_test(2usize.pow(16), &mut rng).unwrap();
     let tmp_dir = TempDir::new("random_in_mem_test_sender").unwrap();
-    let (network, mut wallet) =
-        create_backend_and_sender_wallet(&mut rng, &universal_param, tmp_dir.path()).await;
+    tmp_dirs.push(tmp_dir);
+    let (network, mut wallet) = create_backend_and_sender_wallet(
+        &mut rng,
+        &universal_param,
+        tmp_dirs.last().unwrap().path(),
+    )
+    .await;
     event!(Level::INFO, "Sender wallet has some initial balance");
     fund_eth_wallet(&mut wallet).await;
     event!(Level::INFO, "Funded Sender wallet with eth");
 
     // sponsor some token
     let erc20_contract = deploy_erc20_token().await;
-    sponsor_simple_token(&mut wallet, &erc20_contract)
+    let sponsored_asset = sponsor_simple_token(&mut wallet, &erc20_contract)
         .await
         .unwrap();
     let address = wallet.pub_keys().await[0].address();
@@ -233,7 +237,14 @@ async fn main() {
 
     for _i in 0..(args.num_wallets) {
         let tmp_dir = TempDir::new("random_in_mem_test").unwrap();
-        let (k, mut w) = create_wallet(&mut rng, &universal_param, &network, tmp_dir.path()).await;
+        tmp_dirs.push(tmp_dir);
+        let (k, mut w) = create_wallet(
+            &mut rng,
+            &universal_param,
+            &network,
+            tmp_dirs.last().unwrap().path(),
+        )
+        .await;
         event!(
             Level::INFO,
             "initialized new wallet\n  address: {}\n  pub key: {}",
@@ -243,7 +254,7 @@ async fn main() {
         fund_eth_wallet(&mut w).await;
         event!(Level::INFO, "Funded new wallet with eth");
         // Fund the wallet with some native asset for paying fees
-        transfer_token(&mut wallet, k.address(), 2, AssetCode::native(), 1)
+        transfer_token(&mut wallet, k.address(), 200, AssetCode::native(), 1)
             .await
             .unwrap();
         event!(Level::INFO, "Sent native token to new wallet");
@@ -256,6 +267,7 @@ async fn main() {
 
         match operation {
             OperationType::Mint => {
+                event!(Level::INFO, "Minting");
                 let minter = wallets.choose_mut(&mut rng).unwrap();
                 let address = minter.pub_keys().await[0].address();
                 let asset = mint_token(minter).await.unwrap();
@@ -266,6 +278,7 @@ async fn main() {
                 );
             }
             OperationType::Transfer => {
+                event!(Level::INFO, "Transfering");
                 let sender = wallets.choose_mut(&mut rng).unwrap();
                 let sender_address = sender.pub_keys().await[0].address();
 
@@ -311,13 +324,13 @@ async fn main() {
                                 // validators. Thus we make this a warning, not an error.
                                 event!(Level::WARN, "transfer failed!");
                             }
-                            update_balances(
-                                &sender_address,
-                                &recipient_pk.address(),
-                                amount,
-                                asset,
-                                &mut balances,
-                            )
+                            // update_balances(
+                            //     &sender_address,
+                            //     &recipient_pk.address(),
+                            //     amount,
+                            //     asset,
+                            //     &mut balances,
+                            // )
                         }
                         Err(err) => {
                             event!(Level::ERROR, "error while waiting for transaction: {}", err);
@@ -329,6 +342,7 @@ async fn main() {
                 }
             }
             OperationType::Freeze => {
+                event!(Level::INFO, "Freezing");
                 let freezer = wallets.choose_mut(&mut rng).unwrap();
 
                 let freezable_records: Vec<RecordInfo> =
@@ -345,6 +359,7 @@ async fn main() {
                     .unwrap();
             }
             OperationType::Unfreeze => {
+                event!(Level::INFO, "Unfreezing");
                 let freezer = wallets.choose_mut(&mut rng).unwrap();
 
                 let freezable_records: Vec<RecordInfo> =
@@ -361,16 +376,13 @@ async fn main() {
                     .unwrap();
             }
             OperationType::Wrap => {
+                event!(Level::INFO, "Wrapping");
                 let wrapper = wallets.choose_mut(&mut rng).unwrap();
                 let wrapper_key = wrapper.pub_keys().await[0].clone();
-                let asset_def = wrapper
-                    .define_asset(&[], AssetPolicy::default())
-                    .await
-                    .expect("failed to define asset");
                 wrap_simple_token(
                     wrapper,
                     &wrapper_key.address(),
-                    asset_def,
+                    sponsored_asset.clone(),
                     &erc20_contract,
                     100,
                 )
@@ -378,16 +390,28 @@ async fn main() {
                 .unwrap();
             }
             OperationType::Burn => {
+                event!(Level::INFO, "Burning");
                 let burner = wallets.choose_mut(&mut rng).unwrap();
                 let asset = iter(burner.assets().await)
                     .filter(|asset| burner.is_wrapped_asset(asset.definition.code))
                     .next()
                     .await;
                 if let Some(asset) = asset {
+                    event!(Level::INFO, "Can burn something");
                     let amount = get_burn_ammount(burner, asset.definition.code).await;
-                    burn_token(burner, asset.definition, amount).await.unwrap();
+                    event!(
+                        Level::INFO,
+                        "Buring {} asset: {}",
+                        amount,
+                        asset.definition.code
+                    );
+                    if amount > 0 {
+                        burn_token(burner, asset.definition.clone(), amount)
+                            .await
+                            .unwrap();
+                    }
                 } else {
-                    println!("no burnable assets, skipping burn operation");
+                    event!(Level::INFO, "no burnable assets, skipping burn operation");
                 }
             }
         }

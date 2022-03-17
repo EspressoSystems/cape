@@ -14,17 +14,26 @@ use async_std::{
     sync::{Arc, Mutex},
     task::{spawn, JoinHandle},
 };
+use cap_rust_sandbox::{ledger::CapeLedger, universal_param::UNIVERSAL_PARAM};
 use cape_wallet::{
-    routes::{init_wallet, Wallet},
+    mocks::{MockCapeBackend, MockCapeNetwork},
+    routes::{wallet_error, Wallet},
     wallet::CapeWalletError,
-    web::default_storage_path,
 };
 use jf_cap::{
     keys::{UserKeyPair, UserPubKey},
-    structs::AssetCode,
+    structs::{
+        AssetCode, AssetDefinition as JfAssetDefinition, FreezeFlag, ReceiverMemo,
+        RecordCommitment, RecordOpening,
+    },
+    MerkleTree, TransactionVerifyingKey,
 };
+use key_set::{KeySet, VerifierKeySet};
+use rand::distributions::{Alphanumeric, DistString};
 use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
 use seahorse::loader::Loader;
+use seahorse::reef::Ledger;
+use seahorse::testing::MockLedger;
 use serde::{Deserialize, Serialize};
 use snafu::Snafu;
 use std::path::PathBuf;
@@ -38,11 +47,7 @@ use tide::StatusCode;
 )]
 pub struct FaucetOptions {
     /// mnemonic for the faucet wallet
-    #[structopt(
-        long = "mnemonic",
-        env = "CAPE_FAUCET_WALLET_MNEMONIC",
-        default_value = ""
-    )]
+    #[structopt(long, env = "CAPE_FAUCET_WALLET_MNEMONIC", default_value = "")]
     pub mnemonic: String,
 
     /// path to the faucet wallet
@@ -128,27 +133,96 @@ async fn request_fee_assets(
     net::server::response(&req, ())
 }
 
+pub async fn load_faucet_wallet(
+    rng: &mut ChaChaRng,
+    faucet_pub_key: UserPubKey,
+    mut loader: Loader,
+) -> Result<Wallet, tide::Error> {
+    let verif_crs = VerifierKeySet {
+        mint: TransactionVerifyingKey::Mint(
+            jf_cap::proof::mint::preprocess(&*UNIVERSAL_PARAM, CapeLedger::merkle_height())?.1,
+        ),
+        xfr: KeySet::new(
+            vec![
+                TransactionVerifyingKey::Transfer(
+                    jf_cap::proof::transfer::preprocess(
+                        &*UNIVERSAL_PARAM,
+                        2,
+                        2,
+                        CapeLedger::merkle_height(),
+                    )?
+                    .1,
+                ),
+                TransactionVerifyingKey::Transfer(
+                    jf_cap::proof::transfer::preprocess(
+                        &*UNIVERSAL_PARAM,
+                        3,
+                        3,
+                        CapeLedger::merkle_height(),
+                    )?
+                    .1,
+                ),
+            ]
+            .into_iter(),
+        )
+        .unwrap(),
+        freeze: KeySet::new(
+            vec![TransactionVerifyingKey::Freeze(
+                jf_cap::proof::freeze::preprocess(
+                    &*UNIVERSAL_PARAM,
+                    2,
+                    CapeLedger::merkle_height(),
+                )?
+                .1,
+            )]
+            .into_iter(),
+        )
+        .unwrap(),
+    };
+
+    // Set up a faucet record.
+    let mut records = MerkleTree::new(CapeLedger::merkle_height()).unwrap();
+    let faucet_ro = RecordOpening::new(
+        rng,
+        1000,
+        JfAssetDefinition::native(),
+        faucet_pub_key,
+        FreezeFlag::Unfrozen,
+    );
+    records.push(RecordCommitment::from(&faucet_ro).to_field_element());
+    let faucet_memo = ReceiverMemo::from_ro(rng, &faucet_ro, &[]).unwrap();
+
+    let mut ledger = MockLedger::new(MockCapeNetwork::new(
+        verif_crs,
+        records,
+        vec![(faucet_memo, 0)],
+    ));
+    ledger.set_block_size(1).unwrap();
+
+    let backend = MockCapeBackend::new(Arc::new(Mutex::new(ledger)), &mut loader)?;
+    let wallet = Wallet::new(backend).await.map_err(wallet_error)?;
+    Ok(wallet)
+}
+
 pub async fn init_web_server(
     opt: &FaucetOptions,
 ) -> std::io::Result<JoinHandle<std::io::Result<()>>> {
     let mut rng = ChaChaRng::from_entropy();
     let faucet_key_pair = UserKeyPair::generate(&mut rng);
+    let mut password = opt.faucet_password.clone();
+    if password.is_empty() {
+        password = Alphanumeric.sample_string(&mut rand::thread_rng(), 16);
+    }
     let loader = Loader::from_literal(
         Some(opt.mnemonic.clone().replace('-', " ")),
-        opt.faucet_password.clone(),
+        password,
         opt.faucet_wallet_path.clone(),
     );
     let state = FaucetState {
         wallet: Arc::new(Mutex::new(
-            init_wallet(
-                &mut rng,
-                faucet_key_pair.pub_key(),
-                loader,
-                true,
-                &default_storage_path(),
-            )
-            .await
-            .unwrap(),
+            load_faucet_wallet(&mut rng, faucet_key_pair.pub_key(), loader)
+                .await
+                .unwrap(),
         )),
         grant_size: opt.grant_size,
         fee_size: opt.fee_size,

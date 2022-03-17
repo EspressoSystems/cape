@@ -25,7 +25,7 @@ execute.
 ## Using the web server
 
 ```
-cargo run --release -p cape_wallet --bin web_server -- [options]
+cargo run --release --bin wallet-api -- [options]
 ```
 
 You can use `--help` to see a list of the possible values for `[options]`.

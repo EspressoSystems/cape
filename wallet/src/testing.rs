@@ -348,14 +348,6 @@ pub async fn sponsor_simple_token<'a>(
         .await
 }
 
-// pub async fn get_burn_record<'a>(burner: &mut CapeWallet<'a, CapeBackend<'a, ()>>) {
-//     let asset = iter(burner.assets().await)
-//         .filter(|asset| burner.is_wrapped_asset(asset.definition.code))
-//         .next()
-//         .await;
-//     if
-// }
-
 pub async fn burn_token<'a>(
     burner: &mut CapeWallet<'a, CapeBackend<'a, ()>>,
     cape_asset: AssetDefinition,

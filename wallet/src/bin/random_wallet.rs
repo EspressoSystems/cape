@@ -18,8 +18,8 @@ use cape_wallet::testing::create_test_network;
 use cape_wallet::testing::get_burn_ammount;
 use cape_wallet::testing::OperationType;
 use cape_wallet::testing::{
-    burn_token, find_freezable_records, freeze_token, sponsor_simple_token, unfreeze_token,
-    wrap_simple_token,
+    burn_token, find_freezable_records, freeze_token, fund_eth_wallet, sponsor_simple_token,
+    unfreeze_token, wrap_simple_token,
 };
 use cape_wallet::CapeWallet;
 use jf_cap::keys::UserKeyPair;
@@ -171,7 +171,7 @@ async fn main() {
         }
     };
 
-    // fund_eth_wallet()
+    fund_eth_wallet(&mut wallet).await;
 
     let freeze_key = wallet
         .generate_freeze_key("freezing account".into())

@@ -212,7 +212,7 @@ pub enum OperationType {
 
 impl Distribution<OperationType> for Standard {
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> OperationType {
-        match rng.gen_range(0..=4) {
+        match rng.gen_range(0..=5) {
             0 => OperationType::Transfer,
             1 => OperationType::Freeze,
             2 => OperationType::Unfreeze,
@@ -358,14 +358,6 @@ pub async fn wrap_simple_token<'a>(
         )
         .await
         .unwrap();
-    assert_eq!(
-        erc20_contract
-            .balance_of(wrapper_eth_addr.clone().into())
-            .call()
-            .await
-            .unwrap(),
-        0.into()
-    );
     Ok(())
 }
 

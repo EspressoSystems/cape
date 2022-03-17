@@ -11,7 +11,7 @@
 //
 // This test is still a work in progrogress.  See: https://github.com/EspressoSystems/cape/issues/649
 // for everything left before it works properly.
-// #![deny(warnings)]
+#![deny(warnings)]
 
 use async_std::sync::{Arc, Mutex};
 use cap_rust_sandbox::deploy::deploy_erc20_token;
@@ -31,8 +31,6 @@ use jf_cap::keys::UserAddress;
 use jf_cap::keys::UserPubKey;
 use jf_cap::proof::UniversalParam;
 use jf_cap::structs::AssetCode;
-use jf_cap::structs::AssetDefinition;
-use jf_cap::structs::AssetPolicy;
 use jf_cap::structs::FreezeFlag;
 use jf_cap::{keys::UserKeyPair, testing_apis::universal_setup_for_test};
 use rand::seq::SliceRandom;
@@ -245,6 +243,12 @@ async fn main() {
             tmp_dirs.last().unwrap().path(),
         )
         .await;
+        w.generate_freeze_key("freezing account".into())
+            .await
+            .unwrap();
+        w.generate_audit_key("viewing account".into())
+            .await
+            .unwrap();
         event!(
             Level::INFO,
             "initialized new wallet\n  address: {}\n  pub key: {}",
@@ -257,6 +261,13 @@ async fn main() {
         transfer_token(&mut wallet, k.address(), 200, AssetCode::native(), 1)
             .await
             .unwrap();
+
+        balances.insert(k.address().clone(), HashMap::new());
+        balances
+            .get_mut(&k.address())
+            .unwrap()
+            .insert(AssetCode::native(), 200);
+
         event!(Level::INFO, "Sent native token to new wallet");
         public_keys.push(k);
         wallets.push(w);
@@ -324,13 +335,13 @@ async fn main() {
                                 // validators. Thus we make this a warning, not an error.
                                 event!(Level::WARN, "transfer failed!");
                             }
-                            // update_balances(
-                            //     &sender_address,
-                            //     &recipient_pk.address(),
-                            //     amount,
-                            //     asset,
-                            //     &mut balances,
-                            // )
+                            update_balances(
+                                &sender_address,
+                                &recipient_pk.address(),
+                                amount,
+                                asset,
+                                &mut balances,
+                            )
                         }
                         Err(err) => {
                             event!(Level::ERROR, "error while waiting for transaction: {}", err);
@@ -348,6 +359,7 @@ async fn main() {
                 let freezable_records: Vec<RecordInfo> =
                     find_freezable_records(freezer, FreezeFlag::Unfrozen).await;
                 if freezable_records.is_empty() {
+                    event!(Level::INFO, "No freezable records");
                     continue;
                 }
                 let record = freezable_records.choose(&mut rng).unwrap();
@@ -365,12 +377,19 @@ async fn main() {
                 let freezable_records: Vec<RecordInfo> =
                     find_freezable_records(freezer, FreezeFlag::Frozen).await;
                 if freezable_records.is_empty() {
+                    event!(Level::INFO, "No frozen records");
                     continue;
                 }
                 let record = freezable_records.choose(&mut rng).unwrap();
                 let owner_address = record.ro.pub_key.address();
                 let asset_def = &record.ro.asset_def;
-
+                event!(
+                    Level::INFO,
+                    "Unfreezing Asset: {}, Amount: {}, Owner: {}",
+                    asset_def.code,
+                    record.ro.amount,
+                    owner_address
+                );
                 unfreeze_token(freezer, &asset_def.code, record.ro.amount, owner_address)
                     .await
                     .unwrap();

@@ -17,7 +17,7 @@ use structopt::StructOpt;
 #[structopt(name = "Minimal CAPE Relayer")]
 struct MinimalRelayerOptions {
     /// URL for Ethers provider
-    #[structopt(short = "u", long = "rpc-url", default_value = "http://localhost:8545")]
+    #[structopt(short = "u", long, default_value = "http://localhost:8545")]
     rpc_url: String,
 
     /// Address for CAPE submit

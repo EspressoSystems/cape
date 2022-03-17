@@ -46,35 +46,27 @@ pub struct FaucetOptions {
     pub mnemonic: String,
 
     /// path to the faucet wallet
-    #[structopt(long = "wallet_path", env = "CAPE_FAUCET_WALLET_PATH")]
+    #[structopt(long = "wallet-path", env = "CAPE_FAUCET_WALLET_PATH")]
     pub faucet_wallet_path: PathBuf,
 
     /// password on the faucet account keyfile
     #[structopt(
-        long = "wallet_password",
+        long = "wallet-password",
         env = "CAPE_FAUCET_WALLET_PASSWORD",
         default_value = ""
     )]
     pub faucet_password: String,
 
     /// binding port for the faucet service
-    #[structopt(
-        long = "faucet_port",
-        env = "CAPE_FAUCET_PORT",
-        default_value = "50079"
-    )]
+    #[structopt(long, env = "CAPE_FAUCET_PORT", default_value = "50079")]
     pub faucet_port: String,
 
     /// size of transfer for faucet grant
-    #[structopt(
-        long = "grant_size",
-        env = "CAPE_FAUCET_GRANT_SIZE",
-        default_value = "5000"
-    )]
+    #[structopt(long, env = "CAPE_FAUCET_GRANT_SIZE", default_value = "5000")]
     pub grant_size: u64,
 
     /// fee for faucet grant
-    #[structopt(long = "fee_size", env = "CAPE_FAUCET_FEE_SIZE", default_value = "100")]
+    #[structopt(long, env = "CAPE_FAUCET_FEE_SIZE", default_value = "100")]
     pub fee_size: u64,
 }
 

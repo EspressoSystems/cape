@@ -22,28 +22,28 @@ use structopt::StructOpt;
 )]
 struct RelayerOptions {
     /// Path to relayer configuration file.
-    // #[structopt(long = "config", short = "c", default_value = "")]
+    // #[structopt(long, short, default_value = "")]
     // config: String,
 
     // /// Flag to update config fields.
-    // #[structopt(long = "update_config_file")]
+    // #[structopt(long)]
     // update_config_file: bool,
 
     /// Path to persistence files.
     ///
     /// Persistence files will be nested under the specified directory
-    #[structopt(long = "store_path", short = "s", default_value = "")]
+    #[structopt(long, short, default_value = "")]
     store_path: String,
 
     /// Flag to reset persisted state.
-    #[structopt(long = "reset_store_state")]
+    #[structopt(long)]
     reset_state_store: bool,
     // /// Address for EQS
-    // #[structopt(long = "eqs_address", default_value = "")]
+    // #[structopt(long, default_value = "")]
     // eqs_address: String,
 
     // /// Address for CAPE submit
-    // #[structopt(long = "cape_address", default_value = "")]
+    // #[structopt(long, default_value = "")]
     // cape_address: String,
 }
 

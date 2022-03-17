@@ -21,6 +21,7 @@ use cape_wallet::{
 };
 use ethers::prelude::Address;
 use jf_cap::{keys::UserPubKey, structs::AssetCode};
+use rand::distributions::{Alphanumeric, DistString};
 use seahorse::loader::{Loader, LoaderMetadata};
 use serde::{Deserialize, Serialize};
 use snafu::Snafu;
@@ -36,11 +37,7 @@ use tide::StatusCode;
 )]
 pub struct FaucetOptions {
     /// mnemonic for the faucet wallet
-    #[structopt(
-        long = "mnemonic",
-        env = "CAPE_FAUCET_WALLET_MNEMONIC",
-        default_value = ""
-    )]
+    #[structopt(long, env = "CAPE_FAUCET_WALLET_MNEMONIC", default_value = "")]
     pub mnemonic: String,
 
     /// path to the faucet wallet
@@ -169,9 +166,13 @@ async fn request_fee_assets(
 pub async fn init_web_server(
     opt: &FaucetOptions,
 ) -> std::io::Result<JoinHandle<std::io::Result<()>>> {
-    let mut loader = Loader::from_literal(
-        Some(opt.mnemonic.clone().replace('-', " ")),
-        opt.faucet_password.clone(),
+    let mut password = opt.faucet_password.clone();
+    if password.is_empty() {
+        password = Alphanumeric.sample_string(&mut rand::thread_rng(), 16);
+    }
+    let mut loader = Loader::recovery(
+        opt.mnemonic.clone().replace('-', " "),
+        password,
         opt.faucet_wallet_path.clone(),
     );
     let backend = CapeBackend::new(

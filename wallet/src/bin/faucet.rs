@@ -213,8 +213,8 @@ pub async fn init_web_server(
     if password.is_empty() {
         password = Alphanumeric.sample_string(&mut rand::thread_rng(), 16);
     }
-    let loader = Loader::from_literal(
-        Some(opt.mnemonic.clone().replace('-', " ")),
+    let loader = Loader::recovery(
+        opt.mnemonic.clone().replace('-', " "),
         password,
         opt.faucet_wallet_path.clone(),
     );

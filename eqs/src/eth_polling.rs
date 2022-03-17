@@ -6,7 +6,7 @@
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::configuration::EQSOptions;
-use crate::query_result_state::QueryResultState;
+use crate::query_result_state::{EthEventIndex, QueryResultState};
 use crate::state_persistence::StatePersistence;
 
 use async_std::sync::{Arc, RwLock};
@@ -30,6 +30,11 @@ use seahorse::events::LedgerEvent;
 pub(crate) struct EthPolling {
     pub query_result_state: Arc<RwLock<QueryResultState>>,
     pub state_persistence: StatePersistence,
+    /// The index of the last event incorporated into `self`.
+    pub last_event_index: Option<EthEventIndex>,
+    /// The index of the earliest block which we might not have finished processing.
+    pub next_block_to_query: u64,
+    pub pending_commit_event: Vec<CapeTransition>,
     pub connection: EthConnection,
 }
 
@@ -43,16 +48,18 @@ impl EthPolling {
             return EthPolling {
                 query_result_state,
                 state_persistence,
+                pending_commit_event: Vec::new(),
+                last_event_index: None,
+                next_block_to_query: 0,
                 connection: EthConnection::for_test().await,
             };
         }
 
-        let connection = if let Some(contract_address) = opt.cape_address() {
+        let (connection, last_event_index) = if let Some(contract_address) = opt.cape_address() {
             let mut state_updater = query_result_state.write().await;
-            let next_block = state_updater.next_block;
-            let next_log_index = state_updater.next_log_index;
+            let last_reported_index = state_updater.last_reported_index;
 
-            if state_updater.contract_address.is_none() && (next_block > 0 || next_log_index > 0) {
+            if state_updater.contract_address.is_none() && last_reported_index.is_some() {
                 panic!(
                     "Persisted state is malformed! Run again with --reset_store_state to repair"
                 );
@@ -66,14 +73,35 @@ impl EthPolling {
                 state_updater.contract_address = Some(contract_address);
             }
 
-            EthConnection::from_config_for_query(&format!("{:?}", contract_address), opt.rpc_url())
+            (
+                EthConnection::from_config_for_query(
+                    &format!("{:?}", contract_address),
+                    opt.rpc_url(),
+                ),
+                last_reported_index,
+            )
         } else {
             panic!("Invocation Error! Address required unless launched for testing");
         };
 
+        let next_block_to_query = match last_event_index {
+            Some((block, _log_index)) => {
+                // We start querying from the same block that we last reported from, if there is
+                // one, just in case that there were more events in that block which we didn't have
+                // time to process before shutting down.
+                block
+            }
+            None => {
+                // If we haven't seen any events yet, start from the beginning.
+                0
+            }
+        };
         EthPolling {
             query_result_state,
             state_persistence,
+            last_event_index,
+            next_block_to_query,
+            pending_commit_event: Vec::new(),
             connection,
         }
     }
@@ -81,12 +109,11 @@ impl EthPolling {
     pub async fn check(&mut self) -> Result<u64, async_std::io::Error> {
         // do eth poll, unpack updates
         // select cape events starting from the next block which we haven't finished processing
-        let next_block = self.query_result_state.read().await.next_block;
         let new_event = self
             .connection
             .contract
             .events()
-            .from_block(next_block)
+            .from_block(self.next_block_to_query)
             .query_with_meta()
             .await
             .unwrap();
@@ -95,23 +122,18 @@ impl EthPolling {
         for (filter, meta) in new_event {
             let current_block = meta.block_number.as_u64();
             let current_log_index = meta.log_index.as_u64();
+            let current_index = (current_block, current_log_index);
 
-            // We sometimes see repeat events in spite of the `from_block(next_block)` filter. This
-            // appears to be a hardhat bug.
-            let (next_block, next_log_index) = {
-                let state = self.query_result_state.read().await;
-                (state.next_block, state.next_log_index)
-            };
-            if current_block < next_block
-                || (current_block == next_block && current_log_index < next_log_index)
-            {
-                continue;
+            // We sometimes see repeat events in spite of the `from_block(next_block_to_query)`
+            // filter. This appears to be a hardhat bug. Skip this event if it does not come after
+            // the last reported event.
+            if let Some(last_event_index) = self.last_event_index {
+                if current_index <= last_event_index {
+                    continue;
+                }
             }
             latest_block = Some(current_block);
-            // Each event handler makes updates to the `query_result_state` and then returns the
-            // handle to it, locked for writing. At the end, we advance the indices into the
-            // Ethereum event stream and persist the updated state.
-            let mut updated_state = match filter {
+            match filter {
                 CAPEEvents::BlockCommittedFilter(_) => {
                     let fetched_block_with_memos =
                         fetch_cape_block(&self.connection, meta.transaction_hash)
@@ -136,17 +158,14 @@ impl EthPolling {
                         );
                     }
 
-                    let wraps = {
-                        let mut state = self.query_result_state.write().await;
-                        mem::take(&mut state.pending_commit_event)
-                    };
+                    // Get all the wrap transitions which are pending since the last commit.
+                    let wraps = mem::take(&mut self.pending_commit_event);
 
-                    //add transactions followed by wraps to pending commit
+                    // Add transactions followed by wraps to pending commit
                     let mut transitions = Vec::new();
                     for tx in model_txns.clone() {
                         transitions.push(CapeTransition::Transaction(tx.clone()));
                     }
-
                     let pending_commit =
                         transitions.iter().cloned().chain(wraps).collect::<Vec<_>>();
                     let output_record_commitments = pending_commit
@@ -271,7 +290,11 @@ impl EthPolling {
                         });
 
                     updated_state.ledger_state.state_number += 1;
-                    updated_state
+                    updated_state.last_reported_index = Some(current_index);
+                    self.last_event_index = Some(current_index);
+
+                    // persist the state block updates (will be more fine grained in r3)
+                    self.state_persistence.store_latest_state(&*updated_state);
                 }
 
                 CAPEEvents::Erc20TokensDepositedFilter(filter_data) => {
@@ -289,9 +312,8 @@ impl EthPolling {
                         src_addr: EthereumAddr(filter_data.from.to_fixed_bytes()),
                     };
 
-                    let mut updated_state = self.query_result_state.write().await;
-                    updated_state.pending_commit_event.push(new_transition_wrap);
-                    updated_state
+                    self.pending_commit_event.push(new_transition_wrap);
+                    self.last_event_index = Some(current_index);
                 }
                 CAPEEvents::FaucetInitializedFilter(filter_data) => {
                     // Obtain record opening
@@ -362,22 +384,18 @@ impl EthPolling {
                         .transaction_id_by_hash
                         .insert(transition.commit(), (0, 0));
 
-                    updated_state.ledger_state.state_number += 1;
-                    updated_state
-                }
-            };
+                    updated_state.last_reported_index = Some(current_index);
+                    self.last_event_index = Some(current_index);
 
-            updated_state.advance(current_block, current_log_index);
-            // persist the state block updates (will be more fine grained in r3)
-            self.state_persistence.store_latest_state(&*updated_state);
+                    // persist the state block updates (will be more fine grained in r3)
+                    self.state_persistence.store_latest_state(&updated_state);
+                }
+            }
         }
 
-        // If we finished processing a block, advance the state.
+        // If we finished processing a block, query for the following block next time.
         if let Some(latest_block) = latest_block {
-            let mut updated_state = self.query_result_state.write().await;
-            updated_state.next_block = latest_block + 1;
-            updated_state.next_log_index = 0;
-            self.state_persistence.store_latest_state(&*updated_state);
+            self.next_block_to_query = latest_block + 1;
         }
 
         Ok(0)

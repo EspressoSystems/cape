@@ -8,16 +8,20 @@
 //! An implementation of [seahorse::WalletBackend] for CAPE.
 #![deny(warnings)]
 
-use crate::{mocks::MockCapeLedger, CapeWalletBackend, CapeWalletError};
-use address_book::{address_book_port, InsertPubKey};
-use async_std::sync::{Arc, Mutex, MutexGuard};
+use crate::{CapeWalletBackend, CapeWalletError};
+use address_book::InsertPubKey;
+use async_std::{
+    sync::{Arc, Mutex, MutexGuard},
+    task::sleep,
+};
 use async_trait::async_trait;
 use cap_rust_sandbox::{
     deploy::EthMiddleware,
-    ledger::{CapeLedger, CapeNullifierSet, CapeTransition},
+    ledger::{CapeLedger, CapeNullifierSet, CapeTransition, CapeTruster},
     model::{Erc20Code, EthereumAddr},
     types::{CAPE, ERC20},
 };
+use eqs::routes::CapState;
 use ethers::{
     core::k256::ecdsa::SigningKey,
     prelude::{
@@ -27,68 +31,86 @@ use ethers::{
     providers::Middleware,
     signers::Signer,
 };
-use futures::Stream;
+use futures::stream::{self, Stream, StreamExt};
 use jf_cap::{
     keys::{UserAddress, UserKeyPair, UserPubKey},
     proof::UniversalParam,
     structs::{AssetDefinition, Nullifier, RecordOpening},
-    VerKey,
+    MerkleTree, VerKey,
 };
-use net::client::parse_error_body;
+use key_set::ProverKeySet;
+use net::client::{parse_error_body, response_body};
 use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
-use reef::traits::Transaction;
+use reef::Ledger;
 use relayer::SubmitBody;
 use seahorse::{
     events::{EventIndex, EventSource, LedgerEvent},
     hd,
     loader::WalletLoader,
     persistence::AtomicWalletStorage,
-    txn_builder::{TransactionInfo, TransactionUID},
+    txn_builder::{RecordDatabase, TransactionInfo, TransactionState},
     WalletBackend, WalletState,
 };
 use serde::{de::DeserializeOwned, Serialize};
+use std::cmp::min;
 use std::convert::{TryFrom, TryInto};
 use std::pin::Pin;
+use std::time::Duration;
 use surf::Url;
 
-fn get_provider() -> Provider<Http> {
-    let rpc_url = match std::env::var("RPC_URL") {
-        Ok(val) => val,
-        Err(_) => "http://localhost:8545".to_string(),
-    };
-    Provider::<Http>::try_from(rpc_url).expect("could not instantiate HTTP Provider")
+fn get_provider(rpc_url: &Url) -> Provider<Http> {
+    Provider::<Http>::try_from(rpc_url.to_string()).expect("could not instantiate HTTP Provider")
+}
+
+pub struct CapeBackendConfig {
+    pub rpc_url: Url,
+    pub eqs_url: Url,
+    pub relayer_url: Url,
+    pub address_book_url: Url,
+    pub contract_address: Address,
+    pub eth_mnemonic: Option<String>,
+    pub min_polling_delay: Duration,
 }
 
 pub struct CapeBackend<'a, Meta: Serialize + DeserializeOwned> {
     universal_param: &'a UniversalParam,
+    rpc_url: Url,
+    eqs: surf::Client,
     relayer: surf::Client,
+    address_book: surf::Client,
     contract: CAPE<EthMiddleware>,
     storage: Arc<Mutex<AtomicWalletStorage<'a, CapeLedger, Meta>>>,
     key_stream: hd::KeyTree,
     eth_wallet: EthWallet<SigningKey>,
-    mock_eqs: Arc<Mutex<MockCapeLedger<'a>>>,
+    min_polling_delay: Duration,
 }
 
 impl<'a, Meta: Serialize + DeserializeOwned + Send + Clone + PartialEq> CapeBackend<'a, Meta> {
     pub async fn new(
         universal_param: &'a UniversalParam,
-        relayer_url: Url,
-        contract_address: Address,
-        eth_mnemonic: Option<String>,
-        mock_eqs: Arc<Mutex<MockCapeLedger<'a>>>,
+        config: CapeBackendConfig,
         loader: &mut impl WalletLoader<CapeLedger, Meta = Meta>,
     ) -> Result<CapeBackend<'a, Meta>, CapeWalletError> {
+        let eqs: surf::Client = surf::Config::default()
+            .set_base_url(config.eqs_url)
+            .try_into()
+            .unwrap();
+        let eqs = eqs.with(parse_error_body::<relayer::Error>);
         let relayer: surf::Client = surf::Config::default()
-            .set_base_url(relayer_url)
+            .set_base_url(config.relayer_url)
             .try_into()
             .unwrap();
         let relayer = relayer.with(parse_error_body::<relayer::Error>);
+        let address_book: surf::Client = surf::Config::default()
+            .set_base_url(config.address_book_url)
+            .try_into()
+            .unwrap();
 
         // Create an Ethereum wallet to talk to the CAPE contract.
-        let provider = get_provider();
+        let provider = get_provider(&config.rpc_url);
         let chain_id = provider.get_chainid().await.unwrap().as_u64();
         // If mnemonic is set, try to use it to create a wallet, otherwise create a random wallet.
-        let eth_wallet = match eth_mnemonic {
+        let eth_wallet = match config.eth_mnemonic {
             Some(mnemonic) => MnemonicBuilder::<English>::default()
                 .phrase(mnemonic.as_str())
                 .build()
@@ -99,20 +121,44 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send + Clone + PartialEq> CapeBack
         }
         .with_chain_id(chain_id);
         let client = Arc::new(SignerMiddleware::new(provider, eth_wallet.clone()));
-        let contract = CAPE::new(contract_address, client);
+        let contract = CAPE::new(config.contract_address, client);
 
         let storage = AtomicWalletStorage::new(loader, 1024)?;
         let key_stream = storage.key_stream();
 
         Ok(Self {
             universal_param,
+            rpc_url: config.rpc_url,
+            eqs,
             relayer,
             contract,
+            address_book,
             storage: Arc::new(Mutex::new(storage)),
             key_stream,
             eth_wallet,
-            mock_eqs,
+            min_polling_delay: config.min_polling_delay,
         })
+    }
+}
+
+impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeBackend<'a, Meta> {
+    async fn get_eqs<T: DeserializeOwned>(
+        &self,
+        route: impl AsRef<str>,
+    ) -> Result<T, CapeWalletError> {
+        let mut res =
+            self.eqs
+                .get(route.as_ref())
+                .send()
+                .await
+                .map_err(|err| CapeWalletError::Failed {
+                    msg: format!("eqs error: {}", err),
+                })?;
+        response_body::<T>(&mut res)
+            .await
+            .map_err(|err| CapeWalletError::Failed {
+                msg: format!("error deserializing eqs response: {}", err),
+            })
     }
 }
 
@@ -137,78 +183,164 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
         info: TransactionInfo<CapeLedger>,
     ) -> Result<(), CapeWalletError> {
         match &txn {
-            CapeTransition::Transaction(txn) => {
-                self.relayer
-                    .post("submit")
-                    .body_json(&SubmitBody {
-                        transaction: txn.clone(),
-                        memos: info.memos.clone().into_iter().flatten().collect(),
-                        signature: info.sig.clone(),
-                    })
-                    .map_err(|err| CapeWalletError::Failed {
-                        msg: err.to_string(),
-                    })?
-                    .send()
-                    .await
-                    .map_err(|err| CapeWalletError::Failed {
-                        msg: format!("relayer error: {}", err),
-                    })?;
-            }
-            CapeTransition::Wrap { .. } => {
-                return Err(CapeWalletError::Failed {
-                    msg: String::from(
-                        "invalid transaction type: wraps must be submitted using `wrap()`, not \
-                        `submit()`",
-                    ),
+            CapeTransition::Transaction(txn) => self
+                .relayer
+                .post("submit")
+                .body_json(&SubmitBody {
+                    transaction: txn.clone(),
+                    memos: info.memos.clone().into_iter().flatten().collect(),
+                    signature: info.sig.clone(),
                 })
-            }
+                .map_err(|err| CapeWalletError::Failed {
+                    msg: err.to_string(),
+                })?
+                .send()
+                .await
+                .map_err(|err| CapeWalletError::Failed {
+                    msg: format!("relayer error: {}", err),
+                })
+                // Ignore the response, which is empty
+                .map(|_| ()),
+            CapeTransition::Wrap { .. } => Err(CapeWalletError::Failed {
+                msg: String::from(
+                    "invalid transaction type: wraps must be submitted using `wrap()`, not \
+                        `submit()`",
+                ),
+            }),
+            CapeTransition::Faucet { .. } => Err(CapeWalletError::Failed {
+                msg: String::from("submitting a faucet transaction from a wallet is not supported"),
+            }),
         }
-
-        // The mock EQS is not connected to the real contract, so we have to update it by explicitly
-        // passing it the submitted transaction. This should not fail, since the submission to the
-        // contract above succeeded, and the mock EQS is supposed to be tracking the contract state.
-        let mut mock_eqs = self.mock_eqs.lock().await;
-        mock_eqs.network().store_call_data(
-            info.uid.unwrap_or_else(|| TransactionUID(txn.hash())),
-            info.memos.into_iter().flatten().collect(),
-            info.sig,
-        );
-        mock_eqs.submit(txn).unwrap();
-
-        Ok(())
     }
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////
-    // The remaining backend methods are still mocked, pending completion of the EQS
-    //
-
     async fn create(&mut self) -> Result<WalletState<'a, CapeLedger>, CapeWalletError> {
-        let state = self
-            .mock_eqs
-            .lock()
-            .await
-            .network()
-            .create_wallet(self.universal_param)?;
-        self.storage().await.create(&state).await?;
-        Ok(state)
+        let state: CapState = self.get_eqs("get_cap_state").await?;
+
+        // `records` should be _almost_ completely sparse. However, even a fully pruned Merkle tree
+        // contains the last leaf appended, but as a new wallet, we don't care about _any_ of the
+        // leaves, so make a note to forget the last one once more leaves have been appended.
+        let record_mt = MerkleTree::restore_from_frontier(
+            state.ledger.record_merkle_commitment,
+            &state.ledger.record_merkle_frontier,
+        )
+        .ok_or_else(|| CapeWalletError::Failed {
+            msg: String::from("cannot reconstruct Merkle tree from frontier"),
+        })?;
+        let merkle_leaf_to_forget = if record_mt.num_leaves() > 0 {
+            Some(record_mt.num_leaves() - 1)
+        } else {
+            None
+        };
+
+        Ok(WalletState {
+            proving_keys: Arc::new(gen_proving_keys(self.universal_param)),
+            txn_state: TransactionState {
+                validator: CapeTruster::new(state.ledger.state_number, record_mt.num_leaves()),
+                now: EventIndex::from_source(EventSource::QueryService, state.num_events as usize),
+                // Completely sparse nullifier set
+                nullifiers: Default::default(),
+                record_mt,
+                records: RecordDatabase::default(),
+                merkle_leaf_to_forget,
+                transactions: Default::default(),
+            },
+            key_scans: Default::default(),
+            key_state: Default::default(),
+            assets: Default::default(),
+            viewing_accounts: Default::default(),
+            freezing_accounts: Default::default(),
+            sending_accounts: Default::default(),
+        })
     }
 
     async fn subscribe(&self, from: EventIndex, to: Option<EventIndex>) -> Self::EventStream {
-        self.mock_eqs.lock().await.network().subscribe(from, to)
+        // To avoid overloading the EQS with spurious network traffic, we will increase the backoff
+        // time as long as we are not getting any new events, up to a maximum of 1 minute.
+        let max_backoff = Duration::from_secs(60);
+
+        struct StreamState {
+            from: usize,
+            to: Option<usize>,
+            eqs: surf::Client,
+            backoff: Duration,
+            min_backoff: Duration,
+            max_backoff: Duration,
+        }
+        let state = StreamState {
+            from: from.index(EventSource::QueryService),
+            to: to.map(|to| to.index(EventSource::QueryService)),
+            eqs: self.eqs.clone(),
+            backoff: self.min_polling_delay,
+            min_backoff: self.min_polling_delay,
+            max_backoff,
+        };
+
+        // Create a stream from a function which polls the EQS. The polling function itself returns
+        // a stream of events, since in any given request we may receive more than one event, or
+        // zero. Below, we will flatten this stream and tag each event with the event source (which
+        // is always QueryService) as required by the WalletBackend API.
+        Box::pin(
+            stream::unfold(state, |mut state| async move {
+                let req = if let Some(to) = state.to {
+                    if state.from >= to {
+                        // Returning `None` terminates the stream.
+                        return None;
+                    }
+                    state.eqs.get(&format!(
+                        "get_events_since/{}/{}",
+                        state.from,
+                        to - state.from
+                    ))
+                } else {
+                    state.eqs.get(&format!("get_events_since/{}", state.from))
+                };
+                let mut res = if let Ok(res) = req.send().await {
+                    res
+                } else {
+                    // Could not connect to EQS. Continue without updating state or yielding
+                    // any events, and retry with a backoff.
+                    sleep(state.backoff).await;
+                    state.backoff = min(state.backoff * 2, state.max_backoff);
+                    return Some((stream::iter(vec![]), state));
+                };
+                // Get events from the response. Panic if the response body does not
+                // deserialize properly, as this should never happen as long as the EQS is
+                // correct/honest.
+                let events = response_body::<Vec<LedgerEvent<CapeLedger>>>(&mut res)
+                    .await
+                    .unwrap();
+                if events.is_empty() {
+                    // If there were no new events, increase the backoff before retrying.
+                    sleep(state.backoff).await;
+                    state.backoff = min(state.backoff * 2, state.max_backoff);
+                } else {
+                    // If we succeeded in getting new events, reset the backoff.
+                    state.backoff = state.min_backoff;
+                    // Still sleep for the minimum duration, since we know there will not be
+                    // new events at least until the EQS polls again.
+                    sleep(state.backoff).await;
+                }
+
+                // Update state and yield the events we received.
+                state.from += events.len();
+                Some((stream::iter(events), state))
+            })
+            .flatten()
+            .map(|event| (event, EventSource::QueryService)),
+        )
     }
 
     async fn get_public_key(&self, address: &UserAddress) -> Result<UserPubKey, CapeWalletError> {
         let address_bytes = bincode::serialize(address).unwrap();
-        let mut response = surf::post(format!(
-            "http://localhost:{}/request_pubkey",
-            address_book_port()
-        ))
-        .content_type(surf::http::mime::BYTE_STREAM)
-        .body_bytes(&address_bytes)
-        .await
-        .map_err(|err| CapeWalletError::Failed {
-            msg: format!("error requesting public key: {}", err),
-        })?;
+        let mut response = self
+            .address_book
+            .post("request_pubkey")
+            .content_type(surf::http::mime::BYTE_STREAM)
+            .body_bytes(&address_bytes)
+            .await
+            .map_err(|err| CapeWalletError::Failed {
+                msg: format!("error requesting public key: {}", err),
+            })?;
         let bytes = response.body_bytes().await.unwrap();
         let pub_key: UserPubKey = bincode::deserialize(&bytes).unwrap();
         Ok(pub_key)
@@ -225,12 +357,12 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
             Some(ret) => Ok((ret, ())),
             None => {
                 let ret = self
-                    .mock_eqs
-                    .lock()
-                    .await
-                    .network()
-                    .nullifier_spent(nullifier);
-                nullifiers.insert(nullifier, ret);
+                    .get_eqs(format!("check_nullifier/{}", nullifier))
+                    .await?;
+                // Inserting the nullifier in the local cache is probably not a good idea here.
+                // Generally a nullifier is only useful once (when we want to spend it) so adding it
+                // to the cache after we've already queried it once is likely to grow the size of
+                // the cache without making its contents more useful.
                 Ok((ret, ()))
             }
         }
@@ -240,14 +372,13 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
         let pub_key_bytes = bincode::serialize(&key_pair.pub_key()).unwrap();
         let sig = key_pair.sign(&pub_key_bytes);
         let json_request = InsertPubKey { pub_key_bytes, sig };
-        match surf::post(format!(
-            "http://localhost:{}/insert_pubkey",
-            address_book_port()
-        ))
-        .content_type(surf::http::mime::JSON)
-        .body_json(&json_request)
-        .unwrap()
-        .await
+        match self
+            .address_book
+            .post("insert_pubkey")
+            .content_type(surf::http::mime::JSON)
+            .body_json(&json_request)
+            .unwrap()
+            .await
         {
             Ok(_) => Ok(()),
             Err(err) => Err(CapeWalletError::Failed {
@@ -281,29 +412,24 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
                     "error submitting CAPE::sponsorCapeAsset transaction: {}",
                     err
                 ),
-            })?;
-
-        // Update the mock EQS to correspond with the new state of the contract. This cannot fail
-        // since the update to the real contract succeeded.
-        self.mock_eqs
-            .lock()
-            .await
-            .network()
-            .register_erc20(asset.clone(), erc20_code, sponsor)
-            .unwrap();
-
-        Ok(())
+            })
+            // Ignore the status code.
+            .map(|_| ())
     }
 
     async fn get_wrapped_erc20_code(
         &self,
         asset: &AssetDefinition,
     ) -> Result<Erc20Code, CapeWalletError> {
-        self.mock_eqs
-            .lock()
+        Ok(self
+            .contract
+            .lookup(asset.clone().into())
+            .call()
             .await
-            .network()
-            .get_wrapped_asset(asset)
+            .map_err(|err| CapeWalletError::Failed {
+                msg: format!("error calling CAPE::lookup: {}", err),
+            })?
+            .into())
     }
 
     async fn wrap_erc20(
@@ -338,26 +464,14 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
             .await
             .map_err(|err| CapeWalletError::Failed {
                 msg: format!("error submitting CAPE::depositErc20 transaction: {}", err),
-            })?;
-
-        // The mock EQS is not connected to the real contract, so we have to update it by explicitly
-        // passing it the submitted transaction. This should not fail, since the submission to the
-        // contract above succeded, and the mock EQS is supposed to be tracking the contract state.
-        let mut mock_eqs = self.mock_eqs.lock().await;
-        mock_eqs
-            .submit(CapeTransition::Wrap {
-                ro: Box::new(ro),
-                erc20_code,
-                src_addr,
             })
-            .unwrap();
-
-        Ok(())
+            // Ignore the status code
+            .map(|_| ())
     }
 
     fn eth_client(&self) -> Result<Arc<EthMiddleware>, CapeWalletError> {
         Ok(Arc::new(SignerMiddleware::new(
-            get_provider(),
+            get_provider(&self.rpc_url),
             self.eth_wallet.clone(),
         )))
     }
@@ -370,16 +484,46 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
     }
 }
 
+const TRANSFER_KEY_SIZES: &[(usize, usize)] = &[(1, 2), (2, 2), (2, 3)];
+const FREEZE_KEY_SIZES: &[usize] = &[2, 3];
+
+fn gen_proving_keys(srs: &UniversalParam) -> ProverKeySet<key_set::OrderByOutputs> {
+    use jf_cap::proof::{freeze, mint, transfer};
+
+    ProverKeySet {
+        mint: mint::preprocess(srs, CapeLedger::merkle_height())
+            .unwrap()
+            .0,
+        xfr: TRANSFER_KEY_SIZES
+            .iter()
+            .map(|(inputs, outputs)| {
+                transfer::preprocess(srs, *inputs, *outputs, CapeLedger::merkle_height())
+                    .unwrap()
+                    .0
+            })
+            .collect(),
+        freeze: FREEZE_KEY_SIZES
+            .iter()
+            .map(|inputs| {
+                freeze::preprocess(srs, *inputs, CapeLedger::merkle_height())
+                    .unwrap()
+                    .0
+            })
+            .collect(),
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
     use crate::testing::{
-        create_test_network, sponsor_simple_token, transfer_token, wrap_simple_token,
+        create_test_network, retry, rpc_url_for_test, spawn_eqs, sponsor_simple_token,
+        transfer_token, wrap_simple_token,
     };
     use crate::{mocks::MockCapeWalletLoader, CapeWallet, CapeWalletExt};
-    use cap_rust_sandbox::deploy::deploy_erc20_token;
+    use cap_rust_sandbox::{deploy::deploy_erc20_token, universal_param::UNIVERSAL_PARAM};
     use ethers::types::{TransactionRequest, U256};
-    use jf_cap::{structs::AssetCode, testing_apis::universal_setup_for_test};
+    use jf_cap::structs::AssetCode;
     use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
     use seahorse::testing::await_transaction;
     use std::path::PathBuf;
@@ -389,9 +533,10 @@ mod test {
     #[async_std::test]
     async fn test_transfer() {
         let mut rng = ChaChaRng::from_seed([1u8; 32]);
-        let universal_param = universal_setup_for_test(2usize.pow(16), &mut rng).unwrap();
-        let (sender_key, relayer_url, contract_address, mock_eqs) =
-            create_test_network(&mut rng, &universal_param).await;
+        let universal_param = &*UNIVERSAL_PARAM;
+        let (sender_key, relayer_url, address_book_url, contract_address, _) =
+            create_test_network(&mut rng, universal_param).await;
+        let (eqs_url, _eqs_dir, _join_eqs) = spawn_eqs(contract_address).await;
 
         // Create a sender wallet and add the key pair that owns the faucet record.
         let sender_dir = TempDir::new("cape_wallet_backend_test").unwrap();
@@ -400,11 +545,16 @@ mod test {
             key: hd::KeyTree::random(&mut rng).0,
         };
         let sender_backend = CapeBackend::new(
-            &universal_param,
-            relayer_url.clone(),
-            contract_address,
-            None,
-            mock_eqs.clone(),
+            universal_param,
+            CapeBackendConfig {
+                rpc_url: rpc_url_for_test(),
+                eqs_url: eqs_url.clone(),
+                relayer_url: relayer_url.clone(),
+                address_book_url: address_book_url.clone(),
+                contract_address,
+                eth_mnemonic: None,
+                min_polling_delay: Duration::from_millis(500),
+            },
             &mut sender_loader,
         )
         .await
@@ -414,16 +564,19 @@ mod test {
             .add_user_key(sender_key.clone(), "sender".into(), EventIndex::default())
             .await
             .unwrap();
+
         // Wait for the wallet to register the balance belonging to the key, from the initial grant
-        // records. Depending on exactly when the key was added relative to the background event
-        // handling thread, the relevant events may be processed by either the event handling thread
-        // or the key scan thread, so we will wait for both of them to complete.
-        sender.sync(mock_eqs.lock().await.now()).await.unwrap();
-        sender.await_key_scan(&sender_key.address()).await.unwrap();
+        // records.
+        retry(|| async {
+            sender
+                .balance_breakdown(&sender_key.address(), &AssetCode::native())
+                .await
+                > 0
+        })
+        .await;
         let total_balance = sender
             .balance_breakdown(&sender_key.address(), &AssetCode::native())
             .await;
-        assert!(total_balance > 0);
 
         // Create an empty receiver wallet, and generating a receiving key.
         let receiver_dir = TempDir::new("cape_wallet_backend_test").unwrap();
@@ -432,11 +585,16 @@ mod test {
             key: hd::KeyTree::random(&mut rng).0,
         };
         let receiver_backend = CapeBackend::new(
-            &universal_param,
-            relayer_url.clone(),
-            contract_address,
-            None,
-            mock_eqs.clone(),
+            universal_param,
+            CapeBackendConfig {
+                rpc_url: rpc_url_for_test(),
+                eqs_url: eqs_url.clone(),
+                relayer_url: relayer_url.clone(),
+                address_book_url: address_book_url.clone(),
+                contract_address,
+                eth_mnemonic: None,
+                min_polling_delay: Duration::from_millis(500),
+            },
             &mut receiver_loader,
         )
         .await
@@ -500,9 +658,10 @@ mod test {
     #[async_std::test]
     async fn test_anonymous_erc20_transfer() {
         let mut rng = ChaChaRng::from_seed([1u8; 32]);
-        let universal_param = universal_setup_for_test(2usize.pow(16), &mut rng).unwrap();
-        let (wrapper_key, relayer_url, contract_address, mock_eqs) =
-            create_test_network(&mut rng, &universal_param).await;
+        let universal_param = &*UNIVERSAL_PARAM;
+        let (wrapper_key, relayer_url, address_book_url, contract_address, _) =
+            create_test_network(&mut rng, universal_param).await;
+        let (eqs_url, _eqs_dir, _join_eqs) = spawn_eqs(contract_address).await;
 
         // Create a wallet to sponsor an asset and a different wallet to deposit (we should be able
         // to deposit from an account other than the sponsor).
@@ -512,11 +671,16 @@ mod test {
             key: hd::KeyTree::random(&mut rng).0,
         };
         let sponsor_backend = CapeBackend::new(
-            &universal_param,
-            relayer_url.clone(),
-            contract_address.clone(),
-            None,
-            mock_eqs.clone(),
+            universal_param,
+            CapeBackendConfig {
+                rpc_url: rpc_url_for_test(),
+                eqs_url: eqs_url.clone(),
+                relayer_url: relayer_url.clone(),
+                address_book_url: address_book_url.clone(),
+                contract_address,
+                eth_mnemonic: None,
+                min_polling_delay: Duration::from_millis(500),
+            },
             &mut sponsor_loader,
         )
         .await
@@ -534,11 +698,16 @@ mod test {
             key: hd::KeyTree::random(&mut rng).0,
         };
         let wrapper_backend = CapeBackend::new(
-            &universal_param,
-            relayer_url.clone(),
-            contract_address.clone(),
-            None,
-            mock_eqs.clone(),
+            universal_param,
+            CapeBackendConfig {
+                rpc_url: rpc_url_for_test(),
+                eqs_url: eqs_url.clone(),
+                relayer_url: relayer_url.clone(),
+                address_book_url: address_book_url.clone(),
+                contract_address,
+                eth_mnemonic: None,
+                min_polling_delay: Duration::from_millis(500),
+            },
             &mut wrapper_loader,
         )
         .await
@@ -551,21 +720,20 @@ mod test {
             .await
             .unwrap();
         // Wait for the wrapper to register the balance belonging to the key, from the initial grant
-        // records. Depending on exactly when the key was added relative to the background event
-        // handling thread, the relevant events may be processed by either the event handling thread
-        // or the key scan thread, so we will wait for both of them to complete.
-        wrapper.sync(mock_eqs.lock().await.now()).await.unwrap();
-        wrapper
-            .await_key_scan(&wrapper_key.address())
-            .await
-            .unwrap();
+        // records.
+        retry(|| async {
+            wrapper
+                .balance_breakdown(&wrapper_key.address(), &AssetCode::native())
+                .await
+                > 0
+        })
+        .await;
         let total_native_balance = wrapper
             .balance_breakdown(&wrapper_key.address(), &AssetCode::native())
             .await;
-        assert!(total_native_balance > 0);
 
         // Fund the Ethereum wallets for contract calls.
-        let provider = get_provider().interval(Duration::from_millis(100u64));
+        let provider = get_provider(&rpc_url_for_test()).interval(Duration::from_millis(100u64));
         let accounts = provider.get_accounts().await.unwrap();
         assert!(!accounts.is_empty());
         for wallet in [&sponsor, &wrapper] {
@@ -610,12 +778,15 @@ mod test {
             .await
             .unwrap();
         await_transaction(&receipt, &wrapper, &[&sponsor]).await;
-        assert_eq!(
+        // Wraps are processed after transactions, so we may have to wait a short time after the
+        // transaction is completed for the wrapped balance to show up.
+        retry(|| async {
             wrapper
                 .balance_breakdown(&wrapper_key.address(), &AssetCode::native())
-                .await,
-            total_native_balance - 2
-        );
+                .await
+                == total_native_balance - 2
+        })
+        .await;
         assert_eq!(
             sponsor
                 .balance_breakdown(&sponsor_key.address(), &AssetCode::native())

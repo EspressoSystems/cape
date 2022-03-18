@@ -405,6 +405,9 @@ impl<'a> MockNetwork<'a, CapeLedger> for MockCapeNetwork {
                     src_addr,
                     ro,
                 },
+                CapeTransition::Faucet { .. } => {
+                    panic!("submitting a Faucet transaction from a wallet is not supported")
+                }
             })
             .collect();
 

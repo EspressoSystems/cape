@@ -13,15 +13,14 @@
 // for everything left before it works properly.
 #![deny(warnings)]
 
-use async_std::sync::{Arc, Mutex};
 use cap_rust_sandbox::deploy::deploy_erc20_token;
-use cape_wallet::backend::CapeBackend;
+use cape_wallet::backend::{CapeBackend, CapeBackendConfig};
 use cape_wallet::mocks::*;
 use cape_wallet::testing::get_burn_amount;
 use cape_wallet::testing::{
     burn_token, create_test_network, find_freezable_records, freeze_token, fund_eth_wallet,
-    mint_token, retry_delay, sponsor_simple_token, transfer_token, unfreeze_token,
-    wrap_simple_token, OperationType,
+    mint_token, retry_delay, rpc_url_for_test, spawn_eqs, sponsor_simple_token, transfer_token,
+    unfreeze_token, wrap_simple_token, OperationType,
 };
 use cape_wallet::CapeWallet;
 use cape_wallet::CapeWalletExt;
@@ -39,6 +38,7 @@ use seahorse::txn_builder::RecordInfo;
 use seahorse::{events::EventIndex, hd::KeyTree};
 use std::collections::HashMap;
 use std::path::Path;
+use std::time::Duration;
 use structopt::StructOpt;
 use surf::Url;
 use tempdir::TempDir;
@@ -54,11 +54,12 @@ struct Args {
     num_wallets: u64,
 }
 
-struct NetworkInfo<'a> {
+struct NetworkInfo {
     sender_key: UserKeyPair,
+    eqs_url: Url,
     relayer_url: Url,
+    address_book_url: Url,
     contract_address: Address,
-    mock_eqs: Arc<Mutex<MockCapeLedger<'a>>>,
 }
 
 #[allow(clippy::needless_lifetimes)]
@@ -66,13 +67,15 @@ async fn create_backend_and_sender_wallet<'a>(
     rng: &mut ChaChaRng,
     universal_param: &'a UniversalParam,
     storage: &Path,
-) -> (NetworkInfo<'a>, CapeWallet<'a, CapeBackend<'a, ()>>) {
-    let nework_tuple = create_test_network(rng, universal_param).await;
+) -> (NetworkInfo, CapeWallet<'a, CapeBackend<'a, ()>>) {
+    let network_tuple = create_test_network(rng, universal_param).await;
+    let (eqs_url, _eqs_dir, _join_eqs) = spawn_eqs(network_tuple.3).await;
     let network = NetworkInfo {
-        sender_key: nework_tuple.0,
-        relayer_url: nework_tuple.1,
-        contract_address: nework_tuple.2,
-        mock_eqs: nework_tuple.3,
+        sender_key: network_tuple.0,
+        eqs_url,
+        relayer_url: network_tuple.1,
+        address_book_url: network_tuple.2,
+        contract_address: network_tuple.3,
     };
 
     let mut loader = MockCapeWalletLoader {
@@ -82,10 +85,15 @@ async fn create_backend_and_sender_wallet<'a>(
 
     let backend = CapeBackend::new(
         universal_param,
-        network.relayer_url.clone(),
-        network.contract_address,
-        None,
-        network.mock_eqs.clone(),
+        CapeBackendConfig {
+            rpc_url: rpc_url_for_test(),
+            eqs_url: network.eqs_url.clone(),
+            relayer_url: network.relayer_url.clone(),
+            address_book_url: network.address_book_url.clone(),
+            contract_address: network.contract_address,
+            eth_mnemonic: None,
+            min_polling_delay: Duration::from_millis(500),
+        },
         &mut loader,
     )
     .await
@@ -115,10 +123,6 @@ async fn create_backend_and_sender_wallet<'a>(
         address,
         pub_key,
     );
-    wallet
-        .sync(network.mock_eqs.lock().await.now())
-        .await
-        .unwrap();
 
     // Wait for initial balance.
     while wallet
@@ -135,7 +139,7 @@ async fn create_backend_and_sender_wallet<'a>(
 async fn create_wallet<'a>(
     rng: &mut ChaChaRng,
     universal_param: &'a UniversalParam,
-    network: &NetworkInfo<'a>,
+    network: &NetworkInfo,
     storage: &Path,
 ) -> (UserPubKey, CapeWallet<'a, CapeBackend<'a, ()>>) {
     let mut loader = MockCapeWalletLoader {
@@ -145,10 +149,15 @@ async fn create_wallet<'a>(
 
     let backend = CapeBackend::new(
         universal_param,
-        network.relayer_url.clone(),
-        network.contract_address,
-        None,
-        network.mock_eqs.clone(),
+        CapeBackendConfig {
+            rpc_url: rpc_url_for_test(),
+            eqs_url: network.eqs_url.clone(),
+            relayer_url: network.relayer_url.clone(),
+            address_book_url: network.address_book_url.clone(),
+            contract_address: network.contract_address,
+            eth_mnemonic: None,
+            min_polling_delay: Duration::from_millis(500),
+        },
         &mut loader,
     )
     .await

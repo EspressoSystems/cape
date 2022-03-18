@@ -33,7 +33,7 @@ PATH = [ "get_all_nullifiers" ]
 DOC = "Returns the current set of nullifiers."
 
 [route.check_nullifier]
-PATH = [ "check_nullifiers/:nullifier" ]
+PATH = [ "check_nullifier/:nullifier" ]
 ":nullifier" = "TaggedBase64"
 DOC = "Returns whether the specified nullifier has been spent."
 ERROR_nullifier = "A valid nullifier is required. Nullifiers begin with NUL~."

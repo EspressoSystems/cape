@@ -82,7 +82,7 @@ jobs:
         with:
           name: wallet-webserver
           path: |
-            target/release/web_server
+            target/release/wallet-api
 
   docker:
     runs-on: self-hosted

@@ -66,6 +66,7 @@ pub enum CapeTransactionKind {
     CAP(cap::TransactionKind),
     Burn,
     Wrap,
+    Faucet,
 }
 
 impl TransactionKind for CapeTransactionKind {
@@ -106,6 +107,9 @@ pub enum CapeTransition {
         src_addr: EthereumAddr,
         ro: Box<RecordOpening>,
     },
+    Faucet {
+        ro: Box<RecordOpening>,
+    },
 }
 
 impl Committable for CapeTransition {
@@ -142,7 +146,7 @@ impl Transaction for CapeTransition {
     fn proven_nullifiers(&self) -> Vec<(Nullifier, ())> {
         let nullifiers = match self {
             Self::Transaction(txn) => txn.nullifiers(),
-            Self::Wrap { .. } => Vec::new(),
+            Self::Wrap { .. } | Self::Faucet { .. } => Vec::new(),
         };
         nullifiers.into_iter().zip(repeat(())).collect()
     }
@@ -150,13 +154,13 @@ impl Transaction for CapeTransition {
     fn output_commitments(&self) -> Vec<RecordCommitment> {
         match self {
             Self::Transaction(txn) => txn.commitments(),
-            Self::Wrap { ro, .. } => vec![RecordCommitment::from(&**ro)],
+            Self::Wrap { ro, .. } | Self::Faucet { ro, .. } => vec![RecordCommitment::from(&**ro)],
         }
     }
 
     fn output_openings(&self) -> Option<Vec<RecordOpening>> {
         match self {
-            Self::Wrap { ro, .. } => Some(vec![(**ro).clone()]),
+            Self::Wrap { ro, .. } | Self::Faucet { ro, .. } => Some(vec![(**ro).clone()]),
             _ => None,
         }
     }
@@ -174,6 +178,7 @@ impl Transaction for CapeTransition {
             },
             Self::Transaction(CapeModelTxn::Burn { .. }) => CapeTransactionKind::Burn,
             Self::Wrap { .. } => CapeTransactionKind::Wrap,
+            Self::Faucet { .. } => CapeTransactionKind::Faucet,
         }
     }
 

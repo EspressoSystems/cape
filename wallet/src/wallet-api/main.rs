@@ -24,7 +24,7 @@
 //!
 //! ### Building and running locally
 //! ```
-//! cargo run --release -p cape_wallet --bin web_server -- [options]
+//! cargo run --release --bin wallet-api -- [options]
 //! ```
 //!
 //! You can use `--help` to see a list of the possible values for `[options]`.
@@ -39,57 +39,31 @@
 //! the web server. Most of the functionality, such as API interpretation, request parsing, and
 //! route handling, is defined in the [cape_wallet] crate.
 
-use cape_wallet::web::{
-    default_api_path, default_storage_path, default_web_path, init_server, NodeOpt,
-};
+mod disco;
+mod routes;
+mod web;
+
+use crate::web::{init_server, NodeOpt};
 use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
 use structopt::StructOpt;
 
 #[async_std::main]
 async fn main() -> Result<(), std::io::Error> {
     tracing_subscriber::fmt().pretty().init();
-
-    // Initialize the web server.
-    //
-    // opt_web_path is the path to the web assets directory. If the path
-    // is empty, the default is constructed assuming Cargo is used to
-    // build the executable in the customary location.
-    //
-    // own_id is the identifier of this instance of the executable. The
-    // port the web server listens on is 60000, unless the
-    // PORT environment variable is set.
-
-    // Take the command line option for the web asset directory path
-    // provided it is not empty. Otherwise, construct the default from
-    // the executable path.
-    let api_path = NodeOpt::from_args()
-        .api_path
-        .unwrap_or_else(default_api_path);
-    let web_path = NodeOpt::from_args()
-        .web_path
-        .unwrap_or_else(default_web_path);
-    let storage = NodeOpt::from_args()
-        .storage
-        .unwrap_or_else(default_storage_path);
-
-    // We use 60000 by default, chosen because it differs from the default ports for the EQS and the
-    // Espresso query service.
-    let port = std::env::var("PORT").unwrap_or_else(|_| String::from("60000"));
-    init_server(
-        ChaChaRng::from_entropy(),
-        api_path,
-        web_path,
-        port.parse().unwrap(),
-        storage,
-    )?
-    .await?;
-
+    init_server(ChaChaRng::from_entropy(), &NodeOpt::from_args())?.await?;
     Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{
+        routes::CapeAPIError,
+        web::{
+            DEFAULT_ETH_ADDR, DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR,
+            DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR, DEFAULT_WRAPPED_AMT,
+        },
+    };
     use async_std::fs;
     use cap_rust_sandbox::{
         ledger::CapeLedger,
@@ -97,13 +71,8 @@ mod tests {
     };
     use cape_wallet::{
         mocks::test_asset_signing_key,
-        routes::{assets_path, CapeAPIError},
-        testing::port,
+        testing::{port, retry},
         ui::*,
-        web::{
-            retry, DEFAULT_ETH_ADDR, DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR,
-            DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR, DEFAULT_WRAPPED_AMT,
-        },
     };
     use jf_cap::{
         keys::{AuditorKeyPair, FreezerKeyPair, UserKeyPair},
@@ -135,6 +104,7 @@ mod tests {
     struct TestServer {
         client: surf::Client,
         temp_dir: TempDir,
+        options: NodeOpt,
     }
 
     impl TestServer {
@@ -147,14 +117,8 @@ mod tests {
             // ends. This is ok, since each test's server task should be idle once
             // the test is over.
             let temp_dir = TempDir::new("test_wallet_api_storage").unwrap();
-            init_server(
-                ChaChaRng::from_seed([42; 32]),
-                default_api_path(),
-                default_web_path(),
-                port,
-                temp_dir.path().to_path_buf(),
-            )
-            .unwrap();
+            let options = NodeOpt::for_test(port as u16, temp_dir.path().to_path_buf());
+            init_server(ChaChaRng::from_seed([42; 32]), &options).unwrap();
             Self::wait(port).await;
 
             let client: surf::Client = surf::Config::new()
@@ -165,6 +129,7 @@ mod tests {
             Self {
                 client: client.with(client::parse_error_body::<CapeAPIError>),
                 temp_dir,
+                options,
             }
         }
 
@@ -179,15 +144,15 @@ mod tests {
                 .expect_err(&format!("{} succeeded without an open wallet", path));
         }
 
-        fn storage(&self) -> &Path {
-            self.temp_dir.path()
-        }
-
         fn path(&self) -> String {
             let path = [self.temp_dir.path(), Path::new("keystores/test_wallet")]
                 .iter()
                 .collect::<PathBuf>();
             fmt_path(&path)
+        }
+
+        fn options(&self) -> &NodeOpt {
+            &self.options
         }
 
         async fn wait(port: u64) {
@@ -1718,7 +1683,7 @@ mod tests {
             vec![JfAssetDefinition::native(), new_asset.clone()],
             &test_asset_signing_key(),
         );
-        let path = assets_path(&server.storage());
+        let path = server.options().assets_path();
         fs::write(&path, &bincode::serialize(&assets).unwrap())
             .await
             .unwrap();

@@ -415,7 +415,7 @@ contract functions called in the tests.
 
 Run
 
-    cargo run --release --bin gas_usage
+    cargo run --release --bin gas-usage
 
 To show gas usage of sending various notes to the contract.
 

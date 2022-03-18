@@ -238,11 +238,11 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
 
     /// Determine if an asset is a wrapped asset (as opposed to a domestic CAPE asset).
     async fn is_wrapped_asset(&self, asset: AssetCode) -> bool {
-        let state = self.lock().await;
         let definition = match self.asset(asset).await {
             Some(asset) => asset.definition,
             None => return false,
         };
+        let state = self.lock().await;
         state
             .backend()
             .get_wrapped_erc20_code(&definition)

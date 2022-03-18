@@ -16,13 +16,21 @@ use seahorse::events::LedgerEvent;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet, VecDeque};
 
+/// The index of a single event in the Ethereum event stream.
+///
+/// Events are indexed using `(block_number, log_index)`, where `block_number` is the index of the
+/// block containing the event, and `log_index` is the index of the event within the block. For any
+/// event indices `i1: EthEventIndex` and `i2: EthEventIndex`, the event with index `i1` comes
+/// before the event with index `i2` chronologically if and only if `i1 < i2`.
+pub type EthEventIndex = (u64, u64);
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct QueryResultState {
     // latest state, primary source
     pub ledger_state: CapeLedgerState,
     pub nullifiers: HashSet<Nullifier>,
     pub verifier_keys: VerifierKeySet,
-    pub last_updated_block_height: u64,
+    pub last_reported_index: Option<EthEventIndex>,
     pub contract_address: Option<Address>,
 
     // accumulated list of CAPE events
@@ -49,7 +57,7 @@ impl QueryResultState {
             },
             nullifiers: HashSet::new(),
             verifier_keys,
-            last_updated_block_height: 0,
+            last_reported_index: None,
             contract_address: None,
 
             events: Vec::new(),

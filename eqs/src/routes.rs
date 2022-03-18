@@ -30,6 +30,7 @@ pub enum ApiRouteKey {
     get_events_since,
     get_transaction,
     get_transaction_by_hash,
+    healthcheck,
 }
 
 /// Verify that every variant of enum ApiRouteKey is defined in api.toml
@@ -171,6 +172,19 @@ pub async fn get_transaction_by_hash(
     }
 }
 
+/// Return a JSON expression with status 200 indicating the server
+/// is up and running. The JSON expression is simply,
+///    {"status": "available"}
+/// When the server is running but unable to process requests
+/// normally, a response with status 503 and payload {"status":
+/// "unavailable"} should be added.
+pub async fn healthcheck() -> Result<tide::Response, tide::Error> {
+    Ok(tide::Response::builder(200)
+        .content_type(tide::http::mime::JSON)
+        .body(tide::prelude::json!({"status": "available"}))
+        .build())
+}
+
 pub async fn dispatch_url(
     req: tide::Request<WebState>,
     route_pattern: &str,
@@ -195,5 +209,6 @@ pub async fn dispatch_url(
         ApiRouteKey::get_transaction_by_hash => {
             response(&req, get_transaction_by_hash(bindings, query_state).await?)
         }
+        ApiRouteKey::healthcheck => Ok(healthcheck().await?),
     }
 }

@@ -37,6 +37,10 @@ HEADING_DESCRIPTION = "Description"
 PATH = ["getmnemonic"]
 DOC = "Generate a random mnemonic phrase."
 
+[route.healthcheck]
+PATH = ["healthcheck"]
+DOC = "Responds with JSON {\"status\": \"available\"}."
+
 [route.newwallet]
 PATH = ["newwallet/:mnemonic/:password", "newwallet/:mnemonic/:password/path/:path", "newwallet/:mnemonic/:password/name/:name"]
 ":password" = "Literal"

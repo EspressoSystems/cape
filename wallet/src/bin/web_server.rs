@@ -1752,28 +1752,30 @@ mod tests {
         let server = TestServer::new().await;
         let mut rng = ChaChaRng::from_seed([1; 32]);
 
-        let keypair_send_addr = UserKeyPair::generate(&mut rng);
-        let keypair_send_key = UserKeyPair::generate(&mut rng);
-        let keypair_view = AuditorKeyPair::generate(&mut rng);
-        let keypair_freeze = FreezerKeyPair::generate(&mut rng);
-
         // Should fail if a wallet is not already open.
         server
             .requires_wallet::<PrivateKey>(&format!(
                 "getprivatekey/{}",
-                keypair_send_addr.address(),
+                UserAddress::from(UserKeyPair::generate(&mut rng).address()),
             ))
             .await;
         server
-            .requires_wallet::<PrivateKey>(
-                &format!("getprivatekey/{}", keypair_send_key.pub_key(),),
-            )
+            .requires_wallet::<PrivateKey>(&format!(
+                "getprivatekey/{}",
+                UserKeyPair::generate(&mut rng).pub_key(),
+            ))
             .await;
         server
-            .requires_wallet::<PrivateKey>(&format!("getprivatekey/{}", keypair_view.pub_key(),))
+            .requires_wallet::<PrivateKey>(&format!(
+                "getprivatekey/{}",
+                AuditorKeyPair::generate(&mut rng).pub_key(),
+            ))
             .await;
         server
-            .requires_wallet::<PrivateKey>(&format!("getprivatekey/{}", keypair_freeze.pub_key(),))
+            .requires_wallet::<PrivateKey>(&format!(
+                "getprivatekey/{}",
+                FreezerKeyPair::generate(&mut rng).pub_key(),
+            ))
             .await;
 
         // Now open a wallet.
@@ -1786,23 +1788,38 @@ mod tests {
             .await
             .unwrap();
 
+        //Create keys
+        let sending_key = match server.get::<PubKey>("newkey/sending").await.unwrap() {
+            PubKey::Sending(key) => key,
+            key => panic!("Expected PubKey::Sending, found {:?}", key),
+        };
+        let viewing_key = match server.get::<PubKey>("newkey/viewing").await.unwrap() {
+            PubKey::Viewing(key) => key,
+            key => panic!("Expected PubKey::Viewing, found {:?}", key),
+        };
+        let freezing_key = match server.get::<PubKey>("newkey/freezing").await.unwrap() {
+            PubKey::Freezing(key) => key,
+            key => panic!("Expected PubKey::Freezing, found {:?}", key),
+        };
+
+        // Get the private keys
         let sending_key_addr = server
             .get::<PrivateKey>(&format!(
                 "getprivatekey/{}",
-                UserAddress(keypair_send_addr.address()),
+                UserAddress::from(sending_key.address()),
             ))
             .await
             .unwrap();
         let sending_key_pub = server
-            .get::<PrivateKey>(&format!("getprivatekey/{}", keypair_send_key.pub_key(),))
+            .get::<PrivateKey>(&format!("getprivatekey/{}", sending_key,))
             .await
             .unwrap();
         let auditor_key = server
-            .get::<PrivateKey>(&format!("getprivatekey/{}", keypair_view.pub_key(),))
+            .get::<PrivateKey>(&format!("getprivatekey/{}", viewing_key,))
             .await
             .unwrap();
         let freezer_key = server
-            .get::<PrivateKey>(&format!("getprivatekey/{}", keypair_freeze.pub_key(),))
+            .get::<PrivateKey>(&format!("getprivatekey/{}", freezing_key,))
             .await
             .unwrap();
         server
@@ -1810,9 +1827,10 @@ mod tests {
             .await
             .expect_err("getprivatekey succeeded with invalid address");
 
+        //check that keys are correct
         match sending_key_addr {
             PrivateKey::Sending(key) => {
-                assert_eq!(key.pub_key(), keypair_send_addr.pub_key());
+                assert_eq!(key.pub_key(), sending_key);
             }
             _ => {
                 panic!("Expected PrivateKey::Sending, found {:?}", sending_key_addr);
@@ -1820,7 +1838,7 @@ mod tests {
         }
         match sending_key_pub {
             PrivateKey::Sending(key) => {
-                assert_eq!(key.pub_key(), keypair_send_key.pub_key());
+                assert_eq!(key.pub_key(), sending_key);
             }
             _ => {
                 panic!("Expected PrivateKey::Sending, found {:?}", sending_key_pub);
@@ -1828,7 +1846,7 @@ mod tests {
         }
         match auditor_key {
             PrivateKey::Viewing(key) => {
-                assert_eq!(key.pub_key(), keypair_view.pub_key());
+                assert_eq!(key.pub_key(), viewing_key);
             }
             _ => {
                 panic!("Expected PrivateKey::Viewing, found {:?}", auditor_key);
@@ -1836,7 +1854,7 @@ mod tests {
         }
         match freezer_key {
             PrivateKey::Freezing(key) => {
-                assert_eq!(key.pub_key(), keypair_freeze.pub_key());
+                assert_eq!(key.pub_key(), freezing_key);
             }
             _ => {
                 panic!("Expected PrivateKey::Freezing, found {:?}", freezer_key);

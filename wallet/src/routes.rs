@@ -1009,7 +1009,10 @@ async fn getprivatekey(
     let wallet = require_wallet(wallet)?;
     let address = bindings[":address"].value.clone();
     match address.as_identifier()?.tag().as_str() {
-        "ADDR" => match wallet.get_user_private_key(&address.to()?).await {
+        "ADDR" => match wallet
+            .get_user_private_key(&address.to::<UserAddress>()?.0)
+            .await
+        {
             Ok(keypair) => Ok(PrivateKey::Sending(keypair)),
             Err(msg) => Err(wallet_error(msg)),
         },

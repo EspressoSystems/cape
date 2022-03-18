@@ -348,3 +348,10 @@ PATH = ["transaction/list", "transaction/list/:from/:count", "transaction/status
 DOC = """
 List transactions, poll the status of a given transaction, or await events for a given transaction.
 """
+
+[route.getprivatekey]
+PATH = ["getprivatekey/:address"]
+":address" = "TaggedBase64"
+DOC = """
+Get the private key of an account.
+"""

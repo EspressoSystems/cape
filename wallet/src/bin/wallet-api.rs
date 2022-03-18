@@ -90,6 +90,7 @@ async fn main() -> Result<(), std::io::Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ark_serialize::CanonicalDeserialize;
     use async_std::fs;
     use cap_rust_sandbox::{
         ledger::CapeLedger,
@@ -111,7 +112,7 @@ mod tests {
     };
     use net::{client, UserAddress};
     use seahorse::{
-        asset_library::VerifiedAssetLibrary,
+        asset_library::{Icon, VerifiedAssetLibrary},
         hd::{KeyTree, Mnemonic},
         txn_builder::{RecordInfo, TransactionReceipt},
     };
@@ -120,6 +121,7 @@ mod tests {
     use std::collections::HashSet;
     use std::convert::TryInto;
     use std::fmt::Debug;
+    use std::io::Cursor;
     use std::iter::once;
     use std::iter::FromIterator;
     use std::path::{Path, PathBuf};
@@ -1793,5 +1795,226 @@ mod tests {
             .find(|asset| asset.definition == AssetDefinition::from(new_asset.clone()))
             .unwrap();
         assert!(asset_info.verified);
+    }
+
+    #[async_std::test]
+    #[traced_test]
+    async fn test_export_import_asset() {
+        let server = TestServer::new().await;
+        server
+            .get::<()>(&format!(
+                "newwallet/{}/password1/name/wallet1",
+                server.get::<String>("getmnemonic").await.unwrap(),
+            ))
+            .await
+            .unwrap();
+
+        let mut asset = server
+            .get::<AssetInfo>(&format!(
+                "newasset/description/{}",
+                base64::encode_config("description".as_bytes(), base64::URL_SAFE_NO_PAD)
+            ))
+            .await
+            .unwrap();
+        // We know the mint info since we created the asset. Later we will check that importers
+        // can't learn the mint info.
+        assert!(asset.mint_info.is_some());
+
+        // Export the asset.
+        let export = server
+            .get::<String>(&format!("exportasset/{}", asset.definition.code))
+            .await
+            .unwrap();
+
+        // Open a different wallet and import the asset.
+        server
+            .get::<()>(&format!(
+                "newwallet/{}/password2/name/wallet2",
+                server.get::<String>("getmnemonic").await.unwrap(),
+            ))
+            .await
+            .unwrap();
+        // Make sure the new wallet doesn't have the asset before we import it.
+        let info = server.get::<WalletSummary>("getinfo").await.unwrap();
+        assert_eq!(info.assets, vec![AssetInfo::native()]);
+
+        // Import the asset.
+        let import = server
+            .get::<AssetInfo>(&format!("importasset/{}", export))
+            .await
+            .unwrap();
+        // Make sure we didn't export the mint info.
+        assert!(import.mint_info.is_none());
+        // Check that all the information besides the mint info is the same.
+        asset.mint_info = None;
+        assert_eq!(asset, import);
+    }
+
+    #[async_std::test]
+    #[traced_test]
+    async fn test_updateasset() {
+        let server = TestServer::new().await;
+        let symbol = base64::encode_config("symbol".as_bytes(), base64::URL_SAFE_NO_PAD);
+        let description = base64::encode_config("description".as_bytes(), base64::URL_SAFE_NO_PAD);
+
+        // Generate a simple icon in raw bytes: 4 bytes for width, 4 for height, and then
+        // width*height*3 zerox bytes for the pixels. Use 64x64 so seahorse doesn't resize the icon.
+        let icon_width: u32 = 64;
+        let icon_height: u32 = 64;
+        let icon_data = [0; 3 * 64 * 64];
+        let icon_bytes = icon_width
+            .to_le_bytes()
+            .iter()
+            .chain(icon_height.to_le_bytes().iter())
+            .chain(icon_data.iter())
+            .cloned()
+            .collect::<Vec<_>>();
+        let icon = <Icon as CanonicalDeserialize>::deserialize(icon_bytes.as_slice()).unwrap();
+
+        // Now write the icon as a PNG and encode it in base64.
+        let mut icon_cursor = Cursor::new(vec![]);
+        icon.write_png(&mut icon_cursor).unwrap();
+        let icon_bytes = icon_cursor.into_inner();
+        // We use URL_SAFE_NO_PAD for URL parameters
+        let icon = base64::encode_config(&icon_bytes, base64::URL_SAFE_NO_PAD);
+        // We use standard base 64 for responses, since that's what HTML image converts expect.
+        let icon_response = base64::encode(&icon_bytes);
+
+        // Should fail if a wallet is not already open.
+        server
+            .requires_wallet::<AssetInfo>(&format!(
+                "updateasset/{}/symbol/{}",
+                AssetCode::native(),
+                symbol
+            ))
+            .await;
+        server
+            .requires_wallet::<AssetInfo>(&format!(
+                "updateasset/{}/description/{}",
+                AssetCode::native(),
+                description
+            ))
+            .await;
+        server
+            .requires_wallet::<AssetInfo>(&format!(
+                "updateasset/{}/icon/{}",
+                AssetCode::native(),
+                icon
+            ))
+            .await;
+
+        // Create a wallet.
+        server
+            .get::<()>(&format!(
+                "newwallet/{}/my-password/path/{}",
+                server.get::<String>("getmnemonic").await.unwrap(),
+                server.path()
+            ))
+            .await
+            .unwrap();
+
+        // Update the metadata of the native asset, one field at a time.
+        let info = server
+            .get::<AssetInfo>(&format!(
+                "updateasset/{}/symbol/{}",
+                AssetCode::native(),
+                symbol
+            ))
+            .await
+            .unwrap();
+        assert_eq!(
+            info,
+            server
+                .get::<WalletSummary>("getinfo")
+                .await
+                .unwrap()
+                .assets
+                .into_iter()
+                .find(|asset| asset.definition.code == info.definition.code)
+                .unwrap()
+        );
+        assert_eq!(info.symbol.unwrap(), "symbol");
+
+        let info = server
+            .get::<AssetInfo>(&format!(
+                "updateasset/{}/description/{}",
+                AssetCode::native(),
+                description
+            ))
+            .await
+            .unwrap();
+        assert_eq!(
+            info,
+            server
+                .get::<WalletSummary>("getinfo")
+                .await
+                .unwrap()
+                .assets
+                .into_iter()
+                .find(|asset| asset.definition.code == info.definition.code)
+                .unwrap()
+        );
+        assert_eq!(info.description.unwrap(), "description");
+
+        let info = server
+            .get::<AssetInfo>(&format!(
+                "updateasset/{}/icon/{}",
+                AssetCode::native(),
+                icon
+            ))
+            .await
+            .unwrap();
+        assert_eq!(
+            info,
+            server
+                .get::<WalletSummary>("getinfo")
+                .await
+                .unwrap()
+                .assets
+                .into_iter()
+                .find(|asset| asset.definition.code == info.definition.code)
+                .unwrap()
+        );
+        assert_eq!(info.icon.unwrap(), icon_response);
+
+        // Test route parsing for updating multiple fields at a time, although updating with the
+        // same data will have no affect.
+        server
+            .get::<AssetInfo>(&format!(
+                "updateasset/{}/symbol/{}/description/{}",
+                AssetCode::native(),
+                symbol,
+                description
+            ))
+            .await
+            .unwrap();
+        server
+            .get::<AssetInfo>(&format!(
+                "updateasset/{}/symbol/{}/icon/{}",
+                AssetCode::native(),
+                symbol,
+                icon
+            ))
+            .await
+            .unwrap();
+        server
+            .get::<AssetInfo>(&format!(
+                "updateasset/{}/description/{}/icon/{}",
+                AssetCode::native(),
+                description,
+                icon
+            ))
+            .await
+            .unwrap();
+        server
+            .get::<AssetInfo>(&format!(
+                "updateasset/{}/symbol/{}/description/{}/icon/{}",
+                AssetCode::native(),
+                symbol,
+                description,
+                icon
+            ))
+            .await
+            .unwrap();
     }
 }

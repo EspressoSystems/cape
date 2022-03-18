@@ -34,6 +34,7 @@ use net::{server::response, TaggedBlob, UserAddress};
 use rand_chacha::ChaChaRng;
 use reef::traits::Ledger;
 use seahorse::{
+    asset_library::Icon,
     events::{EventIndex, EventSource},
     hd::KeyTree,
     loader::{Loader, LoaderMetadata},
@@ -45,6 +46,7 @@ use serde::{Deserialize, Serialize};
 use snafu::Snafu;
 use std::collections::HashMap;
 use std::fmt::Debug;
+use std::io::Cursor;
 use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -240,12 +242,14 @@ pub struct RouteBinding {
 #[derive(AsRefStr, Copy, Clone, Debug, EnumIter, EnumString, strum_macros::Display)]
 pub enum ApiRouteKey {
     closewallet,
+    exportasset,
     freeze,
     getaddress,
     getaccount,
     getbalance,
     getinfo,
     getmnemonic,
+    importasset,
     importkey,
     listkeystores,
     mint,
@@ -259,6 +263,7 @@ pub enum ApiRouteKey {
     transaction,
     unfreeze,
     unwrap,
+    updateasset,
     view,
     wrap,
     getrecords,
@@ -973,6 +978,90 @@ async fn getaccount(
     }
 }
 
+async fn updateasset(
+    bindings: &HashMap<String, RouteBinding>,
+    wallet: &mut Option<Wallet>,
+) -> Result<AssetInfo, tide::Error> {
+    let wallet = require_wallet(wallet)?;
+    let code = bindings[":asset"].value.to::<AssetCode>()?;
+
+    // Get the existing asset information.
+    let mut asset = wallet
+        .asset(code)
+        .await
+        .ok_or_else(|| wallet_error(CapeWalletError::UndefinedAsset { asset: code }))?;
+
+    // Update based on request parameters.
+    if let Some(symbol) = bindings.get(":symbol") {
+        asset = asset.with_name(std::str::from_utf8(&symbol.value.as_base64()?)?.to_string());
+    }
+    if let Some(description) = bindings.get(":description") {
+        asset = asset
+            .with_description(std::str::from_utf8(&description.value.as_base64()?)?.to_string());
+    }
+    if let Some(icon) = bindings.get(":icon") {
+        let bytes = icon.value.as_base64()?;
+        let icon = Icon::load_png(Cursor::new(bytes))?;
+        asset = asset.with_icon(icon);
+    }
+
+    // Update the asset info in the wallet.
+    wallet.import_asset(asset).await.map_err(wallet_error)?;
+
+    // Get the final asset info, which may be different than what we imported if, say, the asset is
+    // a verified asset that cannot be overridden.
+    Ok(AssetInfo::from_info(wallet, wallet.asset(code).await.unwrap()).await)
+}
+
+pub async fn exportasset(
+    bindings: &HashMap<String, RouteBinding>,
+    wallet: &mut Option<Wallet>,
+) -> Result<String, tide::Error> {
+    let wallet = require_wallet(wallet)?;
+    let code = bindings[":asset"].value.to::<AssetCode>()?;
+    let mut asset = wallet
+        .asset(code)
+        .await
+        .ok_or(CapeWalletError::UndefinedAsset { asset: code })?;
+
+    // Don't export mint info, we don't want other users to be able to mint this asset just because
+    // we've published it on a registry.
+    asset.mint_info = None;
+
+    // The `AssetInfo` structure serializes as a JSON blob, but for exporting and transmitting, a
+    // compact, URL-safe string is more convenient. Therefore, we serialize to bytes and then encode
+    // in base64.
+    let bytes = bincode::serialize(&asset).unwrap();
+    Ok(TaggedBase64::new("CAPE-ASSET", &bytes).unwrap().to_string())
+}
+
+pub async fn importasset(
+    bindings: &HashMap<String, RouteBinding>,
+    wallet: &mut Option<Wallet>,
+) -> Result<AssetInfo, tide::Error> {
+    let wallet = require_wallet(wallet)?;
+    let tb64 = bindings[":asset"].value.as_identifier()?;
+    if tb64.tag() != "CAPE-ASSET" {
+        return Err(server_error(CapeAPIError::Tag {
+            expected: "CAPE-ASSET".into(),
+            actual: tb64.tag(),
+        }));
+    }
+    let bytes = tb64.value();
+    let asset = bincode::deserialize::<seahorse::AssetInfo>(&bytes).map_err(|err| {
+        server_error(CapeAPIError::Deserialize {
+            msg: err.to_string(),
+        })
+    })?;
+    let code = asset.definition.code;
+    wallet.import_asset(asset).await.map_err(wallet_error)?;
+
+    // Get the asset info from the wallet, which may be different from what we imported if the
+    // wallet already had this asset and merely updated part of it.
+    let info = wallet.asset(code).await.unwrap();
+    Ok(AssetInfo::from_info(wallet, info).await)
+}
+
 pub async fn dispatch_url(
     req: tide::Request<WebState>,
     route_pattern: &str,
@@ -988,12 +1077,14 @@ pub async fn dispatch_url(
     let key = ApiRouteKey::from_str(segments.0).expect("Unknown route");
     match key {
         ApiRouteKey::closewallet => response(&req, closewallet(wallet).await?),
+        ApiRouteKey::exportasset => response(&req, exportasset(bindings, wallet).await?),
         ApiRouteKey::freeze => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::getaddress => response(&req, getaddress(wallet).await?),
         ApiRouteKey::getaccount => response(&req, getaccount(bindings, wallet).await?),
         ApiRouteKey::getbalance => response(&req, getbalance(bindings, wallet).await?),
         ApiRouteKey::getinfo => response(&req, getinfo(wallet).await?),
         ApiRouteKey::getmnemonic => response(&req, getmnemonic(rng).await?),
+        ApiRouteKey::importasset => response(&req, importasset(bindings, wallet).await?),
         ApiRouteKey::importkey => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::listkeystores => response(&req, listkeystores(storage).await?),
         ApiRouteKey::mint => response(&req, mint(bindings, wallet).await?),
@@ -1018,6 +1109,7 @@ pub async fn dispatch_url(
         ApiRouteKey::transaction => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::unfreeze => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::unwrap => response(&req, unwrap(bindings, wallet).await?),
+        ApiRouteKey::updateasset => response(&req, updateasset(bindings, wallet).await?),
         ApiRouteKey::view => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::wrap => response(&req, wrap(bindings, wallet).await?),
         ApiRouteKey::getrecords => response(&req, get_records(wallet).await?),

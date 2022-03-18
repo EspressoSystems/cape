@@ -347,7 +347,7 @@ async fn main() {
                 let wrapper = wallets.choose_mut(&mut rng).unwrap();
                 let wrapper_key = wrapper.pub_keys().await[0].clone();
                 let asset_def = wrapper
-                    .define_asset(&[], AssetPolicy::default())
+                    .define_asset("my-asset".into(), &[], AssetPolicy::default())
                     .await
                     .expect("failed to define asset");
                 wrap_simple_token(

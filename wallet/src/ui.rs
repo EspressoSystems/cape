@@ -7,6 +7,9 @@
 
 //! Type definitions for UI-focused API responses.
 
+use crate::wallet::{CapeWallet, CapeWalletBackend, CapeWalletExt};
+use cap_rust_sandbox::model::Erc20Code;
+use futures::stream::{iter, StreamExt};
 use jf_cap::{
     keys::{AuditorPubKey, FreezerPubKey, UserPubKey},
     structs::{AssetCode, AssetDefinition as JfAssetDefinition, AssetPolicy},
@@ -14,12 +17,14 @@ use jf_cap::{
 use net::UserAddress;
 use seahorse::{
     accounts::{AccountInfo, KeyPair},
+    asset_library::Icon,
     txn_builder::RecordInfo,
     MintInfo,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::{self, Display, Formatter};
+use std::io::Cursor;
 use std::str::FromStr;
 
 /// UI-friendly asset definition.
@@ -76,6 +81,10 @@ impl From<JfAssetDefinition> for AssetDefinition {
 impl From<AssetDefinition> for JfAssetDefinition {
     fn from(definition: AssetDefinition) -> JfAssetDefinition {
         let code = definition.code;
+        if code == AssetCode::native() {
+            return JfAssetDefinition::native();
+        }
+
         let mut policy = AssetPolicy::default();
         if let Some(freezing_key) = definition.freezing_key {
             policy = policy.set_freezer_pub_key(freezing_key);
@@ -193,44 +202,62 @@ pub struct AssetInfo {
     pub definition: AssetDefinition,
     pub mint_info: Option<MintInfo>,
     pub verified: bool,
+
+    /// Human-readable asset name.
+    pub symbol: Option<String>,
+    /// Human-readable asset description.
+    pub description: Option<String>,
+    /// Base64-encoded PNG icon.
+    pub icon: Option<String>,
+    /// The ERC-20 token address that this asset wraps, if this is a wrapped asset.
+    pub wrapped_erc20: Option<Erc20Code>,
 }
 
 impl AssetInfo {
-    pub fn new(definition: AssetDefinition, mint_info: MintInfo, verified: bool) -> Self {
+    pub fn new(info: seahorse::AssetInfo, wrapped_erc20: Option<Erc20Code>) -> Self {
+        let icon = info.icon.map(|icon| {
+            let mut bytes = Cursor::new(vec![]);
+            icon.write_png(&mut bytes).unwrap();
+            base64::encode(&bytes.into_inner())
+        });
         Self {
-            definition,
-            mint_info: Some(mint_info),
-            verified,
+            definition: info.definition.into(),
+            mint_info: info.mint_info,
+            verified: info.verified,
+            symbol: info.name,
+            description: info.description,
+            icon,
+            wrapped_erc20,
         }
+    }
+
+    pub async fn from_info<'a, Backend: CapeWalletBackend<'a> + Sync + 'a>(
+        wallet: &CapeWallet<'a, Backend>,
+        info: seahorse::AssetInfo,
+    ) -> Self {
+        let wrapped_erc20 = wallet.wrapped_asset(info.definition.code).await;
+        Self::new(info, wrapped_erc20)
     }
 
     /// Details about the native asset type.
     pub fn native() -> Self {
-        Self {
-            definition: AssetDefinition::native(),
-            mint_info: None,
-            verified: false,
-        }
+        Self::new(seahorse::AssetInfo::native(), None)
     }
 }
 
-impl From<AssetDefinition> for AssetInfo {
-    fn from(definition: AssetDefinition) -> Self {
-        Self {
-            definition,
-            mint_info: None,
-            verified: false,
-        }
-    }
-}
+impl From<AssetInfo> for seahorse::AssetInfo {
+    fn from(info: AssetInfo) -> Self {
+        let icon = info.icon.map(|b64| {
+            let bytes = base64::decode(&b64).unwrap();
+            Icon::load_png(Cursor::new(bytes.as_slice())).unwrap()
+        });
 
-impl From<seahorse::AssetInfo> for AssetInfo {
-    fn from(asset_info: seahorse::AssetInfo) -> Self {
-        Self {
-            definition: AssetDefinition::from(asset_info.definition),
-            mint_info: asset_info.mint_info,
-            verified: asset_info.verified,
-        }
+        let mut asset = seahorse::AssetInfo::from(JfAssetDefinition::from(info.definition));
+        asset.mint_info = info.mint_info;
+        asset.name = info.symbol;
+        asset.description = info.description;
+        asset.icon = icon;
+        asset
     }
 }
 
@@ -247,64 +274,6 @@ impl Display for AssetInfo {
         }
         write!(f, ",verified:{}", self.verified)?;
         Ok(())
-    }
-}
-
-impl FromStr for AssetInfo {
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        // This parse method is meant for a friendly, discoverable CLI interface. It parses a
-        // comma-separated list of key-value pairs, like `description:my_asset`. This allows the
-        // fields to be specified in any order, or not at all. Recognized fields are "definition",
-        // "seed", and "description".
-        let mut definition = None;
-        let mut seed = None;
-        let mut description = None;
-        for kv in s.split(',') {
-            let (key, value) = match kv.split_once(':') {
-                Some(split) => split,
-                None => return Err(format!("expected key:value pair, got {}", kv)),
-            };
-            match key {
-                "definition" => {
-                    definition = Some(
-                        value
-                            .parse()
-                            .map_err(|_| format!("expected AssetDefinition, got {}", value))?,
-                    )
-                }
-                "seed" => {
-                    seed = Some(
-                        value
-                            .parse()
-                            .map_err(|_| format!("expected AssetCodeSeed, got {}", value))?,
-                    )
-                }
-                "description" => description = Some(MintInfo::parse_description(value)),
-                _ => return Err(format!("unrecognized key {}", key)),
-            }
-        }
-
-        let definition = match definition {
-            Some(definition) => definition,
-            None => return Err(String::from("must specify definition")),
-        };
-        let mint_info = match (seed, description) {
-            (Some(seed), Some(description)) => Some(MintInfo { seed, description }),
-            (None, None) => None,
-            _ => {
-                return Err(String::from(
-                    "seed and description must be specified together or not at all",
-                ))
-            }
-        };
-
-        Ok(AssetInfo {
-            definition,
-            mint_info,
-            verified: false,
-        })
     }
 }
 
@@ -363,15 +332,23 @@ pub struct Account {
     pub used: bool,
 }
 
-impl<Key: KeyPair> From<AccountInfo<Key>> for Account {
-    fn from(info: AccountInfo<Key>) -> Self {
+impl Account {
+    pub async fn from_info<'a, Key: KeyPair, Backend: CapeWalletBackend<'a> + Sync + 'a>(
+        wallet: &CapeWallet<'a, Backend>,
+        info: AccountInfo<Key>,
+    ) -> Self {
+        let assets = iter(info.assets)
+            .then(|asset| async {
+                (
+                    asset.definition.code,
+                    AssetInfo::from_info(wallet, asset).await,
+                )
+            })
+            .collect::<HashMap<_, _>>()
+            .await;
         Self {
             records: info.records.into_iter().map(|rec| rec.into()).collect(),
-            assets: info
-                .assets
-                .into_iter()
-                .map(|asset| (asset.definition.code, AssetInfo::from(asset)))
-                .collect(),
+            assets,
             balance: info.balance,
             description: info.description,
             used: info.used,

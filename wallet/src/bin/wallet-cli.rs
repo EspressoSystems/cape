@@ -145,6 +145,7 @@ async fn cli_sponsor<'a>(
     wallet: &mut CapeWallet<'_>,
     erc20_code: Erc20Code,
     sponsor_addr: EthereumAddr,
+    symbol: Option<String>,
     viewer: Option<AuditorPubKey>,
     freezer: Option<FreezerPubKey>,
     view_amount: Option<bool>,
@@ -189,7 +190,10 @@ async fn cli_sponsor<'a>(
     if let Some(viewing_threshold) = viewing_threshold {
         policy = policy.set_reveal_threshold(viewing_threshold);
     }
-    match wallet.sponsor(erc20_code, sponsor_addr, policy).await {
+    match wallet
+        .sponsor(symbol.unwrap_or_default(), erc20_code, sponsor_addr, policy)
+        .await
+    {
         Ok(def) => {
             cli_writeln!(io, "{}", def);
         }
@@ -250,13 +254,14 @@ fn cape_specific_cli_commands<'a>() -> Vec<Command<'a, CapeCli>> {
              wallet,
              erc20_code: Erc20Code,
              sponsor_addr: EthereumAddr;
+             symbol: Option<String>,
              viewer: Option<AuditorPubKey>,
              freezer: Option<FreezerPubKey>,
              view_amount: Option<bool>,
              view_address: Option<bool>,
              view_blind: Option<bool>,
              viewing_threshold: Option<u64>| {
-                cli_sponsor(io, wallet, erc20_code, sponsor_addr, viewer, freezer, view_amount, view_address, view_blind, viewing_threshold).await;
+                cli_sponsor(io, wallet, erc20_code, sponsor_addr, symbol, viewer, freezer, view_amount, view_address, view_blind, viewing_threshold).await;
             }
         ),
         command!(
@@ -408,13 +413,14 @@ mod tests {
                      wallet,
                      erc20_code: Erc20Code,
                      sponsor_addr: EthereumAddr;
+                     symbol: Option<String>,
                      viewer: Option<AuditorPubKey>,
                      freezer: Option<FreezerPubKey>,
                      view_amount: Option<bool>,
                      view_address: Option<bool>,
                      view_blind: Option<bool>,
                      viewing_threshold: Option<u64>| {
-                        cli_sponsor(io, wallet, erc20_code, sponsor_addr, viewer, freezer, view_amount, view_address, view_blind, viewing_threshold).await;
+                        cli_sponsor(io, wallet, erc20_code, sponsor_addr, symbol, viewer, freezer, view_amount, view_address, view_blind, viewing_threshold).await;
                     }
                 ),
                 command!(

@@ -77,6 +77,7 @@ pub trait CapeWalletExt<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> {
     /// Sponsor the creation of a new wrapped ERC-20 CAPE asset.
     async fn sponsor(
         &mut self,
+        symbol: String,
         erc20_code: Erc20Code,
         sponsor_addr: EthereumAddr,
         cap_asset_policy: AssetPolicy,
@@ -122,6 +123,9 @@ pub trait CapeWalletExt<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> {
         fee: u64,
     ) -> Result<TransactionReceipt<CapeLedger>, CapeWalletError>;
 
+    /// Get the ERC-20 asset code that this asset wraps, if this is a wrapped asset.
+    async fn wrapped_asset(&self, asset: AssetCode) -> Option<Erc20Code>;
+
     /// Determine if an asset is a wrapped ERC-20 asset (as opposed to a domestic CAPE asset).
     async fn is_wrapped_asset(&self, asset: AssetCode) -> bool;
 
@@ -144,6 +148,7 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
 {
     async fn sponsor(
         &mut self,
+        symbol: String,
         erc20_code: Erc20Code,
         sponsor_addr: EthereumAddr,
         cap_asset_policy: AssetPolicy,
@@ -162,7 +167,8 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
         drop(state);
 
         // Add the new asset to our asset library.
-        self.import_asset(asset.clone().into()).await?;
+        self.import_asset(AssetInfo::from(asset.clone()).with_name(symbol))
+            .await?;
 
         Ok(asset)
     }
@@ -236,18 +242,18 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
         self.submit(txn, info).await
     }
 
-    /// Determine if an asset is a wrapped asset (as opposed to a domestic CAPE asset).
-    async fn is_wrapped_asset(&self, asset: AssetCode) -> bool {
-        let definition = match self.asset(asset).await {
-            Some(asset) => asset.definition,
-            None => return false,
-        };
+    async fn wrapped_asset(&self, asset: AssetCode) -> Option<Erc20Code> {
+        let asset = self.asset(asset).await?;
         let state = self.lock().await;
         state
             .backend()
-            .get_wrapped_erc20_code(&definition)
+            .get_wrapped_erc20_code(&asset.definition)
             .await
-            .is_ok()
+            .ok()
+    }
+
+    async fn is_wrapped_asset(&self, asset: AssetCode) -> bool {
+        self.wrapped_asset(asset).await.is_some()
     }
 
     async fn eth_client(&self) -> Result<Arc<EthMiddleware>, CapeWalletError> {

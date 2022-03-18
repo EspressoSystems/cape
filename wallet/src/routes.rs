@@ -473,12 +473,15 @@ pub async fn init_wallet(
 }
 
 async fn known_assets(wallet: &Wallet) -> HashMap<AssetCode, AssetInfo> {
-    wallet
-        .assets()
-        .await
-        .into_iter()
-        .map(|asset| (asset.definition.code, AssetInfo::from(asset)))
+    iter(wallet.assets().await)
+        .then(|asset| async {
+            (
+                asset.definition.code,
+                AssetInfo::from_info(wallet, asset).await,
+            )
+        })
         .collect()
+        .await
 }
 
 pub fn require_wallet(wallet: &mut Option<Wallet>) -> Result<&mut Wallet, tide::Error> {
@@ -715,8 +718,12 @@ async fn newkey(
 async fn newasset(
     bindings: &HashMap<String, RouteBinding>,
     wallet: &mut Option<Wallet>,
-) -> Result<AssetDefinition, tide::Error> {
+) -> Result<AssetInfo, tide::Error> {
     let wallet = require_wallet(wallet)?;
+    let symbol = match bindings.get(":symbol") {
+        Some(param) => std::str::from_utf8(&param.value.as_base64()?)?.to_string(),
+        None => String::new(),
+    };
 
     // Construct the asset policy.
     let mut policy = AssetPolicy::default();
@@ -747,7 +754,7 @@ async fn newasset(
     };
 
     // If an ERC20 code is given, sponsor the asset. Otherwise, define an asset.
-    match bindings.get(":erc20") {
+    let code = match bindings.get(":erc20") {
         Some(erc20_code) => {
             let erc20_code = erc20_code.value.to::<Erc20Code>()?;
             let sponsor_address = bindings
@@ -755,19 +762,27 @@ async fn newasset(
                 .unwrap()
                 .value
                 .to::<EthereumAddr>()?;
-            Ok(wallet
-                .sponsor(erc20_code, sponsor_address, policy)
+            wallet
+                .sponsor(symbol, erc20_code, sponsor_address, policy)
                 .await?
-                .into())
+                .code
         }
         None => {
             let description = match bindings.get(":description") {
                 Some(description) => description.value.as_base64()?,
                 _ => Vec::new(),
             };
-            Ok(wallet.define_asset(&description, policy).await?.into())
+            wallet
+                .define_asset(symbol, &description, policy)
+                .await?
+                .code
         }
-    }
+    };
+
+    // The asset lookup will always succeed after we just created the asset.
+    let info = wallet.asset(code).await.unwrap();
+    let asset = AssetInfo::from_info(wallet, info).await;
+    Ok(asset)
 }
 
 async fn wrap(
@@ -931,16 +946,26 @@ async fn getaccount(
     let wallet = require_wallet(wallet)?;
     let address = bindings[":address"].value.clone();
     match address.as_identifier()?.tag().as_str() {
-        "ADDR" => Ok(wallet
-            .sending_account(&address.to::<UserAddress>()?.0)
-            .await?
-            .into()),
-        "USERPUBKEY" => Ok(wallet
-            .sending_account(&address.to::<UserPubKey>()?.address())
-            .await?
-            .into()),
-        "AUDPUBKEY" => Ok(wallet.viewing_account(&address.to()?).await?.into()),
-        "FREEZEPUBKEY" => Ok(wallet.freezing_account(&address.to()?).await?.into()),
+        "ADDR" => Ok(Account::from_info(
+            wallet,
+            wallet
+                .sending_account(&address.to::<UserAddress>()?.0)
+                .await?,
+        )
+        .await),
+        "USERPUBKEY" => Ok(Account::from_info(
+            wallet,
+            wallet
+                .sending_account(&address.to::<UserPubKey>()?.address())
+                .await?,
+        )
+        .await),
+        "AUDPUBKEY" => {
+            Ok(Account::from_info(wallet, wallet.viewing_account(&address.to()?).await?).await)
+        }
+        "FREEZEPUBKEY" => {
+            Ok(Account::from_info(wallet, wallet.freezing_account(&address.to()?).await?).await)
+        }
         tag => Err(server_error(CapeAPIError::Tag {
             expected: String::from("ADDR | USERPUBKEY | AUDPUBKEY | FREEZEPUBKEY"),
             actual: String::from(tag),

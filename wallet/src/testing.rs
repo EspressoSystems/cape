@@ -219,7 +219,9 @@ pub async fn mint_token<'a>(
         .unwrap()
         .reveal_blinding_factor()
         .unwrap();
-    let my_asset = wallet.define_asset(&[], policy).await?;
+    let my_asset = wallet
+        .define_asset("test_domestic_asset".into(), &[], policy)
+        .await?;
     event!(Level::INFO, "defined a new asset type: {}", my_asset.code);
     let address = wallet.pub_keys().await[0].address();
 
@@ -356,6 +358,7 @@ pub async fn sponsor_simple_token<'a>(
     let sponsor_eth_addr = sponsor.eth_address().await.unwrap();
     sponsor
         .sponsor(
+            "test_wrapped_asset".into(),
             erc20_contract.address().into(),
             sponsor_eth_addr.clone(),
             AssetPolicy::default(),

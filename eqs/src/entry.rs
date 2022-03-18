@@ -10,6 +10,7 @@ use crate::configuration::EQSOptions;
 use crate::eth_polling::EthPolling;
 use crate::query_result_state::QueryResultState;
 use crate::state_persistence::StatePersistence;
+use atomic_store::PersistenceError;
 
 use async_std::{
     sync::{Arc, RwLock},
@@ -19,13 +20,20 @@ use async_std::{
 pub async fn run(opt: &EQSOptions) -> std::io::Result<()> {
     let (state_persistence, query_result_state) = if opt.reset_state() {
         (
-            StatePersistence::new(&opt.store_path(), "eqs").unwrap(),
+            StatePersistence::new(&opt.store_path(), "eth_query").unwrap(),
             Arc::new(RwLock::new(QueryResultState::new(opt.verifier_keys()))),
         )
     } else {
-        let state_persistence = StatePersistence::load(&opt.store_path(), "eqs").unwrap();
-        let query_result_state =
-            Arc::new(RwLock::new(state_persistence.load_latest_state().unwrap()));
+        let state_persistence = StatePersistence::load(&opt.store_path(), "eth_query").unwrap();
+        let query_result_state = Arc::new(RwLock::new(
+            state_persistence.load_latest_state().unwrap_or_else(|err| {
+                if let PersistenceError::FailedToFindExpectedResource { key: _ } = err {
+                    QueryResultState::new(opt.verifier_keys())
+                } else {
+                    panic!("{:?}", err);
+                }
+            }),
+        ));
         (state_persistence, query_result_state)
     };
 

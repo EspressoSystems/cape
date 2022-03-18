@@ -12,25 +12,24 @@
 //! of the actual routes is defined in [crate::routes].
 
 use crate::routes::{
-    dispatch_url, keystores_dir, CapeAPIError, RouteBinding, UrlSegmentType, UrlSegmentValue,
-    Wallet,
+    dispatch_url, CapeAPIError, RouteBinding, UrlSegmentType, UrlSegmentValue, Wallet,
 };
 use async_std::{
     sync::{Arc, Mutex},
-    task::{sleep, spawn, JoinHandle},
+    task::{spawn, JoinHandle},
 };
 use cap_rust_sandbox::model::EthereumAddr;
-use futures::Future;
+use ethers::prelude::Address;
 use jf_cap::{keys::UserKeyPair, structs::AssetCode};
 use net::server;
 use rand_chacha::ChaChaRng;
-use seahorse::testing::await_transaction;
 use std::collections::hash_map::HashMap;
 use std::fs::create_dir_all;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::time::Duration;
 use structopt::StructOpt;
+use tide::http::Url;
 
 pub const DEFAULT_ETH_ADDR: EthereumAddr = EthereumAddr([2; 20]);
 pub const DEFAULT_WRAPPED_AMT: u64 = 1000;
@@ -38,7 +37,7 @@ pub const DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR: u64 = 500;
 pub const DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR: u64 = 400;
 
 /// Server configuration with command line parsing support.
-#[derive(Debug, StructOpt)]
+#[derive(Clone, Debug, StructOpt)]
 #[structopt(
     name = "Wallet Web API",
     about = "Performs wallet operations in response to web requests"
@@ -58,6 +57,161 @@ pub struct NodeOpt {
         env = "CAPE_WALLET_STORAGE", // Fallback to env_var or $HOME
     )]
     pub storage: Option<PathBuf>,
+
+    /// Port to host the server on.
+    #[structopt(short, long, env = "CAPE_WALLET_PORT", default_value = "60000")]
+    pub port: u16,
+
+    /// URL for the Ethereum Query Service.
+    #[structopt(
+        short,
+        long,
+        env = "CAPE_EQS_URL",
+        default_value = "http://localhost:50087"
+    )]
+    pub eqs_url: Url,
+
+    /// URL for the CAPE relayer.
+    #[structopt(
+        short,
+        long,
+        env = "CAPE_RELAYER_URL",
+        default_value = "http://localhost:50077"
+    )]
+    pub relayer_url: Url,
+
+    /// URL for the Ethereum Query Service.
+    #[structopt(
+        short,
+        long,
+        env = "CAPE_ADDRESS_BOOK_URL",
+        default_value = "http://localhost:50078"
+    )]
+    pub address_book_url: Url,
+
+    /// Address of the CAPE smart contract.
+    #[structopt(short, long, env = "CAPE_CONTRACT_ADDRESS")]
+    pub contract_address: Address,
+
+    /// URL for Ethers HTTP Provider
+    #[structopt(
+        short,
+        long,
+        env = "CAPE_WEB3_PROVIDER_URL",
+        default_value = "http://localhost:8545"
+    )]
+    pub rpc_url: Url,
+
+    /// Mnemonic for a local Ethereum wallet for direct contract calls.
+    #[structopt(long, env = "ETH_MNEMONIC")]
+    pub eth_mnemonic: Option<String>,
+
+    /// Minimum amount of time to wait between polling requests to EQS.
+    #[structopt(long, env = "CAPE_WALLET_MIN_POLLING_DELAY", default_value = "500")]
+    pub min_polling_delay_ms: u64,
+}
+
+impl Default for NodeOpt {
+    fn default() -> Self {
+        Self {
+            web_path: None,
+            api_path: None,
+            storage: None,
+            port: 60000,
+            eqs_url: "http://localhost:50087".parse().unwrap(),
+            relayer_url: "http://localhost:50077".parse().unwrap(),
+            address_book_url: "http://localhost:50078".parse().unwrap(),
+            contract_address: Address::default(),
+            rpc_url: "http://localhost:8545".parse().unwrap(),
+            eth_mnemonic: None,
+            min_polling_delay_ms: 500,
+        }
+    }
+}
+
+// Some of these functions are only used in non-test configs. Rather than annotate each such
+// function with #[cfg(not(test))], it's easier just to allow them to be unused.
+#[allow(dead_code)]
+impl NodeOpt {
+    #[cfg(any(test, feature = "testing"))]
+    pub fn for_test(port: u16, tmp_storage: PathBuf) -> Self {
+        Self {
+            port,
+            storage: Some(tmp_storage),
+            ..Default::default()
+        }
+    }
+
+    pub fn web_path(&self) -> PathBuf {
+        self.web_path
+            .as_ref()
+            .map(|path| path.to_path_buf())
+            .unwrap_or_else(default_web_path)
+    }
+
+    pub fn api_path(&self) -> PathBuf {
+        self.api_path
+            .as_ref()
+            .map(|path| path.to_path_buf())
+            .unwrap_or_else(default_api_path)
+    }
+
+    pub fn storage(&self) -> PathBuf {
+        self.storage
+            .as_ref()
+            .map(|path| path.to_path_buf())
+            .unwrap_or_else(default_storage_path)
+    }
+
+    pub fn last_used_path(&self) -> PathBuf {
+        [&self.storage(), Path::new("last_wallet_path")]
+            .iter()
+            .collect()
+    }
+
+    pub fn keystores_dir(&self) -> PathBuf {
+        [&self.storage(), Path::new("keystores")].iter().collect()
+    }
+
+    pub fn keystore_path(&self, name: &str) -> PathBuf {
+        [self.keystores_dir().as_path(), Path::new(name)]
+            .iter()
+            .collect()
+    }
+
+    pub fn assets_path(&self) -> PathBuf {
+        [&self.storage(), Path::new("verified_assets")]
+            .iter()
+            .collect()
+    }
+
+    pub fn rpc_url(&self) -> Url {
+        self.rpc_url.clone()
+    }
+
+    pub fn eqs_url(&self) -> Url {
+        self.eqs_url.clone()
+    }
+
+    pub fn relayer_url(&self) -> Url {
+        self.relayer_url.clone()
+    }
+
+    pub fn address_book_url(&self) -> Url {
+        self.address_book_url.clone()
+    }
+
+    pub fn contract_address(&self) -> Address {
+        self.contract_address
+    }
+
+    pub fn eth_mnemonic(&self) -> Option<String> {
+        self.eth_mnemonic.clone()
+    }
+
+    pub fn min_polling_delay(&self) -> Duration {
+        Duration::from_millis(self.min_polling_delay_ms)
+    }
 }
 
 /// Returns the project directory.
@@ -74,21 +228,21 @@ fn project_path() -> PathBuf {
 }
 
 /// Returns the default path to the web directory.
-pub fn default_web_path() -> PathBuf {
+fn default_web_path() -> PathBuf {
     const ASSET_DIR: &str = "public";
     let dir = project_path();
     [&dir, Path::new(ASSET_DIR)].iter().collect()
 }
 
 /// Returns the default path to the API file.
-pub fn default_api_path() -> PathBuf {
+fn default_api_path() -> PathBuf {
     const API_FILE: &str = "api/api.toml";
     let dir = project_path();
     [&dir, Path::new(API_FILE)].iter().collect()
 }
 
 /// Returns the default path to store generated files.
-pub fn default_storage_path() -> PathBuf {
+fn default_storage_path() -> PathBuf {
     let home = std::env::var("HOME")
         .expect("HOME directory is not set. Please set the server's HOME directory.");
     [&home, ".espresso/cape/wallet"].iter().collect()
@@ -101,7 +255,7 @@ pub struct WebState {
     pub(crate) wallet: Arc<Mutex<Option<Wallet>>>,
     pub(crate) rng: Arc<Mutex<ChaChaRng>>,
     pub(crate) faucet_key_pair: UserKeyPair,
-    pub(crate) storage: PathBuf,
+    pub(crate) options: NodeOpt,
 }
 
 // Get the route pattern that matches the URL of a request, and the bindings for parameters in the
@@ -234,18 +388,6 @@ async fn entry_page(req: tide::Request<WebState>) -> Result<tide::Response, tide
     }
 }
 
-pub async fn retry<Fut: Future<Output = bool>>(f: impl Fn() -> Fut) {
-    let mut backoff = Duration::from_millis(100);
-    for _ in 0..10 {
-        if f().await {
-            return;
-        }
-        sleep(backoff).await;
-        backoff *= 2;
-    }
-    panic!("retry loop did not complete in {:?}", backoff);
-}
-
 /// Testing route handler which populates a wallet with dummy data.
 ///
 /// This route will modify the wallet by generating 2 of each kind of key (viewing, freezing, and
@@ -254,12 +396,11 @@ pub async fn retry<Fut: Future<Output = bool>>(f: impl Fn() -> Fut) {
 /// ERC-20 asset for that same address.
 #[cfg(any(test, feature = "testing"))]
 async fn populatefortest(req: tide::Request<WebState>) -> Result<tide::Response, tide::Error> {
-    use crate::{
-        routes::{require_wallet, wallet_error},
-        wallet::CapeWalletExt,
-    };
+    use crate::routes::{require_wallet, wallet_error};
     use cap_rust_sandbox::model::Erc20Code;
+    use cape_wallet::{testing::retry, wallet::CapeWalletExt};
     use rand::{RngCore, SeedableRng};
+    use seahorse::testing::await_transaction;
 
     let wallet = &mut *req.state().wallet.lock().await;
     let wallet = require_wallet(wallet)?;
@@ -374,29 +515,26 @@ async fn populatefortest(req: tide::Request<WebState>) -> Result<tide::Response,
 /// entire process. This is a limitation of the Tide server framework.
 pub fn init_server(
     mut rng: ChaChaRng,
-    api_path: PathBuf,
-    web_path: PathBuf,
-    port: u64,
-    storage: PathBuf,
+    options: &NodeOpt,
 ) -> std::io::Result<JoinHandle<std::io::Result<()>>> {
     // Make sure relevant sub-directories of `storage` exist.
-    create_dir_all(keystores_dir(&storage))?;
+    create_dir_all(options.keystores_dir())?;
 
-    let api = crate::disco::load_messages(&api_path);
+    let api = crate::disco::load_messages(&options.api_path());
     let faucet_key_pair = UserKeyPair::generate(&mut rng);
     let mut web_server = tide::with_state(WebState {
         api: api.clone(),
         wallet: Arc::new(Mutex::new(None)),
         rng: Arc::new(Mutex::new(rng)),
         faucet_key_pair,
-        storage,
+        options: options.clone(),
     });
     web_server
         .with(server::trace)
         .with(server::add_error_body::<_, CapeAPIError>);
 
     // Define the routes handled by the web server.
-    web_server.at("/public").serve_dir(web_path)?;
+    web_server.at("/public").serve_dir(options.web_path())?;
     web_server.at("/").get(crate::disco::compose_help);
 
     // Add routes from a configuration file.
@@ -428,6 +566,6 @@ pub fn init_server(
     #[cfg(any(test, feature = "testing"))]
     web_server.at("populatefortest").get(populatefortest);
 
-    let addr = format!("0.0.0.0:{}", port);
+    let addr = format!("0.0.0.0:{}", options.port);
     Ok(spawn(web_server.listen(addr)))
 }

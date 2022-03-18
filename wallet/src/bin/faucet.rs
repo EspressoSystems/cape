@@ -14,21 +14,21 @@ use async_std::{
     sync::{Arc, Mutex},
     task::{spawn, JoinHandle},
 };
+use cap_rust_sandbox::universal_param::UNIVERSAL_PARAM;
 use cape_wallet::{
-    routes::{init_wallet, Wallet},
-    wallet::CapeWalletError,
-    web::default_storage_path,
+    backend::{CapeBackend, CapeBackendConfig},
+    wallet::{CapeWallet, CapeWalletError},
 };
-use jf_cap::{
-    keys::{UserKeyPair, UserPubKey},
-    structs::AssetCode,
-};
-use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
-use seahorse::loader::Loader;
+use ethers::prelude::Address;
+use jf_cap::{keys::UserPubKey, structs::AssetCode};
+use rand::distributions::{Alphanumeric, DistString};
+use seahorse::loader::{Loader, LoaderMetadata};
 use serde::{Deserialize, Serialize};
 use snafu::Snafu;
 use std::path::PathBuf;
+use std::time::Duration;
 use structopt::StructOpt;
+use surf::Url;
 use tide::StatusCode;
 
 #[derive(Debug, StructOpt)]
@@ -38,11 +38,7 @@ use tide::StatusCode;
 )]
 pub struct FaucetOptions {
     /// mnemonic for the faucet wallet
-    #[structopt(
-        long = "mnemonic",
-        env = "CAPE_FAUCET_WALLET_MNEMONIC",
-        default_value = ""
-    )]
+    #[structopt(long, env = "CAPE_FAUCET_WALLET_MNEMONIC")]
     pub mnemonic: String,
 
     /// path to the faucet wallet
@@ -68,11 +64,55 @@ pub struct FaucetOptions {
     /// fee for faucet grant
     #[structopt(long, env = "CAPE_FAUCET_FEE_SIZE", default_value = "100")]
     pub fee_size: u64,
+
+    /// URL for the Ethereum Query Service.
+    #[structopt(
+        short,
+        long,
+        env = "CAPE_EQS_URL",
+        default_value = "http://localhost:50087"
+    )]
+    pub eqs_url: Url,
+
+    /// URL for the CAPE relayer.
+    #[structopt(
+        short,
+        long,
+        env = "CAPE_RELAYER_URL",
+        default_value = "http://localhost:50077"
+    )]
+    pub relayer_url: Url,
+
+    /// URL for the Ethereum Query Service.
+    #[structopt(
+        short,
+        long,
+        env = "CAPE_ADDRESS_BOOK_URL",
+        default_value = "http://localhost:50078"
+    )]
+    pub address_book_url: Url,
+
+    /// Address of the CAPE smart contract.
+    #[structopt(short, long, env = "CAPE_CONTRACT_ADDRESS")]
+    pub contract_address: Address,
+
+    /// URL for Ethers HTTP Provider
+    #[structopt(
+        short,
+        long,
+        env = "CAPE_WEB3_PROVIDER_URL",
+        default_value = "http://localhost:8545"
+    )]
+    pub rpc_url: Url,
+
+    /// Minimum amount of time to wait between polling requests to EQS.
+    #[structopt(long, env = "CAPE_WALLET_MIN_POLLING_DELAY", default_value = "500")]
+    pub min_polling_delay_ms: u64,
 }
 
 #[derive(Clone)]
 struct FaucetState {
-    wallet: Arc<Mutex<Wallet>>,
+    wallet: Arc<Mutex<CapeWallet<'static, CapeBackend<'static, LoaderMetadata>>>>,
     grant_size: u64,
     fee_size: u64,
 }
@@ -131,25 +171,34 @@ async fn request_fee_assets(
 pub async fn init_web_server(
     opt: &FaucetOptions,
 ) -> std::io::Result<JoinHandle<std::io::Result<()>>> {
-    let mut rng = ChaChaRng::from_entropy();
-    let faucet_key_pair = UserKeyPair::generate(&mut rng);
-    let loader = Loader::from_literal(
-        Some(opt.mnemonic.clone().replace('-', " ")),
-        opt.faucet_password.clone(),
+    let mut password = opt.faucet_password.clone();
+    if password.is_empty() {
+        password = Alphanumeric.sample_string(&mut rand::thread_rng(), 16);
+    }
+    let mut loader = Loader::recovery(
+        opt.mnemonic.clone().replace('-', " "),
+        password,
         opt.faucet_wallet_path.clone(),
     );
+    let backend = CapeBackend::new(
+        &*UNIVERSAL_PARAM,
+        CapeBackendConfig {
+            rpc_url: opt.rpc_url.clone(),
+            eqs_url: opt.eqs_url.clone(),
+            relayer_url: opt.relayer_url.clone(),
+            address_book_url: opt.address_book_url.clone(),
+            contract_address: opt.contract_address,
+            // We don't use an Ethereum wallet. The faucet only has to do transfers. It should not have
+            // to do any operations that go directly to the contract and thus require an ETH fee.
+            eth_mnemonic: None,
+            min_polling_delay: Duration::from_millis(opt.min_polling_delay_ms),
+        },
+        &mut loader,
+    )
+    .await
+    .unwrap();
     let state = FaucetState {
-        wallet: Arc::new(Mutex::new(
-            init_wallet(
-                &mut rng,
-                faucet_key_pair.pub_key(),
-                loader,
-                true,
-                &default_storage_path(),
-            )
-            .await
-            .unwrap(),
-        )),
+        wallet: Arc::new(Mutex::new(CapeWallet::new(backend).await.unwrap())),
         grant_size: opt.grant_size,
         fee_size: opt.fee_size,
     };

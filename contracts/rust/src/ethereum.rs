@@ -194,8 +194,8 @@ async fn link_unlinked_libraries<M: 'static + Middleware>(
 
 // TODO: why do we need 'static ?
 // https://docs.rs/anyhow/1.0.44/anyhow/struct.Error.html ?
-#[async_recursion(?Send)]
-pub async fn deploy<M: 'static + Middleware, T: Tokenize>(
+#[async_recursion]
+pub async fn deploy<M: 'static + Middleware, T: Send + Tokenize>(
     client: Arc<M>,
     path: &Path,
     constructor_args: T,

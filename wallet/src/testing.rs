@@ -13,19 +13,22 @@ use crate::mocks::*;
 use crate::wallet::CapeWalletExt;
 use crate::CapeWallet;
 use crate::CapeWalletError;
+use address_book::address_book_port;
 use address_book::init_web_server;
 use address_book::wait_for_server;
 use address_book::TransientFileStore;
 use async_std::sync::{Arc, Mutex};
-use async_std::task::sleep;
+use async_std::task::{sleep, spawn, JoinHandle};
 use cap_rust_sandbox::deploy::EthMiddleware;
 use cap_rust_sandbox::ethereum::get_provider;
 use cap_rust_sandbox::ledger::CapeLedger;
 use cap_rust_sandbox::types::SimpleToken;
+use eqs::{configuration::EQSOptions, run_eqs};
 use ethers::prelude::Address;
 use ethers::providers::Middleware;
 use ethers::types::TransactionRequest;
 use ethers::types::U256;
+use futures::Future;
 use jf_cap::keys::FreezerPubKey;
 use jf_cap::keys::UserAddress;
 use jf_cap::keys::UserKeyPair;
@@ -52,6 +55,7 @@ use seahorse::txn_builder::{TransactionReceipt, TransactionStatus};
 use std::collections::HashSet;
 use std::time::Duration;
 use surf::Url;
+use tempdir::TempDir;
 use tide::log::LevelFilter;
 use tracing::{event, Level};
 
@@ -73,15 +77,34 @@ pub async fn retry_delay() {
     sleep(Duration::from_secs(1)).await
 }
 
-#[allow(clippy::needless_lifetimes)]
+pub async fn retry<Fut: Future<Output = bool>>(f: impl Fn() -> Fut) {
+    let mut backoff = Duration::from_millis(100);
+    for _ in 0..10 {
+        if f().await {
+            return;
+        }
+        sleep(backoff).await;
+        backoff *= 2;
+    }
+    panic!("retry loop did not complete in {:?}", backoff);
+}
+
 pub async fn create_test_network<'a>(
     rng: &mut ChaChaRng,
     universal_param: &'a UniversalParam,
-) -> (UserKeyPair, Url, Address, Arc<Mutex<MockCapeLedger<'a>>>) {
-    init_web_server(LevelFilter::Error, TransientFileStore::default())
+) -> (
+    UserKeyPair,
+    Url,
+    Url,
+    Address,
+    Arc<Mutex<MockCapeLedger<'a>>>,
+) {
+    init_web_server(LevelFilter::Info, TransientFileStore::default())
         .await
         .expect("Failed to run server.");
     wait_for_server().await;
+    let address_book_url =
+        Url::parse(&format!("http://localhost:{}", address_book_port())).unwrap();
 
     // Set up a network that includes a minimal relayer, connected to a real Ethereum
     // blockchain, as well as a mock EQS which will track the blockchain in parallel, since we
@@ -94,7 +117,18 @@ pub async fn create_test_network<'a>(
 
     let verif_crs = VerifierKeySet {
         xfr: vec![
-            // For regular transfers, including non-native transfers
+            // For native transfers
+            TransactionVerifyingKey::Transfer(
+                jf_cap::proof::transfer::preprocess(
+                    universal_param,
+                    1,
+                    2,
+                    CapeLedger::merkle_height(),
+                )
+                .unwrap()
+                .1,
+            ),
+            // For non-native transfers
             TransactionVerifyingKey::Transfer(
                 jf_cap::proof::transfer::preprocess(
                     universal_param,
@@ -143,7 +177,13 @@ pub async fn create_test_network<'a>(
     // either.
     let mock_eqs = Arc::new(Mutex::new(mock_eqs));
 
-    (sender_key, relayer_url, contract.address(), mock_eqs)
+    (
+        sender_key,
+        relayer_url,
+        address_book_url,
+        contract.address(),
+        mock_eqs,
+    )
 }
 
 pub async fn fund_eth_wallet<'a>(wallet: &mut CapeWallet<'a, CapeBackend<'a, ()>>) {
@@ -154,7 +194,7 @@ pub async fn fund_eth_wallet<'a>(wallet: &mut CapeWallet<'a, CapeBackend<'a, ()>
 
     let tx = TransactionRequest::new()
         .to(Address::from(wallet.eth_address().await.unwrap()))
-        .value(ethers::utils::parse_ether(U256::from(1)).unwrap())
+        .value(ethers::utils::parse_ether(U256::from(1000)).unwrap())
         .from(accounts[0]);
     provider
         .send_transaction(tx, None)
@@ -164,7 +204,7 @@ pub async fn fund_eth_wallet<'a>(wallet: &mut CapeWallet<'a, CapeBackend<'a, ()>
         .unwrap();
 }
 
-pub async fn get_burn_ammount<'a>(
+pub async fn get_burn_amount<'a>(
     wallet: &CapeWallet<'a, CapeBackend<'a, ()>>,
     asset: AssetCode,
 ) -> u64 {
@@ -174,10 +214,48 @@ pub async fn get_burn_ammount<'a>(
         .filter(|rec| rec.ro.asset_def.code == asset)
         .collect::<Vec<_>>();
     if filtered.is_empty() {
+        event!(Level::INFO, "No records to burn");
         0
     } else {
         filtered[0].ro.amount
     }
+}
+
+pub fn rpc_url_for_test() -> Url {
+    match std::env::var("CAPE_WEB3_PROVIDER_URL") {
+        Ok(val) => val.parse().unwrap(),
+        Err(_) => "http://localhost:8545".parse().unwrap(),
+    }
+}
+
+pub async fn spawn_eqs(cape_address: Address) -> (Url, TempDir, JoinHandle<std::io::Result<()>>) {
+    let dir = TempDir::new("wallet_testing_eqs").unwrap();
+    let eqs_port = port().await;
+    let opt = EQSOptions {
+        web_path: String::new(),
+        api_path: [
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")),
+            std::path::Path::new("../eqs/api/api.toml"),
+        ]
+        .iter()
+        .collect::<std::path::PathBuf>()
+        .as_os_str()
+        .to_str()
+        .unwrap()
+        .to_string(),
+        store_path: dir.path().as_os_str().to_str().unwrap().to_owned(),
+        reset_store_state: true,
+        query_frequency: 500,
+        eqs_port: eqs_port as u16,
+        cape_address: Some(cape_address),
+        rpc_url: rpc_url_for_test().to_string(),
+        temp_test_run: false,
+    };
+    let join = spawn(async move { run_eqs(&opt).await });
+    let url = Url::parse(&format!("http://localhost:{}", eqs_port)).unwrap();
+    retry(|| async { surf::connect(url.clone()).send().await.is_ok() }).await;
+
+    (url, dir, join)
 }
 
 #[derive(Debug)]
@@ -192,7 +270,7 @@ pub enum OperationType {
 
 impl Distribution<OperationType> for Standard {
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> OperationType {
-        match rng.gen_range(0..=4) {
+        match rng.gen_range(0..=5) {
             0 => OperationType::Transfer,
             1 => OperationType::Freeze,
             2 => OperationType::Unfreeze,
@@ -321,14 +399,6 @@ pub async fn wrap_simple_token<'a>(
         .unwrap()
         .await
         .unwrap();
-    assert_eq!(
-        erc20_contract
-            .balance_of(wrapper_eth_addr.clone().into())
-            .call()
-            .await
-            .unwrap(),
-        amount.into()
-    );
 
     // Deposit some ERC20 into the CAPE contract.
     wrapper
@@ -340,14 +410,6 @@ pub async fn wrap_simple_token<'a>(
         )
         .await
         .unwrap();
-    assert_eq!(
-        erc20_contract
-            .balance_of(wrapper_eth_addr.clone().into())
-            .call()
-            .await
-            .unwrap(),
-        0.into()
-    );
     Ok(())
 }
 
@@ -393,6 +455,14 @@ pub async fn transfer_token<'a>(
     asset_code: AssetCode,
     fee: u64,
 ) -> Result<TransactionReceipt<CapeLedger>, CapeWalletError> {
+    event!(
+        Level::INFO,
+        "Sending {} to: {} from {}.  Asset: code {}",
+        amount,
+        sender.pub_keys().await[0].address(),
+        receiver_address,
+        asset_code
+    );
     sender
         .transfer(None, &asset_code, &[(receiver_address, amount)], fee)
         .await

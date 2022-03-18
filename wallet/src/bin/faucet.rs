@@ -47,7 +47,7 @@ use tide::StatusCode;
 )]
 pub struct FaucetOptions {
     /// mnemonic for the faucet wallet
-    #[structopt(long, env = "CAPE_FAUCET_WALLET_MNEMONIC", default_value = "")]
+    #[structopt(long, env = "CAPE_FAUCET_WALLET_MNEMONIC")]
     pub mnemonic: String,
 
     /// path to the faucet wallet

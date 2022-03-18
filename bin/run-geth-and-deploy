@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail
+run-geth --verbosity 1 &
+wait-port 8545
+hardhat deploy --reset
+wait

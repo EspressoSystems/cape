@@ -15,10 +15,10 @@ use cap_rust_sandbox::deploy::deploy_erc20_token;
 use cape_wallet::backend::{CapeBackend, CapeBackendConfig};
 use cape_wallet::mocks::*;
 use cape_wallet::testing::create_test_network;
-use cape_wallet::testing::get_burn_ammount;
+use cape_wallet::testing::get_burn_amount;
 use cape_wallet::testing::OperationType;
 use cape_wallet::testing::{
-    burn_token, find_freezable_records, freeze_token, rpc_url_for_test, spawn_eqs,
+    burn_token, find_freezable_records, freeze_token, fund_eth_wallet, rpc_url_for_test, spawn_eqs,
     sponsor_simple_token, unfreeze_token, wrap_simple_token,
 };
 use cape_wallet::CapeWallet;
@@ -179,7 +179,7 @@ async fn main() {
         }
     };
 
-    // fund_eth_wallet()
+    fund_eth_wallet(&mut wallet).await;
 
     let freeze_key = wallet
         .generate_freeze_key("freezing account".into())
@@ -406,7 +406,7 @@ async fn main() {
             OperationType::Burn => {
                 let assets = wallet.assets().await;
                 let asset = assets.choose(&mut rng).unwrap();
-                let amount = get_burn_ammount(&wallet, asset.definition.code).await;
+                let amount = get_burn_amount(&wallet, asset.definition.code).await;
                 burn_token(&mut wallet, asset.definition.clone(), amount)
                     .await
                     .unwrap();

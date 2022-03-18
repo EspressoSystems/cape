@@ -99,7 +99,7 @@ pub async fn create_test_network<'a>(
     Address,
     Arc<Mutex<MockCapeLedger<'a>>>,
 ) {
-    init_web_server(LevelFilter::Error, TransientFileStore::default())
+    init_web_server(LevelFilter::Info, TransientFileStore::default())
         .await
         .expect("Failed to run server.");
     wait_for_server().await;
@@ -194,7 +194,7 @@ pub async fn fund_eth_wallet<'a>(wallet: &mut CapeWallet<'a, CapeBackend<'a, ()>
 
     let tx = TransactionRequest::new()
         .to(Address::from(wallet.eth_address().await.unwrap()))
-        .value(ethers::utils::parse_ether(U256::from(1)).unwrap())
+        .value(ethers::utils::parse_ether(U256::from(1000)).unwrap())
         .from(accounts[0]);
     provider
         .send_transaction(tx, None)
@@ -204,7 +204,7 @@ pub async fn fund_eth_wallet<'a>(wallet: &mut CapeWallet<'a, CapeBackend<'a, ()>
         .unwrap();
 }
 
-pub async fn get_burn_ammount<'a>(
+pub async fn get_burn_amount<'a>(
     wallet: &CapeWallet<'a, CapeBackend<'a, ()>>,
     asset: AssetCode,
 ) -> u64 {
@@ -214,6 +214,7 @@ pub async fn get_burn_ammount<'a>(
         .filter(|rec| rec.ro.asset_def.code == asset)
         .collect::<Vec<_>>();
     if filtered.is_empty() {
+        event!(Level::INFO, "No records to burn");
         0
     } else {
         filtered[0].ro.amount
@@ -269,7 +270,7 @@ pub enum OperationType {
 
 impl Distribution<OperationType> for Standard {
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> OperationType {
-        match rng.gen_range(0..=4) {
+        match rng.gen_range(0..=5) {
             0 => OperationType::Transfer,
             1 => OperationType::Freeze,
             2 => OperationType::Unfreeze,
@@ -396,14 +397,6 @@ pub async fn wrap_simple_token<'a>(
         .unwrap()
         .await
         .unwrap();
-    assert_eq!(
-        erc20_contract
-            .balance_of(wrapper_eth_addr.clone().into())
-            .call()
-            .await
-            .unwrap(),
-        amount.into()
-    );
 
     // Deposit some ERC20 into the CAPE contract.
     wrapper
@@ -415,14 +408,6 @@ pub async fn wrap_simple_token<'a>(
         )
         .await
         .unwrap();
-    assert_eq!(
-        erc20_contract
-            .balance_of(wrapper_eth_addr.clone().into())
-            .call()
-            .await
-            .unwrap(),
-        0.into()
-    );
     Ok(())
 }
 
@@ -467,6 +452,14 @@ pub async fn transfer_token<'a>(
     asset_code: AssetCode,
     fee: u64,
 ) -> Result<TransactionReceipt<CapeLedger>, CapeWalletError> {
+    event!(
+        Level::INFO,
+        "Sending {} to: {} from {}.  Asset: code {}",
+        amount,
+        sender.pub_keys().await[0].address(),
+        receiver_address,
+        asset_code
+    );
     sender
         .transfer(None, &asset_code, &[(receiver_address, amount)], fee)
         .await

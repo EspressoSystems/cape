@@ -235,7 +235,7 @@ impl AssetInfo {
         wallet: &CapeWallet<'a, Backend>,
         info: seahorse::AssetInfo,
     ) -> Self {
-        let wrapped_erc20 = wallet.wrapped_asset(info.definition.code).await;
+        let wrapped_erc20 = wallet.wrapped_erc20(info.definition.code).await;
         Self::new(info, wrapped_erc20)
     }
 

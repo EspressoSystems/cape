@@ -124,7 +124,7 @@ pub trait CapeWalletExt<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> {
     ) -> Result<TransactionReceipt<CapeLedger>, CapeWalletError>;
 
     /// Get the ERC-20 asset code that this asset wraps, if this is a wrapped asset.
-    async fn wrapped_asset(&self, asset: AssetCode) -> Option<Erc20Code>;
+    async fn wrapped_erc20(&self, asset: AssetCode) -> Option<Erc20Code>;
 
     /// Determine if an asset is a wrapped ERC-20 asset (as opposed to a domestic CAPE asset).
     async fn is_wrapped_asset(&self, asset: AssetCode) -> bool;
@@ -242,7 +242,7 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
         self.submit(txn, info).await
     }
 
-    async fn wrapped_asset(&self, asset: AssetCode) -> Option<Erc20Code> {
+    async fn wrapped_erc20(&self, asset: AssetCode) -> Option<Erc20Code> {
         let asset = self.asset(asset).await?;
         let state = self.lock().await;
         state
@@ -253,7 +253,7 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
     }
 
     async fn is_wrapped_asset(&self, asset: AssetCode) -> bool {
-        self.wrapped_asset(asset).await.is_some()
+        self.wrapped_erc20(asset).await.is_some()
     }
 
     async fn eth_client(&self) -> Result<Arc<EthMiddleware>, CapeWalletError> {

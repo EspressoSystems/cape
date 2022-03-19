@@ -5251,7 +5251,7 @@ dependencies = [
 [[package]]
 name = "seahorse"
 version = "0.2.0"
-source = "git+https://github.com/EspressoSystems/seahorse.git#2e647f9fa4c46a11296fd231bf9114483871e5a8"
+source = "git+https://github.com/EspressoSystems/seahorse.git#c9f1624a5eae0f53d34bc6b01a93ab92a8efe424"
 dependencies = [
  "arbitrary",
  "arbitrary-wrappers",
@@ -5273,6 +5273,7 @@ dependencies = [
  "image",
  "itertools 0.10.3",
  "jf-cap",
+ "jf-primitives",
  "jf-utils",
  "key-set",
  "lazy_static",

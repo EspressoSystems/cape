@@ -177,6 +177,7 @@ pub async fn init_web_server<T: Store + 'static>(
     });
     app.at("/insert_pubkey").post(insert_pubkey);
     app.at("/request_pubkey").post(request_pubkey);
+    app.at("/healthcheck").get(healthcheck);
     let address = format!("0.0.0.0:{}", address_book_port());
     Ok(spawn(app.listen(address)))
 }
@@ -238,4 +239,19 @@ async fn request_pubkey<T: Store>(
         }
         _ => Ok(tide::Response::new(StatusCode::NotFound)),
     }
+}
+
+/// Return a JSON expression with status 200 indicating the server
+/// is up and running. The JSON expression is simply,
+///    {"status": "available"}
+/// When the server is running but unable to process requests
+/// normally, a response with status 503 and payload {"status":
+/// "unavailable"} should be added.
+async fn healthcheck<T: Store>(
+    mut _req: tide::Request<ServerState<T>>,
+) -> Result<tide::Response, tide::Error> {
+    Ok(tide::Response::builder(200)
+        .content_type(tide::http::mime::JSON)
+        .body(json!({"status": "available"}))
+        .build())
 }

@@ -149,6 +149,19 @@ pub fn faucet_error(source: CapeWalletError) -> tide::Error {
     })
 }
 
+/// Return a JSON expression with status 200 indicating the server
+/// is up and running. The JSON expression is simply,
+///    {"status": "available"}
+/// When the server is running but unable to process requests
+/// normally, a response with status 503 and payload {"status":
+/// "unavailable"} should be added.
+async fn healthcheck(_req: tide::Request<FaucetState>) -> Result<tide::Response, tide::Error> {
+    Ok(tide::Response::builder(200)
+        .content_type(tide::http::mime::JSON)
+        .body(tide::prelude::json!({"status": "available"}))
+        .build())
+}
+
 async fn request_fee_assets(
     mut req: tide::Request<FaucetState>,
 ) -> Result<tide::Response, tide::Error> {
@@ -203,6 +216,7 @@ pub async fn init_web_server(
         fee_size: opt.fee_size,
     };
     let mut app = tide::with_state(state);
+    app.at("/healthcheck").get(healthcheck);
     app.at("/request_fee_assets").post(request_fee_assets);
     let address = format!("0.0.0.0:{}", opt.faucet_port);
     Ok(spawn(app.listen(address)))

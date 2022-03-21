@@ -73,6 +73,19 @@ pub struct SubmitBody {
     pub signature: Signature,
 }
 
+/// Return a JSON expression with status 200 indicating the server
+/// is up and running. The JSON expression is simply,
+///    {"status": "available"}
+/// When the server is running but unable to process requests
+/// normally, a response with status 503 and payload {"status":
+/// "unavailable"} should be added.
+async fn healthcheck(_req: tide::Request<WebState>) -> Result<tide::Response, tide::Error> {
+    Ok(tide::Response::builder(200)
+        .content_type(tide::http::mime::JSON)
+        .body(tide::prelude::json!({"status": "available"}))
+        .build())
+}
+
 async fn submit_endpoint(mut req: tide::Request<WebState>) -> Result<tide::Response, tide::Error> {
     let SubmitBody {
         transaction,
@@ -125,6 +138,7 @@ pub fn init_web_server(
     port: String,
 ) -> task::JoinHandle<Result<(), std::io::Error>> {
     let mut web_server = tide::with_state(WebState { contract });
+    web_server.at("/healthcheck").get(healthcheck);
     web_server
         .with(add_error_body::<_, Error>)
         .at("/submit")

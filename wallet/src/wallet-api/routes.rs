@@ -363,6 +363,7 @@ pub enum ApiRouteKey {
     getinfo,
     getmnemonic,
     importasset,
+    healthcheck,
     importkey,
     listkeystores,
     mint,
@@ -544,6 +545,19 @@ pub fn require_wallet(wallet: &mut Option<Wallet>) -> Result<&mut Wallet, tide::
 
 pub async fn getmnemonic(rng: &mut ChaChaRng) -> Result<String, tide::Error> {
     Ok(KeyTree::random(rng).1.to_string().replace(' ', "-"))
+}
+
+/// Return a JSON expression with status 200 indicating the server
+/// is up and running. The JSON expression is simply,
+///    {"status": "available"}
+/// When the server is running but unable to process requests
+/// normally, a response with status 503 and payload {"status":
+/// "unavailable"} should be added.
+async fn healthcheck() -> Result<tide::Response, tide::Error> {
+    Ok(tide::Response::builder(200)
+        .content_type(tide::http::mime::JSON)
+        .body(tide::prelude::json!({"status": "available"}))
+        .build())
 }
 
 pub async fn newwallet(
@@ -1123,6 +1137,7 @@ pub async fn dispatch_url(
         ApiRouteKey::getmnemonic => response(&req, getmnemonic(rng).await?),
         ApiRouteKey::importasset => response(&req, importasset(bindings, wallet).await?),
         ApiRouteKey::getprivatekey => response(&req, getprivatekey(bindings, wallet).await?),
+        ApiRouteKey::healthcheck => healthcheck().await,
         ApiRouteKey::importkey => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::listkeystores => response(&req, listkeystores(options).await?),
         ApiRouteKey::mint => response(&req, mint(bindings, wallet).await?),

@@ -233,7 +233,7 @@ mod test {
         test_utils::contract_abi_path,
         types::{GenericInto, CAPE},
     };
-    use ethers::types::Address;
+    use ethers::{prelude::PendingTransaction, providers::Middleware, types::Address};
     use jf_cap::{
         keys::UserKeyPair,
         sign_receiver_memos,
@@ -320,10 +320,11 @@ mod test {
         let (contract, faucet, faucet_rec, records) = deploy_test_contract_with_faucet().await;
         let (transaction, memos, sig) =
             generate_transfer(&mut rng, &faucet, faucet_rec, user.pub_key(), &records);
+        let provider = contract.client().provider().clone();
 
         // Submit a transaction and verify that the 2 output commitments get added to the contract's
         // records Merkle tree.
-        relay(
+        let hash = relay(
             &upcast_test_cape_to_cape(contract.clone()),
             transaction.clone(),
             memos.clone(),
@@ -331,6 +332,8 @@ mod test {
         )
         .await
         .unwrap();
+        let receipt = PendingTransaction::new(hash, &provider);
+        receipt.await.unwrap();
         assert_eq!(contract.get_num_leaves().call().await.unwrap(), 3.into());
 
         // Submit an invalid transaction (e.g.the same one again) and check that the contract's
@@ -365,6 +368,7 @@ mod test {
         let port = get_port().await;
         let (contract, faucet, faucet_rec, records) = start_minimal_relayer_for_test(port).await;
         let client = get_client(port);
+        let provider = contract.client().provider().clone();
         let (transaction, memos, signature) =
             generate_transfer(&mut rng, &faucet, faucet_rec, user.pub_key(), &records);
         let mut res = client
@@ -378,7 +382,9 @@ mod test {
             .send()
             .await
             .unwrap();
-        response_body::<TransactionReceipt>(&mut res).await.unwrap();
+        let hash = response_body::<H256>(&mut res).await.unwrap();
+        let receipt = PendingTransaction::new(hash, &provider);
+        receipt.await.unwrap();
         assert_eq!(contract.get_num_leaves().call().await.unwrap(), 3.into());
 
         // Test with the non-mock CAPE contract. We can't generate any valid transactions for this

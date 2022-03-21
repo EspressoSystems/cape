@@ -58,6 +58,7 @@ tracing-futures = "0.2"
 tracing-subscriber = "0.2.19"
 
 [dev-dependencies]
+ark-serialize = "0.3.0"
 tracing-test = "0.2.1"
 
 [features]

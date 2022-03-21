@@ -445,7 +445,12 @@ async fn populatefortest(req: tide::Request<WebState>) -> Result<tide::Response,
     let erc20_code = Erc20Code(EthereumAddr(random_addr));
     let sponsor_addr = DEFAULT_ETH_ADDR;
     let asset_def = wallet
-        .sponsor(erc20_code.clone(), sponsor_addr.clone(), Default::default())
+        .sponsor(
+            "dummy_wrapped_asset".into(),
+            erc20_code.clone(),
+            sponsor_addr.clone(),
+            Default::default(),
+        )
         .await
         .map_err(wallet_error)?;
 

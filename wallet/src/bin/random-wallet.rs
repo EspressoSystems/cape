@@ -239,7 +239,7 @@ async fn main() {
                 .reveal_blinding_factor()
                 .unwrap();
             let my_asset = wallet
-                .define_asset(&[], policy)
+                .define_asset("my_asset".into(), &[], policy)
                 .await
                 .expect("failed to define asset");
             event!(Level::INFO, "defined a new asset type: {}", my_asset.code);
@@ -396,7 +396,7 @@ async fn main() {
             }
             OperationType::Wrap => {
                 let asset_def = wallet
-                    .define_asset(&[], AssetPolicy::default())
+                    .define_asset("my_asset".into(), &[], AssetPolicy::default())
                     .await
                     .expect("failed to define asset");
                 wrap_simple_token(&mut wallet, &address, asset_def, &erc20_contract, 100)

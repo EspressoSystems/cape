@@ -64,6 +64,7 @@ mod tests {
             DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR, DEFAULT_WRAPPED_AMT,
         },
     };
+    use ark_serialize::CanonicalDeserialize;
     use async_std::fs;
     use cap_rust_sandbox::{
         ledger::CapeLedger,
@@ -80,7 +81,7 @@ mod tests {
     };
     use net::{client, UserAddress};
     use seahorse::{
-        asset_library::VerifiedAssetLibrary,
+        asset_library::{Icon, VerifiedAssetLibrary},
         hd::{KeyTree, Mnemonic},
         txn_builder::{RecordInfo, TransactionReceipt},
     };
@@ -89,6 +90,7 @@ mod tests {
     use std::collections::HashSet;
     use std::convert::TryInto;
     use std::fmt::Debug;
+    use std::io::Cursor;
     use std::iter::once;
     use std::iter::FromIterator;
     use std::path::{Path, PathBuf};
@@ -399,7 +401,7 @@ mod tests {
                 sending_keys: vec![],
                 viewing_keys: vec![],
                 freezing_keys: vec![],
-                assets: vec![AssetInfo::from(AssetDefinition::native())]
+                assets: vec![AssetInfo::native()]
             }
         )
     }
@@ -704,13 +706,13 @@ mod tests {
 
         // Should fail if a wallet is not already open.
         server
-            .requires_wallet::<AssetDefinition>(&format!(
+            .requires_wallet::<AssetInfo>(&format!(
                 "newasset/erc20/{}/sponsor/{}/view_amount/{}/view_address/{}/viewing_threshold/{}",
                 erc20_code, sponsor_addr, view_amount, view_address, viewing_threshold
             ))
             .await;
         server
-            .requires_wallet::<AssetDefinition>(&format!(
+            .requires_wallet::<AssetInfo>(&format!(
                 "newasset/description/{}/view_amount/{}/view_address/{}/viewing_threshold/{}",
                 description, view_amount, view_address, viewing_threshold
             ))
@@ -735,91 +737,138 @@ mod tests {
 
         // newasset should return a sponsored asset with the correct policy if an ERC20 code is given.
         let sponsored_asset = server
-            .get::<AssetDefinition>(&format!(
+            .get::<AssetInfo>(&format!(
                 "newasset/erc20/{}/sponsor/{}/freezing_key/{}/viewing_key/{}/view_amount/{}/view_address/{}/viewing_threshold/{}",
                 erc20_code, sponsor_addr, freezing_key, viewing_key, view_amount, view_address, viewing_threshold
             ))
             .await
             .unwrap();
-        assert_eq!(&sponsored_asset.viewing_key.unwrap(), viewing_key);
-        assert_eq!(&sponsored_asset.freezing_key.unwrap(), freezing_key);
-        assert_eq!(sponsored_asset.viewing_threshold, viewing_threshold);
+        assert_eq!(sponsored_asset.wrapped_erc20, Some(erc20_code.clone()));
+        assert_eq!(
+            &sponsored_asset.definition.viewing_key.unwrap(),
+            viewing_key
+        );
+        assert_eq!(
+            &sponsored_asset.definition.freezing_key.unwrap(),
+            freezing_key
+        );
+        assert_eq!(
+            sponsored_asset.definition.viewing_threshold,
+            viewing_threshold
+        );
 
         // newasset should return a defined asset with the correct policy if no ERC20 code is given.
         let defined_asset = server
-            .get::<AssetDefinition>(&format!(
+            .get::<AssetInfo>(&format!(
                 "newasset/description/{}/freezing_key/{}/viewing_key/{}/view_amount/{}/view_address/{}/viewing_threshold/{}",
                 description, freezing_key, viewing_key, view_amount, view_address, viewing_threshold
             ))
             .await
             .unwrap();
-        assert_eq!(&defined_asset.viewing_key.unwrap(), viewing_key);
-        assert_eq!(&defined_asset.freezing_key.unwrap(), freezing_key);
-        assert_eq!(defined_asset.viewing_threshold, viewing_threshold);
+        assert_eq!(defined_asset.wrapped_erc20, None);
+        assert_eq!(&defined_asset.definition.viewing_key.unwrap(), viewing_key);
+        assert_eq!(
+            &defined_asset.definition.freezing_key.unwrap(),
+            freezing_key
+        );
+        assert_eq!(
+            defined_asset.definition.viewing_threshold,
+            viewing_threshold
+        );
         let defined_asset = server
-            .get::<AssetDefinition>(&format!(
+            .get::<AssetInfo>(&format!(
             "newasset/freezing_key/{}/viewing_key/{}/view_amount/{}/view_address/{}/viewing_threshold/{}",
             freezing_key, viewing_key, view_amount, view_address, viewing_threshold
         ))
             .await
             .unwrap();
-        assert_eq!(&defined_asset.viewing_key.unwrap(), viewing_key);
-        assert_eq!(&defined_asset.freezing_key.unwrap(), freezing_key);
-        assert_eq!(defined_asset.viewing_threshold, viewing_threshold);
+        assert_eq!(&defined_asset.definition.viewing_key.unwrap(), viewing_key);
+        assert_eq!(
+            &defined_asset.definition.freezing_key.unwrap(),
+            freezing_key
+        );
+        assert_eq!(
+            defined_asset.definition.viewing_threshold,
+            viewing_threshold
+        );
 
         // newasset should return an asset with the default freezer public key if it's not given.
+        let erc20_code = Erc20Code(EthereumAddr([2; 20]));
         let sponsored_asset = server
-                .get::<AssetDefinition>(&format!(
+                .get::<AssetInfo>(&format!(
                     "newasset/erc20/{}/sponsor/{}/viewing_key/{}/view_amount/{}/view_address/{}/viewing_threshold/{}",
                     erc20_code, sponsor_addr, viewing_key, view_amount, view_address, viewing_threshold
                 ))
                 .await
                 .unwrap();
-        assert!(sponsored_asset.freezing_key.is_none());
+        assert!(sponsored_asset.definition.freezing_key.is_none());
         let sponsored_asset = server
-            .get::<AssetDefinition>(&format!(
+            .get::<AssetInfo>(&format!(
                 "newasset/description/{}/viewing_key/{}/view_amount/{}/view_address/{}/viewing_threshold/{}",
                 description, viewing_key, view_amount, view_address, viewing_threshold
             ))
             .await
             .unwrap();
-        assert!(sponsored_asset.freezing_key.is_none());
+        assert!(sponsored_asset.definition.freezing_key.is_none());
 
         // newasset should return an asset with the default auditor public key and no reveal threshold if an
         // auditor public key isn't given.
+        let erc20_code = Erc20Code(EthereumAddr([3; 20]));
         let sponsored_asset = server
-            .get::<AssetDefinition>(&format!(
+            .get::<AssetInfo>(&format!(
                 "newasset/erc20/{}/sponsor/{}/freezing_key/{}",
                 erc20_code, sponsor_addr, freezing_key
             ))
             .await
             .unwrap();
-        assert!(sponsored_asset.viewing_key.is_none());
-        assert_eq!(sponsored_asset.viewing_threshold, 0);
+        assert!(sponsored_asset.definition.viewing_key.is_none());
+        assert_eq!(sponsored_asset.definition.viewing_threshold, 0);
         let sponsored_asset = server
-            .get::<AssetDefinition>(&format!("newasset/description/{}", description))
+            .get::<AssetInfo>(&format!("newasset/description/{}", description))
             .await
             .unwrap();
-        assert!(sponsored_asset.viewing_key.is_none());
-        assert_eq!(sponsored_asset.viewing_threshold, 0);
+        assert!(sponsored_asset.definition.viewing_key.is_none());
+        assert_eq!(sponsored_asset.definition.viewing_threshold, 0);
 
         // newasset should return an asset with no reveal threshold if it's not given.
+        let erc20_code = Erc20Code(EthereumAddr([4; 20]));
         let sponsored_asset = server
-                .get::<AssetDefinition>(&format!(
+                .get::<AssetInfo>(&format!(
                     "newasset/erc20/{}/sponsor/{}/freezing_key/{}/viewing_key/{}/view_amount/{}/view_address/{}",
                     erc20_code, sponsor_addr, freezing_key, viewing_key, view_amount, view_address
                 ))
                 .await
                 .unwrap();
-        assert_eq!(sponsored_asset.viewing_threshold, 0);
+        assert_eq!(sponsored_asset.definition.viewing_threshold, 0);
         let defined_asset = server
-            .get::<AssetDefinition>(&format!(
+            .get::<AssetInfo>(&format!(
                 "newasset/description/{}/freezing_key/{}/viewing_key/{}/view_amount/{}/view_address/{}",
                 description, freezing_key, viewing_key, view_amount, view_address
             ))
             .await
             .unwrap();
-        assert_eq!(defined_asset.viewing_threshold, 0);
+        assert_eq!(defined_asset.definition.viewing_threshold, 0);
+
+        // newasset should return an asset with a given symbol.
+        let erc20_code = Erc20Code(EthereumAddr([5; 20]));
+        let sponsored_asset = server
+                .get::<AssetInfo>(&format!(
+                    "newasset/symbol/{}/erc20/{}/sponsor/{}/freezing_key/{}/viewing_key/{}/view_amount/{}/view_address/{}",
+                    base64::encode_config("my-wrapped-asset", base64::URL_SAFE_NO_PAD), erc20_code,
+                    sponsor_addr, freezing_key, viewing_key, view_amount, view_address
+                ))
+                .await
+                .unwrap();
+        assert_eq!(sponsored_asset.symbol, Some("my-wrapped-asset".into()));
+        let defined_asset = server
+            .get::<AssetInfo>(&format!(
+                "newasset/symbol/{}/description/{}/freezing_key/{}/viewing_key/{}/view_amount/{}/view_address/{}",
+               base64::encode_config("my-defined-asset", base64::URL_SAFE_NO_PAD), description,
+               freezing_key, viewing_key, view_amount, view_address
+            ))
+            .await
+            .unwrap();
+        assert_eq!(defined_asset.symbol, Some("my-defined-asset".into()));
     }
 
     #[async_std::test]
@@ -843,7 +892,7 @@ mod tests {
 
         // Sponsor an asset.
         let sponsored_asset = server
-            .get::<AssetDefinition>(&format!(
+            .get::<AssetInfo>(&format!(
                 "newasset/erc20/{}/sponsor/{}",
                 erc20_code, sponsor_addr
             ))
@@ -886,7 +935,7 @@ mod tests {
         server
             .get::<()>(&format!(
                 "wrap/destination/{}/ethaddress/{}/asset/{}/amount/{}",
-                destination, sponsor_addr, sponsored_asset.code, 10
+                destination, sponsor_addr, sponsored_asset.definition.code, 10
             ))
             .await
             .unwrap();
@@ -918,9 +967,10 @@ mod tests {
 
         // Define an asset.
         let asset = server
-            .get::<AssetDefinition>(&format!("newasset/description/{}", description))
+            .get::<AssetInfo>(&format!("newasset/description/{}", description))
             .await
             .unwrap()
+            .definition
             .code;
 
         // Get the faucet address with non-zero balance of the native asset.
@@ -1680,7 +1730,7 @@ mod tests {
         let (code, _) = AssetCode::random(&mut rng);
         let new_asset = JfAssetDefinition::new(code, AssetPolicy::default()).unwrap();
         let assets = VerifiedAssetLibrary::new(
-            vec![JfAssetDefinition::native(), new_asset.clone()],
+            vec![AssetInfo::native().into(), new_asset.clone().into()],
             &test_asset_signing_key(),
         );
         let path = server.options().assets_path();
@@ -1711,6 +1761,228 @@ mod tests {
             .unwrap();
         assert!(asset_info.verified);
     }
+
+    #[async_std::test]
+    #[traced_test]
+    async fn test_export_import_asset() {
+        let server = TestServer::new().await;
+        server
+            .get::<()>(&format!(
+                "newwallet/{}/password1/name/wallet1",
+                server.get::<String>("getmnemonic").await.unwrap(),
+            ))
+            .await
+            .unwrap();
+
+        let mut asset = server
+            .get::<AssetInfo>(&format!(
+                "newasset/description/{}",
+                base64::encode_config("description".as_bytes(), base64::URL_SAFE_NO_PAD)
+            ))
+            .await
+            .unwrap();
+        // We know the mint info since we created the asset. Later we will check that importers
+        // can't learn the mint info.
+        assert!(asset.mint_info.is_some());
+
+        // Export the asset.
+        let export = server
+            .get::<String>(&format!("exportasset/{}", asset.definition.code))
+            .await
+            .unwrap();
+
+        // Open a different wallet and import the asset.
+        server
+            .get::<()>(&format!(
+                "newwallet/{}/password2/name/wallet2",
+                server.get::<String>("getmnemonic").await.unwrap(),
+            ))
+            .await
+            .unwrap();
+        // Make sure the new wallet doesn't have the asset before we import it.
+        let info = server.get::<WalletSummary>("getinfo").await.unwrap();
+        assert_eq!(info.assets, vec![AssetInfo::native()]);
+
+        // Import the asset.
+        let import = server
+            .get::<AssetInfo>(&format!("importasset/{}", export))
+            .await
+            .unwrap();
+        // Make sure we didn't export the mint info.
+        assert!(import.mint_info.is_none());
+        // Check that all the information besides the mint info is the same.
+        asset.mint_info = None;
+        assert_eq!(asset, import);
+    }
+
+    #[async_std::test]
+    #[traced_test]
+    async fn test_updateasset() {
+        let server = TestServer::new().await;
+        let symbol = base64::encode_config("symbol".as_bytes(), base64::URL_SAFE_NO_PAD);
+        let description = base64::encode_config("description".as_bytes(), base64::URL_SAFE_NO_PAD);
+
+        // Generate a simple icon in raw bytes: 4 bytes for width, 4 for height, and then
+        // width*height*3 zerox bytes for the pixels. Use 64x64 so seahorse doesn't resize the icon.
+        let icon_width: u32 = 64;
+        let icon_height: u32 = 64;
+        let icon_data = [0; 3 * 64 * 64];
+        let icon_bytes = icon_width
+            .to_le_bytes()
+            .iter()
+            .chain(icon_height.to_le_bytes().iter())
+            .chain(icon_data.iter())
+            .cloned()
+            .collect::<Vec<_>>();
+        let icon = <Icon as CanonicalDeserialize>::deserialize(icon_bytes.as_slice()).unwrap();
+
+        // Now write the icon as a PNG and encode it in base64.
+        let mut icon_cursor = Cursor::new(vec![]);
+        icon.write_png(&mut icon_cursor).unwrap();
+        let icon_bytes = icon_cursor.into_inner();
+        // We use URL_SAFE_NO_PAD for URL parameters
+        let icon = base64::encode_config(&icon_bytes, base64::URL_SAFE_NO_PAD);
+        // We use standard base 64 for responses, since that's what HTML image converts expect.
+        let icon_response = base64::encode(&icon_bytes);
+
+        // Should fail if a wallet is not already open.
+        server
+            .requires_wallet::<AssetInfo>(&format!(
+                "updateasset/{}/symbol/{}",
+                AssetCode::native(),
+                symbol
+            ))
+            .await;
+        server
+            .requires_wallet::<AssetInfo>(&format!(
+                "updateasset/{}/description/{}",
+                AssetCode::native(),
+                description
+            ))
+            .await;
+        server
+            .requires_wallet::<AssetInfo>(&format!(
+                "updateasset/{}/icon/{}",
+                AssetCode::native(),
+                icon
+            ))
+            .await;
+
+        // Create a wallet.
+        server
+            .get::<()>(&format!(
+                "newwallet/{}/my-password/path/{}",
+                server.get::<String>("getmnemonic").await.unwrap(),
+                server.path()
+            ))
+            .await
+            .unwrap();
+
+        // Update the metadata of the native asset, one field at a time.
+        let info = server
+            .get::<AssetInfo>(&format!(
+                "updateasset/{}/symbol/{}",
+                AssetCode::native(),
+                symbol
+            ))
+            .await
+            .unwrap();
+        assert_eq!(
+            info,
+            server
+                .get::<WalletSummary>("getinfo")
+                .await
+                .unwrap()
+                .assets
+                .into_iter()
+                .find(|asset| asset.definition.code == info.definition.code)
+                .unwrap()
+        );
+        assert_eq!(info.symbol.unwrap(), "symbol");
+
+        let info = server
+            .get::<AssetInfo>(&format!(
+                "updateasset/{}/description/{}",
+                AssetCode::native(),
+                description
+            ))
+            .await
+            .unwrap();
+        assert_eq!(
+            info,
+            server
+                .get::<WalletSummary>("getinfo")
+                .await
+                .unwrap()
+                .assets
+                .into_iter()
+                .find(|asset| asset.definition.code == info.definition.code)
+                .unwrap()
+        );
+        assert_eq!(info.description.unwrap(), "description");
+
+        let info = server
+            .get::<AssetInfo>(&format!(
+                "updateasset/{}/icon/{}",
+                AssetCode::native(),
+                icon
+            ))
+            .await
+            .unwrap();
+        assert_eq!(
+            info,
+            server
+                .get::<WalletSummary>("getinfo")
+                .await
+                .unwrap()
+                .assets
+                .into_iter()
+                .find(|asset| asset.definition.code == info.definition.code)
+                .unwrap()
+        );
+        assert_eq!(info.icon.unwrap(), icon_response);
+
+        // Test route parsing for updating multiple fields at a time, although updating with the
+        // same data will have no affect.
+        server
+            .get::<AssetInfo>(&format!(
+                "updateasset/{}/symbol/{}/description/{}",
+                AssetCode::native(),
+                symbol,
+                description
+            ))
+            .await
+            .unwrap();
+        server
+            .get::<AssetInfo>(&format!(
+                "updateasset/{}/symbol/{}/icon/{}",
+                AssetCode::native(),
+                symbol,
+                icon
+            ))
+            .await
+            .unwrap();
+        server
+            .get::<AssetInfo>(&format!(
+                "updateasset/{}/description/{}/icon/{}",
+                AssetCode::native(),
+                description,
+                icon
+            ))
+            .await
+            .unwrap();
+        server
+            .get::<AssetInfo>(&format!(
+                "updateasset/{}/symbol/{}/description/{}/icon/{}",
+                AssetCode::native(),
+                symbol,
+                description,
+                icon
+            ))
+            .await
+            .unwrap();
+    }
+
     #[async_std::test]
     #[traced_test]
     async fn test_getprivatekey() {

@@ -248,6 +248,24 @@ PATH = [
   "newasset/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/viewing_threshold/:viewing_threshold",
   "newasset/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key",
   "newasset/erc20/:erc20/sponsor/:sponsor",
+  "newasset/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address/viewing_threshold/:viewing_threshold",
+  "newasset/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address",
+  "newasset/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/viewing_threshold/:viewing_threshold",
+  "newasset/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount",
+  "newasset/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_address/:view_address/viewing_threshold/:viewing_threshold",
+  "newasset/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_address/:view_address",
+  "newasset/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/viewing_threshold/:viewing_threshold",
+  "newasset/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key",
+  "newasset/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key",
+  "newasset/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address/viewing_threshold/:viewing_threshold",
+  "newasset/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address",
+  "newasset/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_amount/:view_amount/viewing_threshold/:viewing_threshold",
+  "newasset/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_amount/:view_amount",
+  "newasset/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_address/:view_address/viewing_threshold/:viewing_threshold",
+  "newasset/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_address/:view_address",
+  "newasset/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/viewing_threshold/:viewing_threshold",
+  "newasset/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key",
+  "newasset/symbol/:symbol/erc20/:erc20/sponsor/:sponsor",
 
   # Paths for asset definition with a given description.
   "newasset/description/:description/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address/viewing_threshold/:viewing_threshold",
@@ -268,6 +286,24 @@ PATH = [
   "newasset/description/:description/viewing_key/:viewing_key/viewing_threshold/:viewing_threshold",
   "newasset/description/:description/viewing_key/:viewing_key",
   "newasset/description/:description",
+  "newasset/symbol/:symbol/description/:description/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address/viewing_threshold/:viewing_threshold",
+  "newasset/symbol/:symbol/description/:description/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address",
+  "newasset/symbol/:symbol/description/:description/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/viewing_threshold/:viewing_threshold",
+  "newasset/symbol/:symbol/description/:description/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount",
+  "newasset/symbol/:symbol/description/:description/freezing_key/:freezing_key/viewing_key/:viewing_key/view_address/:view_address/viewing_threshold/:viewing_threshold",
+  "newasset/symbol/:symbol/description/:description/freezing_key/:freezing_key/viewing_key/:viewing_key/view_address/:view_address",
+  "newasset/symbol/:symbol/description/:description/freezing_key/:freezing_key/viewing_key/:viewing_key/viewing_threshold/:viewing_threshold",
+  "newasset/symbol/:symbol/description/:description/freezing_key/:freezing_key/viewing_key/:viewing_key",
+  "newasset/symbol/:symbol/description/:description/freezing_key/:freezing_key",
+  "newasset/symbol/:symbol/description/:description/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address/viewing_threshold/:viewing_threshold",
+  "newasset/symbol/:symbol/description/:description/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address",
+  "newasset/symbol/:symbol/description/:description/viewing_key/:viewing_key/view_amount/:view_amount/viewing_threshold/:viewing_threshold",
+  "newasset/symbol/:symbol/description/:description/viewing_key/:viewing_key/view_amount/:view_amount",
+  "newasset/symbol/:symbol/description/:description/viewing_key/:viewing_key/view_address/:view_address/viewing_threshold/:viewing_threshold",
+  "newasset/symbol/:symbol/description/:description/viewing_key/:viewing_key/view_address/:view_address",
+  "newasset/symbol/:symbol/description/:description/viewing_key/:viewing_key/viewing_threshold/:viewing_threshold",
+  "newasset/symbol/:symbol/description/:description/viewing_key/:viewing_key",
+  "newasset/symbol/:symbol/description/:description",
 
   # Paths for asset definition without a given description.
   "newasset/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address/viewing_threshold/:viewing_threshold",
@@ -288,8 +324,27 @@ PATH = [
   "newasset/viewing_key/:viewing_key/viewing_threshold/:viewing_threshold",
   "newasset/viewing_key/:viewing_key",
   "newasset",
+  "newasset/symbol/:symbol/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address/viewing_threshold/:viewing_threshold",
+  "newasset/symbol/:symbol/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address",
+  "newasset/symbol/:symbol/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/viewing_threshold/:viewing_threshold",
+  "newasset/symbol/:symbol/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount",
+  "newasset/symbol/:symbol/freezing_key/:freezing_key/viewing_key/:viewing_key/view_address/:view_address/viewing_threshold/:viewing_threshold",
+  "newasset/symbol/:symbol/freezing_key/:freezing_key/viewing_key/:viewing_key/view_address/:view_address",
+  "newasset/symbol/:symbol/freezing_key/:freezing_key/viewing_key/:viewing_key/viewing_threshold/:viewing_threshold",
+  "newasset/symbol/:symbol/freezing_key/:freezing_key/viewing_key/:viewing_key",
+  "newasset/symbol/:symbol/freezing_key/:freezing_key",
+  "newasset/symbol/:symbol/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address/viewing_threshold/:viewing_threshold",
+  "newasset/symbol/:symbol/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address",
+  "newasset/symbol/:symbol/viewing_key/:viewing_key/view_amount/:view_amount/viewing_threshold/:viewing_threshold",
+  "newasset/symbol/:symbol/viewing_key/:viewing_key/view_amount/:view_amount",
+  "newasset/symbol/:symbol/viewing_key/:viewing_key/view_address/:view_address/viewing_threshold/:viewing_threshold",
+  "newasset/symbol/:symbol/viewing_key/:viewing_key/view_address/:view_address",
+  "newasset/symbol/:symbol/viewing_key/:viewing_key/viewing_threshold/:viewing_threshold",
+  "newasset/symbol/:symbol/viewing_key/:viewing_key",
+  "newasset/symbol/:symbol/",
 ]
 ":erc20" = "TaggedBase64"
+":symbol" = "Base64"
 ":description" = "Base64"
 ":sponsor" = "TaggedBase64"
 ":freezing_key" = "TaggedBase64"
@@ -299,6 +354,43 @@ PATH = [
 ":viewing_threshold" = "Integer"
 DOC = """
 Sponsor or define an asset, depending on if an ERC20 code is given. Reports the asset definition.
+"""
+
+[route.updateasset]
+PATH = [
+  "updateasset/:asset/symbol/:symbol",
+  "updateasset/:asset/description/:description",
+  "updateasset/:asset/icon/:icon",
+  "updateasset/:asset/symbol/:symbol/description/:description",
+  "updateasset/:asset/symbol/:symbol/icon/:icon",
+  "updateasset/:asset/description/:description/icon/:icon",
+  "updateasset/:asset/symbol/:symbol/description/:description/icon/:icon",
+]
+":asset" = "TaggedBase64"
+":symbol" = "Base64"
+":description" = "Base64"
+":icon" = "Base64"
+DOC = """
+Edit the local metadata associated with the given asset code.
+
+Will fail if the asset code does not exist in the wallet. Will have no effect on verified assets.
+"""
+
+[route.exportasset]
+PATH = ["exportasset/:asset"]
+":asset" = "TaggedBase64"
+DOC = """
+Return a serialized representation of the asset with the given code.
+"""
+
+[route.importasset]
+PATH = ["importasset/:asset"]
+":asset" = "TaggedBase64"
+DOC = """
+Add an asset to the wallet's asset library.
+
+`:asset` should be a serialized representation of an asset, as returned by `exportasset`. The asset
+may have been created and exported in a different keystore or wallet.
 """
 
 [route.mint]

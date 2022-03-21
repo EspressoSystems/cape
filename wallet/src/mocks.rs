@@ -841,16 +841,20 @@ mod cape_wallet_tests {
         // Sponsor the ERC20 token.
         let cap_asset = wallets[0]
             .0
-            .sponsor(erc20_code, sponsor_addr.clone(), cap_asset_policy)
+            .sponsor(
+                "sponsored_asset".into(),
+                erc20_code,
+                sponsor_addr.clone(),
+                cap_asset_policy,
+            )
             .await
             .unwrap();
         println!("Sponsor completed: {}s", now.elapsed().as_secs_f32());
 
         // Check that the sponsored asset is added to the asset library.
-        assert_eq!(
-            wallets[0].0.asset(cap_asset.code).await,
-            Some(cap_asset.clone().into())
-        );
+        let info = wallets[0].0.asset(cap_asset.code).await.unwrap();
+        assert_eq!(info.definition, cap_asset);
+        assert_eq!(info.name, Some("sponsored_asset".into()));
 
         // Wrapping an undefined asset should fail.
         let wrap_amount = 6;
@@ -895,7 +899,11 @@ mod cape_wallet_tests {
         now = Instant::now();
         let dummy_coin = wallets[0]
             .0
-            .define_asset("Dummy asset".as_bytes(), Default::default())
+            .define_asset(
+                "defined_asset".into(),
+                "Dummy asset".as_bytes(),
+                Default::default(),
+            )
             .await
             .unwrap();
         let mint_fee = 1;

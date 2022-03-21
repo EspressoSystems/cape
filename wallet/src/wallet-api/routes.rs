@@ -375,6 +375,7 @@ pub enum ApiRouteKey {
     resetpassword,
     send,
     transaction,
+    transactionhistory,
     unfreeze,
     unwrap,
     updateasset,
@@ -1113,6 +1114,63 @@ pub async fn importasset(
     Ok(AssetInfo::from_info(wallet, info).await)
 }
 
+async fn transactionhistory(
+    bindings: &HashMap<String, RouteBinding>,
+    wallet: &mut Option<Wallet>,
+) -> Result<Vec<TransactionHistoryEntry>, tide::Error> {
+    let wallet = require_wallet(wallet)?;
+    let history = wallet.transaction_history().await.map_err(wallet_error)?;
+    let from = match bindings.get(":from") {
+        Some(param) => history.len().saturating_sub(param.value.as_usize()?),
+        None => 0,
+    };
+    let to = match bindings.get(":count") {
+        Some(param) => from + param.value.as_usize()?,
+        None => history.len(),
+    };
+    let selected = iter(history.into_iter().skip(from).take(to - from))
+        .then(|entry| TransactionHistoryEntry::from_wallet(wallet, entry))
+        .collect::<Vec<_>>()
+        .await;
+    Ok(selected)
+}
+
+async fn getprivatekey(
+    bindings: &HashMap<String, RouteBinding>,
+    wallet: &mut Option<Wallet>,
+) -> Result<PrivateKey, tide::Error> {
+    let wallet = require_wallet(wallet)?;
+    let address = bindings[":address"].value.clone();
+    match address.as_identifier()?.tag().as_str() {
+        "ADDR" => match wallet
+            .get_user_private_key(&address.to::<UserAddress>()?.0)
+            .await
+        {
+            Ok(keypair) => Ok(PrivateKey::Sending(keypair)),
+            Err(msg) => Err(wallet_error(msg)),
+        },
+        "USERPUBKEY" => match wallet
+            .get_user_private_key(&address.to::<UserPubKey>()?.address())
+            .await
+        {
+            Ok(keypair) => Ok(PrivateKey::Sending(keypair)),
+            Err(msg) => Err(wallet_error(msg)),
+        },
+        "AUDPUBKEY" => match wallet.get_auditor_private_key(&address.to()?).await {
+            Ok(keypair) => Ok(PrivateKey::Viewing(keypair)),
+            Err(msg) => Err(wallet_error(msg)),
+        },
+        "FREEZEPUBKEY" => match wallet.get_freezer_private_key(&address.to()?).await {
+            Ok(keypair) => Ok(PrivateKey::Freezing(keypair)),
+            Err(msg) => Err(wallet_error(msg)),
+        },
+        tag => Err(server_error(CapeAPIError::Tag {
+            expected: String::from("ADDR | USERPUBKEY | AUDPUBKEY | FREEZEPUBKEY"),
+            actual: String::from(tag),
+        })),
+    }
+}
+
 pub async fn dispatch_url(
     req: tide::Request<WebState>,
     route_pattern: &str,
@@ -1160,6 +1218,9 @@ pub async fn dispatch_url(
         ),
         ApiRouteKey::send => response(&req, send(bindings, wallet).await?),
         ApiRouteKey::transaction => dummy_url_eval(route_pattern, bindings),
+        ApiRouteKey::transactionhistory => {
+            response(&req, transactionhistory(bindings, wallet).await?)
+        }
         ApiRouteKey::unfreeze => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::unwrap => response(&req, unwrap(bindings, wallet).await?),
         ApiRouteKey::updateasset => response(&req, updateasset(bindings, wallet).await?),
@@ -1167,41 +1228,5 @@ pub async fn dispatch_url(
         ApiRouteKey::wrap => response(&req, wrap(bindings, wallet).await?),
         ApiRouteKey::getrecords => response(&req, get_records(wallet).await?),
         ApiRouteKey::lastusedkeystore => response(&req, get_last_keystore(options).await?),
-    }
-}
-
-async fn getprivatekey(
-    bindings: &HashMap<String, RouteBinding>,
-    wallet: &mut Option<Wallet>,
-) -> Result<PrivateKey, tide::Error> {
-    let wallet = require_wallet(wallet)?;
-    let address = bindings[":address"].value.clone();
-    match address.as_identifier()?.tag().as_str() {
-        "ADDR" => match wallet
-            .get_user_private_key(&address.to::<UserAddress>()?.0)
-            .await
-        {
-            Ok(keypair) => Ok(PrivateKey::Sending(keypair)),
-            Err(msg) => Err(wallet_error(msg)),
-        },
-        "USERPUBKEY" => match wallet
-            .get_user_private_key(&address.to::<UserPubKey>()?.address())
-            .await
-        {
-            Ok(keypair) => Ok(PrivateKey::Sending(keypair)),
-            Err(msg) => Err(wallet_error(msg)),
-        },
-        "AUDPUBKEY" => match wallet.get_auditor_private_key(&address.to()?).await {
-            Ok(keypair) => Ok(PrivateKey::Viewing(keypair)),
-            Err(msg) => Err(wallet_error(msg)),
-        },
-        "FREEZEPUBKEY" => match wallet.get_freezer_private_key(&address.to()?).await {
-            Ok(keypair) => Ok(PrivateKey::Freezing(keypair)),
-            Err(msg) => Err(wallet_error(msg)),
-        },
-        tag => Err(server_error(CapeAPIError::Tag {
-            expected: String::from("ADDR | USERPUBKEY | AUDPUBKEY | FREEZEPUBKEY"),
-            actual: String::from(tag),
-        })),
     }
 }

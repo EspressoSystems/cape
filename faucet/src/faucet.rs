@@ -22,7 +22,10 @@ use cape_wallet::{
 use ethers::prelude::Address;
 use jf_cap::{keys::UserPubKey, structs::AssetCode};
 use rand::distributions::{Alphanumeric, DistString};
-use seahorse::loader::{Loader, LoaderMetadata};
+use seahorse::{
+    events::EventIndex,
+    loader::{Loader, LoaderMetadata},
+};
 use serde::{Deserialize, Serialize};
 use snafu::Snafu;
 use std::path::PathBuf;
@@ -165,10 +168,15 @@ async fn healthcheck(_req: tide::Request<FaucetState>) -> Result<tide::Response,
 async fn request_fee_assets(
     mut req: tide::Request<FaucetState>,
 ) -> Result<tide::Response, tide::Error> {
-    let bytes = req.body_bytes().await?;
-    let pub_key: UserPubKey = bincode::deserialize(&bytes)?;
+    let pub_key: UserPubKey = net::server::request_body(&mut req).await?;
     let mut wallet = req.state().wallet.lock().await;
     let faucet_addr = wallet.pub_keys().await[0].address();
+    tracing::info!(
+        "transferring {} tokens from {} to {}",
+        req.state().grant_size,
+        net::UserAddress(faucet_addr.clone()),
+        net::UserAddress(pub_key.address())
+    );
     wallet
         .transfer(
             Some(&faucet_addr),
@@ -201,8 +209,9 @@ pub async fn init_web_server(
             relayer_url: opt.relayer_url.clone(),
             address_book_url: opt.address_book_url.clone(),
             contract_address: opt.contract_address,
-            // We don't use an Ethereum wallet. The faucet only has to do transfers. It should not have
-            // to do any operations that go directly to the contract and thus require an ETH fee.
+            // We don't use an Ethereum wallet. The faucet only has to do transfers. It should not
+            // have to do any operations that go directly to the contract and thus require an ETH
+            // fee.
             eth_mnemonic: None,
             min_polling_delay: Duration::from_millis(opt.min_polling_delay_ms),
         },
@@ -210,14 +219,31 @@ pub async fn init_web_server(
     )
     .await
     .unwrap();
+    let mut wallet = CapeWallet::new(backend).await.unwrap();
+
+    // If we're initializing for the first time, we need to generate a key. The faucet should be set
+    // up so that the first HD sending key is the faucet key.
+    if wallet.pub_keys().await.is_empty() {
+        // We pass `EventIndex::default()` to start a scan of the ledger from the beginning, in
+        // order to discove the faucet record.
+        wallet
+            .generate_user_key("faucet".into(), Some(EventIndex::default()))
+            .await
+            .unwrap();
+    }
+
     let state = FaucetState {
-        wallet: Arc::new(Mutex::new(CapeWallet::new(backend).await.unwrap())),
+        wallet: Arc::new(Mutex::new(wallet)),
         grant_size: opt.grant_size,
         fee_size: opt.fee_size,
     };
     let mut app = tide::with_state(state);
-    app.at("/healthcheck").get(healthcheck);
-    app.at("/request_fee_assets").post(request_fee_assets);
+    app.with(net::server::add_error_body::<_, FaucetError>)
+        .with(net::server::trace)
+        .at("/healthcheck")
+        .get(healthcheck)
+        .at("/request_fee_assets")
+        .post(request_fee_assets);
     let address = format!("0.0.0.0:{}", opt.faucet_port);
     Ok(spawn(app.listen(address)))
 }

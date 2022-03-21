@@ -2747,6 +2747,7 @@ dependencies = [
  "surf",
  "tempdir",
  "tide",
+ "tracing",
  "tracing-subscriber 0.3.9",
 ]
 

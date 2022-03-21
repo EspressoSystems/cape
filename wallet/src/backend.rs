@@ -56,7 +56,7 @@ use std::cmp::min;
 use std::convert::{TryFrom, TryInto};
 use std::pin::Pin;
 use std::time::Duration;
-use surf::Url;
+use surf::{StatusCode, Url};
 
 fn get_provider(rpc_url: &Url) -> Provider<Http> {
     Provider::<Http>::try_from(rpc_url.to_string()).expect("could not instantiate HTTP Provider")
@@ -160,6 +160,28 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeBackend<'a, Meta> {
                 msg: format!("error deserializing eqs response: {}", err),
             })
     }
+
+    async fn wait_for_eqs(&self) -> Result<(), CapeWalletError> {
+        let mut backoff = Duration::from_millis(500);
+        for _ in 0..8 {
+            // We use a direct `surf::connect` instead of `self.eqs.connect` because the client
+            // middleware isn't set up to handle connect requests, only API requests.
+            if surf::connect(&self.eqs.config().base_url.as_ref().unwrap())
+                .send()
+                .await
+                .is_ok()
+            {
+                return Ok(());
+            }
+            tracing::warn!("unable to connect to EQS; sleeping for {:?}", backoff);
+            sleep(backoff).await;
+            backoff *= 2;
+        }
+
+        let msg = format!("failed to connect to EQS after {:?}", backoff);
+        tracing::error!("{}", msg);
+        Err(CapeWalletError::Failed { msg })
+    }
 }
 
 #[async_trait]
@@ -214,6 +236,12 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
     }
 
     async fn create(&mut self) -> Result<WalletState<'a, CapeLedger>, CapeWalletError> {
+        // Other network queries can fail, and they will simply cause the wallet operations that use
+        // them to fail, without rendering the entire wallet unusable. But we need `get_cap_state`
+        // to work in order to even open the wallet, so we will first make sure we can connect to
+        // the EQS, retrying several times up to a couple of minutes before reporting an error.
+        self.wait_for_eqs().await?;
+
         let state: CapState = self.get_eqs("get_cap_state").await?;
 
         // `records` should be _almost_ completely sparse. However, even a fully pruned Merkle tree
@@ -341,9 +369,15 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
             .map_err(|err| CapeWalletError::Failed {
                 msg: format!("error requesting public key: {}", err),
             })?;
-        let bytes = response.body_bytes().await.unwrap();
-        let pub_key: UserPubKey = bincode::deserialize(&bytes).unwrap();
-        Ok(pub_key)
+        if response.status() == StatusCode::Ok {
+            let bytes = response.body_bytes().await.unwrap();
+            let pub_key: UserPubKey = bincode::deserialize(&bytes).unwrap();
+            Ok(pub_key)
+        } else {
+            Err(CapeWalletError::Failed {
+                msg: "Error response from address book".into(),
+            })
+        }
     }
 
     async fn get_nullifier_proof(

@@ -5,6 +5,11 @@ authors = ["Espresso Systems <hello@espressosys.com>"]
 edition = "2018"
 description = "Web server that maintains a persistent mapping from user addresses to user public keys"
 license = "GPL-3.0-or-later"
+default-run = "address-book"
+
+[[bin]]
+name = "address-book"
+path = "src/main.rs"
 
 [dependencies]
 futures = "0.3.21"

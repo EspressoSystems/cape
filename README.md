@@ -149,14 +149,20 @@ To build the project run
 The `--release` flag is recommended because without it many cryptographic
 computations the project relies one become unbearably slow.
 
-## Wallet Docker image
+## Docker images
 
-To build the wallet Docker container locally run
+To build the wallet or services Docker images locally run
 
     build-docker-wallet
 
-inside a nix shell from the root directory of the repo. For the CI build see the
-`docker` job in [.github/workflows/build.yml](.github/workflows/build.yml).
+or
+
+    build-docker-services
+
+inside a nix shell from the root directory of the repo.
+
+For the CI build see the `docker-*` jobs in
+[.github/workflows/build.yml](.github/workflows/build.yml).
 
 # Development
 

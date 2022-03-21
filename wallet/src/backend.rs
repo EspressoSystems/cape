@@ -199,7 +199,9 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
                 .map_err(|err| CapeWalletError::Failed {
                     msg: format!("relayer error: {}", err),
                 })
-                // Ignore the response, which is empty
+                // Ignore the response, which contains a hash of the submitted Ethereum transaction.
+                // The EQS will track this transaction for us and send us an event if/when it gets
+                // mined.
                 .map(|_| ()),
             CapeTransition::Wrap { .. } => Err(CapeWalletError::Failed {
                 msg: String::from(

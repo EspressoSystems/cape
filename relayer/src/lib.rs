@@ -17,7 +17,7 @@ use cap_rust_sandbox::{
     model::CapeModelTxn,
     types::CAPE,
 };
-use ethers::prelude::TransactionReceipt;
+use ethers::prelude::H256;
 use jf_cap::{keys::UserPubKey, structs::ReceiverMemo, Signature};
 use net::server::{add_error_body, request_body, response};
 use serde::{Deserialize, Serialize};
@@ -35,9 +35,6 @@ pub enum Error {
     #[snafu(display("error during transaction submission: {}", msg))]
     Submission { msg: String },
 
-    #[snafu(display("transaction was not accepted by Ethereum miners"))]
-    Rejected,
-
     #[snafu(display("internal server error: {}", msg))]
     Internal { msg: String },
 }
@@ -50,9 +47,7 @@ impl net::Error for Error {
     fn status(&self) -> StatusCode {
         match self {
             Self::Deserialize { .. } | Self::BadBlock { .. } => StatusCode::BadRequest,
-            Self::Submission { .. } | Self::Rejected | Self::Internal { .. } => {
-                StatusCode::InternalServerError
-            }
+            Self::Submission { .. } | Self::Internal { .. } => StatusCode::InternalServerError,
         }
     }
 }
@@ -102,16 +97,20 @@ async fn submit_endpoint(mut req: tide::Request<WebState>) -> Result<tide::Respo
     response(&req, ret)
 }
 /// This function implements the core logic of the relayer
+///
 /// * `contract` -  CAPE contract instance to submit the block information to
 /// * `transaction` - CAPE transaction from a user
 /// * `memos` - list of memos corresponding to the transaction
 /// * `signature` - signature over the memos information
+///
+/// Waits for the transaction to be submitted and returns its hash. Does not wait for the
+/// transaction to be mined.
 async fn relay(
     contract: &CAPE<EthMiddleware>,
     transaction: CapeModelTxn,
     memos: Vec<ReceiverMemo>,
     sig: Signature,
-) -> Result<TransactionReceipt, Error> {
+) -> Result<H256, Error> {
     let miner = UserPubKey::default();
     let block = BlockWithMemos {
         block: CapeBlock::from_cape_transactions(vec![transaction], miner.address()).map_err(
@@ -121,13 +120,15 @@ async fn relay(
         )?,
         memos: vec![(memos, sig)],
     };
-    submit_cape_block_with_memos(contract, block).await
-        .map_err(|err| Error::Submission { msg: err.to_string() })?
+    let pending = submit_cape_block_with_memos(contract, block)
         .await
-        .map_err(|err| Error::Submission { msg: err.to_string() })?
-        // If we are successful but get None instead of Some(TransactionReceipt), it means the
-        // transaction was finalized but not accepted; i.e. it was rejected or expired.
-        .ok_or(Error::Rejected)
+        .map_err(|err| Error::Submission {
+            msg: err.to_string(),
+        })?;
+    // The pending transaction itself doesn't serialize well, but all the relevant information is
+    // contained in the transaction hash. The client can reconstruct the pending transaction from
+    // the hash using a particular provider.
+    Ok(*pending)
 }
 
 pub const DEFAULT_RELAYER_PORT: u16 = 50077u16;

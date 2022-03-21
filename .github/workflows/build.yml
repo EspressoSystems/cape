@@ -75,8 +75,8 @@ jobs:
           publish_dir: ./doc/mdbook/book/
           cname: cape.docs.espressosys.com
 
-      - name: Build Wallet
-        run: nix-shell --run "cargo build -p cape_wallet --release"
+      - name: Build all executables
+        run: nix-shell --run "cargo build --release"
 
       - uses: actions/upload-artifact@v2
         with:
@@ -84,7 +84,16 @@ jobs:
           path: |
             target/release/wallet-api
 
-  docker:
+      - uses: actions/upload-artifact@v2
+        with:
+          name: services-executables
+          path: |
+            target/release/address-book
+            target/release/eqs
+            target/release/faucet
+            target/release/minimal-relayer
+
+  docker-wallet:
     runs-on: self-hosted
     needs: build
     steps:
@@ -124,7 +133,53 @@ jobs:
         name: Build and Push Docker
         with:
           context: ./wallet-checkout/
-          file: ./Dockerfile
+          file: ./wallet.Dockerfile
+          platforms: linux/amd64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  docker-services:
+    runs-on: self-hosted
+    needs: build
+    steps:
+      - uses: actions/checkout@v2
+        name: Checkout Repository
+        with:
+          path: services-checkout
+
+      - uses: actions/download-artifact@v2
+        with:
+          name: services-executables
+          path: services-checkout/target/release/
+
+      - uses: docker/setup-buildx-action@v1
+        name: Setup Docker BuildKit (buildx)
+        with:
+          driver: docker
+
+      - uses: docker/login-action@v1
+        name: Login to Github Container Repo
+        if: github.event_name != 'pull_request'
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/metadata-action@v3
+        name: Generate Docker Metadata
+        id: meta
+        with:
+          images: ghcr.io/espressosystems/cape/services
+
+      - name: Generate base image
+        run: cd services-checkout && bin/build-docker-base
+
+      - uses: docker/build-push-action@v2
+        name: Build and Push Docker
+        with:
+          context: ./services-checkout/
+          file: ./services.Dockerfile
           platforms: linux/amd64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}

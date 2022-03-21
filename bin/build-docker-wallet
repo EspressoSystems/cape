@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 set -e
 build-docker-base
-docker build .
+docker build -t cape/wallet -f ./wallet.Dockerfile .

@@ -34,12 +34,13 @@ async fn main() -> std::io::Result<()> {
     let opt = MinimalRelayerOptions::from_args();
 
     // Set up a client to submit ETH transactions.
+    let provider = Provider::<Http>::try_from(opt.rpc_url.clone())
+        .expect("could not instantiate HTTP Provider");
     let wallet = MnemonicBuilder::<English>::default()
         .phrase(opt.mnemonic.as_str())
         .build()
-        .expect("could not open relayer wallet");
-    let provider = Provider::<Http>::try_from(opt.rpc_url.clone())
-        .expect("could not instantiate HTTP Provider");
+        .expect("could not open relayer wallet")
+        .with_chain_id(provider.get_chainid().await.unwrap().as_u64());
     let client = Arc::new(SignerMiddleware::new(provider, wallet));
 
     // Connect to CAPE smart contract.

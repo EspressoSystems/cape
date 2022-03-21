@@ -93,6 +93,16 @@ jobs:
             target/release/faucet
             target/release/minimal-relayer
 
+      - uses: actions/upload-artifact@v2
+        with:
+          name: demo-executables
+          path: |
+            target/release/address-book
+            target/release/eqs
+            target/release/faucet
+            target/release/minimal-relayer
+            target/release/wallet-api
+
   docker-wallet:
     runs-on: self-hosted
     needs: build
@@ -180,6 +190,52 @@ jobs:
         with:
           context: ./services-checkout/
           file: ./services.Dockerfile
+          platforms: linux/amd64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  docker-demo:
+    runs-on: self-hosted
+    needs: build
+    steps:
+      - uses: actions/checkout@v2
+        name: Checkout Repository
+        with:
+          path: demo-checkout
+
+      - uses: actions/download-artifact@v2
+        with:
+          name: demo-executables
+          path: demo-checkout/target/release/
+
+      - uses: docker/setup-buildx-action@v1
+        name: Setup Docker BuildKit (buildx)
+        with:
+          driver: docker
+
+      - uses: docker/login-action@v1
+        name: Login to Github Container Repo
+        if: github.event_name != 'pull_request'
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/metadata-action@v3
+        name: Generate Docker Metadata
+        id: meta
+        with:
+          images: ghcr.io/espressosystems/cape/demo
+
+      - name: Generate base image
+        run: cd demo-checkout && bin/build-docker-base
+
+      - uses: docker/build-push-action@v2
+        name: Build and Push Docker
+        with:
+          context: ./demo-checkout/
+          file: ./demo.Dockerfile
           platforms: linux/amd64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}

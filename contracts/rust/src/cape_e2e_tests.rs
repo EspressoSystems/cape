@@ -451,20 +451,12 @@ async fn test_2user_mint_maybe_submit(should_submit: bool) -> Result<()> {
     )
     .unwrap();
 
-    let alice_ro = RecordOpening::new(
-        &mut prng,
-        1, /* 1 less, for the transaction fee */
-        coin,
-        alice_key.pub_key(),
-        FreezeFlag::Unfrozen,
-    );
-
     println!("Merkle path checked: {}s", now.elapsed().as_secs_f32());
     let now = Instant::now();
 
     let (txn1, _) = {
         let fee_input = FeeInput {
-            ro: alice_ro,
+            ro: alice_rec1,
             acc_member_witness: AccMemberWitness {
                 merkle_path: alice_rec_path.clone(),
                 root: first_root,
@@ -476,7 +468,7 @@ async fn test_2user_mint_maybe_submit(should_submit: bool) -> Result<()> {
         let seed = AssetCodeSeed::generate(&mut prng);
         let description = "My Asset".as_bytes();
         let code = AssetCode::new_domestic(seed, description);
-        let policy = AssetPolicy::rand_for_test(&mut prng);
+        let policy = AssetPolicy::default();
         let new_coin = AssetDefinition::new(code, policy).unwrap();
 
         let (fee_info, _fee_ro) = TxnFeeInfo::new(&mut prng, fee_input, 1).unwrap();

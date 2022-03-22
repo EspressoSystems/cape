@@ -29,9 +29,9 @@
 //!
 //! You can use `--help` to see a list of the possible values for `[options]`.
 //!
-//! Once started, the web server will serve an HTTP API at `localhost:60000`. You can override the
-//! default port by setting the `PORT` environment variable. The endpoints are documented in
-//! `api/api.toml`.
+//! Once started, the web server will serve an HTTP API at `localhost:60000`.
+//! You can override the default port by setting the `CAPE_WALLET_PORT`
+//! environment variable. The endpoints are documented in `api/api.toml`.
 //!
 //! ## Development
 //!
@@ -1346,6 +1346,52 @@ mod tests {
                 == BalanceInfo::Balance(200)
         })
         .await;
+
+        // Check transaction history.
+        let history = server
+            .get::<Vec<TransactionHistoryEntry>>("transactionhistory")
+            .await
+            .unwrap();
+        // We just made 2 transfers, there may be more from populatefortest.
+        assert!(history.len() >= 2);
+        let history = history[history.len() - 2..].to_vec();
+
+        assert_eq!(history[0].kind, "send");
+        assert_eq!(history[0].asset, AssetCode::native());
+        assert_eq!(history[0].senders, vec![src_address]);
+        assert_eq!(history[0].receivers, vec![(dst_address.clone(), 100)]);
+        assert_eq!(history[0].status, "accepted");
+
+        assert_eq!(history[1].kind, "send");
+        assert_eq!(history[1].asset, AssetCode::native());
+        // We don't necessarily know the senders for the second transaction, since we allowed the
+        // wallet to choose.
+        assert_eq!(history[1].receivers, vec![(dst_address, 100)]);
+        assert_eq!(history[1].status, "accepted");
+
+        // Check :from and :count.
+        assert_eq!(
+            history,
+            server
+                .get::<Vec<TransactionHistoryEntry>>("transactionhistory/from/2")
+                .await
+                .unwrap()
+        );
+        assert_eq!(
+            &history[0..1],
+            server
+                .get::<Vec<TransactionHistoryEntry>>("transactionhistory/from/2/count/1")
+                .await
+                .unwrap()
+        );
+        // If we ask for more entries than there are, we should just get as many as are available.
+        assert_eq!(
+            &history[1..],
+            server
+                .get::<Vec<TransactionHistoryEntry>>("transactionhistory/from/1/count/10")
+                .await
+                .unwrap()
+        );
     }
 
     #[async_std::test]

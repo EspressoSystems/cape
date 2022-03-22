@@ -37,6 +37,10 @@ HEADING_DESCRIPTION = "Description"
 PATH = ["getmnemonic"]
 DOC = "Generate a random mnemonic phrase."
 
+[route.healthcheck]
+PATH = ["healthcheck"]
+DOC = "Responds with JSON {\"status\": \"available\"}."
+
 [route.newwallet]
 PATH = ["newwallet/:mnemonic/:password", "newwallet/:mnemonic/:password/path/:path", "newwallet/:mnemonic/:password/name/:name"]
 ":password" = "Literal"
@@ -433,12 +437,21 @@ View the given asset or view the asset associated with the given viewing key.
 """
 
 [route.transaction]
-PATH = ["transaction/list", "transaction/list/:from/:count", "transaction/status/:receipt", "transaction/await/:receipt"]
-":from" = "TaggedBase64"
+PATH = ["transaction/status/:receipt", "transaction/await/:receipt"]
 ":receipt" = "TaggedBase64"
+DOC = """
+Poll the status of a given transaction, or await events for a given transaction.
+"""
+
+[route.transactionhistory]
+PATH = ["transactionhistory", "transactionhistory/from/:from", "transactionhistory/from/:from/count/:count"]
+":from" = "Integer"
 ":count" = "Integer"
 DOC = """
-List transactions, poll the status of a given transaction, or await events for a given transaction.
+List transaction history.
+
+The first form returns all transactions. The second from returns the `:from` most recent. The third
+form returns at most `:count` transactions starting from the `:from` most recent.
 """
 
 [route.getprivatekey]

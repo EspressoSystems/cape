@@ -31,15 +31,19 @@ pub struct EQSOptions {
     /// Path to persistence files.
     ///
     /// Persistence files will be nested under the specified directory
-    #[structopt(long, short, default_value = "")]
+    #[structopt(long, short, default_value = "", env = "CAPE_EQS_STORE_PATH")]
     pub store_path: String,
 
     /// URL for Ethers HTTP Provider
-    #[structopt(long, env = "RPC_URL", default_value = "http://localhost:8545")]
+    #[structopt(
+        long,
+        env = "CAPE_WEB3_PROVIDER_URL",
+        default_value = "http://localhost:8545"
+    )]
     pub rpc_url: String,
 
     /// Address for CAPE contract
-    #[structopt(long, env = "CAPE_ADDRESS")]
+    #[structopt(long, env = "CAPE_CONTRACT_ADDRESS")]
     pub cape_address: Option<Address>,
 
     /// Invoke as a test-only instance; will create and use test contract
@@ -55,9 +59,8 @@ pub struct EQSOptions {
     #[structopt(long, default_value = "500")]
     pub query_frequency: u64,
 
-    // Ethereum connection is specified by env variable.
     /// Web service port .
-    #[structopt(long, default_value = "50087")]
+    #[structopt(long, default_value = "50087", env = "CAPE_EQS_PORT")]
     pub eqs_port: u16,
 }
 

@@ -363,6 +363,7 @@ pub enum ApiRouteKey {
     getinfo,
     getmnemonic,
     importasset,
+    healthcheck,
     importkey,
     listkeystores,
     mint,
@@ -374,6 +375,7 @@ pub enum ApiRouteKey {
     resetpassword,
     send,
     transaction,
+    transactionhistory,
     unfreeze,
     unwrap,
     updateasset,
@@ -544,6 +546,19 @@ pub fn require_wallet(wallet: &mut Option<Wallet>) -> Result<&mut Wallet, tide::
 
 pub async fn getmnemonic(rng: &mut ChaChaRng) -> Result<String, tide::Error> {
     Ok(KeyTree::random(rng).1.to_string().replace(' ', "-"))
+}
+
+/// Return a JSON expression with status 200 indicating the server
+/// is up and running. The JSON expression is simply,
+///    {"status": "available"}
+/// When the server is running but unable to process requests
+/// normally, a response with status 503 and payload {"status":
+/// "unavailable"} should be added.
+async fn healthcheck() -> Result<tide::Response, tide::Error> {
+    Ok(tide::Response::builder(200)
+        .content_type(tide::http::mime::JSON)
+        .body(tide::prelude::json!({"status": "available"}))
+        .build())
 }
 
 pub async fn newwallet(
@@ -1099,60 +1114,25 @@ pub async fn importasset(
     Ok(AssetInfo::from_info(wallet, info).await)
 }
 
-pub async fn dispatch_url(
-    req: tide::Request<WebState>,
-    route_pattern: &str,
+async fn transactionhistory(
     bindings: &HashMap<String, RouteBinding>,
-) -> Result<tide::Response, tide::Error> {
-    let segments = route_pattern.split_once('/').unwrap_or((route_pattern, ""));
-    let route_params = segments.1.split('/').collect::<Vec<_>>();
-    let state = req.state();
-    let options = &state.options;
-    let rng = &mut *state.rng.lock().await;
-    let faucet_key_pair = &state.faucet_key_pair;
-    let wallet = &mut *state.wallet.lock().await;
-    let key = ApiRouteKey::from_str(segments.0).expect("Unknown route");
-    match key {
-        ApiRouteKey::closewallet => response(&req, closewallet(wallet).await?),
-        ApiRouteKey::exportasset => response(&req, exportasset(bindings, wallet).await?),
-        ApiRouteKey::freeze => dummy_url_eval(route_pattern, bindings),
-        ApiRouteKey::getaddress => response(&req, getaddress(wallet).await?),
-        ApiRouteKey::getaccount => response(&req, getaccount(bindings, wallet).await?),
-        ApiRouteKey::getbalance => response(&req, getbalance(bindings, wallet).await?),
-        ApiRouteKey::getinfo => response(&req, getinfo(wallet).await?),
-        ApiRouteKey::getmnemonic => response(&req, getmnemonic(rng).await?),
-        ApiRouteKey::importasset => response(&req, importasset(bindings, wallet).await?),
-        ApiRouteKey::getprivatekey => response(&req, getprivatekey(bindings, wallet).await?),
-        ApiRouteKey::importkey => dummy_url_eval(route_pattern, bindings),
-        ApiRouteKey::listkeystores => response(&req, listkeystores(options).await?),
-        ApiRouteKey::mint => response(&req, mint(bindings, wallet).await?),
-        ApiRouteKey::newasset => response(&req, newasset(bindings, wallet).await?),
-        ApiRouteKey::newkey => response(&req, newkey(&route_params, bindings, wallet).await?),
-        ApiRouteKey::newwallet => response(
-            &req,
-            newwallet(options, bindings, rng, faucet_key_pair, wallet).await?,
-        ),
-        ApiRouteKey::openwallet => response(
-            &req,
-            openwallet(options, bindings, rng, faucet_key_pair, wallet).await?,
-        ),
-        ApiRouteKey::recoverkey => {
-            response(&req, recoverkey(&route_params, bindings, wallet).await?)
-        }
-        ApiRouteKey::resetpassword => response(
-            &req,
-            resetpassword(options, bindings, rng, faucet_key_pair, wallet).await?,
-        ),
-        ApiRouteKey::send => response(&req, send(bindings, wallet).await?),
-        ApiRouteKey::transaction => dummy_url_eval(route_pattern, bindings),
-        ApiRouteKey::unfreeze => dummy_url_eval(route_pattern, bindings),
-        ApiRouteKey::unwrap => response(&req, unwrap(bindings, wallet).await?),
-        ApiRouteKey::updateasset => response(&req, updateasset(bindings, wallet).await?),
-        ApiRouteKey::view => dummy_url_eval(route_pattern, bindings),
-        ApiRouteKey::wrap => response(&req, wrap(bindings, wallet).await?),
-        ApiRouteKey::getrecords => response(&req, get_records(wallet).await?),
-        ApiRouteKey::lastusedkeystore => response(&req, get_last_keystore(options).await?),
-    }
+    wallet: &mut Option<Wallet>,
+) -> Result<Vec<TransactionHistoryEntry>, tide::Error> {
+    let wallet = require_wallet(wallet)?;
+    let history = wallet.transaction_history().await.map_err(wallet_error)?;
+    let from = match bindings.get(":from") {
+        Some(param) => history.len().saturating_sub(param.value.as_usize()?),
+        None => 0,
+    };
+    let to = match bindings.get(":count") {
+        Some(param) => from + param.value.as_usize()?,
+        None => history.len(),
+    };
+    let selected = iter(history.into_iter().skip(from).take(to - from))
+        .then(|entry| TransactionHistoryEntry::from_wallet(wallet, entry))
+        .collect::<Vec<_>>()
+        .await;
+    Ok(selected)
 }
 
 async fn getprivatekey(
@@ -1188,5 +1168,65 @@ async fn getprivatekey(
             expected: String::from("ADDR | USERPUBKEY | AUDPUBKEY | FREEZEPUBKEY"),
             actual: String::from(tag),
         })),
+    }
+}
+
+pub async fn dispatch_url(
+    req: tide::Request<WebState>,
+    route_pattern: &str,
+    bindings: &HashMap<String, RouteBinding>,
+) -> Result<tide::Response, tide::Error> {
+    let segments = route_pattern.split_once('/').unwrap_or((route_pattern, ""));
+    let route_params = segments.1.split('/').collect::<Vec<_>>();
+    let state = req.state();
+    let options = &state.options;
+    let rng = &mut *state.rng.lock().await;
+    let faucet_key_pair = &state.faucet_key_pair;
+    let wallet = &mut *state.wallet.lock().await;
+    let key = ApiRouteKey::from_str(segments.0).expect("Unknown route");
+    match key {
+        ApiRouteKey::closewallet => response(&req, closewallet(wallet).await?),
+        ApiRouteKey::exportasset => response(&req, exportasset(bindings, wallet).await?),
+        ApiRouteKey::freeze => dummy_url_eval(route_pattern, bindings),
+        ApiRouteKey::getaddress => response(&req, getaddress(wallet).await?),
+        ApiRouteKey::getaccount => response(&req, getaccount(bindings, wallet).await?),
+        ApiRouteKey::getbalance => response(&req, getbalance(bindings, wallet).await?),
+        ApiRouteKey::getinfo => response(&req, getinfo(wallet).await?),
+        ApiRouteKey::getmnemonic => response(&req, getmnemonic(rng).await?),
+        ApiRouteKey::importasset => response(&req, importasset(bindings, wallet).await?),
+        ApiRouteKey::getprivatekey => response(&req, getprivatekey(bindings, wallet).await?),
+        ApiRouteKey::healthcheck => healthcheck().await,
+        ApiRouteKey::importkey => dummy_url_eval(route_pattern, bindings),
+        ApiRouteKey::listkeystores => response(&req, listkeystores(options).await?),
+        ApiRouteKey::mint => response(&req, mint(bindings, wallet).await?),
+        ApiRouteKey::newasset => response(&req, newasset(bindings, wallet).await?),
+        ApiRouteKey::newkey => response(&req, newkey(&route_params, bindings, wallet).await?),
+        ApiRouteKey::newwallet => response(
+            &req,
+            newwallet(options, bindings, rng, faucet_key_pair, wallet).await?,
+        ),
+        ApiRouteKey::openwallet => response(
+            &req,
+            openwallet(options, bindings, rng, faucet_key_pair, wallet).await?,
+        ),
+        ApiRouteKey::recoverkey => {
+            response(&req, recoverkey(&route_params, bindings, wallet).await?)
+        }
+        ApiRouteKey::resetpassword => response(
+            &req,
+            resetpassword(options, bindings, rng, faucet_key_pair, wallet).await?,
+        ),
+        ApiRouteKey::send => response(&req, send(bindings, wallet).await?),
+        ApiRouteKey::transaction => dummy_url_eval(route_pattern, bindings),
+        ApiRouteKey::transactionhistory => {
+            response(&req, transactionhistory(bindings, wallet).await?)
+        }
+        ApiRouteKey::unfreeze => dummy_url_eval(route_pattern, bindings),
+        ApiRouteKey::unwrap => response(&req, unwrap(bindings, wallet).await?),
+        ApiRouteKey::updateasset => response(&req, updateasset(bindings, wallet).await?),
+        ApiRouteKey::view => dummy_url_eval(route_pattern, bindings),
+        ApiRouteKey::wrap => response(&req, wrap(bindings, wallet).await?),
+        ApiRouteKey::getrecords => response(&req, get_records(wallet).await?),
+        ApiRouteKey::lastusedkeystore => response(&req, get_last_keystore(options).await?),
     }
 }

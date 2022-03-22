@@ -2726,6 +2726,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "faucet"
+version = "0.1.0"
+dependencies = [
+ "async-std",
+ "bincode",
+ "cap-rust-sandbox",
+ "cape_wallet",
+ "ethers 0.6.0 (git+https://github.com/gakonst/ethers-rs?branch=master)",
+ "hex",
+ "jf-cap",
+ "key-set",
+ "net",
+ "rand 0.8.5",
+ "rand_chacha 0.3.1",
+ "seahorse",
+ "serde",
+ "snafu 0.7.0",
+ "structopt",
+ "surf",
+ "tempdir",
+ "tide",
+ "tracing",
+ "tracing-subscriber 0.3.9",
+]
+
+[[package]]
 name = "fd-lock"
 version = "3.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5251,7 +5277,7 @@ dependencies = [
 [[package]]
 name = "seahorse"
 version = "0.2.0"
-source = "git+https://github.com/EspressoSystems/seahorse.git#2e647f9fa4c46a11296fd231bf9114483871e5a8"
+source = "git+https://github.com/EspressoSystems/seahorse.git#c9f1624a5eae0f53d34bc6b01a93ab92a8efe424"
 dependencies = [
  "arbitrary",
  "arbitrary-wrappers",
@@ -5273,6 +5299,7 @@ dependencies = [
  "image",
  "itertools 0.10.3",
  "jf-cap",
+ "jf-primitives",
  "jf-utils",
  "key-set",
  "lazy_static",

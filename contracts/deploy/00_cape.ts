@@ -2,6 +2,10 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
 import { utils, BigNumber } from "ethers";
 
+function fromEnv(env_var: string, fallback: string): string {
+  return process.env[env_var] || fallback;
+}
+
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy, execute } = deployments;
@@ -27,16 +31,36 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const treeDepth = 24;
   const nRoots = 1000;
 
-  // To update, update `pub_key` in `./rust/src/bin/faucet.rs` and run
+  // To update, update pass new UserPubKey tagged blob:
   //
-  //     cargo run --bin faucet-gen-typescript
+  // cargo run --bin faucet-gen-typescript -- --pub-key  "USERPUBKEY~muN7V...Zl1KxQ"
   //
   // and copy/paste the output.
-  const faucetManagerEncKey = "0x844df918a4f1ccc5893a08f05b797ec21ff47004b561c3b0e1e1f99049665d4a";
-  const faucetManagerAddress = {
-    x: BigNumber.from("0x2DCA81140764685EBFAC3C684E0FF0DB3500A853AB3EE0C966D463AC547BE39A"),
-    y: BigNumber.from("0x228CF79945E37CFBB3F43F150B977639A12C900C949E23ED1DCD250578314393"),
+
+  // Derived from USERPUBKEY~muN7VKxj1GbJ4D6rU6gANdvwD05oPKy_XmhkBxSByq0gAAAAAAAAAIRN-Rik8czFiToI8Ft5fsIf9HAEtWHDsOHh-ZBJZl1KxQ
+  let faucetManagerEncKey = "0x844df918a4f1ccc5893a08f05b797ec21ff47004b561c3b0e1e1f99049665d4a";
+  let faucetManagerAddress = {
+    x: BigNumber.from("0x2dca81140764685ebfac3c684e0ff0db3500a853ab3ee0c966d463ac547be39a"),
+    y: BigNumber.from("0x228cf79945e37cfbb3f43f150b977639a12c900c949e23ed1dcd250578314393"),
   };
+
+  // Override values with environment variable if set.
+  const env_enc_key = process.env["CAPE_FAUCET_MANAGER_ENC_KEY"];
+  if (env_enc_key) {
+    console.log(`Using CAPE_FAUCET_MANAGER_ENC_KEY=${env_enc_key}`);
+    faucetManagerEncKey = env_enc_key;
+  }
+
+  const env_address_x = process.env["CAPE_FAUCET_MANAGER_ADDRESS_X"];
+  const env_address_y = process.env["CAPE_FAUCET_MANAGER_ADDRESS_Y"];
+  if (env_address_x && env_address_y) {
+    console.log(`Using CAPE_FAUCET_MANAGER_ADDRESS_X=${env_address_x}`);
+    console.log(`Using CAPE_FAUCET_MANAGER_ADDRESS_Y=${env_address_y}`);
+    faucetManagerAddress = {
+      x: BigNumber.from(env_address_x),
+      y: BigNumber.from(env_address_y),
+    };
+  }
 
   await deploy("CAPE", {
     from: deployer,
@@ -50,6 +74,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   await execute(
     "CAPE",
     {
+      log: true,
       from: deployer,
     },
     "faucetSetupForTestnet",

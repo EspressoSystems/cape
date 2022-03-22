@@ -16,6 +16,19 @@ pub struct WebState {
     txn_queue: Arc<RwLock<TxnQueue>>,
 }
 
+/// Return a JSON expression with status 200 indicating the server
+/// is up and running. The JSON expression is simply,
+///    {"status": "available"}
+/// When the server is running but unable to process requests
+/// normally, a response with status 503 and payload {"status":
+/// "unavailable"} should be added.
+async fn healthcheck(_req: tide::Request<WebState>) -> Result<tide::Response, tide::Error> {
+    Ok(tide::Response::builder(200)
+        .content_type(tide::http::mime::JSON)
+        .body(tide::prelude::json!({"status": "available"}))
+        .build())
+}
+
 async fn submit_endpoint(mut req: tide::Request<WebState>) -> Result<tide::Response, tide::Error> {
     let tx = server::request_body(&mut req).await?;
     let mut queue = req.state().txn_queue.write().await;
@@ -38,6 +51,7 @@ pub(crate) fn init_web_server(
     txn_queue: Arc<RwLock<TxnQueue>>,
 ) -> Result<task::JoinHandle<Result<(), std::io::Error>>, tide::Error> {
     let mut web_server = tide::with_state(WebState { txn_queue });
+    web_server.at("/healthcheck").get(healthcheck);
     web_server.at("/submit").post(submit_endpoint);
     let port = std::env::var("PORT").unwrap_or_else(|_| DEFAULT_RELAYER_PORT.to_string());
     let addr = format!("0.0.0.0:{}", port);

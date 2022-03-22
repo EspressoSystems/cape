@@ -21,9 +21,11 @@ struct MinimalRelayerOptions {
     rpc_url: String,
 
     /// Address for CAPE submit
+    #[structopt(env = "CAPE_CONTRACT_ADDRESS")]
     cape_address: Address,
 
     /// Mnemonic phrase for ETH wallet, for paying submission gas fees.
+    #[structopt(env = "CAPE_RELAYER_WALLET_MNEMONIC")]
     mnemonic: String,
 }
 
@@ -32,18 +34,20 @@ async fn main() -> std::io::Result<()> {
     let opt = MinimalRelayerOptions::from_args();
 
     // Set up a client to submit ETH transactions.
+    let provider = Provider::<Http>::try_from(opt.rpc_url.clone())
+        .expect("could not instantiate HTTP Provider");
     let wallet = MnemonicBuilder::<English>::default()
         .phrase(opt.mnemonic.as_str())
         .build()
-        .expect("could not open relayer wallet");
-    let provider = Provider::<Http>::try_from(opt.rpc_url.clone())
-        .expect("could not instantiate HTTP Provider");
+        .expect("could not open relayer wallet")
+        .with_chain_id(provider.get_chainid().await.unwrap().as_u64());
     let client = Arc::new(SignerMiddleware::new(provider, wallet));
 
     // Connect to CAPE smart contract.
     let contract = CAPE::new(opt.cape_address, client);
 
     // Start serving CAPE transaction submissions.
-    let port = std::env::var("PORT").unwrap_or_else(|_| DEFAULT_RELAYER_PORT.to_string());
+    let port =
+        std::env::var("CAPE_RELAYER_PORT").unwrap_or_else(|_| DEFAULT_RELAYER_PORT.to_string());
     init_web_server(contract, port).await
 }

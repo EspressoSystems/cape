@@ -224,11 +224,7 @@ async fn test_mint_maybe_submit(should_submit: bool) -> Result<()> {
             .await?;
     }
 
-    println!(
-        "Transfer validated & applied: {}s",
-        now.elapsed().as_secs_f32()
-    );
-    let _now = Instant::now();
+    println!("Mint validated & applied: {}s", now.elapsed().as_secs_f32());
 
     assert_eq!(effects.len(), 1);
     if let CapeModelEthEffect::Emit(CapeModelEvent::BlockCommitted {

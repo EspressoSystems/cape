@@ -518,6 +518,14 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
             .parse()
             .unwrap()
     }
+
+    async fn eqs_time(&self) -> Result<EventIndex, CapeWalletError> {
+        let state: CapState = self.get_eqs("get_cap_state").await?;
+        Ok(EventIndex::from_source(
+            EventSource::QueryService,
+            state.num_events as usize,
+        ))
+    }
 }
 
 const TRANSFER_KEY_SIZES: &[(usize, usize)] = &[(1, 2), (2, 2), (2, 3)];

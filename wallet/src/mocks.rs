@@ -688,6 +688,10 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
     fn asset_verifier(&self) -> VerKey {
         test_asset_signing_key().ver_key()
     }
+
+    async fn eqs_time(&self) -> Result<EventIndex, CapeWalletError> {
+        Ok(self.ledger.lock().await.network().events.now())
+    }
 }
 
 fn cape_to_wallet_err(err: CapeValidationError) -> WalletError<CapeLedger> {

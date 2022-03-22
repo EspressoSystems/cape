@@ -312,6 +312,10 @@ pub struct WalletSummary {
     pub viewing_keys: Vec<AuditorPubKey>,
     pub freezing_keys: Vec<FreezerPubKey>,
     pub assets: Vec<AssetInfo>,
+    /// The time (as an event index) at which the wallet last synced with the EQS.
+    pub sync_time: usize,
+    /// The real-world time (as an event index) according to the EQS.
+    pub real_time: usize,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]

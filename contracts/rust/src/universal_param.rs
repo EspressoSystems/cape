@@ -7,9 +7,13 @@
 
 #![deny(warnings)]
 use jf_cap::testing_apis::universal_setup_for_test;
+use jf_cap::TransactionVerifyingKey;
+use key_set::{KeySet, VerifierKeySet};
 use lazy_static::lazy_static;
 use rand_chacha::rand_core::SeedableRng;
 use rand_chacha::ChaChaRng;
+
+use crate::model::CAPE_MERKLE_HEIGHT;
 
 const MAX_DEGREE_SUPPORTED: usize = 2u64.pow(17) as usize;
 
@@ -17,4 +21,40 @@ lazy_static! {
     pub static ref UNIVERSAL_PARAM: jf_cap::proof::UniversalParam =
         universal_setup_for_test(MAX_DEGREE_SUPPORTED, &mut ChaChaRng::from_seed([0u8; 32]))
             .unwrap();
+}
+
+pub fn verifier_keys() -> VerifierKeySet {
+    let univ_setup = &*UNIVERSAL_PARAM;
+    let (_, xfr_verif_key_12, _) =
+        jf_cap::proof::transfer::preprocess(univ_setup, 1, 2, CAPE_MERKLE_HEIGHT).unwrap();
+    let (_, xfr_verif_key_22, _) =
+        jf_cap::proof::transfer::preprocess(univ_setup, 2, 2, CAPE_MERKLE_HEIGHT).unwrap();
+    let (_, xfr_verif_key_23, _) =
+        jf_cap::proof::transfer::preprocess(univ_setup, 2, 3, CAPE_MERKLE_HEIGHT).unwrap();
+    let (_, mint_verif_key, _) =
+        jf_cap::proof::mint::preprocess(univ_setup, CAPE_MERKLE_HEIGHT).unwrap();
+    let (_, freeze_verif_key_2, _) =
+        jf_cap::proof::freeze::preprocess(univ_setup, 2, CAPE_MERKLE_HEIGHT).unwrap();
+    let (_, freeze_verif_key_3, _) =
+        jf_cap::proof::freeze::preprocess(univ_setup, 3, CAPE_MERKLE_HEIGHT).unwrap();
+    VerifierKeySet {
+        mint: TransactionVerifyingKey::Mint(mint_verif_key),
+        xfr: KeySet::new(
+            vec![
+                TransactionVerifyingKey::Transfer(xfr_verif_key_12),
+                TransactionVerifyingKey::Transfer(xfr_verif_key_22),
+                TransactionVerifyingKey::Transfer(xfr_verif_key_23),
+            ]
+            .into_iter(),
+        )
+        .unwrap(),
+        freeze: KeySet::new(
+            vec![
+                TransactionVerifyingKey::Freeze(freeze_verif_key_2),
+                TransactionVerifyingKey::Freeze(freeze_verif_key_3),
+            ]
+            .into_iter(),
+        )
+        .unwrap(),
+    }
 }

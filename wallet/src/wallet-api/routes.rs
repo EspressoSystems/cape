@@ -12,7 +12,6 @@ use async_std::fs::{read_dir, File};
 use cap_rust_sandbox::{
     ledger::CapeLedger,
     model::{Erc20Code, EthereumAddr},
-    universal_param::UNIVERSAL_PARAM,
 };
 use cape_wallet::{
     ui::*,
@@ -95,12 +94,12 @@ pub fn server_error<E: Into<CapeAPIError>>(err: E) -> tide::Error {
 mod backend {
     use super::*;
     use async_std::sync::{Arc, Mutex};
+    use cap_rust_sandbox::universal_param::verifier_keys;
     use cape_wallet::mocks::{MockCapeBackend, MockCapeNetwork};
     use jf_cap::{
         structs::{FreezeFlag, ReceiverMemo, RecordCommitment, RecordOpening},
-        MerkleTree, TransactionVerifyingKey,
+        MerkleTree,
     };
-    use key_set::{KeySet, VerifierKeySet};
     use reef::traits::Ledger;
     use seahorse::testing::MockLedger;
 
@@ -112,52 +111,7 @@ mod backend {
         faucet_pub_key: UserPubKey,
         loader: &mut Loader,
     ) -> Result<Backend, CapeWalletError> {
-        let verif_crs = VerifierKeySet {
-            mint: TransactionVerifyingKey::Mint(
-                jf_cap::proof::mint::preprocess(&*UNIVERSAL_PARAM, CapeLedger::merkle_height())
-                    .unwrap()
-                    .1,
-            ),
-            xfr: KeySet::new(
-                vec![
-                    TransactionVerifyingKey::Transfer(
-                        jf_cap::proof::transfer::preprocess(
-                            &*UNIVERSAL_PARAM,
-                            2,
-                            2,
-                            CapeLedger::merkle_height(),
-                        )
-                        .unwrap()
-                        .1,
-                    ),
-                    TransactionVerifyingKey::Transfer(
-                        jf_cap::proof::transfer::preprocess(
-                            &*UNIVERSAL_PARAM,
-                            3,
-                            3,
-                            CapeLedger::merkle_height(),
-                        )
-                        .unwrap()
-                        .1,
-                    ),
-                ]
-                .into_iter(),
-            )
-            .unwrap(),
-            freeze: KeySet::new(
-                vec![TransactionVerifyingKey::Freeze(
-                    jf_cap::proof::freeze::preprocess(
-                        &*UNIVERSAL_PARAM,
-                        2,
-                        CapeLedger::merkle_height(),
-                    )
-                    .unwrap()
-                    .1,
-                )]
-                .into_iter(),
-            )
-            .unwrap(),
-        };
+        let verif_crs = verifier_keys();
 
         // Set up a faucet record.
         let mut records = MerkleTree::new(CapeLedger::merkle_height()).unwrap();
@@ -185,6 +139,7 @@ mod backend {
 #[cfg(not(test))]
 mod backend {
     use super::*;
+    use cap_rust_sandbox::universal_param::UNIVERSAL_PARAM;
     use cape_wallet::backend::{CapeBackend, CapeBackendConfig};
 
     pub type Backend = CapeBackend<'static, LoaderMetadata>;

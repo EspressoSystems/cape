@@ -5,9 +5,11 @@
 // This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+#![cfg(test)]
 #![deny(warnings)]
 
 use crate::deploy::deploy_cape_test;
+use crate::test_utils::keysets_for_test;
 use crate::{
     cape::*,
     ledger::CapeLedger,
@@ -20,21 +22,31 @@ use crate::{
 use anyhow::Result;
 use ethers::prelude::U256;
 use jf_cap::keys::{UserKeyPair, UserPubKey};
+
 use jf_cap::structs::{AssetDefinition, FreezeFlag, RecordCommitment, RecordOpening};
 use jf_cap::testing_apis::universal_setup_for_test;
-use jf_cap::transfer::TransferNote;
-use jf_cap::transfer::TransferNoteInput;
+use jf_cap::transfer::{TransferNote, TransferNoteInput};
 use jf_cap::AccMemberWitness;
 use jf_cap::MerkleLeafProof;
 use jf_cap::MerkleTree;
 use jf_cap::TransactionNote;
-use jf_cap::TransactionVerifyingKey;
-use jf_utils::CanonicalBytes;
-use key_set::{KeySet, ProverKeySet, VerifierKeySet};
 use rand::SeedableRng;
 use rand_chacha::ChaChaRng;
 use reef::traits::Ledger as _;
 use std::time::Instant;
+
+#[tokio::test]
+async fn test_2user_and_submit() -> Result<()> {
+    test_2user_maybe_submit(true).await
+}
+
+// Test without submitting to make sure that the submission _should_
+// succeed, and to narrow down test failures that only have to do with the
+// contract interaction code.
+#[tokio::test]
+async fn test_2user_no_submit() -> Result<()> {
+    test_2user_maybe_submit(false).await
+}
 
 async fn test_2user_maybe_submit(should_submit: bool) -> Result<()> {
     let now = Instant::now();
@@ -45,35 +57,7 @@ async fn test_2user_maybe_submit(should_submit: bool) -> Result<()> {
 
     let max_degree = 2usize.pow(16);
     let srs = universal_setup_for_test(max_degree, &mut prng)?;
-
-    let (xfr_prove_key, xfr_verif_key, _) =
-        jf_cap::proof::transfer::preprocess(&srs, 1, 2, CapeLedger::merkle_height()).unwrap();
-    let (mint_prove_key, mint_verif_key, _) =
-        jf_cap::proof::mint::preprocess(&srs, CapeLedger::merkle_height()).unwrap();
-    let (freeze_prove_key, freeze_verif_key, _) =
-        jf_cap::proof::freeze::preprocess(&srs, 2, CapeLedger::merkle_height()).unwrap();
-
-    for (label, key) in vec![
-        ("xfr", CanonicalBytes::from(xfr_verif_key.clone())),
-        ("mint", CanonicalBytes::from(mint_verif_key.clone())),
-        ("freeze", CanonicalBytes::from(freeze_verif_key.clone())),
-    ] {
-        println!("{}: {} bytes", label, key.0.len());
-    }
-
-    let prove_keys = ProverKeySet::<key_set::OrderByInputs> {
-        mint: mint_prove_key,
-        xfr: KeySet::new(vec![xfr_prove_key].into_iter()).unwrap(),
-        freeze: KeySet::new(vec![freeze_prove_key].into_iter()).unwrap(),
-    };
-
-    let verif_keys = VerifierKeySet {
-        mint: TransactionVerifyingKey::Mint(mint_verif_key),
-        xfr: KeySet::new(vec![TransactionVerifyingKey::Transfer(xfr_verif_key)].into_iter())
-            .unwrap(),
-        freeze: KeySet::new(vec![TransactionVerifyingKey::Freeze(freeze_verif_key)].into_iter())
-            .unwrap(),
-    };
+    let (prove_keys, verif_keys) = keysets_for_test(&srs);
 
     println!("CRS set up: {}s", now.elapsed().as_secs_f32());
     let now = Instant::now();
@@ -307,17 +291,4 @@ async fn test_2user_maybe_submit(should_submit: bool) -> Result<()> {
     println!("Old state: {:?}", validator);
     println!("New state: {:?}", new_state);
     Ok(())
-}
-
-#[tokio::test]
-async fn test_2user_and_submit() -> Result<()> {
-    test_2user_maybe_submit(true).await
-}
-
-// Test without submitting to make sure that the submission _should_
-// succeed, and to narrow down test failures that only have to do with the
-// contract interaction code.
-#[tokio::test]
-async fn test_2user_no_submit() -> Result<()> {
-    test_2user_maybe_submit(false).await
 }

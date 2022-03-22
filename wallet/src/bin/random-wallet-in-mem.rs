@@ -60,6 +60,7 @@ struct NetworkInfo {
     relayer_url: Url,
     address_book_url: Url,
     contract_address: Address,
+    _eqs_dir: TempDir,
 }
 
 #[allow(clippy::needless_lifetimes)]
@@ -69,13 +70,14 @@ async fn create_backend_and_sender_wallet<'a>(
     storage: &Path,
 ) -> (NetworkInfo, CapeWallet<'a, CapeBackend<'a, ()>>) {
     let network_tuple = create_test_network(rng, universal_param).await;
-    let (eqs_url, _eqs_dir, _join_eqs) = spawn_eqs(network_tuple.3).await;
+    let (eqs_url, eqs_dir, _join_eqs) = spawn_eqs(network_tuple.3).await;
     let network = NetworkInfo {
         sender_key: network_tuple.0,
         eqs_url,
         relayer_url: network_tuple.1,
         address_book_url: network_tuple.2,
         contract_address: network_tuple.3,
+        _eqs_dir: eqs_dir,
     };
 
     let mut loader = MockCapeWalletLoader {

@@ -285,8 +285,8 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
 
                 _publish(note.inputNullifier);
 
-                commitments.add(note.mintComm);
                 commitments.add(note.chgComm);
+                commitments.add(note.mintComm);
 
                 (vks[i], publicInputs[i], proofs[i], extraMsgs[i]) = _prepareForProofVerification(
                     note

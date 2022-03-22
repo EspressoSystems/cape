@@ -176,8 +176,8 @@ impl CapeBlock {
                 }
                 NoteType::Mint => {
                     let note = self.mint_notes[mint_idx].clone();
-                    outputs_record_commitments.push(note.mint_comm);
                     outputs_record_commitments.push(note.chg_comm);
+                    outputs_record_commitments.push(note.mint_comm);
                     mint_idx += 1;
                 }
                 NoteType::Freeze => {

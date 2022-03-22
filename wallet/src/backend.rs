@@ -262,7 +262,7 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
             None
         };
 
-        Ok(WalletState {
+        let state = WalletState {
             proving_keys: Arc::new(gen_proving_keys(self.universal_param)),
             txn_state: TransactionState {
                 validator: CapeTruster::new(state.ledger.state_number, record_mt.num_leaves()),
@@ -280,7 +280,12 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
             viewing_accounts: Default::default(),
             freezing_accounts: Default::default(),
             sending_accounts: Default::default(),
-        })
+        };
+
+        // Store the initial state.
+        self.storage().await.create(&state).await?;
+
+        Ok(state)
     }
 
     async fn subscribe(&self, from: EventIndex, to: Option<EventIndex>) -> Self::EventStream {

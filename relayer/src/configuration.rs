@@ -5,10 +5,7 @@
 // This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use cap_rust_sandbox::{model::CAPE_MERKLE_HEIGHT, universal_param::UNIVERSAL_PARAM};
 use jf_cap::keys::{UserAddress, UserKeyPair};
-use jf_cap::TransactionVerifyingKey;
-use key_set::{KeySet, VerifierKeySet};
 
 use dirs::data_local_dir;
 use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
@@ -69,32 +66,6 @@ pub(crate) fn store_path() -> PathBuf {
 
 pub(crate) fn reset_state() -> bool {
     RelayerOptions::from_args().reset_state_store
-}
-
-pub(crate) fn verifier_keys() -> VerifierKeySet {
-    // Set up the validator.
-    let univ_setup = &*UNIVERSAL_PARAM;
-    let (_, xfr_verif_key_12, _) =
-        jf_cap::proof::transfer::preprocess(univ_setup, 1, 2, CAPE_MERKLE_HEIGHT).unwrap();
-    let (_, xfr_verif_key_23, _) =
-        jf_cap::proof::transfer::preprocess(univ_setup, 2, 3, CAPE_MERKLE_HEIGHT).unwrap();
-    let (_, mint_verif_key, _) =
-        jf_cap::proof::mint::preprocess(univ_setup, CAPE_MERKLE_HEIGHT).unwrap();
-    let (_, freeze_verif_key, _) =
-        jf_cap::proof::freeze::preprocess(univ_setup, 2, CAPE_MERKLE_HEIGHT).unwrap();
-    VerifierKeySet {
-        mint: TransactionVerifyingKey::Mint(mint_verif_key),
-        xfr: KeySet::new(
-            vec![
-                TransactionVerifyingKey::Transfer(xfr_verif_key_12),
-                TransactionVerifyingKey::Transfer(xfr_verif_key_23),
-            ]
-            .into_iter(),
-        )
-        .unwrap(),
-        freeze: KeySet::new(vec![TransactionVerifyingKey::Freeze(freeze_verif_key)].into_iter())
-            .unwrap(),
-    }
 }
 
 lazy_static! {

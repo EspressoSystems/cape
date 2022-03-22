@@ -221,7 +221,6 @@ impl MockCapeNetwork {
 
                 transactions: Default::default(),
             },
-            key_scans: Default::default(),
             key_state: Default::default(),
             assets: Default::default(),
             viewing_accounts: Default::default(),
@@ -597,6 +596,13 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
             .await
             .network()
             .register_user_key(key_pair)
+    }
+
+    async fn get_initial_scan_state(
+        &self,
+        _from: EventIndex,
+    ) -> Result<(MerkleTree, EventIndex), CapeWalletError> {
+        self.ledger.lock().await.get_initial_scan_state()
     }
 
     async fn get_nullifier_proof(

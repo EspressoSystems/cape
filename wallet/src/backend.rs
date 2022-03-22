@@ -274,7 +274,6 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
                 merkle_leaf_to_forget,
                 transactions: Default::default(),
             },
-            key_scans: Default::default(),
             key_state: Default::default(),
             assets: Default::default(),
             viewing_accounts: Default::default(),
@@ -385,6 +384,19 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
                 msg: "Error response from address book".into(),
             })
         }
+    }
+
+    async fn get_initial_scan_state(
+        &self,
+        _from: EventIndex,
+    ) -> Result<(MerkleTree, EventIndex), CapeWalletError> {
+        // We need to provide a Merkle frontier before the event `from`, but the EQS doesn't store
+        // Merkle frontiers at each event index. To be safe, we provide the original frontier, which
+        // is always empty.
+        Ok((
+            MerkleTree::new(CapeLedger::merkle_height()).unwrap(),
+            EventIndex::default(),
+        ))
     }
 
     async fn get_nullifier_proof(

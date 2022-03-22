@@ -20,6 +20,7 @@ use reef::cap;
 use seahorse::{
     accounts::{AccountInfo, KeyPair},
     asset_library::Icon,
+    events::EventIndex,
     txn_builder::RecordInfo,
     MintInfo,
 };
@@ -344,6 +345,18 @@ pub struct Account {
     pub assets: HashMap<AssetCode, AssetInfo>,
     pub description: String,
     pub used: bool,
+    /// The status of a ledger scan for this account's key.
+    ///
+    /// If a ledger scan using this account's key is in progress, `scan_index` is the index of the
+    /// next event to be scanned.
+    pub scan_index: Option<EventIndex>,
+    /// The ending index of a ledger scan for this account's key.
+    ///
+    /// If a ledger scan using this account's key is in progress, `scan_to` is the index of the last
+    /// event in the scan's range of interest. Note that the `scan_to` may be less than
+    /// `scan_index`, since the scan will not complete until it has caught up with the main event
+    /// loop, which may have advanced past `scan_to`.
+    pub scan_to: Option<EventIndex>,
 }
 
 impl Account {
@@ -360,12 +373,18 @@ impl Account {
             })
             .collect::<HashMap<_, _>>()
             .await;
+        let (scan_index, scan_to) = match info.scan_status {
+            Some((scan_index, scan_to)) => (Some(scan_index), Some(scan_to)),
+            None => (None, None),
+        };
         Self {
             records: info.records.into_iter().map(|rec| rec.into()).collect(),
             assets,
             balance: info.balance,
             description: info.description,
             used: info.used,
+            scan_index,
+            scan_to,
         }
     }
 }

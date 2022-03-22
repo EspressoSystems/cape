@@ -3528,7 +3528,7 @@ checksum = "1aab8fc367588b89dcee83ab0fd66b72b50b72fa1904d7095045ace2b0c81c35"
 [[package]]
 name = "jf-cap"
 version = "0.0.1"
-source = "git+https://github.com/EspressoSystems/cap.git#eafcebd8cd4650572451fb84b19f72864b8ad39b"
+source = "git+https://github.com/EspressoSystems/cap.git#f233bdffb89c3e2b86dc366a7dfc886ec4808253"
 dependencies = [
  "anyhow",
  "ark-bn254",
@@ -5277,7 +5277,7 @@ dependencies = [
 [[package]]
 name = "seahorse"
 version = "0.2.0"
-source = "git+https://github.com/EspressoSystems/seahorse.git#c9f1624a5eae0f53d34bc6b01a93ab92a8efe424"
+source = "git+https://github.com/EspressoSystems/seahorse.git#24962d0c243a4bd6d96147caf9c7210910fba5ed"
 dependencies = [
  "arbitrary",
  "arbitrary-wrappers",
@@ -5292,6 +5292,7 @@ dependencies = [
  "chacha20",
  "chrono",
  "commit",
+ "derivative",
  "espresso-macros 0.1.0 (git+https://github.com/EspressoSystems/espresso-macros.git)",
  "futures",
  "generic-array 0.14.5",

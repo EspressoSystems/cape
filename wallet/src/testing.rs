@@ -115,11 +115,10 @@ pub async fn create_test_network<'a>(
 
     let (_, verif_crs) = keysets_for_test(universal_param);
 
-    let mut mock_eqs = MockCapeLedger::new(MockCapeNetwork::new(
-        verif_crs,
+    let mut mock_eqs = MockCapeLedger::new(
+        MockCapeNetwork::new(verif_crs, records.clone(), vec![(sender_memo, 0)]),
         records,
-        vec![(sender_memo, 0)],
-    ));
+    );
     mock_eqs.set_block_size(1).unwrap();
     // The minimal test relayer does not block transactions, so the mock EQS shouldn't
     // either.

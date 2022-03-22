@@ -315,13 +315,14 @@ impl UrlSegmentValue {
     }
 
     pub fn as_path(&self) -> Result<PathBuf, tide::Error> {
-        Ok(PathBuf::from(std::str::from_utf8(&self.as_base64()?)?))
+        Ok(PathBuf::from(self.as_string()?))
     }
 
     pub fn as_string(&self) -> Result<String, tide::Error> {
         match self {
             Self::Literal(s) => Ok(String::from(s)),
             Self::Identifier(tb64) => Ok(String::from(std::str::from_utf8(&tb64.value())?)),
+            Self::Base64(bytes) => Ok(String::from(std::str::from_utf8(bytes)?)),
             _ => Err(server_error(CapeAPIError::Param {
                 expected: String::from("String"),
                 actual: self.to_string(),
@@ -751,7 +752,7 @@ async fn newkey(
 ) -> Result<PubKey, tide::Error> {
     let wallet = require_wallet(wallet)?;
     let description = match bindings.get(":description") {
-        Some(param) => std::str::from_utf8(param.value.as_base64()?.as_slice())?.into(),
+        Some(param) => param.value.as_string()?,
         None => String::new(),
     };
 
@@ -778,7 +779,7 @@ async fn newasset(
 ) -> Result<AssetInfo, tide::Error> {
     let wallet = require_wallet(wallet)?;
     let symbol = match bindings.get(":symbol") {
-        Some(param) => std::str::from_utf8(&param.value.as_base64()?)?.to_string(),
+        Some(param) => param.value.as_string()?,
         None => String::new(),
     };
 
@@ -920,7 +921,7 @@ async fn recoverkey(
 ) -> Result<PubKey, tide::Error> {
     let wallet = require_wallet(wallet)?;
     let description = match bindings.get(":description") {
-        Some(param) => std::str::from_utf8(param.value.as_base64()?.as_slice())?.into(),
+        Some(param) => param.value.as_string()?,
         None => String::new(),
     };
 
@@ -1045,11 +1046,10 @@ async fn updateasset(
 
     // Update based on request parameters.
     if let Some(symbol) = bindings.get(":symbol") {
-        asset = asset.with_name(std::str::from_utf8(&symbol.value.as_base64()?)?.to_string());
+        asset = asset.with_name(symbol.value.as_string()?);
     }
     if let Some(description) = bindings.get(":description") {
-        asset = asset
-            .with_description(std::str::from_utf8(&description.value.as_base64()?)?.to_string());
+        asset = asset.with_description(description.value.as_string()?);
     }
     if let Some(icon) = bindings.get(":icon") {
         let bytes = icon.value.as_base64()?;

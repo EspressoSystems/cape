@@ -43,9 +43,9 @@ DOC = "Responds with JSON {\"status\": \"available\"}."
 
 [route.newwallet]
 PATH = ["newwallet/:mnemonic/:password", "newwallet/:mnemonic/:password/path/:path", "newwallet/:mnemonic/:password/name/:name"]
-":password" = "Literal"
+":password" = "Base64"
 ":path" = "Base64"
-":name" = "Literal"
+":name" = "Base64"
 ":mnemonic" = "Literal"
 DOC = """
 Creates and opens a new the wallet with the given mnemonic and password.
@@ -57,9 +57,9 @@ If `:path` is given, the wallet will be stored in the given location. If `:name`
 
 [route.openwallet]
 PATH = ["openwallet/:password", "openwallet/:password/path/:path", "openwallet/:password/name/:name"]
-":password" = "Literal"
+":password" = "Base64"
 ":path" = "Base64"
-":name" = "Literal"
+":name" = "Base64"
 DOC = """
 Open the wallet from local storage with the given password and path.
 
@@ -68,9 +68,9 @@ Open the wallet from local storage with the given password and path.
 
 [route.resetpassword]
 PATH = ["resetpassword/:mnemonic/:password", "resetpassword/:mnemonic/:password/path/:path", "resetpassword/:mnemonic/:password/name/:name"]
-":password" = "Literal"
+":password" = "Base64"
 ":path" = "Base64"
-":name" = "Literal"
+":name" = "Base64"
 ":mnemonic" = "Literal"
 DOC = """
 Reset the password of the given wallet, and open it.

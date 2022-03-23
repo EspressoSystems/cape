@@ -250,12 +250,8 @@ pub async fn init_web_server(
         fee_size: opt.fee_size,
     };
     let mut app = tide::with_state(state);
-    app.with(net::server::add_error_body::<_, FaucetError>)
-        .with(net::server::trace)
-        .at("/healthcheck")
-        .get(healthcheck)
-        .at("/request_fee_assets")
-        .post(request_fee_assets);
+    app.at("/healthcheck").get(healthcheck);
+    app.at("/request_fee_assets").post(request_fee_assets);
     let address = format!("0.0.0.0:{}", opt.faucet_port);
     Ok(spawn(app.listen(address)))
 }

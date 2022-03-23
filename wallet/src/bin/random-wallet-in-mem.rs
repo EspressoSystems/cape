@@ -329,6 +329,12 @@ async fn main() {
         .await
     };
 
+    event!(
+        Level::WARN,
+        "Native asset is wrapped = {}",
+        wallet.is_wrapped_asset(AssetCode::native()).await
+    );
+
     event!(Level::INFO, "Sender wallet has some initial balance");
     fund_eth_wallet(&mut wallet).await;
     event!(Level::INFO, "Funded Sender wallet with eth");
@@ -396,10 +402,12 @@ async fn main() {
                 let address = minter.pub_keys().await[0].address();
                 let asset = mint_token(minter).await.unwrap();
                 event!(Level::INFO, "minted custom asset.  Code: {}", asset.code);
-                balances.get_mut(&address).unwrap().insert(
-                    asset.code,
-                    minter.balance_breakdown(&address, &asset.code).await,
-                );
+                let amount = minter.balance_breakdown(&address, &asset.code).await;
+                event!(Level::INFO, "Wallet has {} of new asset", amount);
+                balances
+                    .get_mut(&address)
+                    .unwrap()
+                    .insert(asset.code, amount);
             }
             OperationType::Transfer => {
                 event!(Level::INFO, "Transfering");
@@ -537,7 +545,7 @@ async fn main() {
                     .await;
                 if let Some(asset) = asset {
                     event!(Level::INFO, "Can burn something");
-                    assert_ne!(asset.definition.code, AssetCode::native());
+                    // assert_ne!(asset.definition.code, AssetCode::native());
                     assert!(burner.is_wrapped_asset(asset.definition.code).await);
                     let amount = get_burn_amount(burner, asset.definition.code).await;
                     if amount > 0 {

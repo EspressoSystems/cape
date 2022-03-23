@@ -250,7 +250,10 @@ pub async fn init_web_server(
 
 #[async_std::main]
 async fn main() -> Result<(), std::io::Error> {
-    tracing_subscriber::fmt().pretty().init();
+    tracing_subscriber::fmt()
+        .compact()
+        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+        .init();
 
     // Initialize the faucet web server.
     //

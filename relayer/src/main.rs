@@ -28,7 +28,10 @@ mod txn_queue;
 
 #[async_std::main]
 async fn main() -> std::io::Result<()> {
-    tracing_subscriber::fmt().pretty().init();
+    tracing_subscriber::fmt()
+        .compact()
+        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+        .init();
     let queue = Arc::new(RwLock::new(TxnQueue::new()));
     let _api_handle = init_web_server(queue.clone()).unwrap();
 

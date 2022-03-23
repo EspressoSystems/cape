@@ -1,0 +1,36 @@
+FROM ghcr.io/espressosystems/devops-rust:main AS builder
+RUN apt-get update \
+  && apt-get install -y libcurl4 gcc g++ make python3-pip plantuml
+RUN curl -fsSL https://deb.nodesource.com/setup_16.x | bash -
+RUN apt-get install -y nodejs
+RUN npm install -g pnpm
+COPY . /app/
+RUN wget -O /app/bin/solc https://binaries.soliditylang.org/linux-amd64/solc-linux-amd64-v0.8.10+commit.fc410830
+RUN chmod +x /app/bin/solc
+WORKDIR /app/
+
+# This could probably be done better
+ENV CONTRACTS_DIR=/app/contracts
+ENV GOERLI_MNEMONIC="test test test test test test test test test test test junk"
+ENV GOERLI_URL="https://goerli.infura.io/v3/<project_id>"
+ENV HARDHAT_CONFIG=/app/contracts/hardhat.config.ts
+ENV PATH=/app/bin:$PATH
+ENV PATH=/app/contracts/node_modules/.bin:$PATH
+ENV PATH=/app/node_modules/.bin:$PATH
+ENV RINKEBY_MNEMONIC="test test test test test test test test test test test junk"
+ENV RINKEBY_URL="https://rinkeby.infura.io/v3/<project_id>"
+ENV SOLC_PATH="/app/bin/solc"
+ENV SOLC_VERSION="0.8.10"
+ENV SOLC_OPTIMIZER_RUNS="20"
+ENV TEST_MNEMONIC="test test test test test test test test test test test junk"
+ENV WALLET=/app/wallet
+
+RUN pnpm --recursive install
+RUN python3 ./bin/build-abi
+RUN cargo build --release && rm -r /app/target/release/deps
+
+FROM debian:buster AS artifact
+RUN apt-get update \
+  && apt-get install -y libcurl4 plantuml
+COPY . /app/
+COPY --from=builder /app/target /app/target

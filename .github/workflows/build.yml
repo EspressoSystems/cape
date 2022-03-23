@@ -1,15 +1,15 @@
 name: Build
 
 on:
-  push:
-    branches:
-      - main
-    tags:
-      # YYYYMMDD
-      - "20[0-9][0-9][0-1][0-9][0-3][0-9]"
-  pull_request:
-  schedule:
-    - cron: "0 1 * * 1"
+  #push:
+  #  branches:
+  #    - main
+  #  tags:
+  #    # YYYYMMDD
+  #    - "20[0-9][0-9][0-1][0-9][0-3][0-9]"
+  #pull_request:
+  #schedule:
+  #  - cron: "0 1 * * 1"
   workflow_dispatch:
 
 env:

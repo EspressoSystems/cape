@@ -90,7 +90,7 @@ const config: HardhatUserConfig = {
     },
   },
   solidity: {
-    version: process.env.SOLC_VERSION ? process.env.SOLC_VERSION : "0.8.0",
+    version: process.env.SOLC_VERSION ? process.env.SOLC_VERSION : "0.8.15",
     settings: {
       optimizer: {
         enabled: true,

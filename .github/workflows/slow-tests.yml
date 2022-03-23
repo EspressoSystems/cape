@@ -1,11 +1,11 @@
 name: Slow Tests
 
 on:
-  push:
-    branches:
-      - main
-  schedule:
-    - cron: "0 1 * * 1"
+  #push:
+  #  branches:
+  #    - main
+  #schedule:
+  #  - cron: "0 1 * * 1"
   workflow_dispatch:
 
 env:

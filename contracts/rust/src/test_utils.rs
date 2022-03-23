@@ -64,11 +64,20 @@ impl ContractsInfo {
     }
 }
 
-/// Generates a user key pair that controls the faucet and call the contract for inserting a record commitment inside the merkle tree containing
-/// some native fee asset records.
-pub async fn create_faucet(contract: &TestCAPE<EthMiddleware>) -> (UserKeyPair, RecordOpening) {
-    let mut rng = ChaChaRng::from_seed([42; 32]);
-    let faucet_key_pair = UserKeyPair::generate(&mut rng);
+/// Generates a user key pair that controls the faucet if a key pair isn't provided, and calls the
+/// contract for inserting a record commitment inside the merkle tree containing some native fee
+/// asset records.
+pub async fn create_faucet(
+    contract: &TestCAPE<EthMiddleware>,
+    faucet_key_pair: Option<UserKeyPair>,
+) -> (UserKeyPair, RecordOpening) {
+    let faucet_key_pair = match faucet_key_pair {
+        Some(key) => key,
+        None => {
+            let mut rng = ChaChaRng::from_seed([42; 32]);
+            UserKeyPair::generate(&mut rng)
+        }
+    };
     contract
         .faucet_setup_for_testnet(
             faucet_key_pair.address().into(),

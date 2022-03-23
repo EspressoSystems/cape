@@ -241,9 +241,8 @@ pub async fn init_web_server(
     app.with(net::server::add_error_body::<_, FaucetError>)
         .with(net::server::trace)
         .at("/healthcheck")
-        .get(healthcheck)
-        .at("/request_fee_assets")
-        .post(request_fee_assets);
+        .get(healthcheck);
+    app.at("/request_fee_assets").post(request_fee_assets);
     let address = format!("0.0.0.0:{}", opt.faucet_port);
     Ok(spawn(app.listen(address)))
 }

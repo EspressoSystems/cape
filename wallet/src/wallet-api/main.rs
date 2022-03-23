@@ -98,9 +98,13 @@ mod tests {
     use tempdir::TempDir;
     use tracing_test::traced_test;
 
+    fn base64(bytes: &[u8]) -> String {
+        base64::encode_config(bytes, base64::URL_SAFE_NO_PAD)
+    }
+
     fn fmt_path(path: &Path) -> String {
         let bytes = path.as_os_str().to_str().unwrap().as_bytes();
-        base64::encode_config(bytes, base64::URL_SAFE_NO_PAD)
+        base64(bytes)
     }
 
     struct TestServer {
@@ -191,7 +195,7 @@ mod tests {
     async fn test_newwallet() {
         let server = TestServer::new().await;
         let mnemonic = server.get::<String>("getmnemonic").await.unwrap();
-        let password = "my-password";
+        let password = base64("my pass/word".as_bytes());
 
         // Should fail if the mnemonic is invalid.
         server
@@ -211,13 +215,40 @@ mod tests {
             ))
             .await
             .expect_err("newwallet succeeded with an invalid path");
+        // Should fail if the password is invalid.
+        server
+            .get::<()>(&format!(
+                "newwallet/{}/plaintext-password/path/{}",
+                mnemonic,
+                server.path()
+            ))
+            .await
+            .expect_err("newwallet succeeded with an invalid password");
+        // Should fail if the name is invalid.
+        server
+            .get::<()>(&format!(
+                "newwallet/{}/{}/name/plaintext-name",
+                mnemonic, password,
+            ))
+            .await
+            .expect_err("newwallet succeeded with an invalid name");
 
+        // Test successful calls, using names and passwords with spaces and slashes.
         server
             .get::<()>(&format!(
                 "newwallet/{}/{}/path/{}",
                 mnemonic,
                 password,
                 server.path()
+            ))
+            .await
+            .unwrap();
+        server
+            .get::<()>(&format!(
+                "newwallet/{}/{}/name/{}",
+                mnemonic,
+                password,
+                base64("this is / a wallet name".as_bytes()),
             ))
             .await
             .unwrap();
@@ -240,8 +271,7 @@ mod tests {
     async fn test_openwallet() {
         let server = TestServer::new().await;
         let mnemonic = server.get::<String>("getmnemonic").await.unwrap();
-        println!("mnemonic: {}", mnemonic);
-        let password = "my-password";
+        let password = base64("my-password".as_bytes());
 
         // Should fail if no wallet exists.
         server
@@ -285,7 +315,7 @@ mod tests {
         let server = TestServer::new().await;
         let mnemonic = server.get::<String>("getmnemonic").await.unwrap();
         println!("mnemonic: {}", mnemonic);
-        let password = "my-password";
+        let password = base64("my-password".as_bytes());
 
         // Should get None on first try if no last wallet.
         let opt = server
@@ -366,8 +396,9 @@ mod tests {
         // Now open a wallet and close it.
         server
             .get::<()>(&format!(
-                "newwallet/{}/my-password/path/{}",
+                "newwallet/{}/{}/path/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
+                base64("my-password".as_bytes()),
                 server.path()
             ))
             .await
@@ -386,24 +417,22 @@ mod tests {
         // Now open a wallet and call getinfo.
         server
             .get::<()>(&format!(
-                "newwallet/{}/my-password/path/{}",
+                "newwallet/{}/{}/path/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
+                base64("my-password".as_bytes()),
                 server.path()
             ))
             .await
             .unwrap();
         let info = server.get::<WalletSummary>("getinfo").await.unwrap();
 
-        assert_eq!(
-            info,
-            WalletSummary {
-                addresses: vec![],
-                sending_keys: vec![],
-                viewing_keys: vec![],
-                freezing_keys: vec![],
-                assets: vec![AssetInfo::native()]
-            }
-        )
+        assert_eq!(info.addresses, vec![]);
+        assert_eq!(info.sending_keys, vec![]);
+        assert_eq!(info.viewing_keys, vec![]);
+        assert_eq!(info.freezing_keys, vec![]);
+        assert_eq!(info.assets, vec![AssetInfo::native()]);
+        // The wallet should be up-to-date with the EQS.
+        assert_eq!(info.sync_time, info.real_time);
     }
 
     #[async_std::test]
@@ -419,8 +448,9 @@ mod tests {
         // Now open a wallet and call getaddress.
         server
             .get::<()>(&format!(
-                "newwallet/{}/my-password/path/{}",
+                "newwallet/{}/{}/path/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
+                base64("my-password".as_bytes()),
                 server.path()
             ))
             .await
@@ -445,8 +475,9 @@ mod tests {
         // Now open a wallet populate it and call getrecords.
         server
             .get::<()>(&format!(
-                "newwallet/{}/my-password/path/{}",
+                "newwallet/{}/{}/path/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
+                base64("my-password".as_bytes()),
                 server.path()
             ))
             .await
@@ -503,8 +534,9 @@ mod tests {
         // Now open a wallet.
         server
             .get::<()>(&format!(
-                "newwallet/{}/my-password/path/{}",
+                "newwallet/{}/{}/path/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
+                base64("my-password".as_bytes()),
                 server.path()
             ))
             .await
@@ -594,8 +626,9 @@ mod tests {
         // Now open a wallet.
         server
             .get::<()>(&format!(
-                "newwallet/{}/my-password/path/{}",
+                "newwallet/{}/{}/path/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
+                base64("my-password".as_bytes()),
                 server.path()
             ))
             .await
@@ -721,8 +754,9 @@ mod tests {
         // Now open a wallet.
         server
             .get::<()>(&format!(
-                "newwallet/{}/my-password/path/{}",
+                "newwallet/{}/{}/path/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
+                base64("my-password".as_bytes()),
                 server.path()
             ))
             .await
@@ -883,8 +917,9 @@ mod tests {
         let mut rng = ChaChaRng::from_seed([42u8; 32]);
         server
             .get::<()>(&format!(
-                "newwallet/{}/my-password/path/{}",
+                "newwallet/{}/{}/path/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
+                base64("my-password".as_bytes()),
                 server.path()
             ))
             .await
@@ -954,8 +989,9 @@ mod tests {
         let server = TestServer::new().await;
         server
             .get::<()>(&format!(
-                "newwallet/{}/minter-password/path/{}",
+                "newwallet/{}/{}/path/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
+                base64("minter-password".as_bytes()),
                 server.path()
             ))
             .await
@@ -1054,8 +1090,9 @@ mod tests {
         let server = TestServer::new().await;
         server
             .get::<()>(&format!(
-                "newwallet/{}/minter-password/path/{}",
+                "newwallet/{}/{}/path/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
+                base64("my-password".as_bytes()),
                 server.path()
             ))
             .await
@@ -1153,8 +1190,9 @@ mod tests {
         let server = TestServer::new().await;
         server
             .get::<()>(&format!(
-                "newwallet/{}/my-password/path/{}",
+                "newwallet/{}/{}/path/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
+                base64("my-password".as_bytes()),
                 server.path()
             ))
             .await
@@ -1243,8 +1281,9 @@ mod tests {
         // Now open a wallet.
         server
             .get::<()>(&format!(
-                "newwallet/{}/my-password/path/{}",
+                "newwallet/{}/{}/path/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
+                base64("my-password".as_bytes()),
                 server.path()
             ))
             .await
@@ -1429,8 +1468,9 @@ mod tests {
         // Now open a wallet.
         server
             .get::<()>(&format!(
-                "newwallet/{}/my-password/path/{}",
+                "newwallet/{}/{}/path/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
+                base64("my-password".as_bytes()),
                 server.path()
             ))
             .await
@@ -1532,8 +1572,9 @@ mod tests {
         let mnemonic = server.get::<String>("getmnemonic").await.unwrap();
         server
             .get::<()>(&format!(
-                "newwallet/{}/my-password/path/{}",
+                "newwallet/{}/{}/path/{}",
                 mnemonic,
+                base64("my-password".as_bytes()),
                 server.path()
             ))
             .await
@@ -1555,8 +1596,9 @@ mod tests {
         server.get::<()>("closewallet").await.unwrap();
         server
             .get::<()>(&format!(
-                "newwallet/{}/my-password/path/{}",
+                "newwallet/{}/{}/path/{}",
                 mnemonic,
+                base64("my-password".as_bytes()),
                 fmt_path(new_dir.path())
             ))
             .await
@@ -1642,8 +1684,10 @@ mod tests {
         // Create a named key store.
         server
             .get::<()>(&format!(
-                "newwallet/{}/my-password/name/named_keystore",
-                server.get::<String>("getmnemonic").await.unwrap()
+                "newwallet/{}/{}/name/{}",
+                server.get::<String>("getmnemonic").await.unwrap(),
+                base64("my-password".as_bytes()),
+                base64("named_keystore".as_bytes()),
             ))
             .await
             .unwrap();
@@ -1655,8 +1699,9 @@ mod tests {
         // Create a key store by path, in the directory containing named keystores.
         server
             .get::<()>(&format!(
-                "newwallet/{}/my-password/path/{}",
+                "newwallet/{}/{}/path/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
+                base64("my-password".as_bytes()),
                 server.path()
             ))
             .await
@@ -1676,8 +1721,9 @@ mod tests {
         let new_dir = TempDir::new("non_keystoer_dir").unwrap();
         server
             .get::<()>(&format!(
-                "newwallet/{}/my-password/path/{}",
+                "newwallet/{}/{}/path/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
+                base64("my-password".as_bytes()),
                 fmt_path(new_dir.path())
             ))
             .await
@@ -1694,13 +1740,17 @@ mod tests {
     #[traced_test]
     async fn test_resetpassword() {
         let server = TestServer::new().await;
+        let password1 = base64("password1".as_bytes());
+        let password2 = base64("password2".as_bytes());
+        let password3 = base64("password3".as_bytes());
 
         // Create a wallet with `password1`.
         let mnemonic = server.get::<String>("getmnemonic").await.unwrap();
         server
             .get::<()>(&format!(
-                "newwallet/{}/password1/path/{}",
+                "newwallet/{}/{}/path/{}",
                 mnemonic,
+                password1,
                 server.path(),
             ))
             .await
@@ -1722,15 +1772,16 @@ mod tests {
 
         // Check that the wallet does not open with the wrong password.
         server
-            .get::<()>(&format!("openwallet/password2/path/{}", server.path()))
+            .get::<()>(&format!("openwallet/{}/path/{}", password2, server.path()))
             .await
             .unwrap_err();
 
         // Change the password and check that our data is still there.
         server
             .get::<()>(&format!(
-                "resetpassword/{}/password2/path/{}",
+                "resetpassword/{}/{}/path/{}",
                 mnemonic,
+                password2,
                 server.path()
             ))
             .await
@@ -1746,21 +1797,22 @@ mod tests {
 
         // Check that we can't open the wallet with the old password.
         server
-            .get::<()>(&format!("openwallet/password1/path/{}", server.path()))
+            .get::<()>(&format!("openwallet/{}/path/{}", password1, server.path()))
             .await
             .unwrap_err();
 
         // Check that we can open the wallet with the new password.
         server
-            .get::<()>(&format!("openwallet/password2/path/{}", server.path()))
+            .get::<()>(&format!("openwallet/{}/path/{}", password2, server.path()))
             .await
             .unwrap();
 
         // Check that we can't reset the password using the wrong mnemonic.
         server
             .get::<()>(&format!(
-                "resetpassword/{}/password3/path/{}",
+                "resetpassword/{}/{}/path/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
+                password3,
                 server.path()
             ))
             .await
@@ -1786,8 +1838,9 @@ mod tests {
 
         server
             .get::<()>(&format!(
-                "newwallet/{}/password1/path/{}",
+                "newwallet/{}/{}/path/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
+                base64("my-password".as_bytes()),
                 server.path(),
             ))
             .await
@@ -1814,8 +1867,10 @@ mod tests {
         let server = TestServer::new().await;
         server
             .get::<()>(&format!(
-                "newwallet/{}/password1/name/wallet1",
+                "newwallet/{}/{}/name/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
+                base64("my-password".as_bytes()),
+                base64("wallet1".as_bytes()),
             ))
             .await
             .unwrap();
@@ -1840,8 +1895,10 @@ mod tests {
         // Open a different wallet and import the asset.
         server
             .get::<()>(&format!(
-                "newwallet/{}/password2/name/wallet2",
+                "newwallet/{}/{}/name/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
+                base64("my-password".as_bytes()),
+                base64("wallet2".as_bytes()),
             ))
             .await
             .unwrap();
@@ -1917,8 +1974,9 @@ mod tests {
         // Create a wallet.
         server
             .get::<()>(&format!(
-                "newwallet/{}/my-password/path/{}",
+                "newwallet/{}/{}/path/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
+                base64("my-password".as_bytes()),
                 server.path()
             ))
             .await
@@ -2064,8 +2122,9 @@ mod tests {
         // Now open a wallet.
         server
             .get::<()>(&format!(
-                "newwallet/{}/my-password/path/{}",
+                "newwallet/{}/{}/path/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
+                base64("my-password".as_bytes()),
                 server.path()
             ))
             .await

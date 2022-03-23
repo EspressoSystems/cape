@@ -12,7 +12,6 @@ use async_std::fs::{read_dir, File};
 use cap_rust_sandbox::{
     ledger::CapeLedger,
     model::{Erc20Code, EthereumAddr},
-    universal_param::UNIVERSAL_PARAM,
 };
 use cape_wallet::{
     ui::*,
@@ -95,12 +94,12 @@ pub fn server_error<E: Into<CapeAPIError>>(err: E) -> tide::Error {
 mod backend {
     use super::*;
     use async_std::sync::{Arc, Mutex};
+    use cap_rust_sandbox::universal_param::verifier_keys;
     use cape_wallet::mocks::{MockCapeBackend, MockCapeNetwork};
     use jf_cap::{
         structs::{FreezeFlag, ReceiverMemo, RecordCommitment, RecordOpening},
-        MerkleTree, TransactionVerifyingKey,
+        MerkleTree,
     };
-    use key_set::{KeySet, VerifierKeySet};
     use reef::traits::Ledger;
     use seahorse::testing::MockLedger;
 
@@ -112,52 +111,7 @@ mod backend {
         faucet_pub_key: UserPubKey,
         loader: &mut Loader,
     ) -> Result<Backend, CapeWalletError> {
-        let verif_crs = VerifierKeySet {
-            mint: TransactionVerifyingKey::Mint(
-                jf_cap::proof::mint::preprocess(&*UNIVERSAL_PARAM, CapeLedger::merkle_height())
-                    .unwrap()
-                    .1,
-            ),
-            xfr: KeySet::new(
-                vec![
-                    TransactionVerifyingKey::Transfer(
-                        jf_cap::proof::transfer::preprocess(
-                            &*UNIVERSAL_PARAM,
-                            2,
-                            2,
-                            CapeLedger::merkle_height(),
-                        )
-                        .unwrap()
-                        .1,
-                    ),
-                    TransactionVerifyingKey::Transfer(
-                        jf_cap::proof::transfer::preprocess(
-                            &*UNIVERSAL_PARAM,
-                            3,
-                            3,
-                            CapeLedger::merkle_height(),
-                        )
-                        .unwrap()
-                        .1,
-                    ),
-                ]
-                .into_iter(),
-            )
-            .unwrap(),
-            freeze: KeySet::new(
-                vec![TransactionVerifyingKey::Freeze(
-                    jf_cap::proof::freeze::preprocess(
-                        &*UNIVERSAL_PARAM,
-                        2,
-                        CapeLedger::merkle_height(),
-                    )
-                    .unwrap()
-                    .1,
-                )]
-                .into_iter(),
-            )
-            .unwrap(),
-        };
+        let verif_crs = verifier_keys();
 
         // Set up a faucet record.
         let mut records = MerkleTree::new(CapeLedger::merkle_height()).unwrap();
@@ -185,6 +139,7 @@ mod backend {
 #[cfg(not(test))]
 mod backend {
     use super::*;
+    use cap_rust_sandbox::universal_param::UNIVERSAL_PARAM;
     use cape_wallet::backend::{CapeBackend, CapeBackendConfig};
 
     pub type Backend = CapeBackend<'static, LoaderMetadata>;
@@ -315,13 +270,14 @@ impl UrlSegmentValue {
     }
 
     pub fn as_path(&self) -> Result<PathBuf, tide::Error> {
-        Ok(PathBuf::from(std::str::from_utf8(&self.as_base64()?)?))
+        Ok(PathBuf::from(self.as_string()?))
     }
 
     pub fn as_string(&self) -> Result<String, tide::Error> {
         match self {
             Self::Literal(s) => Ok(String::from(s)),
             Self::Identifier(tb64) => Ok(String::from(std::str::from_utf8(&tb64.value())?)),
+            Self::Base64(bytes) => Ok(String::from(std::str::from_utf8(bytes)?)),
             _ => Err(server_error(CapeAPIError::Param {
                 expected: String::from("String"),
                 actual: self.to_string(),
@@ -655,6 +611,7 @@ async fn listkeystores(options: &NodeOpt) -> Result<Vec<String>, tide::Error> {
 
 async fn getinfo(wallet: &mut Option<Wallet>) -> Result<WalletSummary, tide::Error> {
     let wallet = require_wallet(wallet)?;
+    let (sync_time, real_time) = wallet.scan_status().await.map_err(wallet_error)?;
     Ok(WalletSummary {
         addresses: wallet
             .pub_keys()
@@ -666,6 +623,8 @@ async fn getinfo(wallet: &mut Option<Wallet>) -> Result<WalletSummary, tide::Err
         viewing_keys: wallet.auditor_pub_keys().await,
         freezing_keys: wallet.freezer_pub_keys().await,
         assets: known_assets(wallet).await.into_values().collect(),
+        sync_time: sync_time.index(EventSource::QueryService),
+        real_time: real_time.index(EventSource::QueryService),
     })
 }
 
@@ -751,7 +710,7 @@ async fn newkey(
 ) -> Result<PubKey, tide::Error> {
     let wallet = require_wallet(wallet)?;
     let description = match bindings.get(":description") {
-        Some(param) => std::str::from_utf8(param.value.as_base64()?.as_slice())?.into(),
+        Some(param) => param.value.as_string()?,
         None => String::new(),
     };
 
@@ -778,7 +737,7 @@ async fn newasset(
 ) -> Result<AssetInfo, tide::Error> {
     let wallet = require_wallet(wallet)?;
     let symbol = match bindings.get(":symbol") {
-        Some(param) => std::str::from_utf8(&param.value.as_base64()?)?.to_string(),
+        Some(param) => param.value.as_string()?,
         None => String::new(),
     };
 
@@ -920,7 +879,7 @@ async fn recoverkey(
 ) -> Result<PubKey, tide::Error> {
     let wallet = require_wallet(wallet)?;
     let description = match bindings.get(":description") {
-        Some(param) => std::str::from_utf8(param.value.as_base64()?.as_slice())?.into(),
+        Some(param) => param.value.as_string()?,
         None => String::new(),
     };
 
@@ -1045,11 +1004,10 @@ async fn updateasset(
 
     // Update based on request parameters.
     if let Some(symbol) = bindings.get(":symbol") {
-        asset = asset.with_name(std::str::from_utf8(&symbol.value.as_base64()?)?.to_string());
+        asset = asset.with_name(symbol.value.as_string()?);
     }
     if let Some(description) = bindings.get(":description") {
-        asset = asset
-            .with_description(std::str::from_utf8(&description.value.as_base64()?)?.to_string());
+        asset = asset.with_description(description.value.as_string()?);
     }
     if let Some(icon) = bindings.get(":icon") {
         let bytes = icon.value.as_base64()?;

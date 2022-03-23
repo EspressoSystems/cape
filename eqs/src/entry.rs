@@ -16,19 +16,20 @@ use async_std::{
     sync::{Arc, RwLock},
     task::sleep,
 };
+use cap_rust_sandbox::universal_param::verifier_keys;
 
 pub async fn run(opt: &EQSOptions) -> std::io::Result<()> {
     let (state_persistence, query_result_state) = if opt.reset_state() {
         (
             StatePersistence::new(&opt.store_path(), "eth_query").unwrap(),
-            Arc::new(RwLock::new(QueryResultState::new(opt.verifier_keys()))),
+            Arc::new(RwLock::new(QueryResultState::new(verifier_keys()))),
         )
     } else {
         let state_persistence = StatePersistence::load(&opt.store_path(), "eth_query").unwrap();
         let query_result_state = Arc::new(RwLock::new(
             state_persistence.load_latest_state().unwrap_or_else(|err| {
                 if let PersistenceError::FailedToFindExpectedResource { key: _ } = err {
-                    QueryResultState::new(opt.verifier_keys())
+                    QueryResultState::new(verifier_keys())
                 } else {
                     panic!("{:?}", err);
                 }

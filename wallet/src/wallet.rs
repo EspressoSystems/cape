@@ -15,7 +15,10 @@ use jf_cap::{
     structs::{AssetCode, AssetDefinition, AssetPolicy, FreezeFlag, RecordOpening},
     VerKey,
 };
-use seahorse::{txn_builder::TransactionReceipt, AssetInfo, Wallet, WalletBackend, WalletError};
+use seahorse::{
+    events::EventIndex, txn_builder::TransactionReceipt, AssetInfo, Wallet, WalletBackend,
+    WalletError,
+};
 use std::path::Path;
 
 pub type CapeWalletError = WalletError<CapeLedger>;
@@ -63,6 +66,9 @@ pub trait CapeWalletBackend<'a>: WalletBackend<'a, CapeLedger> {
 
     /// Get the official verification key used to verify asset libraries.
     fn asset_verifier(&self) -> VerKey;
+
+    /// The real-world time (as an event index) according to the EQS.
+    async fn eqs_time(&self) -> Result<EventIndex, CapeWalletError>;
 }
 
 pub type CapeWallet<'a, Backend> = Wallet<'a, Backend, CapeLedger>;
@@ -140,6 +146,13 @@ pub trait CapeWalletExt<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> {
         &mut self,
         library: &Path,
     ) -> Result<Vec<AssetInfo>, CapeWalletError>;
+
+    /// Get the status of the ledger scanner.
+    ///
+    /// Returns `(sync_time, eqs_time)`, wherer `sync_time` is the index of the last event this
+    /// wallet has observed, and `eqs_time` is the total number of events reported by the EQS. It is
+    /// guaranteed that `sync_time <= eqs_time`.
+    async fn scan_status(&self) -> Result<(EventIndex, EventIndex), CapeWalletError>;
 }
 
 #[async_trait]
@@ -274,5 +287,15 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
         let library = bincode::deserialize(&bytes)?;
         let ver_key = self.lock().await.backend().asset_verifier();
         self.verify_assets(&ver_key, library).await
+    }
+
+    async fn scan_status(&self) -> Result<(EventIndex, EventIndex), CapeWalletError> {
+        // We should really take the lock around both of these calls, but `now` is a public Seahorse
+        // function which takes the lock internally. As an approximation, we get the EQS time first,
+        // so that we report as up-to-date a status as we can, if `self.now()` advances during this
+        // function call.
+        let eqs_time = self.lock().await.backend().eqs_time().await?;
+        let sync_time = self.now().await;
+        Ok((sync_time, eqs_time))
     }
 }

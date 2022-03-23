@@ -8,6 +8,7 @@
 //! Type definitions for UI-focused API responses.
 
 use crate::wallet::{CapeWallet, CapeWalletBackend, CapeWalletExt};
+use cap_rust_sandbox::ledger::{CapeLedger, CapeTransactionKind};
 use cap_rust_sandbox::model::Erc20Code;
 use futures::stream::{iter, StreamExt};
 use jf_cap::{
@@ -15,6 +16,7 @@ use jf_cap::{
     structs::{AssetCode, AssetDefinition as JfAssetDefinition, AssetPolicy},
 };
 use net::UserAddress;
+use reef::cap;
 use seahorse::{
     accounts::{AccountInfo, KeyPair},
     asset_library::Icon,
@@ -310,6 +312,10 @@ pub struct WalletSummary {
     pub viewing_keys: Vec<AuditorPubKey>,
     pub freezing_keys: Vec<FreezerPubKey>,
     pub assets: Vec<AssetInfo>,
+    /// The time (as an event index) at which the wallet last synced with the EQS.
+    pub sync_time: usize,
+    /// The real-world time (as an event index) according to the EQS.
+    pub real_time: usize,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -360,6 +366,58 @@ impl Account {
             balance: info.balance,
             description: info.description,
             used: info.used,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct TransactionHistoryEntry {
+    pub time: String,
+    pub asset: AssetCode,
+    pub kind: String,
+    /// Sending keys used to build this transaction, if available.
+    ///
+    /// If we sent this transaction, `senders` records the addresses of the spending keys used to
+    /// submit it. If we received this transaction from someone else, we may not know who the
+    /// senders are and this field may be empty.
+    pub senders: Vec<UserAddress>,
+    /// Receivers and corresponding amounts.
+    pub receivers: Vec<(UserAddress, u64)>,
+    pub status: String,
+}
+
+impl TransactionHistoryEntry {
+    pub async fn from_wallet<'a, Backend: CapeWalletBackend<'a> + Sync + 'a>(
+        wallet: &CapeWallet<'a, Backend>,
+        entry: seahorse::txn_builder::TransactionHistoryEntry<CapeLedger>,
+    ) -> Self {
+        Self {
+            time: entry.time.to_string(),
+            asset: entry.asset,
+            kind: match entry.kind {
+                CapeTransactionKind::CAP(cap::TransactionKind::Send) => "send".to_string(),
+                CapeTransactionKind::CAP(cap::TransactionKind::Receive) => "receive".to_string(),
+                CapeTransactionKind::CAP(cap::TransactionKind::Mint) => "mint".to_string(),
+                CapeTransactionKind::CAP(cap::TransactionKind::Freeze) => "freeze".to_string(),
+                CapeTransactionKind::CAP(cap::TransactionKind::Unfreeze) => "unfreeze".to_string(),
+                CapeTransactionKind::CAP(cap::TransactionKind::Unknown) => "unknown".to_string(),
+                CapeTransactionKind::Burn => "burn".to_string(),
+                CapeTransactionKind::Wrap => "wrap".to_string(),
+                CapeTransactionKind::Faucet => "faucet".to_string(),
+            },
+            senders: entry.senders.into_iter().map(UserAddress::from).collect(),
+            receivers: entry
+                .receivers
+                .into_iter()
+                .map(|(addr, amt)| (addr.into(), amt))
+                .collect(),
+            status: match entry.receipt {
+                Some(receipt) => match wallet.transaction_status(&receipt).await {
+                    Ok(status) => status.to_string(),
+                    Err(_) => "unknown".to_string(),
+                },
+                None => "unknown".to_string(),
+            },
         }
     }
 }

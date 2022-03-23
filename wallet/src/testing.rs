@@ -22,6 +22,7 @@ use async_std::task::{sleep, spawn, JoinHandle};
 use cap_rust_sandbox::deploy::EthMiddleware;
 use cap_rust_sandbox::ethereum::get_provider;
 use cap_rust_sandbox::ledger::CapeLedger;
+use cap_rust_sandbox::test_utils::keysets_for_test;
 use cap_rust_sandbox::types::SimpleToken;
 use eqs::{configuration::EQSOptions, run_eqs};
 use ethers::prelude::Address;
@@ -39,15 +40,12 @@ use jf_cap::structs::AssetDefinition;
 use jf_cap::structs::AssetPolicy;
 use jf_cap::structs::FreezeFlag;
 use jf_cap::structs::ReceiverMemo;
-use jf_cap::TransactionVerifyingKey;
-use key_set::VerifierKeySet;
 use lazy_static::lazy_static;
 use rand::{
     distributions::{Distribution, Standard},
     Rng,
 };
 use rand_chacha::ChaChaRng;
-use reef::Ledger;
 use relayer::testing::start_minimal_relayer_for_test;
 use seahorse::testing::await_transaction;
 use seahorse::txn_builder::RecordInfo;
@@ -117,58 +115,8 @@ pub async fn create_test_network<'a>(
     let relayer_url = Url::parse(&format!("http://localhost:{}", relayer_port)).unwrap();
     let sender_memo = ReceiverMemo::from_ro(rng, &sender_rec, &[]).unwrap();
 
-    let verif_crs = VerifierKeySet {
-        xfr: vec![
-            // For native transfers
-            TransactionVerifyingKey::Transfer(
-                jf_cap::proof::transfer::preprocess(
-                    universal_param,
-                    1,
-                    2,
-                    CapeLedger::merkle_height(),
-                )
-                .unwrap()
-                .1,
-            ),
-            // For non-native transfers
-            TransactionVerifyingKey::Transfer(
-                jf_cap::proof::transfer::preprocess(
-                    universal_param,
-                    2,
-                    3,
-                    CapeLedger::merkle_height(),
-                )
-                .unwrap()
-                .1,
-            ),
-            // For burns (which currently require exactly 2 inputs and outputs, but this is an
-            // artificial restriction which should be lifted)
-            TransactionVerifyingKey::Transfer(
-                jf_cap::proof::transfer::preprocess(
-                    universal_param,
-                    2,
-                    2,
-                    CapeLedger::merkle_height(),
-                )
-                .unwrap()
-                .1,
-            ),
-        ]
-        .into_iter()
-        .collect(),
-        freeze: vec![TransactionVerifyingKey::Freeze(
-            jf_cap::proof::freeze::preprocess(universal_param, 2, CapeLedger::merkle_height())
-                .unwrap()
-                .1,
-        )]
-        .into_iter()
-        .collect(),
-        mint: TransactionVerifyingKey::Mint(
-            jf_cap::proof::mint::preprocess(universal_param, CapeLedger::merkle_height())
-                .unwrap()
-                .1,
-        ),
-    };
+    let (_, verif_crs) = keysets_for_test(universal_param);
+
     let mut mock_eqs = MockCapeLedger::new(MockCapeNetwork::new(
         verif_crs,
         records,

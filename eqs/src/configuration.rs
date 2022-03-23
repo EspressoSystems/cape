@@ -5,11 +5,8 @@
 // This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use cap_rust_sandbox::{model::CAPE_MERKLE_HEIGHT, universal_param::UNIVERSAL_PARAM};
 use dirs::data_local_dir;
 use ethers::prelude::Address;
-use jf_cap::TransactionVerifyingKey;
-use key_set::{KeySet, VerifierKeySet};
 use std::{env, path::PathBuf, time::Duration};
 use structopt::StructOpt;
 
@@ -31,15 +28,19 @@ pub struct EQSOptions {
     /// Path to persistence files.
     ///
     /// Persistence files will be nested under the specified directory
-    #[structopt(long, short, default_value = "")]
+    #[structopt(long, short, default_value = "", env = "CAPE_EQS_STORE_PATH")]
     pub store_path: String,
 
     /// URL for Ethers HTTP Provider
-    #[structopt(long, env = "RPC_URL", default_value = "http://localhost:8545")]
+    #[structopt(
+        long,
+        env = "CAPE_WEB3_PROVIDER_URL",
+        default_value = "http://localhost:8545"
+    )]
     pub rpc_url: String,
 
     /// Address for CAPE contract
-    #[structopt(long, env = "CAPE_ADDRESS")]
+    #[structopt(long, env = "CAPE_CONTRACT_ADDRESS")]
     pub cape_address: Option<Address>,
 
     /// Invoke as a test-only instance; will create and use test contract
@@ -55,9 +56,8 @@ pub struct EQSOptions {
     #[structopt(long, default_value = "500")]
     pub query_frequency: u64,
 
-    // Ethereum connection is specified by env variable.
     /// Web service port .
-    #[structopt(long, default_value = "50087")]
+    #[structopt(long, default_value = "50087", env = "CAPE_EQS_PORT")]
     pub eqs_port: u16,
 }
 
@@ -119,43 +119,6 @@ impl EQSOptions {
 
     pub(crate) fn reset_state(&self) -> bool {
         self.reset_store_state
-    }
-
-    pub(crate) fn verifier_keys(&self) -> VerifierKeySet {
-        // Set up the validator.
-        let univ_setup = &*UNIVERSAL_PARAM;
-        let (_, xfr_verif_key_12, _) =
-            jf_cap::proof::transfer::preprocess(univ_setup, 1, 2, CAPE_MERKLE_HEIGHT).unwrap();
-        let (_, xfr_verif_key_22, _) =
-            jf_cap::proof::transfer::preprocess(univ_setup, 2, 2, CAPE_MERKLE_HEIGHT).unwrap();
-        let (_, xfr_verif_key_23, _) =
-            jf_cap::proof::transfer::preprocess(univ_setup, 2, 3, CAPE_MERKLE_HEIGHT).unwrap();
-        let (_, mint_verif_key, _) =
-            jf_cap::proof::mint::preprocess(univ_setup, CAPE_MERKLE_HEIGHT).unwrap();
-        let (_, freeze_verif_key_2, _) =
-            jf_cap::proof::freeze::preprocess(univ_setup, 2, CAPE_MERKLE_HEIGHT).unwrap();
-        let (_, freeze_verif_key_3, _) =
-            jf_cap::proof::freeze::preprocess(univ_setup, 3, CAPE_MERKLE_HEIGHT).unwrap();
-        VerifierKeySet {
-            mint: TransactionVerifyingKey::Mint(mint_verif_key),
-            xfr: KeySet::new(
-                vec![
-                    TransactionVerifyingKey::Transfer(xfr_verif_key_12),
-                    TransactionVerifyingKey::Transfer(xfr_verif_key_22),
-                    TransactionVerifyingKey::Transfer(xfr_verif_key_23),
-                ]
-                .into_iter(),
-            )
-            .unwrap(),
-            freeze: KeySet::new(
-                vec![
-                    TransactionVerifyingKey::Freeze(freeze_verif_key_2),
-                    TransactionVerifyingKey::Freeze(freeze_verif_key_3),
-                ]
-                .into_iter(),
-            )
-            .unwrap(),
-        }
     }
 
     pub(crate) fn query_frequency(&self) -> Duration {

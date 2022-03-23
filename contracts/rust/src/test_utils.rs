@@ -14,12 +14,15 @@ use crate::types::{SimpleToken, TestCAPE};
 use ethers::prelude::TransactionReceipt;
 use ethers::prelude::{Address, H160, U256};
 use jf_cap::keys::{UserKeyPair, UserPubKey};
+use jf_cap::proof::UniversalParam;
 use jf_cap::structs::{
     AssetDefinition, BlindFactor, FeeInput, FreezeFlag, RecordOpening, TxnFeeInfo,
 };
 use jf_cap::testing_apis::universal_setup_for_test;
 use jf_cap::transfer::{TransferNote, TransferNoteInput};
-use jf_cap::{AccMemberWitness, BaseField, MerkleTree};
+use jf_cap::{AccMemberWitness, BaseField, MerkleTree, TransactionVerifyingKey};
+use jf_utils::CanonicalBytes;
+use key_set::{KeySet, ProverKeySet, VerifierKeySet};
 use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
 use reef::Ledger;
 use std::path::{Path, PathBuf};
@@ -247,4 +250,36 @@ impl PrintGas for Option<TransactionReceipt> {
         );
         self
     }
+}
+
+pub fn keysets_for_test(srs: &UniversalParam) -> (ProverKeySet, VerifierKeySet) {
+    let (xfr_prove_key, xfr_verif_key, _) =
+        jf_cap::proof::transfer::preprocess(srs, 1, 2, CapeLedger::merkle_height()).unwrap();
+    let (mint_prove_key, mint_verif_key, _) =
+        jf_cap::proof::mint::preprocess(srs, CapeLedger::merkle_height()).unwrap();
+    let (freeze_prove_key, freeze_verif_key, _) =
+        jf_cap::proof::freeze::preprocess(srs, 2, CapeLedger::merkle_height()).unwrap();
+
+    for (label, key) in vec![
+        ("xfr", CanonicalBytes::from(xfr_verif_key.clone())),
+        ("mint", CanonicalBytes::from(mint_verif_key.clone())),
+        ("freeze", CanonicalBytes::from(freeze_verif_key.clone())),
+    ] {
+        println!("{}: {} bytes", label, key.0.len());
+    }
+
+    let prove_keys = ProverKeySet::<key_set::OrderByInputs> {
+        mint: mint_prove_key,
+        xfr: KeySet::new(vec![xfr_prove_key].into_iter()).unwrap(),
+        freeze: KeySet::new(vec![freeze_prove_key].into_iter()).unwrap(),
+    };
+
+    let verif_keys = VerifierKeySet {
+        mint: TransactionVerifyingKey::Mint(mint_verif_key),
+        xfr: KeySet::new(vec![TransactionVerifyingKey::Transfer(xfr_verif_key)].into_iter())
+            .unwrap(),
+        freeze: KeySet::new(vec![TransactionVerifyingKey::Freeze(freeze_verif_key)].into_iter())
+            .unwrap(),
+    };
+    (prove_keys, verif_keys)
 }

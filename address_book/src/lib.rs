@@ -143,7 +143,7 @@ pub fn address_book_temp_dir() -> TempDir {
 }
 
 pub fn address_book_port() -> String {
-    std::env::var("PORT").unwrap_or_else(|_| DEFAULT_PORT.to_string())
+    std::env::var("CAPE_ADDRESS_BOOK_PORT").unwrap_or_else(|_| DEFAULT_PORT.to_string())
 }
 
 pub fn cape_data_path() -> PathBuf {

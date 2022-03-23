@@ -14,8 +14,8 @@ mod asset_registry;
 pub mod bindings;
 mod bn254;
 pub mod cape;
-#[cfg(test)]
-mod cape_e2e_tests;
+mod cape_e2e_test_mint;
+mod cape_e2e_test_transfer;
 pub mod deploy;
 mod ed_on_bn254;
 pub mod ethereum;

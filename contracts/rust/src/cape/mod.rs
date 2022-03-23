@@ -17,6 +17,7 @@ use crate::types as sol;
 use anyhow::{anyhow, bail, Result};
 use ark_serialize::*;
 use ethers::prelude::Address;
+use itertools::Itertools;
 use jf_cap::freeze::FreezeNote;
 use jf_cap::keys::UserAddress;
 use jf_cap::mint::MintNote;
@@ -158,52 +159,10 @@ impl CapeBlock {
         })
     }
 
-    /// Collect the record commitments from the transaction outputs in the same order as the CAPE contract
-    pub fn get_list_of_output_record_commitments(self) -> Vec<RecordCommitment> {
-        let mut transfer_idx: usize = 0;
-        let mut mint_idx: usize = 0;
-        let mut freeze_idx: usize = 0;
-        let mut burn_idx: usize = 0;
-        let mut outputs_record_commitments = vec![];
-
-        for note_type in self.note_types {
-            match note_type {
-                NoteType::Transfer => {
-                    for rc in self.transfer_notes[transfer_idx].clone().output_commitments {
-                        outputs_record_commitments.push(rc);
-                    }
-                    transfer_idx += 1;
-                }
-                NoteType::Mint => {
-                    let note = self.mint_notes[mint_idx].clone();
-                    outputs_record_commitments.push(note.mint_comm);
-                    outputs_record_commitments.push(note.chg_comm);
-                    mint_idx += 1;
-                }
-                NoteType::Freeze => {
-                    for rc in self.freeze_notes[freeze_idx].clone().output_commitments {
-                        outputs_record_commitments.push(rc);
-                    }
-                    freeze_idx += 1;
-                }
-                NoteType::Burn => {
-                    for (counter, rc) in self.burn_notes[burn_idx]
-                        .clone()
-                        .transfer_note
-                        .output_commitments
-                        .into_iter()
-                        .enumerate()
-                    {
-                        if counter != 1 {
-                            outputs_record_commitments.push(rc);
-                        }
-                    }
-                    burn_idx += 1;
-                }
-            }
-        }
-
-        outputs_record_commitments
+    /// Collect the record commitments from the transaction outputs
+    pub fn commitments(self) -> Vec<RecordCommitment> {
+        let (txns, _) = self.into_cape_transactions().unwrap();
+        txns.iter().flat_map(|tx| tx.commitments()).collect_vec()
     }
 
     pub fn from_cape_transactions(

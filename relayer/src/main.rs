@@ -10,11 +10,12 @@ extern crate lazy_static;
 
 use crate::api_server::init_web_server;
 use crate::block_builder::Builder;
-use crate::configuration::{reset_state, store_path, verifier_keys};
+use crate::configuration::{reset_state, store_path};
 use crate::state_persistence::StatePersistence;
 use crate::txn_queue::TxnQueue;
 
 use cap_rust_sandbox::model::{CapeContractState, CAPE_MERKLE_HEIGHT};
+use cap_rust_sandbox::universal_param::verifier_keys;
 use jf_cap::MerkleTree;
 
 use async_std::sync::{Arc, RwLock};

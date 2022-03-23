@@ -43,9 +43,9 @@ DOC = "Responds with JSON {\"status\": \"available\"}."
 
 [route.newwallet]
 PATH = ["newwallet/:mnemonic/:password", "newwallet/:mnemonic/:password/path/:path", "newwallet/:mnemonic/:password/name/:name"]
-":password" = "Literal"
+":password" = "Base64"
 ":path" = "Base64"
-":name" = "Literal"
+":name" = "Base64"
 ":mnemonic" = "Literal"
 DOC = """
 Creates and opens a new the wallet with the given mnemonic and password.
@@ -57,9 +57,9 @@ If `:path` is given, the wallet will be stored in the given location. If `:name`
 
 [route.openwallet]
 PATH = ["openwallet/:password", "openwallet/:password/path/:path", "openwallet/:password/name/:name"]
-":password" = "Literal"
+":password" = "Base64"
 ":path" = "Base64"
-":name" = "Literal"
+":name" = "Base64"
 DOC = """
 Open the wallet from local storage with the given password and path.
 
@@ -68,9 +68,9 @@ Open the wallet from local storage with the given password and path.
 
 [route.resetpassword]
 PATH = ["resetpassword/:mnemonic/:password", "resetpassword/:mnemonic/:password/path/:path", "resetpassword/:mnemonic/:password/name/:name"]
-":password" = "Literal"
+":password" = "Base64"
 ":path" = "Base64"
-":name" = "Literal"
+":name" = "Base64"
 ":mnemonic" = "Literal"
 DOC = """
 Reset the password of the given wallet, and open it.
@@ -437,12 +437,21 @@ View the given asset or view the asset associated with the given viewing key.
 """
 
 [route.transaction]
-PATH = ["transaction/list", "transaction/list/:from/:count", "transaction/status/:receipt", "transaction/await/:receipt"]
-":from" = "TaggedBase64"
+PATH = ["transaction/status/:receipt", "transaction/await/:receipt"]
 ":receipt" = "TaggedBase64"
+DOC = """
+Poll the status of a given transaction, or await events for a given transaction.
+"""
+
+[route.transactionhistory]
+PATH = ["transactionhistory", "transactionhistory/from/:from", "transactionhistory/from/:from/count/:count"]
+":from" = "Integer"
 ":count" = "Integer"
 DOC = """
-List transactions, poll the status of a given transaction, or await events for a given transaction.
+List transaction history.
+
+The first form returns all transactions. The second from returns the `:from` most recent. The third
+form returns at most `:count` transactions starting from the `:from` most recent.
 """
 
 [route.getprivatekey]

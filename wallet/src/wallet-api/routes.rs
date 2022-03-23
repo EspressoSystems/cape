@@ -12,7 +12,6 @@ use async_std::fs::{read_dir, File};
 use cap_rust_sandbox::{
     ledger::CapeLedger,
     model::{Erc20Code, EthereumAddr},
-    universal_param::UNIVERSAL_PARAM,
 };
 use cape_wallet::{
     ui::*,
@@ -95,12 +94,12 @@ pub fn server_error<E: Into<CapeAPIError>>(err: E) -> tide::Error {
 mod backend {
     use super::*;
     use async_std::sync::{Arc, Mutex};
+    use cap_rust_sandbox::universal_param::verifier_keys;
     use cape_wallet::mocks::{MockCapeBackend, MockCapeNetwork};
     use jf_cap::{
         structs::{FreezeFlag, ReceiverMemo, RecordCommitment, RecordOpening},
-        MerkleTree, TransactionVerifyingKey,
+        MerkleTree,
     };
-    use key_set::{KeySet, VerifierKeySet};
     use reef::traits::Ledger;
     use seahorse::testing::MockLedger;
 
@@ -112,52 +111,7 @@ mod backend {
         faucet_pub_key: UserPubKey,
         loader: &mut Loader,
     ) -> Result<Backend, CapeWalletError> {
-        let verif_crs = VerifierKeySet {
-            mint: TransactionVerifyingKey::Mint(
-                jf_cap::proof::mint::preprocess(&*UNIVERSAL_PARAM, CapeLedger::merkle_height())
-                    .unwrap()
-                    .1,
-            ),
-            xfr: KeySet::new(
-                vec![
-                    TransactionVerifyingKey::Transfer(
-                        jf_cap::proof::transfer::preprocess(
-                            &*UNIVERSAL_PARAM,
-                            2,
-                            2,
-                            CapeLedger::merkle_height(),
-                        )
-                        .unwrap()
-                        .1,
-                    ),
-                    TransactionVerifyingKey::Transfer(
-                        jf_cap::proof::transfer::preprocess(
-                            &*UNIVERSAL_PARAM,
-                            3,
-                            3,
-                            CapeLedger::merkle_height(),
-                        )
-                        .unwrap()
-                        .1,
-                    ),
-                ]
-                .into_iter(),
-            )
-            .unwrap(),
-            freeze: KeySet::new(
-                vec![TransactionVerifyingKey::Freeze(
-                    jf_cap::proof::freeze::preprocess(
-                        &*UNIVERSAL_PARAM,
-                        2,
-                        CapeLedger::merkle_height(),
-                    )
-                    .unwrap()
-                    .1,
-                )]
-                .into_iter(),
-            )
-            .unwrap(),
-        };
+        let verif_crs = verifier_keys();
 
         // Set up a faucet record.
         let mut records = MerkleTree::new(CapeLedger::merkle_height()).unwrap();
@@ -185,6 +139,7 @@ mod backend {
 #[cfg(not(test))]
 mod backend {
     use super::*;
+    use cap_rust_sandbox::universal_param::UNIVERSAL_PARAM;
     use cape_wallet::backend::{CapeBackend, CapeBackendConfig};
 
     pub type Backend = CapeBackend<'static, LoaderMetadata>;
@@ -315,13 +270,14 @@ impl UrlSegmentValue {
     }
 
     pub fn as_path(&self) -> Result<PathBuf, tide::Error> {
-        Ok(PathBuf::from(std::str::from_utf8(&self.as_base64()?)?))
+        Ok(PathBuf::from(self.as_string()?))
     }
 
     pub fn as_string(&self) -> Result<String, tide::Error> {
         match self {
             Self::Literal(s) => Ok(String::from(s)),
             Self::Identifier(tb64) => Ok(String::from(std::str::from_utf8(&tb64.value())?)),
+            Self::Base64(bytes) => Ok(String::from(std::str::from_utf8(bytes)?)),
             _ => Err(server_error(CapeAPIError::Param {
                 expected: String::from("String"),
                 actual: self.to_string(),
@@ -375,6 +331,7 @@ pub enum ApiRouteKey {
     resetpassword,
     send,
     transaction,
+    transactionhistory,
     unfreeze,
     unwrap,
     updateasset,
@@ -654,6 +611,7 @@ async fn listkeystores(options: &NodeOpt) -> Result<Vec<String>, tide::Error> {
 
 async fn getinfo(wallet: &mut Option<Wallet>) -> Result<WalletSummary, tide::Error> {
     let wallet = require_wallet(wallet)?;
+    let (sync_time, real_time) = wallet.scan_status().await.map_err(wallet_error)?;
     Ok(WalletSummary {
         addresses: wallet
             .pub_keys()
@@ -665,6 +623,8 @@ async fn getinfo(wallet: &mut Option<Wallet>) -> Result<WalletSummary, tide::Err
         viewing_keys: wallet.auditor_pub_keys().await,
         freezing_keys: wallet.freezer_pub_keys().await,
         assets: known_assets(wallet).await.into_values().collect(),
+        sync_time: sync_time.index(EventSource::QueryService),
+        real_time: real_time.index(EventSource::QueryService),
     })
 }
 
@@ -750,7 +710,7 @@ async fn newkey(
 ) -> Result<PubKey, tide::Error> {
     let wallet = require_wallet(wallet)?;
     let description = match bindings.get(":description") {
-        Some(param) => std::str::from_utf8(param.value.as_base64()?.as_slice())?.into(),
+        Some(param) => param.value.as_string()?,
         None => String::new(),
     };
 
@@ -777,7 +737,7 @@ async fn newasset(
 ) -> Result<AssetInfo, tide::Error> {
     let wallet = require_wallet(wallet)?;
     let symbol = match bindings.get(":symbol") {
-        Some(param) => std::str::from_utf8(&param.value.as_base64()?)?.to_string(),
+        Some(param) => param.value.as_string()?,
         None => String::new(),
     };
 
@@ -919,7 +879,7 @@ async fn recoverkey(
 ) -> Result<PubKey, tide::Error> {
     let wallet = require_wallet(wallet)?;
     let description = match bindings.get(":description") {
-        Some(param) => std::str::from_utf8(param.value.as_base64()?.as_slice())?.into(),
+        Some(param) => param.value.as_string()?,
         None => String::new(),
     };
 
@@ -1044,11 +1004,10 @@ async fn updateasset(
 
     // Update based on request parameters.
     if let Some(symbol) = bindings.get(":symbol") {
-        asset = asset.with_name(std::str::from_utf8(&symbol.value.as_base64()?)?.to_string());
+        asset = asset.with_name(symbol.value.as_string()?);
     }
     if let Some(description) = bindings.get(":description") {
-        asset = asset
-            .with_description(std::str::from_utf8(&description.value.as_base64()?)?.to_string());
+        asset = asset.with_description(description.value.as_string()?);
     }
     if let Some(icon) = bindings.get(":icon") {
         let bytes = icon.value.as_base64()?;
@@ -1113,6 +1072,63 @@ pub async fn importasset(
     Ok(AssetInfo::from_info(wallet, info).await)
 }
 
+async fn transactionhistory(
+    bindings: &HashMap<String, RouteBinding>,
+    wallet: &mut Option<Wallet>,
+) -> Result<Vec<TransactionHistoryEntry>, tide::Error> {
+    let wallet = require_wallet(wallet)?;
+    let history = wallet.transaction_history().await.map_err(wallet_error)?;
+    let from = match bindings.get(":from") {
+        Some(param) => history.len().saturating_sub(param.value.as_usize()?),
+        None => 0,
+    };
+    let to = match bindings.get(":count") {
+        Some(param) => from + param.value.as_usize()?,
+        None => history.len(),
+    };
+    let selected = iter(history.into_iter().skip(from).take(to - from))
+        .then(|entry| TransactionHistoryEntry::from_wallet(wallet, entry))
+        .collect::<Vec<_>>()
+        .await;
+    Ok(selected)
+}
+
+async fn getprivatekey(
+    bindings: &HashMap<String, RouteBinding>,
+    wallet: &mut Option<Wallet>,
+) -> Result<PrivateKey, tide::Error> {
+    let wallet = require_wallet(wallet)?;
+    let address = bindings[":address"].value.clone();
+    match address.as_identifier()?.tag().as_str() {
+        "ADDR" => match wallet
+            .get_user_private_key(&address.to::<UserAddress>()?.0)
+            .await
+        {
+            Ok(keypair) => Ok(PrivateKey::Sending(keypair)),
+            Err(msg) => Err(wallet_error(msg)),
+        },
+        "USERPUBKEY" => match wallet
+            .get_user_private_key(&address.to::<UserPubKey>()?.address())
+            .await
+        {
+            Ok(keypair) => Ok(PrivateKey::Sending(keypair)),
+            Err(msg) => Err(wallet_error(msg)),
+        },
+        "AUDPUBKEY" => match wallet.get_auditor_private_key(&address.to()?).await {
+            Ok(keypair) => Ok(PrivateKey::Viewing(keypair)),
+            Err(msg) => Err(wallet_error(msg)),
+        },
+        "FREEZEPUBKEY" => match wallet.get_freezer_private_key(&address.to()?).await {
+            Ok(keypair) => Ok(PrivateKey::Freezing(keypair)),
+            Err(msg) => Err(wallet_error(msg)),
+        },
+        tag => Err(server_error(CapeAPIError::Tag {
+            expected: String::from("ADDR | USERPUBKEY | AUDPUBKEY | FREEZEPUBKEY"),
+            actual: String::from(tag),
+        })),
+    }
+}
+
 pub async fn dispatch_url(
     req: tide::Request<WebState>,
     route_pattern: &str,
@@ -1160,6 +1176,9 @@ pub async fn dispatch_url(
         ),
         ApiRouteKey::send => response(&req, send(bindings, wallet).await?),
         ApiRouteKey::transaction => dummy_url_eval(route_pattern, bindings),
+        ApiRouteKey::transactionhistory => {
+            response(&req, transactionhistory(bindings, wallet).await?)
+        }
         ApiRouteKey::unfreeze => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::unwrap => response(&req, unwrap(bindings, wallet).await?),
         ApiRouteKey::updateasset => response(&req, updateasset(bindings, wallet).await?),
@@ -1167,41 +1186,5 @@ pub async fn dispatch_url(
         ApiRouteKey::wrap => response(&req, wrap(bindings, wallet).await?),
         ApiRouteKey::getrecords => response(&req, get_records(wallet).await?),
         ApiRouteKey::lastusedkeystore => response(&req, get_last_keystore(options).await?),
-    }
-}
-
-async fn getprivatekey(
-    bindings: &HashMap<String, RouteBinding>,
-    wallet: &mut Option<Wallet>,
-) -> Result<PrivateKey, tide::Error> {
-    let wallet = require_wallet(wallet)?;
-    let address = bindings[":address"].value.clone();
-    match address.as_identifier()?.tag().as_str() {
-        "ADDR" => match wallet
-            .get_user_private_key(&address.to::<UserAddress>()?.0)
-            .await
-        {
-            Ok(keypair) => Ok(PrivateKey::Sending(keypair)),
-            Err(msg) => Err(wallet_error(msg)),
-        },
-        "USERPUBKEY" => match wallet
-            .get_user_private_key(&address.to::<UserPubKey>()?.address())
-            .await
-        {
-            Ok(keypair) => Ok(PrivateKey::Sending(keypair)),
-            Err(msg) => Err(wallet_error(msg)),
-        },
-        "AUDPUBKEY" => match wallet.get_auditor_private_key(&address.to()?).await {
-            Ok(keypair) => Ok(PrivateKey::Viewing(keypair)),
-            Err(msg) => Err(wallet_error(msg)),
-        },
-        "FREEZEPUBKEY" => match wallet.get_freezer_private_key(&address.to()?).await {
-            Ok(keypair) => Ok(PrivateKey::Freezing(keypair)),
-            Err(msg) => Err(wallet_error(msg)),
-        },
-        tag => Err(server_error(CapeAPIError::Tag {
-            expected: String::from("ADDR | USERPUBKEY | AUDPUBKEY | FREEZEPUBKEY"),
-            actual: String::from(tag),
-        })),
     }
 }

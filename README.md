@@ -21,6 +21,7 @@
   - [4. direnv (Optional, but recommended for development)](#4-direnv-optional-but-recommended-for-development)
 - [Build](#build)
   - [Wallet Docker image](#wallet-docker-image)
+- [CAPE Demo](#cape-demo)
 - [Development](#development)
   - [Running Tests](#running-tests)
   - [Interactive development](#interactive-development)
@@ -163,6 +164,12 @@ inside a nix shell from the root directory of the repo.
 
 For the CI build see the `docker-*` jobs in
 [.github/workflows/build.yml](.github/workflows/build.yml).
+
+# CAPE Demo
+
+To run the CAPE demo locally, run
+
+    cape-demo
 
 # Development
 

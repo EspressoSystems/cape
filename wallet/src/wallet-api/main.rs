@@ -426,16 +426,13 @@ mod tests {
             .unwrap();
         let info = server.get::<WalletSummary>("getinfo").await.unwrap();
 
-        assert_eq!(
-            info,
-            WalletSummary {
-                addresses: vec![],
-                sending_keys: vec![],
-                viewing_keys: vec![],
-                freezing_keys: vec![],
-                assets: vec![AssetInfo::native()]
-            }
-        )
+        assert_eq!(info.addresses, vec![]);
+        assert_eq!(info.sending_keys, vec![]);
+        assert_eq!(info.viewing_keys, vec![]);
+        assert_eq!(info.freezing_keys, vec![]);
+        assert_eq!(info.assets, vec![AssetInfo::native()]);
+        // The wallet should be up-to-date with the EQS.
+        assert_eq!(info.sync_time, info.real_time);
     }
 
     #[async_std::test]

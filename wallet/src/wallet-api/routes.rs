@@ -611,6 +611,7 @@ async fn listkeystores(options: &NodeOpt) -> Result<Vec<String>, tide::Error> {
 
 async fn getinfo(wallet: &mut Option<Wallet>) -> Result<WalletSummary, tide::Error> {
     let wallet = require_wallet(wallet)?;
+    let (sync_time, real_time) = wallet.scan_status().await.map_err(wallet_error)?;
     Ok(WalletSummary {
         addresses: wallet
             .pub_keys()
@@ -622,6 +623,8 @@ async fn getinfo(wallet: &mut Option<Wallet>) -> Result<WalletSummary, tide::Err
         viewing_keys: wallet.auditor_pub_keys().await,
         freezing_keys: wallet.freezer_pub_keys().await,
         assets: known_assets(wallet).await.into_values().collect(),
+        sync_time: sync_time.index(EventSource::QueryService),
+        real_time: real_time.index(EventSource::QueryService),
     })
 }
 

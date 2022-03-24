@@ -11,7 +11,7 @@
 //
 // This test is still a work in progrogress.  See: https://github.com/EspressoSystems/cape/issues/649
 // for everything left before it works properly.
-// #![deny(warnings)]
+#![deny(warnings)]
 
 use cap_rust_sandbox::deploy::deploy_erc20_token;
 use cape_wallet::backend::{CapeBackend, CapeBackendConfig};
@@ -370,12 +370,6 @@ async fn main() {
         .await
     };
 
-    event!(
-        Level::WARN,
-        "Native asset is wrapped = {}",
-        wallet.is_wrapped_asset(AssetCode::native()).await
-    );
-
     event!(Level::INFO, "Sender wallet has some initial balance");
     fund_eth_wallet(&mut wallet).await;
     event!(Level::INFO, "Funded Sender wallet with eth");
@@ -444,7 +438,6 @@ async fn main() {
                 let asset = mint_token(minter).await.unwrap();
                 event!(Level::INFO, "minted custom asset.  Code: {}", asset.code);
                 let amount = minter.balance_breakdown(&address, &asset.code).await;
-                event!(Level::INFO, "Wallet has {} of new asset", amount);
                 balances
                     .get_mut(&address)
                     .unwrap()
@@ -592,8 +585,6 @@ async fn main() {
                     .await;
                 if let Some(asset) = asset {
                     event!(Level::INFO, "Can burn something");
-                    // assert_ne!(asset.definition.code, AssetCode::native());
-                    assert!(burner.is_wrapped_asset(asset.definition.code).await);
                     let amount = get_burn_amount(burner, asset.definition.code).await;
                     if amount > 0 {
                         event!(

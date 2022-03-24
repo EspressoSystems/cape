@@ -29,7 +29,10 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::time::Duration;
 use structopt::StructOpt;
-use tide::http::{Method, Url};
+use tide::{
+    http::{headers::HeaderValue, Method, Url},
+    security::{CorsMiddleware, Origin},
+};
 
 pub const DEFAULT_ETH_ADDR: EthereumAddr = EthereumAddr([2; 20]);
 pub const DEFAULT_WRAPPED_AMT: u64 = 1000;
@@ -530,6 +533,13 @@ pub fn init_server(
         options: options.clone(),
     });
     web_server
+        .with(
+            CorsMiddleware::new()
+                .allow_methods("GET, POST".parse::<HeaderValue>().unwrap())
+                .allow_headers("*".parse::<HeaderValue>().unwrap())
+                .allow_origin(Origin::from("*"))
+                .allow_credentials(true),
+        )
         .with(server::trace)
         .with(server::add_error_body::<_, CapeAPIError>);
 

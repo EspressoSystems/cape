@@ -23,6 +23,11 @@ use std::path::Path;
 
 pub type CapeWalletError = WalletError<CapeLedger>;
 
+pub fn default_erc20_code() -> Erc20Code {
+    let zeros: [u8; 20] = [0; 20];
+    Erc20Code(EthereumAddr(zeros))
+}
+
 /// Extension of the [WalletBackend] trait with CAPE-specific functionality.
 #[async_trait]
 pub trait CapeWalletBackend<'a>: WalletBackend<'a, CapeLedger> {
@@ -258,11 +263,16 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
     async fn wrapped_erc20(&self, asset: AssetCode) -> Option<Erc20Code> {
         let asset = self.asset(asset).await?;
         let state = self.lock().await;
-        state
+        let code = state
             .backend()
             .get_wrapped_erc20_code(&asset.definition)
             .await
-            .ok()
+            .ok();
+        if Some(default_erc20_code()) == code {
+            None
+        } else {
+            code
+        }
     }
 
     async fn is_wrapped_asset(&self, asset: AssetCode) -> bool {

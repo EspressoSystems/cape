@@ -240,6 +240,47 @@ async fn create_wallet<'a>(
     )
 }
 
+fn add_balance(
+    addr: &UserAddress,
+    amount: u64,
+    asset: &AssetCode,
+    balances: &mut HashMap<UserAddress, HashMap<AssetCode, u64>>,
+) {
+    if !balances.contains_key(addr) {
+        balances.insert(addr.clone(), HashMap::new());
+    }
+
+    let assets = balances.get_mut(addr).unwrap();
+    let balance = *assets.get(asset).unwrap_or(&0);
+
+    assets.insert(*asset, balance + amount);
+}
+
+fn remove_balance(
+    addr: &UserAddress,
+    amount: u64,
+    asset: &AssetCode,
+    balances: &mut HashMap<UserAddress, HashMap<AssetCode, u64>>,
+) {
+    assert!(
+        balances.contains_key(addr),
+        "Test never recorded the sender having any assets"
+    );
+
+    let assets = balances.get_mut(addr).unwrap();
+    let balance = *assets.get(asset).unwrap_or(&0);
+
+    assert!(
+        balance >= amount,
+        "Address {} only has {} balance but is trying to burn {}.",
+        addr,
+        balance,
+        amount
+    );
+
+    assets.insert(*asset, balance - amount);
+}
+
 fn update_balances(
     send_addr: &UserAddress,
     receiver_addr: &UserAddress,
@@ -260,7 +301,7 @@ fn update_balances(
     // Udate with asset code
     let send_balance = *sender_assets.get(asset).unwrap_or(&0);
     assert!(
-        send_balance > amount,
+        send_balance >= amount,
         "Address {} only has {} balance but is trying to send {}.",
         send_addr,
         send_balance,
@@ -535,6 +576,12 @@ async fn main() {
                 )
                 .await
                 .unwrap();
+                add_balance(
+                    &wrapper_key.address(),
+                    100,
+                    &sponsored_asset.code,
+                    &mut balances,
+                );
             }
             OperationType::Burn => {
                 event!(Level::INFO, "Burning");
@@ -558,6 +605,12 @@ async fn main() {
                         burn_token(burner, asset.definition.clone(), amount)
                             .await
                             .unwrap();
+                        remove_balance(
+                            &burner.pub_keys().await[0].address(),
+                            amount,
+                            &asset.definition.code,
+                            &mut balances,
+                        );
                     }
                 } else {
                     event!(Level::INFO, "no burnable assets, skipping burn operation");

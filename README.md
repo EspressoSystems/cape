@@ -20,8 +20,10 @@
   - [3. Verify installation](#3-verify-installation)
   - [4. direnv (Optional, but recommended for development)](#4-direnv-optional-but-recommended-for-development)
 - [Build](#build)
-  - [Wallet Docker image](#wallet-docker-image)
+  - [Docker images](#docker-images)
 - [CAPE Demo](#cape-demo)
+  - [Local demo](#local-demo)
+  - [Docker compose](#docker-compose)
 - [Development](#development)
   - [Running Tests](#running-tests)
   - [Interactive development](#interactive-development)
@@ -167,9 +169,22 @@ For the CI build see the `docker-*` jobs in
 
 # CAPE Demo
 
+## Local demo
+
 To run the CAPE demo locally, run
 
-    cape-demo
+    cape-demo-local
+
+## Docker compose
+
+To run the docker compose demo, run
+
+    cape-demo-docker
+
+The `CAPE_SERVICES_IMAGE` or `CAPE_WALLET_IMAGE` env vars can be set to run the
+demo with the locally built docker images:
+
+    env CAPE_SERVICES_IMAGE=cape/services CAPE_WALLET_IMAGE=cape/wallet cape-demo-docker
 
 # Development
 

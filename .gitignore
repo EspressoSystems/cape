@@ -26,3 +26,5 @@ __pycache__/
 /doc/contracts
 /doc/mdbook
 .*.sw*
+
+demo/

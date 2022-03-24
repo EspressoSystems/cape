@@ -38,7 +38,7 @@ pub trait CapeWalletBackend<'a>: WalletBackend<'a, CapeLedger> {
     ) -> Result<(), CapeWalletError>;
 
     /// Get the ERC20 code which is associated with a CAPE asset.
-    /// Returns None if the Asset code is not a wrapped asset.
+    /// Returns None if the asset is not a wrapped asset.
     async fn get_wrapped_erc20_code(
         &self,
         asset: &AssetDefinition,

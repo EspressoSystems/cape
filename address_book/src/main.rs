@@ -23,6 +23,11 @@ async fn main() -> Result<(), std::io::Error> {
     let handle = signals.handle();
     let signals_task = async_std::task::spawn(handle_signals(signals));
 
+    tracing_subscriber::fmt()
+        .compact()
+        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+        .init();
+
     let store_path = address_book_store_path();
     tide::log::info!("Using store path {:?}", store_path);
     fs::create_dir_all(&store_path)?;

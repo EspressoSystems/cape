@@ -100,7 +100,10 @@ async fn get_pub_keys_from_file(path: &Path) -> Vec<UserPubKey> {
 
 #[async_std::main]
 async fn main() {
-    tracing_subscriber::fmt().pretty().init();
+    tracing_subscriber::fmt()
+        .pretty()
+        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+        .init();
     println!("Starting Test Wallet");
 
     let args = Args::from_args();

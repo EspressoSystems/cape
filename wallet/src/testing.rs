@@ -54,7 +54,6 @@ use std::collections::HashSet;
 use std::time::Duration;
 use surf::Url;
 use tempdir::TempDir;
-use tide::log::LevelFilter;
 use tracing::{event, Level};
 
 lazy_static! {
@@ -97,7 +96,7 @@ pub async fn create_test_network<'a>(
     Address,
     Arc<Mutex<MockCapeLedger<'a>>>,
 ) {
-    init_web_server(LevelFilter::Info, TransientFileStore::default())
+    init_web_server(TransientFileStore::default())
         .await
         .expect("Failed to run server.");
     wait_for_server().await;

@@ -2736,6 +2736,7 @@ dependencies = [
  "cap-rust-sandbox",
  "cape_wallet",
  "ethers 0.6.0 (git+https://github.com/gakonst/ethers-rs?branch=master)",
+ "futures",
  "hex",
  "jf-cap",
  "key-set",

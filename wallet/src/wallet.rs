@@ -268,18 +268,20 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
     async fn wrapped_erc20(&self, asset: AssetCode) -> Option<Erc20Code> {
         let asset = self.asset(asset).await?;
         let state = self.lock().await;
-        state
+        let code = state
             .backend()
             .get_wrapped_erc20_code(&asset.definition)
             .await
-            .ok()
+            .ok();
+        if Some(default_erc20_code()) == code {
+            None
+        } else {
+            code
+        }
     }
 
     async fn is_wrapped_asset(&self, asset: AssetCode) -> bool {
-        match self.wrapped_erc20(asset).await {
-            Some(erc20_code) => erc20_code != default_erc20_code(),
-            None => false,
-        }
+        self.wrapped_erc20(asset).await.is_some()
     }
 
     async fn eth_client(&self) -> Result<Arc<EthMiddleware>, CapeWalletError> {

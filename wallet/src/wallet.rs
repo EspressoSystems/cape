@@ -23,6 +23,11 @@ use std::path::Path;
 
 pub type CapeWalletError = WalletError<CapeLedger>;
 
+pub fn default_erc20_code() -> Erc20Code {
+    let zeros: [u8; 20] = [0; 20];
+    Erc20Code(EthereumAddr(zeros))
+}
+
 /// Extension of the [WalletBackend] trait with CAPE-specific functionality.
 #[async_trait]
 pub trait CapeWalletBackend<'a>: WalletBackend<'a, CapeLedger> {
@@ -196,6 +201,11 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
         let mut state = self.lock().await;
 
         let erc20_code = state.backend().get_wrapped_erc20_code(&cap_asset).await?;
+        if erc20_code == default_erc20_code() {
+            return Err(WalletError::<CapeLedger>::UndefinedAsset {
+                asset: cap_asset.code,
+            });
+        }
         let pub_key = state.backend().get_public_key(&dst_addr).await?;
 
         let ro = RecordOpening::new(
@@ -266,7 +276,10 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
     }
 
     async fn is_wrapped_asset(&self, asset: AssetCode) -> bool {
-        self.wrapped_erc20(asset).await.is_some()
+        match self.wrapped_erc20(asset).await {
+            Some(erc20_code) => erc20_code != default_erc20_code(),
+            None => false,
+        }
     }
 
     async fn eth_client(&self) -> Result<Arc<EthMiddleware>, CapeWalletError> {

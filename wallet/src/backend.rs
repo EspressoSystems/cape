@@ -850,6 +850,9 @@ mod test {
             100
         );
 
+        assert!(wrapper.is_wrapped_asset(cape_asset.code).await);
+        assert_eq!(wrapper.is_wrapped_asset(AssetCode::native()).await, false);
+
         // Make sure the wrapper can access the wrapped tokens, by transferring them to someone else
         // (we'll reuse the `sponsor` wallet, but this could be a separate role).
         let receipt = wrapper

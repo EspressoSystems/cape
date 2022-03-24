@@ -7,7 +7,7 @@
 
 //! Test-only implementation of the [reef] ledger abstraction for CAPE.
 
-use crate::wallet::{CapeWalletBackend, CapeWalletError};
+use crate::wallet::{default_erc20_code, CapeWalletBackend, CapeWalletError};
 use async_std::sync::{Mutex, MutexGuard};
 use async_trait::async_trait;
 use cap_rust_sandbox::{
@@ -276,7 +276,7 @@ impl MockCapeNetwork {
     pub fn get_wrapped_asset(&self, asset: &AssetDefinition) -> Result<Erc20Code, CapeWalletError> {
         match self.contract.erc20_registrar.get(asset) {
             Some((erc20_code, _)) => Ok(erc20_code.clone()),
-            None => Err(WalletError::<CapeLedger>::UndefinedAsset { asset: asset.code }),
+            None => Ok(default_erc20_code()),
         }
     }
 

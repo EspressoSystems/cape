@@ -43,13 +43,13 @@ async fn test_reentrancy_guard() -> Result<()> {
     let asset_def = AssetDefinition::new(asset_code, AssetPolicy::rand_for_test(rng)).unwrap();
     let asset_def_sol = asset_def.clone().generic_into::<sol::AssetDefinition>();
 
+    // Prepare call to CAPE.deposit
     cape_contract_erc20_owner
         .sponsor_cape_asset(malicious_erc20_address, asset_def_sol)
         .send()
         .await?
         .await?;
 
-    // Call CAPE.deposit and check error
     let deposited_amount = 1000;
     let amount_u256 = U256::from(deposited_amount);
     malicious_erc20_contract
@@ -85,7 +85,7 @@ async fn test_reentrancy_guard() -> Result<()> {
         .await?
         .await?;
 
-    // Decide to run CAPE.depositErc20 when call MaliciousContract.transferFrom
+    // Decide to run CAPE.depositErc20 when calling MaliciousContract.transferFrom
     malicious_erc20_contract.run_deposit().send().await?.await?;
 
     let call = cape_contract
@@ -99,7 +99,7 @@ async fn test_reentrancy_guard() -> Result<()> {
 
     call.should_revert_with_message("ReentrancyGuard: reentrant call");
 
-    // Decide to run CAPE.submitBlock when call MaliciousContract.transferFrom
+    // Decide to run CAPE.submitBlock when calling MaliciousContract.transferFrom
     malicious_erc20_contract
         .run_submit_block()
         .send()

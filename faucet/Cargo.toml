@@ -35,4 +35,4 @@ surf = "2.3.2"
 tempdir = "0.3.7"
 tide = "0.16.0"
 tracing = "0.1.26"
-tracing-subscriber = { version = "0.3.9", features = [ "env-filter" ] }
+tracing-subscriber = { version = "0.3", features = [ "env-filter" ] }

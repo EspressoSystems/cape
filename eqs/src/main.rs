@@ -10,6 +10,9 @@ use structopt::StructOpt;
 
 #[async_std::main]
 async fn main() -> std::io::Result<()> {
-    tracing_subscriber::fmt().pretty().init();
+    tracing_subscriber::fmt()
+        .compact()
+        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+        .init();
     eqs::run_eqs(&EQSOptions::from_args()).await
 }

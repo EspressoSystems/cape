@@ -7,6 +7,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployer } = await getNamedAccounts();
 
   await deploy("SimpleToken", { from: deployer, log: true });
+  await deploy("MaliciousToken", { from: deployer, log: true });
 };
 
 export default func;

@@ -43,7 +43,7 @@ use std::str::FromStr;
 use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, EnumIter, EnumString};
 use tagged_base64::TaggedBase64;
-use tide::StatusCode;
+use tide::{http::Method, StatusCode};
 
 #[derive(Debug, Snafu, Serialize, Deserialize)]
 #[snafu(module(error))]
@@ -350,6 +350,18 @@ pub fn check_api(api: toml::Value) -> Result<(), String> {
         let route = api["route"]
             .get(key.as_ref())
             .ok_or_else(|| format!("Missing API definition for [route.{}]", key))?;
+        if let Some(method) = route.get("METHOD") {
+            // If specified, METHOD must be an HTTP method.
+            let method = method
+                .as_str()
+                .ok_or_else(|| format!("Malformed METHOD for [route.{}] (expected string)", key))?;
+            Method::from_str(method).map_err(|_| {
+                format!(
+                    "METHOD {} for [route.{}] is not an HTTP method",
+                    method, key
+                )
+            })?;
+        }
         let paths = route["PATH"]
             .as_array()
             .ok_or_else(|| format!("Malformed PATH for [route.{}] (expected array)", key))?;

@@ -100,7 +100,10 @@ async fn get_pub_keys_from_file(path: &Path) -> Vec<UserPubKey> {
 
 #[async_std::main]
 async fn main() {
-    tracing_subscriber::fmt().pretty().init();
+    tracing_subscriber::fmt()
+        .pretty()
+        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+        .init();
     println!("Starting Test Wallet");
 
     let args = Args::from_args();
@@ -115,7 +118,7 @@ async fn main() {
 
     // Everyone creates own relayer and EQS, not sure it works without EQS
     let (sender_key, relayer_url, address_book_url, contract_address, _) =
-        create_test_network(&mut rng, &universal_param).await;
+        create_test_network(&mut rng, &universal_param, None).await;
     // Spawn our own EQS since we have our own relayer and contract connection.
     // TODO connect to an existing EQS.
     let (eqs_url, _eqs_dir, _join_eqs) = spawn_eqs(contract_address).await;

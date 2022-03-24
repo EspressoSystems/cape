@@ -37,7 +37,7 @@ echo "Starting geth node ..."
 geth --http --dev \
      --mine --maxpeers 0 --nodiscover \
      --miner.gaslimit 25000000 \
-    --allow-insecure-unlock \
-    --password <(echo "") \
-    --datadir $DATA_DIR --unlock $ADDRESS_LIST \
-    "$@"
+     --allow-insecure-unlock \
+     --password <(echo "") \
+     --datadir $DATA_DIR --unlock $ADDRESS_LIST \
+     "$@"

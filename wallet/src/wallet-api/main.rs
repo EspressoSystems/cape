@@ -49,7 +49,10 @@ use structopt::StructOpt;
 
 #[async_std::main]
 async fn main() -> Result<(), std::io::Error> {
-    tracing_subscriber::fmt().pretty().init();
+    tracing_subscriber::fmt()
+        .pretty()
+        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+        .init();
     init_server(ChaChaRng::from_entropy(), &NodeOpt::from_args())?.await?;
     Ok(())
 }

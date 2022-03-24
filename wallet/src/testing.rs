@@ -54,7 +54,6 @@ use std::collections::HashSet;
 use std::time::Duration;
 use surf::Url;
 use tempdir::TempDir;
-use tide::log::LevelFilter;
 use tracing::{event, Level};
 
 lazy_static! {
@@ -87,9 +86,11 @@ pub async fn retry<Fut: Future<Output = bool>>(f: impl Fn() -> Fut) {
     panic!("retry loop did not complete in {:?}", backoff);
 }
 
+/// `faucet_key_pair` - If not provided, a random faucet key pair will be generated.
 pub async fn create_test_network<'a>(
     rng: &mut ChaChaRng,
     universal_param: &'a UniversalParam,
+    faucet_key_pair: Option<UserKeyPair>,
 ) -> (
     UserKeyPair,
     Url,
@@ -97,7 +98,7 @@ pub async fn create_test_network<'a>(
     Address,
     Arc<Mutex<MockCapeLedger<'a>>>,
 ) {
-    init_web_server(LevelFilter::Info, TransientFileStore::default())
+    init_web_server(TransientFileStore::default())
         .await
         .expect("Failed to run server.");
     wait_for_server().await;
@@ -109,7 +110,7 @@ pub async fn create_test_network<'a>(
     // don't yet have a real EQS.
     let relayer_port = port().await;
     let (contract, sender_key, sender_rec, records) =
-        start_minimal_relayer_for_test(relayer_port).await;
+        start_minimal_relayer_for_test(relayer_port, faucet_key_pair).await;
     let relayer_url = Url::parse(&format!("http://localhost:{}", relayer_port)).unwrap();
     let sender_memo = ReceiverMemo::from_ro(rng, &sender_rec, &[]).unwrap();
 

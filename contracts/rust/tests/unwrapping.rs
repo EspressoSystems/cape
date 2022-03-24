@@ -41,7 +41,7 @@ async fn integration_test_unwrapping() -> Result<()> {
     let mut mt = MerkleTree::new(CapeLedger::merkle_height()).unwrap();
 
     // Create some fee asset record
-    let (faucet_key_pair, faucet_record_opening) = create_faucet(&cape_contract).await;
+    let (faucet_key_pair, faucet_record_opening) = create_faucet(&cape_contract, None).await;
     let faucet_record_comm = RecordCommitment::from(&faucet_record_opening).to_field_element();
     mt.push(faucet_record_comm);
 

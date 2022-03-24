@@ -163,14 +163,18 @@ pub mod testing {
     use reef::Ledger;
     use std::time::Duration;
 
-    pub async fn deploy_test_contract_with_faucet() -> (
+    /// `faucet_key_pair` - If not provided, a random faucet key pair will be generated.
+    pub async fn deploy_test_contract_with_faucet(
+        faucet_key_pair: Option<UserKeyPair>,
+    ) -> (
         TestCAPE<EthMiddleware>,
         UserKeyPair,
         RecordOpening,
         MerkleTree,
     ) {
         let cape_contract = deploy_cape_test().await;
-        let (faucet_key_pair, faucet_record_opening) = create_faucet(&cape_contract).await;
+        let (faucet_key_pair, faucet_record_opening) =
+            create_faucet(&cape_contract, faucet_key_pair).await;
         let mut records = MerkleTree::new(CapeLedger::merkle_height()).unwrap();
         let faucet_comm = RecordCommitment::from(&faucet_record_opening);
         records.push(faucet_comm.to_field_element());
@@ -205,16 +209,20 @@ pub mod testing {
         panic!("Minimal relayer did not start in {:?}", backoff);
     }
 
-    /// Start a relayer running a TestCAPE contract,
+    /// Start a relayer running a TestCAPE contract.
+    ///    
+    /// `faucet_key_pair` - If not provided, a random faucet key pair will be generated.
     pub async fn start_minimal_relayer_for_test(
         port: u64,
+        faucet_key_pair: Option<UserKeyPair>,
     ) -> (
         TestCAPE<EthMiddleware>,
         UserKeyPair,
         RecordOpening,
         MerkleTree,
     ) {
-        let (contract, faucet, faucet_rec, records) = deploy_test_contract_with_faucet().await;
+        let (contract, faucet, faucet_rec, records) =
+            deploy_test_contract_with_faucet(faucet_key_pair).await;
         init_web_server(upcast_test_cape_to_cape(contract.clone()), port.to_string());
         wait_for_server(port).await;
         (contract, faucet, faucet_rec, records)
@@ -317,7 +325,7 @@ mod test {
         let mut rng = ChaChaRng::from_seed([42; 32]);
         let user = UserKeyPair::generate(&mut rng);
 
-        let (contract, faucet, faucet_rec, records) = deploy_test_contract_with_faucet().await;
+        let (contract, faucet, faucet_rec, records) = deploy_test_contract_with_faucet(None).await;
         let (transaction, memos, sig) =
             generate_transfer(&mut rng, &faucet, faucet_rec, user.pub_key(), &records);
         let provider = contract.client().provider().clone();
@@ -366,7 +374,8 @@ mod test {
         let user = UserKeyPair::generate(&mut rng);
 
         let port = get_port().await;
-        let (contract, faucet, faucet_rec, records) = start_minimal_relayer_for_test(port).await;
+        let (contract, faucet, faucet_rec, records) =
+            start_minimal_relayer_for_test(port, None).await;
         let client = get_client(port);
         let provider = contract.client().provider().clone();
         let (transaction, memos, signature) =

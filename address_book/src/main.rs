@@ -10,7 +10,6 @@ use std::fs;
 use address_book::{address_book_store_path, init_web_server, signal::handle_signals, FileStore};
 use signal_hook::consts::{SIGINT, SIGTERM};
 use signal_hook_async_std::Signals;
-use tide::log::LevelFilter;
 
 /// Run a web server that provides a key/value store mapping user
 /// addresses to public keys.
@@ -23,12 +22,17 @@ async fn main() -> Result<(), std::io::Error> {
     let handle = signals.handle();
     let signals_task = async_std::task::spawn(handle_signals(signals));
 
+    tracing_subscriber::fmt()
+        .compact()
+        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+        .init();
+
     let store_path = address_book_store_path();
     tide::log::info!("Using store path {:?}", store_path);
     fs::create_dir_all(&store_path)?;
     let store = FileStore::new(store_path);
 
-    init_web_server(LevelFilter::Info, store)
+    init_web_server(store)
         .await
         .unwrap_or_else(|err| {
             panic!("Web server exited with an error: {}", err);

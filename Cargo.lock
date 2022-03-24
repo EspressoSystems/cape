@@ -43,6 +43,8 @@ dependencies = [
  "surf",
  "tempdir",
  "tide",
+ "tracing",
+ "tracing-subscriber 0.3.9",
 ]
 
 [[package]]
@@ -1192,7 +1194,7 @@ dependencies = [
  "tracing",
  "tracing-distributed",
  "tracing-futures",
- "tracing-subscriber 0.2.25",
+ "tracing-subscriber 0.3.9",
  "tracing-test",
 ]
 

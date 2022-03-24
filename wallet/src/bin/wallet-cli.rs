@@ -392,7 +392,10 @@ impl CLIArgs for CapeArgs {
 
 #[async_std::main]
 async fn main() -> Result<(), std::io::Error> {
-    tracing_subscriber::fmt().pretty().init();
+    tracing_subscriber::fmt()
+        .pretty()
+        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+        .init();
 
     // Initialize the wallet CLI.
     if let Err(err) = cli_main::<CapeLedger, CapeCli>(CapeArgs::from_args()).await {

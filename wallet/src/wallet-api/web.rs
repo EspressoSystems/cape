@@ -29,7 +29,10 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::time::Duration;
 use structopt::StructOpt;
-use tide::http::Url;
+use tide::{
+    http::{headers::HeaderValue, Method, Url},
+    security::{CorsMiddleware, Origin},
+};
 
 pub const DEFAULT_ETH_ADDR: EthereumAddr = EthereumAddr([2; 20]);
 pub const DEFAULT_WRAPPED_AMT: u64 = 1000;
@@ -530,6 +533,13 @@ pub fn init_server(
         options: options.clone(),
     });
     web_server
+        .with(
+            CorsMiddleware::new()
+                .allow_methods("GET, POST".parse::<HeaderValue>().unwrap())
+                .allow_headers("*".parse::<HeaderValue>().unwrap())
+                .allow_origin(Origin::from("*"))
+                .allow_credentials(true),
+        )
         .with(server::trace)
         .with(server::add_error_body::<_, CapeAPIError>);
 
@@ -557,8 +567,12 @@ pub fn init_server(
                     .collect(),
                 _ => panic!("Expecting a toml::String or toml::Array, but got: {:?}", &v),
             };
+            let method = match v.get("METHOD") {
+                Some(m) => m.as_str().unwrap().parse().unwrap(),
+                None => Method::Get,
+            };
             for path in routes {
-                web_server.at(&path).get(entry_page);
+                web_server.at(&path).method(method, entry_page);
             }
         });
     }

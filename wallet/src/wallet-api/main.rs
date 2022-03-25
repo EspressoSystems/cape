@@ -147,8 +147,19 @@ mod tests {
             client::response_body(&mut res).await
         }
 
+        async fn post<T: DeserializeOwned>(&self, path: &str) -> Result<T, surf::Error> {
+            let mut res = self.client.post(path).send().await?;
+            client::response_body(&mut res).await
+        }
+
         async fn requires_wallet<T: Debug + DeserializeOwned>(&self, path: &str) {
             self.get::<T>(path)
+                .await
+                .expect_err(&format!("{} succeeded without an open wallet", path));
+        }
+
+        async fn requires_wallet_post<T: Debug + DeserializeOwned>(&self, path: &str) {
+            self.post::<T>(path)
                 .await
                 .expect_err(&format!("{} succeeded without an open wallet", path));
         }
@@ -202,7 +213,7 @@ mod tests {
 
         // Should fail if the mnemonic is invalid.
         server
-            .get::<()>(&format!(
+            .post::<()>(&format!(
                 "newwallet/invalid-mnemonic/{}/path/{}",
                 password,
                 server.path()
@@ -212,7 +223,7 @@ mod tests {
 
         // Should fail if the path is invalid.
         server
-            .get::<()>(&format!(
+            .post::<()>(&format!(
                 "newwallet/{}/{}/path/invalid-path",
                 mnemonic, password
             ))
@@ -220,7 +231,7 @@ mod tests {
             .expect_err("newwallet succeeded with an invalid path");
         // Should fail if the password is invalid.
         server
-            .get::<()>(&format!(
+            .post::<()>(&format!(
                 "newwallet/{}/plaintext-password/path/{}",
                 mnemonic,
                 server.path()
@@ -229,7 +240,7 @@ mod tests {
             .expect_err("newwallet succeeded with an invalid password");
         // Should fail if the name is invalid.
         server
-            .get::<()>(&format!(
+            .post::<()>(&format!(
                 "newwallet/{}/{}/name/plaintext-name",
                 mnemonic, password,
             ))
@@ -238,7 +249,7 @@ mod tests {
 
         // Test successful calls, using names and passwords with spaces and slashes.
         server
-            .get::<()>(&format!(
+            .post::<()>(&format!(
                 "newwallet/{}/{}/path/{}",
                 mnemonic,
                 password,
@@ -247,7 +258,7 @@ mod tests {
             .await
             .unwrap();
         server
-            .get::<()>(&format!(
+            .post::<()>(&format!(
                 "newwallet/{}/{}/name/{}",
                 mnemonic,
                 password,
@@ -258,7 +269,7 @@ mod tests {
 
         // Should fail if the wallet already exists.
         server
-            .get::<()>(&format!(
+            .post::<()>(&format!(
                 "newwallet/{}/{}/path/{}",
                 mnemonic,
                 password,
@@ -278,12 +289,12 @@ mod tests {
 
         // Should fail if no wallet exists.
         server
-            .requires_wallet::<()>(&format!("openwallet/{}/path/{}", password, server.path()))
+            .requires_wallet_post::<()>(&format!("openwallet/{}/path/{}", password, server.path()))
             .await;
 
         // Now create a wallet so we can open it.
         server
-            .get::<()>(&format!(
+            .post::<()>(&format!(
                 "newwallet/{}/{}/path/{}",
                 mnemonic,
                 password,
@@ -292,13 +303,13 @@ mod tests {
             .await
             .unwrap();
         server
-            .get::<()>(&format!("openwallet/{}/path/{}", password, server.path()))
+            .post::<()>(&format!("openwallet/{}/path/{}", password, server.path()))
             .await
             .unwrap();
 
         // Should fail if the password is incorrect.
         server
-            .get::<()>(&format!(
+            .post::<()>(&format!(
                 "openwallet/invalid-password/path/{}",
                 server.path()
             ))
@@ -328,7 +339,7 @@ mod tests {
         assert!(opt.is_none());
 
         let url = format!("newwallet/{}/{}/path/{}", mnemonic, password, server.path());
-        server.get::<()>(&url).await.unwrap();
+        server.post::<()>(&url).await.unwrap();
 
         let mut path = server
             .get::<Option<PathBuf>>("lastusedkeystore")
@@ -338,7 +349,7 @@ mod tests {
 
         // We should still get the same path after opening the wallet
         server
-            .get::<()>(&format!("openwallet/{}/path/{}", password, server.path()))
+            .post::<()>(&format!("openwallet/{}/path/{}", password, server.path()))
             .await
             .unwrap();
         path = server
@@ -349,7 +360,7 @@ mod tests {
 
         // Open the wallet with the we path we retrieved
         server
-            .get::<()>(&format!(
+            .post::<()>(&format!(
                 "openwallet/{}/path/{}",
                 password,
                 fmt_path(path.as_ref().unwrap())
@@ -361,7 +372,7 @@ mod tests {
         let second_path = fmt_path(TempDir::new("test_cape_wallet_2").unwrap().path());
 
         server
-            .get::<()>(&format!(
+            .post::<()>(&format!(
                 "newwallet/{}/{}/path/{}",
                 mnemonic, password, second_path
             ))
@@ -376,7 +387,7 @@ mod tests {
 
         // repopen the first wallet and see the path returned is also the original
         server
-            .get::<()>(&format!("openwallet/{}/path/{}", password, server.path()))
+            .post::<()>(&format!("openwallet/{}/path/{}", password, server.path()))
             .await
             .unwrap();
 
@@ -394,11 +405,11 @@ mod tests {
         let server = TestServer::new().await;
 
         // Should fail if a wallet is not already open.
-        server.requires_wallet::<()>("closewallet").await;
+        server.requires_wallet_post::<()>("closewallet").await;
 
         // Now open a wallet and close it.
         server
-            .get::<()>(&format!(
+            .post::<()>(&format!(
                 "newwallet/{}/{}/path/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
                 base64("my-password".as_bytes()),
@@ -406,7 +417,7 @@ mod tests {
             ))
             .await
             .unwrap();
-        server.get::<()>("closewallet").await.unwrap();
+        server.post::<()>("closewallet").await.unwrap();
     }
 
     #[async_std::test]
@@ -419,7 +430,7 @@ mod tests {
 
         // Now open a wallet and call getinfo.
         server
-            .get::<()>(&format!(
+            .post::<()>(&format!(
                 "newwallet/{}/{}/path/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
                 base64("my-password".as_bytes()),
@@ -450,7 +461,7 @@ mod tests {
 
         // Now open a wallet and call getaddress.
         server
-            .get::<()>(&format!(
+            .post::<()>(&format!(
                 "newwallet/{}/{}/path/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
                 base64("my-password".as_bytes()),
@@ -477,7 +488,7 @@ mod tests {
 
         // Now open a wallet populate it and call getrecords.
         server
-            .get::<()>(&format!(
+            .post::<()>(&format!(
                 "newwallet/{}/{}/path/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
                 base64("my-password".as_bytes()),
@@ -536,7 +547,7 @@ mod tests {
 
         // Now open a wallet.
         server
-            .get::<()>(&format!(
+            .post::<()>(&format!(
                 "newwallet/{}/{}/path/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
                 base64("my-password".as_bytes()),
@@ -622,13 +633,19 @@ mod tests {
         let server = TestServer::new().await;
 
         // Should fail if a wallet is not already open.
-        server.requires_wallet::<PubKey>("newkey/sending").await;
-        server.requires_wallet::<PubKey>("newkey/tracing").await;
-        server.requires_wallet::<PubKey>("newkey/freezing").await;
+        server
+            .requires_wallet_post::<PubKey>("newkey/sending")
+            .await;
+        server
+            .requires_wallet_post::<PubKey>("newkey/tracing")
+            .await;
+        server
+            .requires_wallet_post::<PubKey>("newkey/freezing")
+            .await;
 
         // Now open a wallet.
         server
-            .get::<()>(&format!(
+            .post::<()>(&format!(
                 "newwallet/{}/{}/path/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
                 base64("my-password".as_bytes()),
@@ -638,9 +655,9 @@ mod tests {
             .unwrap();
 
         // newkey should return a public key with the correct type and add the key to the wallet.
-        let sending_key = server.get::<PubKey>("newkey/sending").await.unwrap();
-        let viewing_key = server.get::<PubKey>("newkey/viewing").await.unwrap();
-        let freezing_key = server.get::<PubKey>("newkey/freezing").await.unwrap();
+        let sending_key = server.post::<PubKey>("newkey/sending").await.unwrap();
+        let viewing_key = server.post::<PubKey>("newkey/viewing").await.unwrap();
+        let freezing_key = server.post::<PubKey>("newkey/freezing").await.unwrap();
         let info = server.get::<WalletSummary>("getinfo").await.unwrap();
         match sending_key {
             PubKey::Sending(key) => {
@@ -669,7 +686,7 @@ mod tests {
 
         // Test named keys.
         match server
-            .get::<PubKey>(&format!(
+            .post::<PubKey>(&format!(
                 "newkey/sending/description/{}",
                 base64::encode("sending".as_bytes())
             ))
@@ -686,7 +703,7 @@ mod tests {
             key => panic!("Expected PubKey::Sending, found {:?}", key),
         }
         match server
-            .get::<PubKey>(&format!(
+            .post::<PubKey>(&format!(
                 "newkey/viewing/description/{}",
                 base64::encode("viewing".as_bytes())
             ))
@@ -703,7 +720,7 @@ mod tests {
             key => panic!("Expected PubKey::Viewing, found {:?}", key),
         }
         match server
-            .get::<PubKey>(&format!(
+            .post::<PubKey>(&format!(
                 "newkey/freezing/description/{}",
                 base64::encode("freezing".as_bytes())
             ))
@@ -722,7 +739,7 @@ mod tests {
 
         // Should fail if the key type is invaild.
         server
-            .get::<PubKey>("newkey/invalid_key_type")
+            .post::<PubKey>("newkey/invalid_key_type")
             .await
             .expect_err("newkey succeeded with an invaild key type");
     }
@@ -742,13 +759,13 @@ mod tests {
 
         // Should fail if a wallet is not already open.
         server
-            .requires_wallet::<AssetInfo>(&format!(
+            .requires_wallet_post::<AssetInfo>(&format!(
                 "newasset/erc20/{}/sponsor/{}/view_amount/{}/view_address/{}/viewing_threshold/{}",
                 erc20_code, sponsor_addr, view_amount, view_address, viewing_threshold
             ))
             .await;
         server
-            .requires_wallet::<AssetInfo>(&format!(
+            .requires_wallet_post::<AssetInfo>(&format!(
                 "newasset/description/{}/view_amount/{}/view_address/{}/viewing_threshold/{}",
                 description, view_amount, view_address, viewing_threshold
             ))
@@ -756,7 +773,7 @@ mod tests {
 
         // Now open a wallet.
         server
-            .get::<()>(&format!(
+            .post::<()>(&format!(
                 "newwallet/{}/{}/path/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
                 base64("my-password".as_bytes()),
@@ -766,15 +783,15 @@ mod tests {
             .unwrap();
 
         // Create keys.
-        server.get::<PubKey>("newkey/viewing").await.unwrap();
-        server.get::<PubKey>("newkey/freezing").await.unwrap();
+        server.post::<PubKey>("newkey/viewing").await.unwrap();
+        server.post::<PubKey>("newkey/freezing").await.unwrap();
         let info = server.get::<WalletSummary>("getinfo").await.unwrap();
         let viewing_key = &info.viewing_keys[0];
         let freezing_key = &info.freezing_keys[0];
 
         // newasset should return a sponsored asset with the correct policy if an ERC20 code is given.
         let sponsored_asset = server
-            .get::<AssetInfo>(&format!(
+            .post::<AssetInfo>(&format!(
                 "newasset/erc20/{}/sponsor/{}/freezing_key/{}/viewing_key/{}/view_amount/{}/view_address/{}/viewing_threshold/{}",
                 erc20_code, sponsor_addr, freezing_key, viewing_key, view_amount, view_address, viewing_threshold
             ))
@@ -796,7 +813,7 @@ mod tests {
 
         // newasset should return a defined asset with the correct policy if no ERC20 code is given.
         let defined_asset = server
-            .get::<AssetInfo>(&format!(
+            .post::<AssetInfo>(&format!(
                 "newasset/description/{}/freezing_key/{}/viewing_key/{}/view_amount/{}/view_address/{}/viewing_threshold/{}",
                 description, freezing_key, viewing_key, view_amount, view_address, viewing_threshold
             ))
@@ -813,7 +830,7 @@ mod tests {
             viewing_threshold
         );
         let defined_asset = server
-            .get::<AssetInfo>(&format!(
+            .post::<AssetInfo>(&format!(
             "newasset/freezing_key/{}/viewing_key/{}/view_amount/{}/view_address/{}/viewing_threshold/{}",
             freezing_key, viewing_key, view_amount, view_address, viewing_threshold
         ))
@@ -832,7 +849,7 @@ mod tests {
         // newasset should return an asset with the default freezer public key if it's not given.
         let erc20_code = Erc20Code(EthereumAddr([2; 20]));
         let sponsored_asset = server
-                .get::<AssetInfo>(&format!(
+                .post::<AssetInfo>(&format!(
                     "newasset/erc20/{}/sponsor/{}/viewing_key/{}/view_amount/{}/view_address/{}/viewing_threshold/{}",
                     erc20_code, sponsor_addr, viewing_key, view_amount, view_address, viewing_threshold
                 ))
@@ -840,7 +857,7 @@ mod tests {
                 .unwrap();
         assert!(sponsored_asset.definition.freezing_key.is_none());
         let sponsored_asset = server
-            .get::<AssetInfo>(&format!(
+            .post::<AssetInfo>(&format!(
                 "newasset/description/{}/viewing_key/{}/view_amount/{}/view_address/{}/viewing_threshold/{}",
                 description, viewing_key, view_amount, view_address, viewing_threshold
             ))
@@ -852,7 +869,7 @@ mod tests {
         // auditor public key isn't given.
         let erc20_code = Erc20Code(EthereumAddr([3; 20]));
         let sponsored_asset = server
-            .get::<AssetInfo>(&format!(
+            .post::<AssetInfo>(&format!(
                 "newasset/erc20/{}/sponsor/{}/freezing_key/{}",
                 erc20_code, sponsor_addr, freezing_key
             ))
@@ -861,7 +878,7 @@ mod tests {
         assert!(sponsored_asset.definition.viewing_key.is_none());
         assert_eq!(sponsored_asset.definition.viewing_threshold, 0);
         let sponsored_asset = server
-            .get::<AssetInfo>(&format!("newasset/description/{}", description))
+            .post::<AssetInfo>(&format!("newasset/description/{}", description))
             .await
             .unwrap();
         assert!(sponsored_asset.definition.viewing_key.is_none());
@@ -870,7 +887,7 @@ mod tests {
         // newasset should return an asset with no reveal threshold if it's not given.
         let erc20_code = Erc20Code(EthereumAddr([4; 20]));
         let sponsored_asset = server
-                .get::<AssetInfo>(&format!(
+                .post::<AssetInfo>(&format!(
                     "newasset/erc20/{}/sponsor/{}/freezing_key/{}/viewing_key/{}/view_amount/{}/view_address/{}",
                     erc20_code, sponsor_addr, freezing_key, viewing_key, view_amount, view_address
                 ))
@@ -878,7 +895,7 @@ mod tests {
                 .unwrap();
         assert_eq!(sponsored_asset.definition.viewing_threshold, 0);
         let defined_asset = server
-            .get::<AssetInfo>(&format!(
+            .post::<AssetInfo>(&format!(
                 "newasset/description/{}/freezing_key/{}/viewing_key/{}/view_amount/{}/view_address/{}",
                 description, freezing_key, viewing_key, view_amount, view_address
             ))
@@ -889,7 +906,7 @@ mod tests {
         // newasset should return an asset with a given symbol.
         let erc20_code = Erc20Code(EthereumAddr([5; 20]));
         let sponsored_asset = server
-                .get::<AssetInfo>(&format!(
+                .post::<AssetInfo>(&format!(
                     "newasset/symbol/{}/erc20/{}/sponsor/{}/freezing_key/{}/viewing_key/{}/view_amount/{}/view_address/{}",
                     base64::encode_config("my-wrapped-asset", base64::URL_SAFE_NO_PAD), erc20_code,
                     sponsor_addr, freezing_key, viewing_key, view_amount, view_address
@@ -898,7 +915,7 @@ mod tests {
                 .unwrap();
         assert_eq!(sponsored_asset.symbol, Some("my-wrapped-asset".into()));
         let defined_asset = server
-            .get::<AssetInfo>(&format!(
+            .post::<AssetInfo>(&format!(
                 "newasset/symbol/{}/description/{}/freezing_key/{}/viewing_key/{}/view_amount/{}/view_address/{}",
                base64::encode_config("my-defined-asset", base64::URL_SAFE_NO_PAD), description,
                freezing_key, viewing_key, view_amount, view_address
@@ -919,7 +936,7 @@ mod tests {
         let server = TestServer::new().await;
         let mut rng = ChaChaRng::from_seed([42u8; 32]);
         server
-            .get::<()>(&format!(
+            .post::<()>(&format!(
                 "newwallet/{}/{}/path/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
                 base64("my-password".as_bytes()),
@@ -930,7 +947,7 @@ mod tests {
 
         // Sponsor an asset.
         let sponsored_asset = server
-            .get::<AssetInfo>(&format!(
+            .post::<AssetInfo>(&format!(
                 "newasset/erc20/{}/sponsor/{}",
                 erc20_code, sponsor_addr
             ))
@@ -938,7 +955,7 @@ mod tests {
             .unwrap();
 
         // Create an address to receive the wrapped asset.
-        server.get::<PubKey>("newkey/sending").await.unwrap();
+        server.post::<PubKey>("newkey/sending").await.unwrap();
         let info = server.get::<WalletSummary>("getinfo").await.unwrap();
         let sending_key = &info.sending_keys[0];
         let destination: UserAddress = sending_key.address().into();
@@ -948,21 +965,21 @@ mod tests {
         let invalid_eth_addr = Erc20Code(EthereumAddr([0u8; 20]));
         let invalid_asset = AssetDefinition::dummy();
         server
-            .get::<()>(&format!(
+            .post::<()>(&format!(
                 "wrap/destination/{}/ethaddress/{}/asset/{}/amount/{}",
                 invalid_destination, sponsor_addr, sponsored_asset, 10
             ))
             .await
             .expect_err("wrap succeeded with an invalid user address");
         server
-            .get::<()>(&format!(
+            .post::<()>(&format!(
                 "wrap/destination/{}/ethaddress/{}/asset/{}/amount/{}",
                 destination, invalid_eth_addr, sponsored_asset, 10
             ))
             .await
             .expect_err("wrap succeeded with an invalid Ethereum address");
         server
-            .get::<()>(&format!(
+            .post::<()>(&format!(
                 "wrap/destination/{}/ethaddress/{}/asset/{}/amount/{}",
                 destination, sponsor_addr, invalid_asset, 10
             ))
@@ -971,7 +988,7 @@ mod tests {
 
         // wrap should succeed with the correct information.
         server
-            .get::<()>(&format!(
+            .post::<()>(&format!(
                 "wrap/destination/{}/ethaddress/{}/asset/{}/amount/{}",
                 destination, sponsor_addr, sponsored_asset.definition.code, 10
             ))
@@ -991,7 +1008,7 @@ mod tests {
         // Open a wallet with some initial grants and keys.
         let server = TestServer::new().await;
         server
-            .get::<()>(&format!(
+            .post::<()>(&format!(
                 "newwallet/{}/{}/path/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
                 base64("minter-password".as_bytes()),
@@ -1006,7 +1023,7 @@ mod tests {
 
         // Define an asset.
         let asset = server
-            .get::<AssetInfo>(&format!("newasset/description/{}", description))
+            .post::<AssetInfo>(&format!("newasset/description/{}", description))
             .await
             .unwrap()
             .definition
@@ -1029,21 +1046,21 @@ mod tests {
         let invalid_minter = UserAddress::from(UserKeyPair::generate(&mut rng).address());
         let invalid_recipient = UserAddress::from(UserKeyPair::generate(&mut rng).address());
         server
-            .get::<TransactionReceipt<CapeLedger>>(&format!(
+            .post::<TransactionReceipt<CapeLedger>>(&format!(
                 "mint/asset/{}/amount/{}/fee/{}/minter/{}/recipient/{}",
                 invalid_asset, amount, fee, minter, recipient
             ))
             .await
             .expect_err("mint succeeded with an invalid asset");
         server
-            .get::<TransactionReceipt<CapeLedger>>(&format!(
+            .post::<TransactionReceipt<CapeLedger>>(&format!(
                 "mint/asset/{}/amount/{}/fee/{}/minter/{}/recipient/{}",
                 asset, amount, fee, invalid_minter, recipient
             ))
             .await
             .expect_err("mint succeeded with an invalid minter address");
         server
-            .get::<TransactionReceipt<CapeLedger>>(&format!(
+            .post::<TransactionReceipt<CapeLedger>>(&format!(
                 "mint/asset/{}/amount/{}/fee/{}/minter/{}/recipient/{}",
                 asset, amount, fee, minter, invalid_recipient
             ))
@@ -1052,7 +1069,7 @@ mod tests {
 
         // mint should succeed with the correct information.
         server
-            .get::<TransactionReceipt<CapeLedger>>(&format!(
+            .post::<TransactionReceipt<CapeLedger>>(&format!(
                 "mint/asset/{}/amount/{}/fee/{}/minter/{}/recipient/{}",
                 asset, amount, fee, minter, recipient
             ))
@@ -1092,7 +1109,7 @@ mod tests {
         // Open a wallet with some wrapped and native assets.
         let server = TestServer::new().await;
         server
-            .get::<()>(&format!(
+            .post::<()>(&format!(
                 "newwallet/{}/{}/path/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
                 base64("my-password".as_bytes()),
@@ -1134,21 +1151,21 @@ mod tests {
         let invalid_eth_addr = Erc20Code(EthereumAddr([0u8; 20]));
         let invalid_asset = AssetDefinition::dummy();
         server
-            .get::<TransactionReceipt<CapeLedger>>(&format!(
+            .post::<TransactionReceipt<CapeLedger>>(&format!(
                 "unwrap/source/{}/ethaddress/{}/asset/{}/amount/{}/fee/{}",
                 invalid_source, eth_addr, asset, DEFAULT_WRAPPED_AMT, 1
             ))
             .await
             .expect_err("unwrap succeeded with an invalid source address");
         server
-            .get::<TransactionReceipt<CapeLedger>>(&format!(
+            .post::<TransactionReceipt<CapeLedger>>(&format!(
                 "unwrap/source/{}/ethaddress/{}/asset/{}/amount/{}/fee/{}",
                 source, invalid_eth_addr, asset, DEFAULT_WRAPPED_AMT, 1
             ))
             .await
             .expect_err("unwrap succeeded with an invalid Ethereum address");
         server
-            .get::<TransactionReceipt<CapeLedger>>(&format!(
+            .post::<TransactionReceipt<CapeLedger>>(&format!(
                 "unwrap/source/{}/ethaddress/{}/asset/{}/amount/{}/fee/{}",
                 source, eth_addr, invalid_asset, DEFAULT_WRAPPED_AMT, 1
             ))
@@ -1157,7 +1174,7 @@ mod tests {
 
         // unwrap should succeed with the correct information.
         server
-            .get::<TransactionReceipt<CapeLedger>>(&format!(
+            .post::<TransactionReceipt<CapeLedger>>(&format!(
                 "unwrap/source/{}/ethaddress/{}/asset/{}/amount/{}/fee/{}",
                 source, eth_addr, asset, DEFAULT_WRAPPED_AMT, fee
             ))
@@ -1192,7 +1209,7 @@ mod tests {
     async fn test_dummy_populate() {
         let server = TestServer::new().await;
         server
-            .get::<()>(&format!(
+            .post::<()>(&format!(
                 "newwallet/{}/{}/path/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
                 base64("my-password".as_bytes()),
@@ -1266,7 +1283,7 @@ mod tests {
 
         // Should fail if a wallet is not already open.
         server
-            .requires_wallet::<AssetDefinition>(&format!(
+            .requires_wallet_post::<AssetDefinition>(&format!(
                 "send/sender/{}/asset/{}/recipient/{}/amount/1/fee/1",
                 UserKeyPair::generate(&mut rng).address(),
                 AssetCode::random(&mut rng).0,
@@ -1274,7 +1291,7 @@ mod tests {
             ))
             .await;
         server
-            .requires_wallet::<AssetDefinition>(&format!(
+            .requires_wallet_post::<AssetDefinition>(&format!(
                 "send/asset/{}/recipient/{}/amount/1/fee/1",
                 AssetCode::random(&mut rng).0,
                 EthereumAddr([1; 20]),
@@ -1283,7 +1300,7 @@ mod tests {
 
         // Now open a wallet.
         server
-            .get::<()>(&format!(
+            .post::<()>(&format!(
                 "newwallet/{}/{}/path/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
                 base64("my-password".as_bytes()),
@@ -1324,7 +1341,7 @@ mod tests {
 
         // Make a transfer with a given sender address.
         server
-            .get::<TransactionReceipt<CapeLedger>>(&format!(
+            .post::<TransactionReceipt<CapeLedger>>(&format!(
                 "send/sender/{}/asset/{}/recipient/{}/amount/{}/fee/{}",
                 src_address,
                 &AssetCode::native(),
@@ -1365,7 +1382,7 @@ mod tests {
 
         // Make a transfer without a sender address.
         server
-            .get::<TransactionReceipt<CapeLedger>>(&format!(
+            .post::<TransactionReceipt<CapeLedger>>(&format!(
                 "send/asset/{}/recipient/{}/amount/{}/fee/{}",
                 &AssetCode::native(),
                 dst_address,
@@ -1470,7 +1487,7 @@ mod tests {
 
         // Now open a wallet.
         server
-            .get::<()>(&format!(
+            .post::<()>(&format!(
                 "newwallet/{}/{}/path/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
                 base64("my-password".as_bytes()),
@@ -1559,22 +1576,22 @@ mod tests {
 
         // Should fail if a wallet is not already open.
         server
-            .requires_wallet::<PubKey>(&format!("recoverkey/sending"))
+            .requires_wallet_post::<PubKey>(&format!("recoverkey/sending"))
             .await;
         server
-            .requires_wallet::<PubKey>(&format!("recoverkey/sending/0"))
+            .requires_wallet_post::<PubKey>(&format!("recoverkey/sending/0"))
             .await;
         server
-            .requires_wallet::<PubKey>(&format!("recoverkey/viewing"))
+            .requires_wallet_post::<PubKey>(&format!("recoverkey/viewing"))
             .await;
         server
-            .requires_wallet::<PubKey>(&format!("recoverkey/freezing"))
+            .requires_wallet_post::<PubKey>(&format!("recoverkey/freezing"))
             .await;
 
         // Create a wallet and generate some keys, 2 of each type.
         let mnemonic = server.get::<String>("getmnemonic").await.unwrap();
         server
-            .get::<()>(&format!(
+            .post::<()>(&format!(
                 "newwallet/{}/{}/path/{}",
                 mnemonic,
                 base64("my-password".as_bytes()),
@@ -1587,7 +1604,7 @@ mod tests {
             for _ in 0..2 {
                 keys.push(
                     server
-                        .get::<PubKey>(&format!("newkey/{}", ty))
+                        .post::<PubKey>(&format!("newkey/{}", ty))
                         .await
                         .unwrap(),
                 );
@@ -1596,9 +1613,9 @@ mod tests {
 
         // Close the wallet, create a new wallet with the same mnemonic, and recover the keys.
         let new_dir = TempDir::new("test_recover_key_path2").unwrap();
-        server.get::<()>("closewallet").await.unwrap();
+        server.post::<()>("closewallet").await.unwrap();
         server
-            .get::<()>(&format!(
+            .post::<()>(&format!(
                 "newwallet/{}/{}/path/{}",
                 mnemonic,
                 base64("my-password".as_bytes()),
@@ -1611,7 +1628,7 @@ mod tests {
             for _ in 0..2 {
                 recovered_keys.push(
                     server
-                        .get::<PubKey>(&format!("recoverkey/{}", ty))
+                        .post::<PubKey>(&format!("recoverkey/{}", ty))
                         .await
                         .unwrap(),
                 );
@@ -1621,7 +1638,7 @@ mod tests {
 
         // Test named keys.
         match server
-            .get::<PubKey>(&format!(
+            .post::<PubKey>(&format!(
                 "recoverkey/sending/description/{}",
                 base64::encode("sending".as_bytes())
             ))
@@ -1638,7 +1655,7 @@ mod tests {
             key => panic!("Expected PubKey::Sending, found {:?}", key),
         }
         match server
-            .get::<PubKey>(&format!(
+            .post::<PubKey>(&format!(
                 "recoverkey/viewing/description/{}",
                 base64::encode("viewing".as_bytes())
             ))
@@ -1655,7 +1672,7 @@ mod tests {
             key => panic!("Expected PubKey::Viewing, found {:?}", key),
         }
         match server
-            .get::<PubKey>(&format!(
+            .post::<PubKey>(&format!(
                 "recoverkey/freezing/description/{}",
                 base64::encode("freezing".as_bytes())
             ))
@@ -1686,7 +1703,7 @@ mod tests {
 
         // Create a named key store.
         server
-            .get::<()>(&format!(
+            .post::<()>(&format!(
                 "newwallet/{}/{}/name/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
                 base64("my-password".as_bytes()),
@@ -1701,7 +1718,7 @@ mod tests {
 
         // Create a key store by path, in the directory containing named keystores.
         server
-            .get::<()>(&format!(
+            .post::<()>(&format!(
                 "newwallet/{}/{}/path/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
                 base64("my-password".as_bytes()),
@@ -1723,7 +1740,7 @@ mod tests {
         // Create a wallet in a different directory, and make sure it is not listed.
         let new_dir = TempDir::new("non_keystoer_dir").unwrap();
         server
-            .get::<()>(&format!(
+            .post::<()>(&format!(
                 "newwallet/{}/{}/path/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
                 base64("my-password".as_bytes()),
@@ -1750,7 +1767,7 @@ mod tests {
         // Create a wallet with `password1`.
         let mnemonic = server.get::<String>("getmnemonic").await.unwrap();
         server
-            .get::<()>(&format!(
+            .post::<()>(&format!(
                 "newwallet/{}/{}/path/{}",
                 mnemonic,
                 password1,
@@ -1760,7 +1777,7 @@ mod tests {
             .unwrap();
 
         // Create some data.
-        let key = match server.get::<PubKey>("newkey/sending").await.unwrap() {
+        let key = match server.post::<PubKey>("newkey/sending").await.unwrap() {
             PubKey::Sending(key) => key,
             key => panic!("expected PubKey::Sending, got {:?}", key),
         };
@@ -1775,13 +1792,13 @@ mod tests {
 
         // Check that the wallet does not open with the wrong password.
         server
-            .get::<()>(&format!("openwallet/{}/path/{}", password2, server.path()))
+            .post::<()>(&format!("openwallet/{}/path/{}", password2, server.path()))
             .await
             .unwrap_err();
 
         // Change the password and check that our data is still there.
         server
-            .get::<()>(&format!(
+            .post::<()>(&format!(
                 "resetpassword/{}/{}/path/{}",
                 mnemonic,
                 password2,
@@ -1800,19 +1817,19 @@ mod tests {
 
         // Check that we can't open the wallet with the old password.
         server
-            .get::<()>(&format!("openwallet/{}/path/{}", password1, server.path()))
+            .post::<()>(&format!("openwallet/{}/path/{}", password1, server.path()))
             .await
             .unwrap_err();
 
         // Check that we can open the wallet with the new password.
         server
-            .get::<()>(&format!("openwallet/{}/path/{}", password2, server.path()))
+            .post::<()>(&format!("openwallet/{}/path/{}", password2, server.path()))
             .await
             .unwrap();
 
         // Check that we can't reset the password using the wrong mnemonic.
         server
-            .get::<()>(&format!(
+            .post::<()>(&format!(
                 "resetpassword/{}/{}/path/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
                 password3,
@@ -1840,7 +1857,7 @@ mod tests {
             .unwrap();
 
         server
-            .get::<()>(&format!(
+            .post::<()>(&format!(
                 "newwallet/{}/{}/path/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
                 base64("my-password".as_bytes()),
@@ -1869,7 +1886,7 @@ mod tests {
     async fn test_export_import_asset() {
         let server = TestServer::new().await;
         server
-            .get::<()>(&format!(
+            .post::<()>(&format!(
                 "newwallet/{}/{}/name/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
                 base64("my-password".as_bytes()),
@@ -1879,7 +1896,7 @@ mod tests {
             .unwrap();
 
         let mut asset = server
-            .get::<AssetInfo>(&format!(
+            .post::<AssetInfo>(&format!(
                 "newasset/description/{}",
                 base64::encode_config("description".as_bytes(), base64::URL_SAFE_NO_PAD)
             ))
@@ -1897,7 +1914,7 @@ mod tests {
 
         // Open a different wallet and import the asset.
         server
-            .get::<()>(&format!(
+            .post::<()>(&format!(
                 "newwallet/{}/{}/name/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
                 base64("my-password".as_bytes()),
@@ -1911,7 +1928,7 @@ mod tests {
 
         // Import the asset.
         let import = server
-            .get::<AssetInfo>(&format!("importasset/{}", export))
+            .post::<AssetInfo>(&format!("importasset/{}", export))
             .await
             .unwrap();
         // Make sure we didn't export the mint info.
@@ -1953,21 +1970,21 @@ mod tests {
 
         // Should fail if a wallet is not already open.
         server
-            .requires_wallet::<AssetInfo>(&format!(
+            .requires_wallet_post::<AssetInfo>(&format!(
                 "updateasset/{}/symbol/{}",
                 AssetCode::native(),
                 symbol
             ))
             .await;
         server
-            .requires_wallet::<AssetInfo>(&format!(
+            .requires_wallet_post::<AssetInfo>(&format!(
                 "updateasset/{}/description/{}",
                 AssetCode::native(),
                 description
             ))
             .await;
         server
-            .requires_wallet::<AssetInfo>(&format!(
+            .requires_wallet_post::<AssetInfo>(&format!(
                 "updateasset/{}/icon/{}",
                 AssetCode::native(),
                 icon
@@ -1976,7 +1993,7 @@ mod tests {
 
         // Create a wallet.
         server
-            .get::<()>(&format!(
+            .post::<()>(&format!(
                 "newwallet/{}/{}/path/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
                 base64("my-password".as_bytes()),
@@ -1987,7 +2004,7 @@ mod tests {
 
         // Update the metadata of the native asset, one field at a time.
         let info = server
-            .get::<AssetInfo>(&format!(
+            .post::<AssetInfo>(&format!(
                 "updateasset/{}/symbol/{}",
                 AssetCode::native(),
                 symbol
@@ -2008,7 +2025,7 @@ mod tests {
         assert_eq!(info.symbol.unwrap(), "symbol");
 
         let info = server
-            .get::<AssetInfo>(&format!(
+            .post::<AssetInfo>(&format!(
                 "updateasset/{}/description/{}",
                 AssetCode::native(),
                 description
@@ -2029,7 +2046,7 @@ mod tests {
         assert_eq!(info.description.unwrap(), "description");
 
         let info = server
-            .get::<AssetInfo>(&format!(
+            .post::<AssetInfo>(&format!(
                 "updateasset/{}/icon/{}",
                 AssetCode::native(),
                 icon
@@ -2052,7 +2069,7 @@ mod tests {
         // Test route parsing for updating multiple fields at a time, although updating with the
         // same data will have no affect.
         server
-            .get::<AssetInfo>(&format!(
+            .post::<AssetInfo>(&format!(
                 "updateasset/{}/symbol/{}/description/{}",
                 AssetCode::native(),
                 symbol,
@@ -2061,7 +2078,7 @@ mod tests {
             .await
             .unwrap();
         server
-            .get::<AssetInfo>(&format!(
+            .post::<AssetInfo>(&format!(
                 "updateasset/{}/symbol/{}/icon/{}",
                 AssetCode::native(),
                 symbol,
@@ -2070,7 +2087,7 @@ mod tests {
             .await
             .unwrap();
         server
-            .get::<AssetInfo>(&format!(
+            .post::<AssetInfo>(&format!(
                 "updateasset/{}/description/{}/icon/{}",
                 AssetCode::native(),
                 description,
@@ -2079,7 +2096,7 @@ mod tests {
             .await
             .unwrap();
         server
-            .get::<AssetInfo>(&format!(
+            .post::<AssetInfo>(&format!(
                 "updateasset/{}/symbol/{}/description/{}/icon/{}",
                 AssetCode::native(),
                 symbol,
@@ -2124,7 +2141,7 @@ mod tests {
 
         // Now open a wallet.
         server
-            .get::<()>(&format!(
+            .post::<()>(&format!(
                 "newwallet/{}/{}/path/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
                 base64("my-password".as_bytes()),
@@ -2134,15 +2151,15 @@ mod tests {
             .unwrap();
 
         //Create keys
-        let sending_key = match server.get::<PubKey>("newkey/sending").await.unwrap() {
+        let sending_key = match server.post::<PubKey>("newkey/sending").await.unwrap() {
             PubKey::Sending(key) => key,
             key => panic!("Expected PubKey::Sending, found {:?}", key),
         };
-        let viewing_key = match server.get::<PubKey>("newkey/viewing").await.unwrap() {
+        let viewing_key = match server.post::<PubKey>("newkey/viewing").await.unwrap() {
             PubKey::Viewing(key) => key,
             key => panic!("Expected PubKey::Viewing, found {:?}", key),
         };
-        let freezing_key = match server.get::<PubKey>("newkey/freezing").await.unwrap() {
+        let freezing_key = match server.post::<PubKey>("newkey/freezing").await.unwrap() {
             PubKey::Freezing(key) => key,
             key => panic!("Expected PubKey::Freezing, found {:?}", key),
         };

@@ -46,6 +46,7 @@ When you run the CLI, you will be prompted to open a wallet. To do so, you can e
   - After a mnemonic phrase is accepted, follow the prompt to create a password.
 
 - Recover a wallet
+
   - Enter `3` and the mnemonic phrase associated with the wallet.
   - Follow the prompts to create a new password.
 
@@ -54,6 +55,7 @@ When you run the CLI, you will be prompted to open a wallet. To do so, you can e
 Once you have an open wallet, you will get the REPL prompt, `>`. Now you can type `help` to view a list of commands you can execute and the arguments you need to specify.
 
 - Transaction operations
+
   - `sponsor`: sponsor an asset
   - `wrap`: wrap an asset
     - Note: The `asset_def` argument must be an already-sponsored asset. To sponsor an asset, use the `sponsor` command.
@@ -69,7 +71,9 @@ Once you have an open wallet, you will get the REPL prompt, `>`. Now you can typ
   - `unfreeze`: unfreeze previously frozen assets owned by another users
   - `wait`: wait for a transaction to complete
   - `sync`: wait until the wallet has processed up to a given event index
+
 - Information listing
+
   - `address`: print all public addresses of this wallet
   - `pub_key`: print all of the public keys of this wallet
   - `assets`: list assets known to the wallet
@@ -82,7 +86,9 @@ Once you have an open wallet, you will get the REPL prompt, `>`. Now you can typ
   - `info`: print general information about this wallet
   - `view`: list unspent records of viewable asset types
   - `now`: print the index of the latest event processed by the wallet
+
 - Key and record operations
+
   - `gen_key`: generate new keys
   - `load_key`: load a key from a file
   - `import_memo`: import an owner memo belonging to this wallet

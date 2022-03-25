@@ -9,6 +9,7 @@
 mod events;
 mod faucet;
 mod note_types;
+mod reentrancy;
 pub mod submit_block;
 mod wrapping;
 

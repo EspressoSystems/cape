@@ -10,9 +10,9 @@ name = "wallet-api"
 path = "src/wallet-api/main.rs"
 
 [dependencies]
+address_book = { path = "../address_book" }
 async-std = { version = "1.9.0", features = ["unstable", "attributes"] }
 async-trait = "0.1.51"
-address_book = { path = "../address_book" }
 base64 = "0.13"
 bincode = "1.3.3"
 cap-rust-sandbox = { path = "../contracts/rust" }
@@ -24,18 +24,18 @@ futures = "0.3.0"
 futures-util = "0.3.8"
 itertools = "0.10.1"
 jf-cap = { features = ["test_apis"], git = "https://github.com/EspressoSystems/cap.git" }
+jf-plonk = { features = ["std"], git = "https://github.com/EspressoSystems/jellyfish.git" }
+jf-primitives = { features = ["std"], git = "https://github.com/EspressoSystems/jellyfish.git" }
+jf-utils = { features = ["std"], git = "https://github.com/EspressoSystems/jellyfish.git" }
 key-set = { git = "https://github.com/EspressoSystems/key-set.git" }
 lazy_static = "1.4.0"
-jf-plonk = { features=["std"], git = "https://github.com/EspressoSystems/jellyfish.git" }
-jf-primitives = { features=["std"], git = "https://github.com/EspressoSystems/jellyfish.git"}
-jf-utils = { features=["std"], git = "https://github.com/EspressoSystems/jellyfish.git"}
 markdown = "0.3"
 net = { git = "https://github.com/EspressoSystems/net.git" }
-rand = "0.8.4"
 pipe = { version = "0.4" }
+rand = "0.8.4"
 rand_chacha = "0.3.1"
-regex = "1.5.4"
 reef = { git = "https://github.com/EspressoSystems/reef.git" }
+regex = "1.5.4"
 relayer = { path = "../relayer", features = ["testing"] }
 seahorse = { git = "https://github.com/EspressoSystems/seahorse.git", features = ["testing"] }
 serde = { version = "1.0.123", features = ["derive", "rc"] }

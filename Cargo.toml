@@ -6,7 +6,7 @@ members = [
     "contracts/rust",
     "doc/workflow",
     "eqs",
+    "faucet",
     "relayer",
     "wallet",
-    "faucet",
 ]

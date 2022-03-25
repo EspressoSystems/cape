@@ -58,6 +58,11 @@ use std::pin::Pin;
 use std::time::Duration;
 use surf::{StatusCode, Url};
 
+pub fn default_erc20_code() -> Erc20Code {
+    let zeros: [u8; 20] = [0; 20];
+    Erc20Code(EthereumAddr(zeros))
+}
+
 fn get_provider(rpc_url: &Url) -> Provider<Http> {
     Provider::<Http>::try_from(rpc_url.to_string()).expect("could not instantiate HTTP Provider")
 }
@@ -461,8 +466,8 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
     async fn get_wrapped_erc20_code(
         &self,
         asset: &AssetDefinition,
-    ) -> Result<Erc20Code, CapeWalletError> {
-        Ok(self
+    ) -> Result<Option<Erc20Code>, CapeWalletError> {
+        let code = self
             .contract
             .lookup(asset.clone().into())
             .call()
@@ -470,7 +475,12 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
             .map_err(|err| CapeWalletError::Failed {
                 msg: format!("error calling CAPE::lookup: {}", err),
             })?
-            .into())
+            .into();
+        Ok(if code == default_erc20_code() {
+            None
+        } else {
+            Some(code)
+        })
     }
 
     async fn wrap_erc20(
@@ -849,6 +859,9 @@ mod test {
                 .await,
             100
         );
+
+        assert!(wrapper.is_wrapped_asset(cape_asset.code).await);
+        assert_eq!(wrapper.is_wrapped_asset(AssetCode::native()).await, false);
 
         // Make sure the wrapper can access the wrapped tokens, by transferring them to someone else
         // (we'll reuse the `sponsor` wallet, but this could be a separate role).

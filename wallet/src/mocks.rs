@@ -273,10 +273,13 @@ impl MockCapeNetwork {
         Ok(())
     }
 
-    pub fn get_wrapped_asset(&self, asset: &AssetDefinition) -> Result<Erc20Code, CapeWalletError> {
+    pub fn get_wrapped_asset(
+        &self,
+        asset: &AssetDefinition,
+    ) -> Result<Option<Erc20Code>, CapeWalletError> {
         match self.contract.erc20_registrar.get(asset) {
-            Some((erc20_code, _)) => Ok(erc20_code.clone()),
-            None => Err(WalletError::<CapeLedger>::UndefinedAsset { asset: asset.code }),
+            Some((erc20_code, _)) => Ok(Some(erc20_code.clone())),
+            None => Ok(None),
         }
     }
 
@@ -661,7 +664,7 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
     async fn get_wrapped_erc20_code(
         &self,
         asset: &AssetDefinition,
-    ) -> Result<Erc20Code, WalletError<CapeLedger>> {
+    ) -> Result<Option<Erc20Code>, WalletError<CapeLedger>> {
         self.ledger.lock().await.network().get_wrapped_asset(asset)
     }
 

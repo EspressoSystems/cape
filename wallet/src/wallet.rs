@@ -38,10 +38,11 @@ pub trait CapeWalletBackend<'a>: WalletBackend<'a, CapeLedger> {
     ) -> Result<(), CapeWalletError>;
 
     /// Get the ERC20 code which is associated with a CAPE asset.
+    /// Returns None if the asset is not a wrapped asset.
     async fn get_wrapped_erc20_code(
         &self,
         asset: &AssetDefinition,
-    ) -> Result<Erc20Code, CapeWalletError>;
+    ) -> Result<Option<Erc20Code>, CapeWalletError>;
 
     /// Wrap some amount of an ERC20 token in a CAPE asset.
     ///
@@ -195,7 +196,15 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
     ) -> Result<(), CapeWalletError> {
         let mut state = self.lock().await;
 
-        let erc20_code = state.backend().get_wrapped_erc20_code(&cap_asset).await?;
+        let erc20_code = match state.backend().get_wrapped_erc20_code(&cap_asset).await? {
+            Some(code) => code,
+            None => {
+                return Err(WalletError::<CapeLedger>::UndefinedAsset {
+                    asset: cap_asset.code,
+                });
+            }
+        };
+
         let pub_key = state.backend().get_public_key(&dst_addr).await?;
 
         let ro = RecordOpening::new(
@@ -262,7 +271,7 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
             .backend()
             .get_wrapped_erc20_code(&asset.definition)
             .await
-            .ok()
+            .unwrap_or(None)
     }
 
     async fn is_wrapped_asset(&self, asset: AssetCode) -> bool {

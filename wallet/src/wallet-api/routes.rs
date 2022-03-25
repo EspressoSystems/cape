@@ -125,11 +125,10 @@ mod backend {
         records.push(RecordCommitment::from(&faucet_ro).to_field_element());
         let faucet_memo = ReceiverMemo::from_ro(rng, &faucet_ro, &[]).unwrap();
 
-        let mut ledger = MockLedger::new(MockCapeNetwork::new(
-            verif_crs,
+        let mut ledger = MockLedger::new(
+            MockCapeNetwork::new(verif_crs, records.clone(), vec![(faucet_memo, 0)]),
             records,
-            vec![(faucet_memo, 0)],
-        ));
+        );
         ledger.set_block_size(1).unwrap();
 
         MockCapeBackend::new(Arc::new(Mutex::new(ledger)), loader)

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
 set -e
 build-docker-base
+cargo build --release
 docker build -t cape/services -f ./services.Dockerfile .

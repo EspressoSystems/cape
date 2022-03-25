@@ -58,6 +58,11 @@ use std::pin::Pin;
 use std::time::Duration;
 use surf::{StatusCode, Url};
 
+pub fn default_erc20_code() -> Erc20Code {
+    let zeros: [u8; 20] = [0; 20];
+    Erc20Code(EthereumAddr(zeros))
+}
+
 fn get_provider(rpc_url: &Url) -> Provider<Http> {
     Provider::<Http>::try_from(rpc_url.to_string()).expect("could not instantiate HTTP Provider")
 }
@@ -274,7 +279,6 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
                 merkle_leaf_to_forget,
                 transactions: Default::default(),
             },
-            key_scans: Default::default(),
             key_state: Default::default(),
             assets: Default::default(),
             viewing_accounts: Default::default(),
@@ -387,6 +391,19 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
         }
     }
 
+    async fn get_initial_scan_state(
+        &self,
+        _from: EventIndex,
+    ) -> Result<(MerkleTree, EventIndex), CapeWalletError> {
+        // We need to provide a Merkle frontier before the event `from`, but the EQS doesn't store
+        // Merkle frontiers at each event index. To be safe, we provide the original frontier, which
+        // is always empty.
+        Ok((
+            MerkleTree::new(CapeLedger::merkle_height()).unwrap(),
+            EventIndex::default(),
+        ))
+    }
+
     async fn get_nullifier_proof(
         &self,
         nullifiers: &mut CapeNullifierSet,
@@ -461,8 +478,8 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
     async fn get_wrapped_erc20_code(
         &self,
         asset: &AssetDefinition,
-    ) -> Result<Erc20Code, CapeWalletError> {
-        Ok(self
+    ) -> Result<Option<Erc20Code>, CapeWalletError> {
+        let code = self
             .contract
             .lookup(asset.clone().into())
             .call()
@@ -470,7 +487,12 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
             .map_err(|err| CapeWalletError::Failed {
                 msg: format!("error calling CAPE::lookup: {}", err),
             })?
-            .into())
+            .into();
+        Ok(if code == default_erc20_code() {
+            None
+        } else {
+            Some(code)
+        })
     }
 
     async fn wrap_erc20(
@@ -584,7 +606,7 @@ mod test {
         let mut rng = ChaChaRng::from_seed([1u8; 32]);
         let universal_param = &*UNIVERSAL_PARAM;
         let (sender_key, relayer_url, address_book_url, contract_address, _) =
-            create_test_network(&mut rng, universal_param).await;
+            create_test_network(&mut rng, universal_param, None).await;
         let (eqs_url, _eqs_dir, _join_eqs) = spawn_eqs(contract_address).await;
 
         // Create a sender wallet and add the key pair that owns the faucet record.
@@ -709,7 +731,7 @@ mod test {
         let mut rng = ChaChaRng::from_seed([1u8; 32]);
         let universal_param = &*UNIVERSAL_PARAM;
         let (wrapper_key, relayer_url, address_book_url, contract_address, _) =
-            create_test_network(&mut rng, universal_param).await;
+            create_test_network(&mut rng, universal_param, None).await;
         let (eqs_url, _eqs_dir, _join_eqs) = spawn_eqs(contract_address).await;
 
         // Create a wallet to sponsor an asset and a different wallet to deposit (we should be able
@@ -849,6 +871,9 @@ mod test {
                 .await,
             100
         );
+
+        assert!(wrapper.is_wrapped_asset(cape_asset.code).await);
+        assert_eq!(wrapper.is_wrapped_asset(AssetCode::native()).await, false);
 
         // Make sure the wrapper can access the wrapped tokens, by transferring them to someone else
         // (we'll reuse the `sponsor` wallet, but this could be a separate role).

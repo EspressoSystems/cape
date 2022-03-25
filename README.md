@@ -1,5 +1,17 @@
 # Configurable Asset Privacy for Ethereum (CAPE)
 
+CAPE is an application of the [Configurable Asset Privacy (CAP)
+protocol](https://github.com/EspressoSystems/cap/blob/main/cap-specification.pdf)
+which enables digital assets to have customized privacy
+properties. CAPE is a smart contract application that asset creators
+can use to bring new assets with custom privacy into existence and to
+generate CAPE versions of existing Ethereum assets, endowing ERC-20s
+and eventually ERC-721s with privacy properties.
+
+The [Cape Technical
+Documentation](https://docs.cape.tech/espresso-systems/cape-technical-documentation/introduction)
+describes the project at a high level.
+
 **DISCLAIMER:** This software is provided "as is" and its security has not been externally audited. Use at your own risk.
 
 ---
@@ -20,8 +32,10 @@
   - [3. Verify installation](#3-verify-installation)
   - [4. direnv (Optional, but recommended for development)](#4-direnv-optional-but-recommended-for-development)
 - [Build](#build)
-  - [Wallet Docker image](#wallet-docker-image)
+  - [Docker images](#docker-images)
 - [CAPE Demo](#cape-demo)
+  - [Local demo](#local-demo)
+  - [Docker compose](#docker-compose)
 - [Development](#development)
   - [Running Tests](#running-tests)
   - [Interactive development](#interactive-development)
@@ -167,9 +181,22 @@ For the CI build see the `docker-*` jobs in
 
 # CAPE Demo
 
+## Local demo
+
 To run the CAPE demo locally, run
 
-    cape-demo
+    cape-demo-local
+
+## Docker compose
+
+To run the docker compose demo, run
+
+    cape-demo-docker
+
+The `CAPE_SERVICES_IMAGE` or `CAPE_WALLET_IMAGE` env vars can be set to run the
+demo with the locally built docker images:
+
+    env CAPE_SERVICES_IMAGE=cape/services CAPE_WALLET_IMAGE=cape/wallet cape-demo-docker
 
 # Development
 

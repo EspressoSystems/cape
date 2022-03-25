@@ -338,7 +338,7 @@ fn extract_burn_dst(xfr: &TransferNote) -> Option<Option<EthereumAddr>> {
 
 impl CapeContractState {
     // How many previous record Merkle tree root hashes the validator should remember.
-    pub const RECORD_ROOT_HISTORY_SIZE: usize = 10;
+    pub const RECORD_ROOT_HISTORY_SIZE: usize = 1000;
 
     pub fn new(verif_crs: VerifierKeySet, record_merkle_frontier: MerkleTree) -> Self {
         Self {

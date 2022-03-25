@@ -9,29 +9,18 @@
 use async_std::task::{sleep, spawn, JoinHandle};
 use jf_cap::keys::{UserAddress, UserPubKey};
 use jf_cap::Signature;
-use once_cell::sync::Lazy;
 use rand::{distributions::Alphanumeric, Rng};
 use std::env;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::{fs, time::Duration};
 use tempdir::TempDir;
-use tide::{log::LevelFilter, prelude::*, StatusCode};
+use tide::{prelude::*, StatusCode};
 
 pub mod signal;
 
 pub const DEFAULT_PORT: u16 = 50078u16;
 const ADDRESS_BOOK_STARTUP_RETRIES: usize = 8;
-
-pub static mut LOG_LEVEL: LevelFilter = LevelFilter::Info;
-
-/// Runs one and only one logger.
-///
-/// Accessing `LOG_LEVEL` is considered unsafe since it is a static mutable
-/// variable, but we need this to ensure that only one logger is running.
-static LOGGING: Lazy<()> = Lazy::new(|| unsafe {
-    tide::log::with_level(LOG_LEVEL);
-});
 
 pub trait Store: Clone + Send + Sync {
     fn save(&self, address: &UserAddress, pub_key: &UserPubKey) -> Result<(), std::io::Error>;
@@ -162,16 +151,8 @@ pub fn address_book_store_path() -> PathBuf {
 }
 
 pub async fn init_web_server<T: Store + 'static>(
-    log_level: LevelFilter,
     store: T,
 ) -> std::io::Result<JoinHandle<std::io::Result<()>>> {
-    // Accessing `LOG_LEVEL` is considered unsafe since it is a static mutable
-    // variable, but we need this to ensure that only one logger is running.
-    unsafe {
-        LOG_LEVEL = log_level;
-    }
-    Lazy::force(&LOGGING);
-
     let mut app = tide::with_state(ServerState {
         store: Arc::new(store),
     });

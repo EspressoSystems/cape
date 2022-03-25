@@ -120,12 +120,7 @@ async fn connect_to_demo_backend<'a>(
     .await
     .unwrap();
 
-    let mut wallet = CapeWallet::new(backend).await.unwrap();
-    wallet
-        .generate_user_key("sending account".into(), None)
-        .await
-        .unwrap();
-    wallet
+    CapeWallet::new(backend).await.unwrap()
 }
 
 #[allow(clippy::needless_lifetimes)]
@@ -246,14 +241,12 @@ fn add_balance(
     asset: &AssetCode,
     balances: &mut HashMap<UserAddress, HashMap<AssetCode, u64>>,
 ) {
-    if !balances.contains_key(addr) {
-        balances.insert(addr.clone(), HashMap::new());
-    }
-
-    let assets = balances.get_mut(addr).unwrap();
-    let balance = *assets.get(asset).unwrap_or(&0);
-
-    assets.insert(*asset, balance + amount);
+    let balance_ref: &mut u64 = balances
+        .entry(addr.clone())
+        .or_default()
+        .entry(*asset)
+        .or_default();
+    *balance_ref += amount;
 }
 
 fn remove_balance(
@@ -359,7 +352,6 @@ async fn main() {
             event!(Level::INFO, "waiting for initial balance");
             retry_delay().await;
         }
-        // client::response_body(&mut res).await.unwrap();
         (network, wallet)
     } else {
         create_backend_and_sender_wallet(
@@ -435,13 +427,14 @@ async fn main() {
                 event!(Level::INFO, "Minting");
                 let minter = wallets.choose_mut(&mut rng).unwrap();
                 let address = minter.pub_keys().await[0].address();
-                let asset = mint_token(minter).await.unwrap();
+                let (asset, maybe_txn) = mint_token(minter).await.unwrap();
                 event!(Level::INFO, "minted custom asset.  Code: {}", asset.code);
-                let amount = minter.balance_breakdown(&address, &asset.code).await;
-                balances
-                    .get_mut(&address)
-                    .unwrap()
-                    .insert(asset.code, amount);
+                if maybe_txn.is_some() {
+                    balances
+                        .get_mut(&address)
+                        .unwrap()
+                        .insert(asset.code, 1u64 << 32);
+                }
             }
             OperationType::Transfer => {
                 event!(Level::INFO, "Transfering");
@@ -530,7 +523,7 @@ async fn main() {
 
                 freeze_token(freezer, &asset_def.code, record.ro.amount, owner_address)
                     .await
-                    .unwrap();
+                    .ok();
             }
             OperationType::Unfreeze => {
                 event!(Level::INFO, "Unfreezing");
@@ -554,7 +547,7 @@ async fn main() {
                 );
                 unfreeze_token(freezer, &asset_def.code, record.ro.amount, owner_address)
                     .await
-                    .unwrap();
+                    .ok();
             }
             OperationType::Wrap => {
                 event!(Level::INFO, "Wrapping");
@@ -593,15 +586,19 @@ async fn main() {
                             amount,
                             asset.definition.code
                         );
-                        burn_token(burner, asset.definition.clone(), amount)
-                            .await
-                            .unwrap();
-                        remove_balance(
-                            &burner.pub_keys().await[0].address(),
-                            amount,
-                            &asset.definition.code,
-                            &mut balances,
-                        );
+                        match burn_token(burner, asset.definition.clone(), amount).await {
+                            Ok(_) => {
+                                remove_balance(
+                                    &burner.pub_keys().await[0].address(),
+                                    amount,
+                                    &asset.definition.code,
+                                    &mut balances,
+                                );
+                            }
+                            Err(err) => {
+                                event!(Level::ERROR, "Error generating burn txn: {}", err);
+                            }
+                        }
                     }
                 } else {
                     event!(Level::INFO, "no burnable assets, skipping burn operation");

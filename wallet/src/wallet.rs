@@ -23,11 +23,6 @@ use std::path::Path;
 
 pub type CapeWalletError = WalletError<CapeLedger>;
 
-pub fn default_erc20_code() -> Erc20Code {
-    let zeros: [u8; 20] = [0; 20];
-    Erc20Code(EthereumAddr(zeros))
-}
-
 /// Extension of the [WalletBackend] trait with CAPE-specific functionality.
 #[async_trait]
 pub trait CapeWalletBackend<'a>: WalletBackend<'a, CapeLedger> {

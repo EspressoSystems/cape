@@ -44,7 +44,7 @@ contract MaliciousToken is ERC20 {
     /**
      * /// @dev pick the submitBlock function when calling back the CAPE contract
      */
-    function runSubmitBlock() public {
+    function selectSubmitBlockAttack() public {
         _runDeposit = false;
         _runSubmitBlock = true;
     }

@@ -86,7 +86,11 @@ async fn test_reentrancy_guard() -> Result<()> {
         .await?;
 
     // Decide to run CAPE.depositErc20 when calling MaliciousContract.transferFrom
-    malicious_erc20_contract.run_deposit().send().await?.await?;
+    malicious_erc20_contract
+        .select_deposit_attack()
+        .send()
+        .await?
+        .await?;
 
     let call = cape_contract
         .deposit_erc_20(
@@ -101,7 +105,7 @@ async fn test_reentrancy_guard() -> Result<()> {
 
     // Decide to run CAPE.submitBlock when calling MaliciousContract.transferFrom
     malicious_erc20_contract
-        .run_submit_block()
+        .select_submit_block_attack()
         .send()
         .await?
         .await?;

@@ -64,6 +64,7 @@ contract MaliciousToken is ERC20 {
             address dummyAddress;
             cape.depositErc20(dummyRo, dummyAddress);
         }
+
         if (_runSubmitBlock) {
             TestCAPE.CapeBlock memory dummyBlock;
             cape.submitCapeBlock(dummyBlock);

@@ -42,6 +42,7 @@ PATH = ["healthcheck"]
 DOC = "Responds with JSON {\"status\": \"available\"}."
 
 [route.newwallet]
+METHOD = "POST"
 PATH = ["newwallet/:mnemonic/:password", "newwallet/:mnemonic/:password/path/:path", "newwallet/:mnemonic/:password/name/:name"]
 ":password" = "Base64"
 ":path" = "Base64"
@@ -56,6 +57,7 @@ If `:path` is given, the wallet will be stored in the given location. If `:name`
 """
 
 [route.openwallet]
+METHOD = "POST"
 PATH = ["openwallet/:password", "openwallet/:password/path/:path", "openwallet/:password/name/:name"]
 ":password" = "Base64"
 ":path" = "Base64"
@@ -67,6 +69,7 @@ Open the wallet from local storage with the given password and path.
 """
 
 [route.resetpassword]
+METHOD = "POST"
 PATH = ["resetpassword/:mnemonic/:password", "resetpassword/:mnemonic/:password/path/:path", "resetpassword/:mnemonic/:password/name/:name"]
 ":password" = "Base64"
 ":path" = "Base64"
@@ -80,6 +83,7 @@ The wallet to open is specified by `:path` or `:name` as in `newwallet`. `:mnemo
 """
 
 [route.closewallet]
+METHOD = "POST"
 PATH = ["closewallet"]
 DOC = """
 Close the current wallet.
@@ -147,6 +151,7 @@ Each record contains the following fields:
 """
 
 [route.newkey]
+METHOD = "POST"
 PATH = ["newkey/sending", "newkey/sending/description/:description",
         "newkey/viewing", "newkey/viewing/description/:description",
         "newkey/freezing", "newkey/freezing/description/:description"]
@@ -156,6 +161,7 @@ Generate and return a key of the given type.
 """
 
 [route.importkey]
+METHOD = "POST"
 PATH = ["importkey/freezing/:freezing", "importkey/freezing/:freezing/description/:description",
         "importkey/sending/:sending", "importkey/sending/:sending/description/:description",
         "importkey/sending/:sending/description/:description/scan_from/:index", "importkey/sending/:sending/scan_from/:index",
@@ -170,6 +176,7 @@ Import the given key into the current wallet. For sending keys, the optional sca
 """
 
 [route.recoverkey]
+METHOD = "POST"
 PATH = ["recoverkey/sending", "recoverkey/sending/description/:description", 
         "recoverkey/sending/:scan_from", "recoverkey/sending/:scan_from/description/:description",
         "recoverkey/viewing", "recoverkey/viewing/description/:description",
@@ -192,6 +199,7 @@ that is, the entire ledger will be scanned.
 """
 
 [route.send]
+METHOD = "POST"
 PATH = [
   "send/sender/:sender/asset/:asset/recipient/:recipient/amount/:amount/fee/:fee",
   "send/asset/:asset/recipient/:recipient/amount/:amount/fee/:fee"
@@ -208,6 +216,7 @@ the transaction through the validation process.
 """
 
 [route.wrap]
+METHOD = "POST"
 PATH = ["wrap/destination/:destination/ethaddress/:eth_address/asset/:asset/amount/:amount"]
 ":destination" = "TaggedBase64"
 ":eth_address" = "TaggedBase64"
@@ -218,6 +227,7 @@ Wrap amount units of the given asset from the Ethereum address to the destinatio
 """
 
 [route.unwrap]
+METHOD = "POST"
 PATH = ["unwrap/source/:source/ethaddress/:eth_address/asset/:asset/amount/:amount/fee/:fee"]
 ":source" = "TaggedBase64"
 ":eth_address" = "TaggedBase64"
@@ -229,6 +239,7 @@ Unwrap amount units of the given asset from the source to the Ethereum address. 
 """
 
 [route.newasset]
+METHOD = "POST"
 PATH = [
   # `symbol` may be added as a parameter in the future but it's not used for now.
   # Only if `viewing_key` is given, can `view_amount`, `view_address` and `viewing_threshold` be specified.
@@ -361,6 +372,7 @@ Sponsor or define an asset, depending on if an ERC20 code is given. Reports the 
 """
 
 [route.updateasset]
+METHOD = "POST"
 PATH = [
   "updateasset/:asset/symbol/:symbol",
   "updateasset/:asset/description/:description",
@@ -388,6 +400,7 @@ Return a serialized representation of the asset with the given code.
 """
 
 [route.importasset]
+METHOD = "POST"
 PATH = ["importasset/:asset"]
 ":asset" = "TaggedBase64"
 DOC = """
@@ -398,6 +411,7 @@ may have been created and exported in a different keystore or wallet.
 """
 
 [route.mint]
+METHOD = "POST"
 PATH = ["mint/asset/:asset/amount/:amount/fee/:fee/minter/:minter/recipient/:recipient"]
 ":asset" = "TaggedBase64"
 ":amount" = "Integer"
@@ -409,6 +423,7 @@ Mint amount units of a given asset code controlled by the current wallet to the 
 """
 
 [route.freeze]
+METHOD = "POST"
 PATH = ["freeze/:address/:asset/fee/:fee_address/:fee_amount"]
 ":address" = "TaggedBase64"
 ":asset" = "TaggedBase64"
@@ -419,6 +434,7 @@ Freeze the asset associated with the given address and asset type. Assumes the a
 """
 
 [route.unfreeze]
+METHOD = "POST"
 PATH = ["unfreeze/:address/:asset/fee/:fee_address/:fee_amount"]
 ":address" = "TaggedBase64"
 ":asset" = "TaggedBase64"

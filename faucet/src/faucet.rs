@@ -35,7 +35,11 @@ use std::path::PathBuf;
 use std::time::Duration;
 use structopt::StructOpt;
 use surf::Url;
-use tide::StatusCode;
+use tide::{
+    http::headers::HeaderValue,
+    security::{CorsMiddleware, Origin},
+    StatusCode,
+};
 
 #[derive(Debug, StructOpt)]
 #[structopt(
@@ -250,6 +254,12 @@ pub async fn init_web_server(
         fee_size: opt.fee_size,
     };
     let mut app = tide::with_state(state);
+    app.with(
+        CorsMiddleware::new()
+            .allow_methods("GET, POST".parse::<HeaderValue>().unwrap())
+            .allow_headers("*".parse::<HeaderValue>().unwrap())
+            .allow_origin(Origin::from("*")),
+    );
     app.at("/healthcheck").get(healthcheck);
     app.at("/request_fee_assets").post(request_fee_assets);
     let address = format!("0.0.0.0:{}", opt.faucet_port);

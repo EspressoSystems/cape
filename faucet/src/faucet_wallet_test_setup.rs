@@ -14,7 +14,7 @@ pub fn u256_to_hex(n: U256) -> String {
 )]
 pub struct Options {
     /// mnemonic for the faucet wallet
-    #[structopt(long, env = "CAPE_FAUCET_WALLET_MNEMONIC")]
+    #[structopt(long, env = "CAPE_FAUCET_MANAGER_MNEMONIC")]
     pub mnemonic: String,
 }
 
@@ -31,6 +31,9 @@ async fn main() -> Result<(), std::io::Error> {
         .derive_sub_tree("user".as_bytes())
         .derive_user_key_pair(&0u64.to_le_bytes())
         .pub_key();
+
+    eprintln!("Encryption key: {}", pub_key);
+    eprintln!("Address: {}", net::UserAddress(pub_key.address()));
 
     let enc_key_bytes: [u8; 32] = pub_key.enc_key().into();
     let address: EdOnBN254Point = pub_key.address().into();

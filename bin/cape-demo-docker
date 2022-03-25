@@ -18,7 +18,40 @@ fi
 
 
 #
-#   1. Set up a geth chain and deploy the contracts. Then shut it down.
+# CAPE configuration
+#
+export CAPE_ADDRESS_BOOK_PORT=50000
+export CAPE_ADDRESS_BOOK_STORE_PATH=$(mktemp -d -t cape-address-book-store-XXXXXXX)
+
+export CAPE_EQS_PORT=50010
+
+export CAPE_RELAYER_PORT=50020
+export CAPE_RELAYER_WALLET_MNEMONIC="$TEST_MNEMONIC"
+
+export CAPE_FAUCET_PORT=50030
+export CAPE_FAUCET_WALLET_MNEMONIC="$TEST_MNEMONIC"
+export CAPE_FAUCET_MANAGER_MNEMONIC="$TEST_MNEMONIC"
+
+export CAPE_WALLET_PORT=50040
+
+# Create a faucet wallet and export variables printed to stdout
+export CAPE_FAUCET_WALLET_PATH="$(mktemp -d -t cape-faucet-wallet-XXXXXXX)"
+export CAPE_EQS_STORE_PATH="$(mktemp -d -t cape-eqs-store-path-XXXXXXX)"
+set -a; source <(cargo run --release --bin faucet-wallet-test-setup); set +a;
+
+# Clean up temporary directories when script exits.
+# TODO clean up files owned by root after mounting into docker.
+trap "exit" INT TERM
+trap cleanup EXIT
+cleanup(){
+    rmdir "$CAPE_FAUCET_WALLET_PATH"
+    rmdir "$CAPE_EQS_STORE_PATH"
+    rmdir "$CAPE_ADDRESS_BOOK_STORE_PATH"
+    rmdir "$GETH_DATA_DIR"
+}
+
+#
+# Set up a geth chain and deploy the contracts. Then shut it down.
 #
 GETH_DATA_DIR="$(mktemp -d -t "cap-ethereum-data-XXXXXXXX")"
 echo "Using keystore dir $GETH_DATA_DIR"
@@ -49,53 +82,26 @@ geth --http --dev --verbosity 1 \
      --datadir $GETH_DATA_DIR --unlock $ADDRESS_LIST &
 geth_pid=$!
 
-# Deploy contracts
+# Deploy contracts (this requires the address/key exported with the
+# faucet-wallet-test-setup binary)
 hardhat deploy --reset
 
 # Stop the geth node
 echo "Sending HUP signal to geth: PID $geth_pid"
 kill -HUP $geth_pid
 
-#
-# 2. CAPE configuration
-#
-export CAPE_ADDRESS_BOOK_PORT=50000
-export CAPE_ADDRESS_BOOK_STORE_PATH=$(mktemp -d -t cape-address-book-store-XXXXXXX)
-
-export CAPE_EQS_PORT=50010
-
-export CAPE_RELAYER_PORT=50020
-export CAPE_RELAYER_WALLET_MNEMONIC="$TEST_MNEMONIC"
-
-export CAPE_FAUCET_PORT=50030
-export CAPE_FAUCET_WALLET_MNEMONIC="$TEST_MNEMONIC"
-
-export CAPE_WALLET_PORT=50040
-
-# Create a faucet wallet and export variables printed to stdout
-export CAPE_FAUCET_WALLET_PATH="$(mktemp -d -t cape-faucet-wallet-XXXXXXX)"
-export CAPE_EQS_STORE_PATH="$(mktemp -d -t cape-eqs-store-path-XXXXXXX)"
-set -a; source <(cargo run --release --bin faucet-wallet-test-setup); set +a;
-
-# Clean up temporary directories when script exits.
-# TODO clean up files owned by root after mounting into docker.
-trap "exit" INT TERM
-trap cleanup EXIT
-cleanup(){
-    rmdir "$CAPE_FAUCET_WALLET_PATH"
-    rmdir "$CAPE_EQS_STORE_PATH"
-    rmdir "$CAPE_ADDRESS_BOOK_STORE_PATH"
-    rmdir "$GETH_DATA_DIR"
-}
-
-# Configure environment
+# Configure contract addresses
 export CAPE_TOKEN_ADDRESS="$(cat contracts/deployments/localhost/SimpleToken.json | jq -r .address)"
 export CAPE_CONTRACT_ADDRESS="$(cat contracts/deployments/localhost//CAPE.json | jq -r .address)"
 
+#
+# Export configuration
+#
+
+# Export the configuration *not* handled by docker compose for the docker compose demo.
 mkdir -p demo
 COMPOSE_ENV_FILE=demo/compose.env
 
-# Export the configuration *not* handled by docker compose for the docker compose demo.
 # Use a temp file to make sure the final file is complete once it exists.
 TMP_FILE="$(mktemp -t cape-tmp-env-XXXXXXX)"
 set | grep "CAPE_CONTRACT_ADDRESS.*=" | sort >> "$TMP_FILE"
@@ -113,10 +119,12 @@ echo "CAPE demo geth setup completed!"
 echo
 
 #
-# 3. Start the docker containers
+# Start the docker containers
 #
 
-docker compose --env-file demo/compose.env pull
+if [ -z "${CAPE_SERVICES_IMAGE:-}" ] && [ -z "${CAPE_WALLET_IMAGE:-}" ]; then
+    docker compose --env-file demo/compose.env pull
+fi
 docker compose --env-file demo/compose.env up
 
 wait

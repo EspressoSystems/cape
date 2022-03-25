@@ -22,27 +22,32 @@ services:
       - CAPE_RELAYER_URL=http://relayer:$CAPE_RELAYER_PORT
       - CAPE_WALLET_PORT=$CAPE_WALLET_PORT
       - CAPE_WEB3_PROVIDER_URL=http://geth:8545
+      - RUST_BACKTRACE=1
+      - RUST_LOG=info
     depends_on:
       - geth
 
   relayer:
     image: ${CAPE_SERVICES_IMAGE:-ghcr.io/espressosystems/cape/services:main}
-    expose:
-      - $CAPE_RELAYER_PORT
-    command: /app/relayer/minimal-relayer
+    ports:
+      - $CAPE_RELAYER_PORT:$CAPE_RELAYER_PORT
+    # Relayer panics if it can't connect to geth on startup.
+    command: sh -c "sleep 2 && /app/relayer/minimal-relayer"
     environment:
       - CAPE_CONTRACT_ADDRESS=$CAPE_CONTRACT_ADDRESS
       - CAPE_EQS_URL=http://eqs:$CAPE_RELAYER_PORT
       - CAPE_RELAYER_PORT=$CAPE_RELAYER_PORT
       - CAPE_RELAYER_WALLET_MNEMONIC=$CAPE_RELAYER_WALLET_MNEMONIC
       - CAPE_WEB3_PROVIDER_URL=http://geth:8545
+      - RUST_BACKTRACE=1
+      - RUST_LOG=info
     depends_on:
       - geth
 
   eqs:
     image: ${CAPE_SERVICES_IMAGE:-ghcr.io/espressosystems/cape/services:main}
-    expose:
-      - $CAPE_EQS_PORT
+    ports:
+      - $CAPE_EQS_PORT:$CAPE_EQS_PORT
     command: /app/eqs/eqs
     working_dir: /app/eqs
     volumes:
@@ -52,15 +57,17 @@ services:
       - CAPE_EQS_PORT=$CAPE_EQS_PORT
       - CAPE_EQS_STORE_PATH=/mnt/eqs
       - CAPE_WEB3_PROVIDER_URL=http://geth:8545
+      - RUST_BACKTRACE=1
+      - RUST_LOG=info
     depends_on:
       - geth
 
   faucet:
     image: ${CAPE_SERVICES_IMAGE:-ghcr.io/espressosystems/cape/services:main}
-    expose:
-      - $CAPE_FAUCET_PORT
+    ports:
+      - $CAPE_FAUCET_PORT:$CAPE_FAUCET_PORT
     # Faucet panics if it can't connect to EQS on startup.
-    command: bash -c "sleep 2 && /app/faucet/faucet"
+    command: sh -c "sleep 2 && /app/faucet/faucet"
     volumes:
       - $CAPE_FAUCET_WALLET_PATH:/mnt/faucet
     environment:
@@ -72,13 +79,15 @@ services:
       - CAPE_FAUCET_WALLET_PATH=/mnt/faucet
       - CAPE_RELAYER_URL=http://relayer:$CAPE_RELAYER_PORT
       - CAPE_WEB3_PROVIDER_URL=http://geth:8545
+      - RUST_BACKTRACE=1
+      - RUST_LOG=info
     depends_on:
       - geth
 
   address-book:
     image: ${CAPE_SERVICES_IMAGE:-ghcr.io/espressosystems/cape/services:main}
-    expose:
-      - $CAPE_ADDRESS_BOOK_PORT
+    ports:
+      - $CAPE_ADDRESS_BOOK_PORT:$CAPE_ADDRESS_BOOK_PORT
     command: /app/address-book/address-book
     volumes:
       - $CAPE_ADDRESS_BOOK_STORE_PATH:/mnt/address-book
@@ -86,6 +95,8 @@ services:
     environment:
       - CAPE_ADDRESS_BOOK_PORT=$CAPE_ADDRESS_BOOK_PORT
       - CAPE_ADDRESS_BOOK_STORE_PATH=/mnt/address-book
+      - RUST_BACKTRACE=1
+      - RUST_LOG=info
 
   geth:
     image: ethereum/client-go:v1.10.15

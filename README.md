@@ -1,5 +1,17 @@
 # Configurable Asset Privacy for Ethereum (CAPE)
 
+CAPE is an application of the [Configurable Asset Privacy (CAP)
+protocol](https://github.com/EspressoSystems/cap/blob/main/cap-specification.pdf)
+which enables digital assets to have customized privacy
+properties. CAPE is a smart contract application that asset creators
+can use to bring new assets with custom privacy into existence and to
+generate CAPE versions of existing Ethereum assets, endowing ERC-20s
+and eventually ERC-721s with privacy properties.
+
+The [Cape Technical
+Documentation](https://docs.cape.tech/espresso-systems/cape-technical-documentation/introduction)
+describes the project at a high level.
+
 **DISCLAIMER:** This software is provided "as is" and its security has not been externally audited. Use at your own risk.
 
 ---

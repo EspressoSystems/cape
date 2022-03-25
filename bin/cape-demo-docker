@@ -75,7 +75,7 @@ export CAPE_WALLET_PORT=50040
 # Create a faucet wallet and export variables printed to stdout
 export CAPE_FAUCET_WALLET_PATH="$(mktemp -d -t cape-faucet-wallet-XXXXXXX)"
 export CAPE_EQS_STORE_PATH="$(mktemp -d -t cape-eqs-store-path-XXXXXXX)"
-set -a; source <(target/release/faucet-wallet-test-setup); set +a;
+set -a; source <(cargo run --release --bin faucet-wallet-test-setup); set +a;
 
 # Clean up temporary directories when script exits.
 # TODO clean up files owned by root after mounting into docker.
@@ -116,6 +116,7 @@ echo
 # 3. Start the docker containers
 #
 
+docker compose --env-file demo/compose.env pull
 docker compose --env-file demo/compose.env up
 
 wait

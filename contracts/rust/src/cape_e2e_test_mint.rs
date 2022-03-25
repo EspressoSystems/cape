@@ -23,11 +23,11 @@ use anyhow::Result;
 use ethers::prelude::U256;
 use jf_cap::keys::{UserKeyPair, UserPubKey};
 use jf_cap::mint::MintNote;
+use jf_cap::proof::universal_setup_for_staging;
 use jf_cap::structs::{
     AssetCode, AssetCodeSeed, AssetDefinition, AssetPolicy, FeeInput, FreezeFlag, RecordCommitment,
     RecordOpening, TxnFeeInfo,
 };
-use jf_cap::testing_apis::universal_setup_for_test;
 use jf_cap::AccMemberWitness;
 use jf_cap::MerkleLeafProof;
 use jf_cap::MerkleTree;
@@ -58,7 +58,7 @@ async fn test_mint_maybe_submit(should_submit: bool) -> Result<()> {
     let mut prng = ChaChaRng::from_seed([0x8au8; 32]);
 
     let max_degree = 2usize.pow(16);
-    let srs = universal_setup_for_test(max_degree, &mut prng)?;
+    let srs = universal_setup_for_staging(max_degree, &mut prng)?;
     let (prove_keys, verif_keys) = keysets_for_test(&srs);
 
     println!("CRS set up: {}s", now.elapsed().as_secs_f32());

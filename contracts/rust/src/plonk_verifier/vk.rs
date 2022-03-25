@@ -11,9 +11,9 @@ use crate::{types as sol, types::TestVerifyingKeys};
 use anyhow::Result;
 use ark_std::{rand::Rng, test_rng};
 use ethers::prelude::*;
+use jf_cap::proof::universal_setup_for_staging;
 use jf_cap::proof::{freeze, mint, transfer};
 use jf_cap::structs::NoteType;
-use jf_cap::testing_apis::universal_setup_for_test;
 
 const TREE_DEPTH: u8 = 24;
 const SUPPORTED_VKS: [(NoteType, u8, u8, u8); 3] = [
@@ -54,7 +54,7 @@ async fn test_get_vk_by_id() -> Result<()> {
     let rng = &mut test_rng();
 
     let max_degree = 2usize.pow(17);
-    let srs = universal_setup_for_test(max_degree, rng).unwrap();
+    let srs = universal_setup_for_staging(max_degree, rng).unwrap();
 
     for (note_type, num_input, num_output, tree_depth) in SUPPORTED_VKS {
         // load rust vk

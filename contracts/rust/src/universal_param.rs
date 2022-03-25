@@ -6,7 +6,7 @@
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #![deny(warnings)]
-use jf_cap::testing_apis::universal_setup_for_test;
+use jf_cap::proof::universal_setup_for_staging;
 use jf_cap::TransactionVerifyingKey;
 use key_set::{KeySet, VerifierKeySet};
 use lazy_static::lazy_static;
@@ -19,7 +19,7 @@ const MAX_DEGREE_SUPPORTED: usize = 2u64.pow(17) as usize;
 
 lazy_static! {
     pub static ref UNIVERSAL_PARAM: jf_cap::proof::UniversalParam =
-        universal_setup_for_test(MAX_DEGREE_SUPPORTED, &mut ChaChaRng::from_seed([0u8; 32]))
+        universal_setup_for_staging(MAX_DEGREE_SUPPORTED, &mut ChaChaRng::from_seed([0u8; 32]))
             .unwrap();
 }
 

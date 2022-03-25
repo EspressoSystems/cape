@@ -26,7 +26,7 @@ use jf_cap::keys::UserKeyPair;
 use jf_cap::structs::AssetCode;
 use jf_cap::structs::AssetPolicy;
 use jf_cap::structs::FreezeFlag;
-use jf_cap::{keys::UserPubKey, testing_apis::universal_setup_for_test};
+use jf_cap::{keys::UserPubKey, proof::universal_setup_for_staging};
 use rand::distributions::weighted::WeightedError;
 use rand::seq::SliceRandom;
 use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
@@ -110,7 +110,7 @@ async fn main() {
 
     let mut rng = ChaChaRng::seed_from_u64(args.seed.unwrap_or(0));
 
-    let universal_param = universal_setup_for_test(2usize.pow(16), &mut rng).unwrap();
+    let universal_param = universal_setup_for_staging(2usize.pow(16), &mut rng).unwrap();
     let mut loader = MockCapeWalletLoader {
         path: args.storage,
         key: KeyTree::random(&mut rng).0,

@@ -44,7 +44,7 @@ dependencies = [
  "tempdir",
  "tide",
  "tracing",
- "tracing-subscriber 0.3.9",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -1194,7 +1194,7 @@ dependencies = [
  "tracing",
  "tracing-distributed",
  "tracing-futures",
- "tracing-subscriber 0.3.9",
+ "tracing-subscriber",
  "tracing-test",
 ]
 
@@ -2095,7 +2095,7 @@ dependencies = [
  "tide-websockets",
  "toml",
  "tracing",
- "tracing-subscriber 0.3.9",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -2750,7 +2750,7 @@ dependencies = [
  "tempdir",
  "tide",
  "tracing",
- "tracing-subscriber 0.3.9",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -3841,15 +3841,6 @@ dependencies = [
  "lazy_static",
  "pipeline",
  "regex",
-]
-
-[[package]]
-name = "matchers"
-version = "0.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f099785f7595cc4b4553a174ce30dd7589ef93391ff414dbb67f62392b9e0ce1"
-dependencies = [
- "regex-automata",
 ]
 
 [[package]]
@@ -4954,7 +4945,7 @@ dependencies = [
  "tide-websockets",
  "toml",
  "tracing",
- "tracing-subscriber 0.3.9",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -6346,14 +6337,14 @@ dependencies = [
 
 [[package]]
 name = "tracing-distributed"
-version = "0.3.1"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e351159c859c0bfa19dc77955731b8fc52d2f417cd8dc1d4585844d22f013f24"
+checksum = "de30b98573d9e63e82996b3c9bf950210ba3f2dcf363f7eec000acebef1a4377"
 dependencies = [
  "itertools 0.9.0",
  "tracing",
  "tracing-core",
- "tracing-subscriber 0.2.25",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -6378,38 +6369,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tracing-serde"
-version = "0.1.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bc6b213177105856957181934e4920de57730fc69bf42c37ee5bb664d406d9e1"
-dependencies = [
- "serde",
- "tracing-core",
-]
-
-[[package]]
-name = "tracing-subscriber"
-version = "0.2.25"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0e0d2eaa99c3c2e41547cfa109e910a68ea03823cccad4a0525dcbc9b01e8c71"
-dependencies = [
- "ansi_term",
- "chrono",
- "lazy_static",
- "matchers 0.0.1",
- "regex",
- "serde",
- "serde_json",
- "sharded-slab",
- "smallvec",
- "thread_local",
- "tracing",
- "tracing-core",
- "tracing-log",
- "tracing-serde",
-]
-
-[[package]]
 name = "tracing-subscriber"
 version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6417,7 +6376,7 @@ checksum = "9e0ab7bdc962035a87fba73f3acca9b8a8d0034c2e6f60b84aeaaddddc155dce"
 dependencies = [
  "ansi_term",
  "lazy_static",
- "matchers 0.1.0",
+ "matchers",
  "regex",
  "sharded-slab",
  "smallvec",
@@ -6435,7 +6394,7 @@ checksum = "3eb7bda2e93bbc9c5b247034acc6a4b3d04f033a3d4b8fc1cb87d4d1c7c7ebd7"
 dependencies = [
  "lazy_static",
  "tracing-core",
- "tracing-subscriber 0.3.9",
+ "tracing-subscriber",
  "tracing-test-macro",
 ]
 

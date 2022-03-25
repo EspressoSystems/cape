@@ -11,9 +11,9 @@
 //! The list of transaction types supported are declared through `SUPPORTED_VKS`.
 
 use cap_rust_sandbox::types as sol;
+use jf_cap::proof::universal_setup_for_staging;
 use jf_cap::proof::{freeze, mint, transfer};
 use jf_cap::structs::NoteType;
-use jf_cap::testing_apis::universal_setup_for_test;
 use std::process::Command;
 use std::{fs::OpenOptions, io::prelude::*, path::PathBuf};
 
@@ -33,7 +33,7 @@ fn main() {
     // current list of `SUPPORTED_VK` won't exceed `2^17` constraints.
     let max_degree = 2usize.pow(17);
     let rng = &mut ark_std::test_rng();
-    let srs = universal_setup_for_test(max_degree, rng).unwrap();
+    let srs = universal_setup_for_staging(max_degree, rng).unwrap();
 
     for (note_type, num_input, num_output, tree_depth) in SUPPORTED_VKS {
         // calculate the path to solidity file

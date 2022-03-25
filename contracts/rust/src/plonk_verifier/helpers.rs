@@ -10,7 +10,7 @@ use ark_bn254::{Bn254, Fq, Fr};
 use ark_ff::PrimeField;
 use ark_std::{convert::TryInto, test_rng};
 use itertools::izip;
-use jf_cap::testing_apis::universal_setup_for_test;
+use jf_cap::proof::universal_setup_for_staging;
 use jf_plonk::{
     circuit::{Arithmetization, Circuit, PlonkCircuit},
     proof_system::{
@@ -37,7 +37,7 @@ pub(crate) fn gen_plonk_proof_for_test(
     let rng = &mut test_rng();
     let n = 64;
     let max_degree = n + 2;
-    let srs = universal_setup_for_test(max_degree, rng)?;
+    let srs = universal_setup_for_staging(max_degree, rng)?;
 
     // 2. Create circuits
     let circuits = (0..num_proof)

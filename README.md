@@ -460,6 +460,7 @@ Run
 To show gas usage of sending various notes to the contract.
 
 ## CI Tests
+
 You can replicate the same set of tests that the CI system does by running this command in your nix-shell
 
     run-ci-tests

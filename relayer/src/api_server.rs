@@ -10,6 +10,7 @@ use crate::txn_queue::TxnQueue;
 use async_std::sync::{Arc, RwLock};
 use async_std::task;
 use tide::StatusCode;
+use tide_tracing::TraceMiddleware;
 
 #[derive(Clone)]
 pub struct WebState {
@@ -51,6 +52,7 @@ pub(crate) fn init_web_server(
     txn_queue: Arc<RwLock<TxnQueue>>,
 ) -> Result<task::JoinHandle<Result<(), std::io::Error>>, tide::Error> {
     let mut web_server = tide::with_state(WebState { txn_queue });
+    web_server.with(TraceMiddleware::new());
     web_server.at("/healthcheck").get(healthcheck);
     web_server.at("/submit").post(submit_endpoint);
     let port = std::env::var("PORT").unwrap_or_else(|_| DEFAULT_RELAYER_PORT.to_string());

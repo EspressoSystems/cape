@@ -33,6 +33,7 @@ use tide::{
     http::{headers::HeaderValue, Method, Url},
     security::{CorsMiddleware, Origin},
 };
+use tide_tracing::TraceMiddleware;
 
 pub const DEFAULT_ETH_ADDR: EthereumAddr = EthereumAddr([2; 20]);
 pub const DEFAULT_WRAPPED_AMT: u64 = 1000;
@@ -540,6 +541,7 @@ pub fn init_server(
                 .allow_origin(Origin::from("*"))
                 .allow_credentials(true),
         )
+        .with(TraceMiddleware::new())
         .with(server::trace)
         .with(server::add_error_body::<_, CapeAPIError>);
 

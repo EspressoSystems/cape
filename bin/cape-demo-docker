@@ -87,8 +87,8 @@ geth_pid=$!
 hardhat deploy --reset
 
 # Stop the geth node
-echo "Sending HUP signal to geth: PID $geth_pid"
-kill -HUP $geth_pid
+echo "Sending TERM signal to geth: PID $geth_pid"
+kill -TERM $geth_pid
 
 # Configure contract addresses
 export CAPE_TOKEN_ADDRESS="$(cat contracts/deployments/localhost/SimpleToken.json | jq -r .address)"

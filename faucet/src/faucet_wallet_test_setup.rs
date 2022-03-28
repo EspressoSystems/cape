@@ -32,8 +32,11 @@ async fn main() -> Result<(), std::io::Error> {
         .derive_user_key_pair(&0u64.to_le_bytes())
         .pub_key();
 
-    eprintln!("Encryption key: {}", pub_key);
-    eprintln!("Address: {}", net::UserAddress(pub_key.address()));
+    eprintln!("Faucet manager encryption key: {}", pub_key);
+    eprintln!(
+        "Faucet manager address: {}",
+        net::UserAddress(pub_key.address())
+    );
 
     let enc_key_bytes: [u8; 32] = pub_key.enc_key().into();
     let address: EdOnBN254Point = pub_key.address().into();

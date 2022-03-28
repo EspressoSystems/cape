@@ -122,6 +122,7 @@ echo
 # Start the docker containers
 #
 
+# If we are *not* using local docker images, make sure we pull the latest images.
 if [ -z "${CAPE_SERVICES_IMAGE:-}" ] && [ -z "${CAPE_WALLET_IMAGE:-}" ]; then
     docker compose --env-file demo/compose.env pull
 fi

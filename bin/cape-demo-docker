@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-function rmdir() {
+function remove-directory () {
     if [ -n "$1" ] && [ -d "$1" ]; then
         echo "Removing dir $1"
-        rm -rf "$1"
+        # Diretories were mounted into docker and files may be owned by root.
+        # Mount to /mnt inside docker and remove all regular and hidden files.
+        docker run --volume "$1":/mnt -it bash -c "rm -rf /mnt/{*,.[^.],.??*}"
+        rmdir $1
     fi
 }
 
@@ -24,30 +27,29 @@ export CAPE_ADDRESS_BOOK_PORT=50000
 export CAPE_ADDRESS_BOOK_STORE_PATH=$(mktemp -d -t cape-address-book-store-XXXXXXX)
 
 export CAPE_EQS_PORT=50010
+export CAPE_EQS_STORE_PATH="$(mktemp -d -t cape-eqs-store-path-XXXXXXX)"
 
 export CAPE_RELAYER_PORT=50020
 export CAPE_RELAYER_WALLET_MNEMONIC="$TEST_MNEMONIC"
 
 export CAPE_FAUCET_PORT=50030
 export CAPE_FAUCET_WALLET_MNEMONIC="$TEST_MNEMONIC"
-export CAPE_FAUCET_MANAGER_MNEMONIC="$TEST_MNEMONIC"
+export CAPE_FAUCET_WALLET_PATH="$(mktemp -d -t cape-faucet-wallet-XXXXXXX)"
 
 export CAPE_WALLET_PORT=50040
 
-# Create a faucet wallet and export variables printed to stdout
-export CAPE_FAUCET_WALLET_PATH="$(mktemp -d -t cape-faucet-wallet-XXXXXXX)"
-export CAPE_EQS_STORE_PATH="$(mktemp -d -t cape-eqs-store-path-XXXXXXX)"
+# Create a faucet manager wallet and export variables printed to stdout
+export CAPE_FAUCET_MANAGER_MNEMONIC="$TEST_MNEMONIC"
 set -a; source <(cargo run --release --bin faucet-wallet-test-setup); set +a;
 
 # Clean up temporary directories when script exits.
-# TODO clean up files owned by root after mounting into docker.
 trap "exit" INT TERM
 trap cleanup EXIT
 cleanup(){
-    rmdir "$CAPE_FAUCET_WALLET_PATH"
-    rmdir "$CAPE_EQS_STORE_PATH"
-    rmdir "$CAPE_ADDRESS_BOOK_STORE_PATH"
-    rmdir "$GETH_DATA_DIR"
+    remove-directory "$CAPE_FAUCET_WALLET_PATH"
+    remove-directory "$CAPE_EQS_STORE_PATH"
+    remove-directory "$CAPE_ADDRESS_BOOK_STORE_PATH"
+    remove-directory "$GETH_DATA_DIR"
 }
 
 #

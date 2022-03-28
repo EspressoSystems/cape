@@ -66,8 +66,7 @@ services:
     image: ${CAPE_SERVICES_IMAGE:-ghcr.io/espressosystems/cape/services:main}
     ports:
       - $CAPE_FAUCET_PORT:$CAPE_FAUCET_PORT
-    # Faucet panics if it can't connect to EQS on startup.
-    command: sh -c "sleep 2 && /app/faucet/faucet"
+    command: /app/faucet/faucet
     volumes:
       - $CAPE_FAUCET_WALLET_PATH:/mnt/faucet
     environment:

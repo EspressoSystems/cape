@@ -751,20 +751,12 @@ mod tests {
         let server = TestServer::new().await;
 
         // Set parameters for newasset.
-        let erc20_code = Erc20Code(EthereumAddr([1u8; 20]));
-        let sponsor_addr = EthereumAddr([2u8; 20]);
         let viewing_threshold = 10;
         let view_amount = true;
         let view_address = false;
         let description = base64::encode_config(&[3u8; 32], base64::URL_SAFE_NO_PAD);
 
         // Should fail if a wallet is not already open.
-        server
-            .requires_wallet_post::<AssetInfo>(&format!(
-                "newasset/erc20/{}/sponsor/{}/view_amount/{}/view_address/{}/viewing_threshold/{}",
-                erc20_code, sponsor_addr, view_amount, view_address, viewing_threshold
-            ))
-            .await;
         server
             .requires_wallet_post::<AssetInfo>(&format!(
                 "newasset/description/{}/view_amount/{}/view_address/{}/viewing_threshold/{}",
@@ -790,132 +782,60 @@ mod tests {
         let viewing_key = &info.viewing_keys[0];
         let freezing_key = &info.freezing_keys[0];
 
-        // newasset should return a sponsored asset with the correct policy if an ERC20 code is given.
-        let sponsored_asset = server
-            .post::<AssetInfo>(&format!(
-                "newasset/erc20/{}/sponsor/{}/freezing_key/{}/viewing_key/{}/view_amount/{}/view_address/{}/viewing_threshold/{}",
-                erc20_code, sponsor_addr, freezing_key, viewing_key, view_amount, view_address, viewing_threshold
-            ))
-            .await
-            .unwrap();
-        assert_eq!(sponsored_asset.wrapped_erc20, Some(erc20_code.clone()));
-        assert_eq!(
-            &sponsored_asset.definition.viewing_key.unwrap(),
-            viewing_key
-        );
-        assert_eq!(
-            &sponsored_asset.definition.freezing_key.unwrap(),
-            freezing_key
-        );
-        assert_eq!(
-            sponsored_asset.definition.viewing_threshold,
-            viewing_threshold
-        );
-
         // newasset should return a defined asset with the correct policy if no ERC20 code is given.
-        let defined_asset = server
+        let asset = server
             .post::<AssetInfo>(&format!(
                 "newasset/description/{}/freezing_key/{}/viewing_key/{}/view_amount/{}/view_address/{}/viewing_threshold/{}",
                 description, freezing_key, viewing_key, view_amount, view_address, viewing_threshold
             ))
             .await
             .unwrap();
-        assert_eq!(defined_asset.wrapped_erc20, None);
-        assert_eq!(&defined_asset.definition.viewing_key.unwrap(), viewing_key);
-        assert_eq!(
-            &defined_asset.definition.freezing_key.unwrap(),
-            freezing_key
-        );
-        assert_eq!(
-            defined_asset.definition.viewing_threshold,
-            viewing_threshold
-        );
-        let defined_asset = server
+        assert_eq!(asset.wrapped_erc20, None);
+        assert_eq!(&asset.definition.viewing_key.unwrap(), viewing_key);
+        assert_eq!(&asset.definition.freezing_key.unwrap(), freezing_key);
+        assert_eq!(asset.definition.viewing_threshold, viewing_threshold);
+        let asset = server
             .post::<AssetInfo>(&format!(
             "newasset/freezing_key/{}/viewing_key/{}/view_amount/{}/view_address/{}/viewing_threshold/{}",
             freezing_key, viewing_key, view_amount, view_address, viewing_threshold
         ))
             .await
             .unwrap();
-        assert_eq!(&defined_asset.definition.viewing_key.unwrap(), viewing_key);
-        assert_eq!(
-            &defined_asset.definition.freezing_key.unwrap(),
-            freezing_key
-        );
-        assert_eq!(
-            defined_asset.definition.viewing_threshold,
-            viewing_threshold
-        );
+        assert_eq!(&asset.definition.viewing_key.unwrap(), viewing_key);
+        assert_eq!(&asset.definition.freezing_key.unwrap(), freezing_key);
+        assert_eq!(asset.definition.viewing_threshold, viewing_threshold);
 
         // newasset should return an asset with the default freezer public key if it's not given.
-        let erc20_code = Erc20Code(EthereumAddr([2; 20]));
-        let sponsored_asset = server
-                .post::<AssetInfo>(&format!(
-                    "newasset/erc20/{}/sponsor/{}/viewing_key/{}/view_amount/{}/view_address/{}/viewing_threshold/{}",
-                    erc20_code, sponsor_addr, viewing_key, view_amount, view_address, viewing_threshold
-                ))
-                .await
-                .unwrap();
-        assert!(sponsored_asset.definition.freezing_key.is_none());
-        let sponsored_asset = server
+        let asset = server
             .post::<AssetInfo>(&format!(
                 "newasset/description/{}/viewing_key/{}/view_amount/{}/view_address/{}/viewing_threshold/{}",
                 description, viewing_key, view_amount, view_address, viewing_threshold
             ))
             .await
             .unwrap();
-        assert!(sponsored_asset.definition.freezing_key.is_none());
+        assert!(asset.definition.freezing_key.is_none());
 
         // newasset should return an asset with the default auditor public key and no reveal threshold if an
         // auditor public key isn't given.
-        let erc20_code = Erc20Code(EthereumAddr([3; 20]));
-        let sponsored_asset = server
-            .post::<AssetInfo>(&format!(
-                "newasset/erc20/{}/sponsor/{}/freezing_key/{}",
-                erc20_code, sponsor_addr, freezing_key
-            ))
-            .await
-            .unwrap();
-        assert!(sponsored_asset.definition.viewing_key.is_none());
-        assert_eq!(sponsored_asset.definition.viewing_threshold, 0);
-        let sponsored_asset = server
+        let asset = server
             .post::<AssetInfo>(&format!("newasset/description/{}", description))
             .await
             .unwrap();
-        assert!(sponsored_asset.definition.viewing_key.is_none());
-        assert_eq!(sponsored_asset.definition.viewing_threshold, 0);
+        assert!(asset.definition.viewing_key.is_none());
+        assert_eq!(asset.definition.viewing_threshold, 0);
 
         // newasset should return an asset with no reveal threshold if it's not given.
-        let erc20_code = Erc20Code(EthereumAddr([4; 20]));
-        let sponsored_asset = server
-                .post::<AssetInfo>(&format!(
-                    "newasset/erc20/{}/sponsor/{}/freezing_key/{}/viewing_key/{}/view_amount/{}/view_address/{}",
-                    erc20_code, sponsor_addr, freezing_key, viewing_key, view_amount, view_address
-                ))
-                .await
-                .unwrap();
-        assert_eq!(sponsored_asset.definition.viewing_threshold, 0);
-        let defined_asset = server
+        let asset = server
             .post::<AssetInfo>(&format!(
                 "newasset/description/{}/freezing_key/{}/viewing_key/{}/view_amount/{}/view_address/{}",
                 description, freezing_key, viewing_key, view_amount, view_address
             ))
             .await
             .unwrap();
-        assert_eq!(defined_asset.definition.viewing_threshold, 0);
+        assert_eq!(asset.definition.viewing_threshold, 0);
 
         // newasset should return an asset with a given symbol.
-        let erc20_code = Erc20Code(EthereumAddr([5; 20]));
-        let sponsored_asset = server
-                .post::<AssetInfo>(&format!(
-                    "newasset/symbol/{}/erc20/{}/sponsor/{}/freezing_key/{}/viewing_key/{}/view_amount/{}/view_address/{}",
-                    base64::encode_config("my-wrapped-asset", base64::URL_SAFE_NO_PAD), erc20_code,
-                    sponsor_addr, freezing_key, viewing_key, view_amount, view_address
-                ))
-                .await
-                .unwrap();
-        assert_eq!(sponsored_asset.symbol, Some("my-wrapped-asset".into()));
-        let defined_asset = server
+        let asset = server
             .post::<AssetInfo>(&format!(
                 "newasset/symbol/{}/description/{}/freezing_key/{}/viewing_key/{}/view_amount/{}/view_address/{}",
                base64::encode_config("my-defined-asset", base64::URL_SAFE_NO_PAD), description,
@@ -923,7 +843,7 @@ mod tests {
             ))
             .await
             .unwrap();
-        assert_eq!(defined_asset.symbol, Some("my-defined-asset".into()));
+        assert_eq!(asset.symbol, Some("my-defined-asset".into()));
     }
 
     #[async_std::test]
@@ -941,7 +861,7 @@ mod tests {
         // Should fail if a wallet is not already open.
         server
             .requires_wallet_post::<sol::AssetDefinition>(&format!(
-                "sponsor/erc20/{}/sponsor/{}/view_amount/{}/view_address/{}/viewing_threshold/{}",
+                "buildsponsor/erc20/{}/sponsor/{}/view_amount/{}/view_address/{}/viewing_threshold/{}",
                 erc20_code, sponsor_addr, view_amount, view_address, viewing_threshold
             ))
             .await;
@@ -967,7 +887,7 @@ mod tests {
         // Test /sponsor
         let asset = server
             .post::<sol::AssetDefinition>(&format!(
-                "sponsor/erc20/{:#x}/sponsor/{:#x}/freezing_key/{}/viewing_key/{}/view_amount/{}/view_address/{}/viewing_threshold/{}",
+                "buildsponsor/erc20/{:#x}/sponsor/{:#x}/freezing_key/{}/viewing_key/{}/view_amount/{}/view_address/{}/viewing_threshold/{}",
                 erc20_code, sponsor_addr, freezing_key, viewing_key, view_amount, view_address, viewing_threshold
             ))
             .await
@@ -993,13 +913,32 @@ mod tests {
         // `wrapped_erc20` is None because the asset isn't sponsored yet. We have only built the
         // body of the sponsor transaction.
         assert_eq!(info.wrapped_erc20, None);
-        assert_eq!(sol::AssetDefinition::from(info.definition), asset);
+        assert_eq!(sol::AssetDefinition::from(info.definition.clone()), asset);
+        // After submitting the transaction, `wrapped_erc20` is populated.
+        let mut submitted_info: AssetInfo = server
+            .client
+            .post(&format!(
+                "submitsponsor/erc20/{:#x}/sponsor/{:#x}",
+                erc20_code, sponsor_addr
+            ))
+            .body_json(&asset)
+            .unwrap()
+            .send()
+            .await
+            .unwrap()
+            .body_json()
+            .await
+            .unwrap();
+        assert_eq!(submitted_info.wrapped_erc20, Some(erc20_code.into()));
+        // Other than that, the new info is the same as the old one.
+        submitted_info.wrapped_erc20 = None;
+        assert_eq!(submitted_info, info);
 
         // sponsor should return an asset with the default freezer public key if it's not given.
-        let erc20_code = Address::from([2; 20]);
+        let erc20_code = Address::from([2u8; 20]);
         let asset = server
                 .post::<sol::AssetDefinition>(&format!(
-                    "sponsor/erc20/{:#x}/sponsor/{:#x}/viewing_key/{}/view_amount/{}/view_address/{}/viewing_threshold/{}",
+                    "buildsponsor/erc20/{:#x}/sponsor/{:#x}/viewing_key/{}/view_amount/{}/view_address/{}/viewing_threshold/{}",
                     erc20_code, sponsor_addr, viewing_key, view_amount, view_address, viewing_threshold
                 ))
                 .await
@@ -1008,10 +947,10 @@ mod tests {
 
         // sponsor should return an asset with the default auditor public key and no reveal
         // threshold if an auditor public key isn't given.
-        let erc20_code = Address::from([3; 20]);
+        let erc20_code = Address::from([3u8; 20]);
         let asset = server
             .post::<sol::AssetDefinition>(&format!(
-                "sponsor/erc20/{:#x}/sponsor/{:#x}/freezing_key/{}",
+                "buildsponsor/erc20/{:#x}/sponsor/{:#x}/freezing_key/{}",
                 erc20_code, sponsor_addr, freezing_key
             ))
             .await
@@ -1020,10 +959,10 @@ mod tests {
         assert!(!AssetPolicy::from(asset.policy).is_auditor_pub_key_set());
 
         // sponsor should return an asset with no reveal threshold if it's not given.
-        let erc20_code = Address::from([4; 20]);
+        let erc20_code = Address::from([4u8; 20]);
         let asset = server
                 .post::<sol::AssetDefinition>(&format!(
-                    "sponsor/erc20/{:#x}/sponsor/{:#x}/freezing_key/{}/viewing_key/{}/view_amount/{}/view_address/{}",
+                    "buildsponsor/erc20/{:#x}/sponsor/{:#x}/freezing_key/{}/viewing_key/{}/view_amount/{}/view_address/{}",
                     erc20_code, sponsor_addr, freezing_key, viewing_key, view_amount, view_address
                 ))
                 .await
@@ -1031,10 +970,10 @@ mod tests {
         assert_eq!(asset.policy.reveal_threshold, 0);
 
         // sponsor should create an asset with a given symbol.
-        let erc20_code = Address::from([5; 20]);
+        let erc20_code = Address::from([5u8; 20]);
         let asset = server
                 .post::<sol::AssetDefinition>(&format!(
-                    "sponsor/symbol/{}/erc20/{:#x}/sponsor/{:#x}/freezing_key/{}/viewing_key/{}/view_amount/{}/view_address/{}",
+                    "buildsponsor/symbol/{}/erc20/{:#x}/sponsor/{:#x}/freezing_key/{}/viewing_key/{}/view_amount/{}/view_address/{}",
                     base64::encode_config("my-wrapped-asset", base64::URL_SAFE_NO_PAD), erc20_code,
                     sponsor_addr, freezing_key, viewing_key, view_amount, view_address
                 ))

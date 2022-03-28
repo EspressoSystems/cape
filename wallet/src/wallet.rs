@@ -104,6 +104,17 @@ pub trait CapeWalletExt<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> {
         cap_asset_policy: AssetPolicy,
     ) -> Result<AssetDefinition, CapeWalletError>;
 
+    /// Submit a sponsor transaction to the CAPE contract.
+    ///
+    /// `asset` should be the asset definition returned by `build_sponsor`. `erc20_code` and
+    /// `sponsor_addr` must be the same that were used for `build_sponsor`.
+    async fn submit_sponsor(
+        &mut self,
+        erc20_code: Erc20Code,
+        sponsor_addr: EthereumAddr,
+        asset: &AssetDefinition,
+    ) -> Result<(), CapeWalletError>;
+
     /// Wrap some ERC-20 tokens into a CAPE asset.
     ///
     /// This function will withdraw `amount` tokens from the account with address `src_addr` of the
@@ -189,11 +200,7 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
                 cap_asset_policy,
             )
             .await?;
-
-        self.lock()
-            .await
-            .backend_mut()
-            .register_erc20_asset(&asset, erc20_code, sponsor_addr)
+        self.submit_sponsor(erc20_code, sponsor_addr, &asset)
             .await?;
 
         Ok(asset)
@@ -216,6 +223,26 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
             .await?;
 
         Ok(asset)
+    }
+
+    async fn submit_sponsor(
+        &mut self,
+        erc20_code: Erc20Code,
+        sponsor_addr: EthereumAddr,
+        asset: &AssetDefinition,
+    ) -> Result<(), CapeWalletError> {
+        // Check that the asset code is properly constructed.
+        asset
+            .code
+            .verify_foreign(&erc20_asset_description(&erc20_code, &sponsor_addr))
+            .map_err(|source| CapeWalletError::CryptoError { source })?;
+
+        self.lock()
+            .await
+            .backend_mut()
+            .register_erc20_asset(asset, erc20_code, sponsor_addr)
+            .await?;
+        Ok(())
     }
 
     async fn wrap(

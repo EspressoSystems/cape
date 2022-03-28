@@ -1,6 +1,7 @@
 import "@nomiclabs/hardhat-ethers";
 import "@nomiclabs/hardhat-waffle";
 import "@typechain/hardhat";
+import "@nomiclabs/hardhat-etherscan";
 import "hardhat-deploy";
 import "hardhat-gas-reporter";
 import "hardhat-contract-sizer";
@@ -46,6 +47,9 @@ subtask(TASK_COMPILE_SOLIDITY_GET_SOLC_BUILD, async (args: any, _hre, runSuper) 
 
 const config: HardhatUserConfig = {
   defaultNetwork: "localhost",
+  etherscan: {
+    apiKey: process.env.ETHERSCAN_API_KEY,
+  },
   namedAccounts: {
     deployer: 0,
   },

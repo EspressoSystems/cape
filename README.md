@@ -459,11 +459,11 @@ Run
 
 To show gas usage of sending various notes to the contract.
 
-## CI
+## CI Tests
 
-To locally spin up a docker container like the one used in the CI
+You can replicate the same set of tests that the CI system does by running this command in your nix-shell
 
-    TODO: how to run CI locally?
+    run-ci-tests
 
 ### Nightly CI builds
 

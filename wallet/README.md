@@ -12,7 +12,7 @@ There are two ways to utilize a CAPE wallet: the CLI and the web API.
 Before starting the CLI, set the following environment variables.
 
 - Smart contract
-  Set the address of the CAPE smart contract using the environment variable `CAPE_CONTRACT_ADDRESS`. E.g.,
+  - Set the address of the smart contract using the environment variable `CAPE_CONTRACT_ADDRESS`. E.g.,
 
 ```
 export CAPE_CONTRACT_ADDRESS=0x60417B5Ad8629778A46A2cAaA924D7498618622B
@@ -22,6 +22,14 @@ export CAPE_CONTRACT_ADDRESS=0x60417B5Ad8629778A46A2cAaA924D7498618622B
 
   - The default URL for the EQS is `http://localhost:50087`. To override it, use the environment variable `CAPE_EQS_URL`.
   - After the URL is set, run the EQS.
+
+- Relayer
+
+  - The default URL for the relayer is `http://localhost:50077`. To override it, use the environment variable `CAPE_RELAYER_URL`.
+
+- Address Book
+
+  - The default URL for the Address Book is `http://localhost:50078`. To override it, use the environment variable `CAPE_ADDRESS_BOOK_URL`.
 
 ### Starting the CLI
 
@@ -59,10 +67,10 @@ Once you have an open wallet, you will get the REPL prompt, `>`. Now you can typ
   - `sponsor`: sponsor an asset
   - `wrap`: wrap an asset
     - Note: The `asset_def` argument must be an already-sponsored asset. To sponsor an asset, use the `sponsor` command.
-  - `burn`: burn an asset
+  - `burn`: burn some of a wrapped asset and withdraw the funds to an ERC-20 account
   - `transfer`: transfer some owned assets to another user
   - `transfer_from`: transfer some assets from an owned address to another user
-    - Note: Unlike the `transfer` command which allocates all addresses owned by this wallet, `transfer_from` uses only the specified address, so make sure the address has sufficient balance.
+    - Note: Unlike the `transfer` command which allocates from all addresses owned by this wallet, `transfer_from` uses only the specified address, so make sure the address has sufficient balance.
   - `create_asset`: create a new asset
   - `mint`: mint an asset
     - Note: The `asset` argument must be an already-created asset. To create an asset, use the `create` command.

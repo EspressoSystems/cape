@@ -17,6 +17,7 @@ use cape_wallet::{
     ui::*,
     wallet::{CapeWalletError, CapeWalletExt},
 };
+use ethers::prelude::Address;
 use futures::{prelude::*, stream::iter};
 use jf_cap::{
     keys::{AuditorPubKey, FreezerPubKey, UserKeyPair, UserPubKey},
@@ -329,6 +330,7 @@ pub enum ApiRouteKey {
     recoverkey,
     resetpassword,
     send,
+    sponsor,
     transaction,
     transactionhistory,
     unfreeze,
@@ -812,6 +814,57 @@ async fn newasset(
     Ok(asset)
 }
 
+async fn sponsor(
+    bindings: &HashMap<String, RouteBinding>,
+    wallet: &mut Option<Wallet>,
+) -> Result<sol::AssetDefinition, tide::Error> {
+    let wallet = require_wallet(wallet)?;
+    let symbol = match bindings.get(":symbol") {
+        Some(param) => param.value.as_string()?,
+        None => String::new(),
+    };
+
+    // Construct the asset policy.
+    let mut policy = AssetPolicy::default();
+    if let Some(freezing_key) = bindings.get(":freezing_key") {
+        policy = policy.set_freezer_pub_key(freezing_key.value.to::<FreezerPubKey>()?)
+    };
+    if let Some(viewing_key) = bindings.get(":viewing_key") {
+        // Always reveal blinding factor if a viewing key is given.
+        policy = policy
+            .set_auditor_pub_key(viewing_key.value.to::<AuditorPubKey>()?)
+            .reveal_blinding_factor()?;
+
+        // Only if a viewing key is given, can amount and user address be revealed and viewing
+        // threshold be specified.
+        if let Some(view_flag) = bindings.get(":view_amount") {
+            if view_flag.value.as_boolean()? {
+                policy = policy.reveal_amount()?;
+            }
+        }
+        if let Some(view_flag) = bindings.get(":view_address") {
+            if view_flag.value.as_boolean()? {
+                policy = policy.reveal_user_address()?;
+            }
+        }
+        if let Some(threshold) = bindings.get(":viewing_threshold") {
+            policy = policy.set_reveal_threshold(threshold.value.as_u64()?);
+        };
+    };
+
+    let erc20_code: Address = bindings[":erc20"].value.as_string()?.parse()?;
+    let sponsor_address: Address = bindings
+        .get(":sponsor")
+        .unwrap()
+        .value
+        .as_string()?
+        .parse()?;
+    let asset = wallet
+        .build_sponsor(symbol, erc20_code.into(), sponsor_address.into(), policy)
+        .await?;
+    Ok(asset.into())
+}
+
 async fn wrap(
     bindings: &HashMap<String, RouteBinding>,
     wallet: &mut Option<Wallet>,
@@ -1186,6 +1239,7 @@ pub async fn dispatch_url(
             resetpassword(options, bindings, rng, faucet_key_pair, wallet).await?,
         ),
         ApiRouteKey::send => response(&req, send(bindings, wallet).await?),
+        ApiRouteKey::sponsor => response(&req, sponsor(bindings, wallet).await?),
         ApiRouteKey::transaction => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::transactionhistory => {
             response(&req, transactionhistory(bindings, wallet).await?)

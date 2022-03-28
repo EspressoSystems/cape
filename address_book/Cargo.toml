@@ -18,7 +18,7 @@ bincode = "1.3.3"
 dirs = "4.0.0"
 futures = "0.3.21"
 hex = "0.4.3"
-itertools = "0.10.1"
+itertools = "0.10.3"
 jf-cap = { features = ["std"], git = "https://github.com/EspressoSystems/cap.git" }
 net = { git = "https://github.com/EspressoSystems/net.git" }
 once_cell = "1"

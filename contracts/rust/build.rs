@@ -7,10 +7,14 @@
 
 use ethers_contract_abigen::{Abigen, MultiAbigen};
 use glob::glob;
-use std::{option_env, process::Command};
+use itertools::Itertools;
+use std::{option_env, path::PathBuf, process::Command};
 
-fn find_paths(dir: &str, ext: &str) -> glob::Paths {
-    glob(&format!("{}/**/*{}", dir, ext)).unwrap()
+fn find_paths(dir: &str, ext: &str) -> Vec<PathBuf> {
+    glob(&format!("{}/**/*{}", dir, ext))
+        .unwrap()
+        .map(|entry| entry.unwrap())
+        .collect()
 }
 
 fn main() {
@@ -21,18 +25,22 @@ fn main() {
         .output()
         .expect("failed to compile contracts");
 
+    // Watch all solidity files, artifact directories and their parent
+    // directories. Artifacts directories also end with ".sol".
     let paths = if option_env!("CAPE_DONT_WATCH_SOL_FILES").is_none() {
         find_paths(env!("CONTRACTS_DIR"), ".sol")
-            .into_iter()
-            .collect()
     } else {
         vec![]
-    };
+    }
+    .into_iter()
+    .flat_map(|path| [path.clone(), path.parent().unwrap().to_path_buf()])
+    .unique()
+    .sorted();
 
     // Rerun this script (and recompile crate) if any abi files change.
-    for entry in paths {
+    for path in paths {
         // run `cargo build -vv` to inspect output
-        println!("cargo:rerun-if-changed={}", entry.unwrap().display());
+        println!("cargo:rerun-if-changed={}", path.display());
     }
     println!("cargo:rerun-if-env-changed=CAPE_DONT_WATCH_SOL_FILES");
 
@@ -42,11 +50,11 @@ fn main() {
         &format!("{}/artifacts/contracts", env!("CONTRACTS_DIR")),
         ".json",
     )
+    .into_iter()
     .chain(find_paths(
         &format!("{}/artifacts/@openzeppelin", env!("CONTRACTS_DIR")),
         "ERC20.json",
     ))
-    .map(|path| path.unwrap())
     .filter(|path| !path.to_str().unwrap().ends_with(".dbg.json"))
     .collect();
 

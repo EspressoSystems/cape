@@ -36,6 +36,7 @@ export CAPE_ADDRESS_BOOK_STORE_PATH=$(mktemp -d -t cape-address-book-store-XXXXX
 export CAPE_ADDRESS_BOOK_URL="http://localhost:$CAPE_ADDRESS_BOOK_PORT"
 
 export CAPE_EQS_PORT=50010
+export CAPE_EQS_STORE_PATH="$(mktemp -d -t caep-eqs-store-path-XXXXXXX)"
 export CAPE_EQS_URL="http://localhost:$CAPE_EQS_PORT"
 
 export CAPE_RELAYER_PORT=50020
@@ -45,12 +46,12 @@ export CAPE_RELAYER_WALLET_MNEMONIC="$TEST_MNEMONIC"
 export CAPE_FAUCET_PORT=50030
 export CAPE_FAUCET_URL="http://localhost:$CAPE_FAUCET_PORT"
 export CAPE_FAUCET_WALLET_MNEMONIC="$TEST_MNEMONIC"
+export CAPE_FAUCET_WALLET_PATH="$(mktemp -d -t cape-faucet-wallet-XXXXXXX)"
 
 export CAPE_WALLET_PORT=50040
 
 # Create a faucet wallet and export variables printed to stdout
-export CAPE_FAUCET_WALLET_PATH="$(mktemp -d -t cape-faucet-wallet-XXXXXXX)"
-export CAPE_EQS_STORE_PATH="$(mktemp -d -t caep-eqs-store-path-XXXXXXX)"
+export CAPE_FAUCET_MANAGER_MNEMONIC="$TEST_MNEMONIC"
 set -a; source <(target/release/faucet-wallet-test-setup); set +a;
 
 # Start a go-ethereum/geth node

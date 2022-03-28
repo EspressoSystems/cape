@@ -61,6 +61,7 @@ describes the project at a high level.
     - [Nightly CI builds](#nightly-ci-builds)
 - [Deployment](#deployment)
   - [Linking to deployed contracts](#linking-to-deployed-contracts)
+  - [Etherscan verification](#etherscan-verification)
   - [Testnets](#testnets)
     - [Rinkeby](#rinkeby)
     - [Goerli](#goerli)
@@ -497,6 +498,16 @@ In order to avoid re-deploying the library contracts for each test you can pass
 the address obtained by running `hardhat deploy` as an env var
 
     env RESCUE_LIB_ADDRESS=0x5FbDB2315678afecb367f032d93F642f64180aa3 cargo test --release
+
+## Etherscan verification
+
+After running `hardhat deploy`, run the [etherscan-verify](./bin/etherscan-verify) script. For example
+
+    hardhat deploy --network goerli
+    etherscan-verify goerli
+
+This requires the `ETHERSCAN_API_KEY` env var to be set. Keys can be found at
+https://etherscan.io/myapikey.
 
 ## Testnets
 

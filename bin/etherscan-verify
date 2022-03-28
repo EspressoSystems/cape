@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+#
+# Verify contracts on etherscan.
+#
+# This requires the `ETHERSCAN_API_KEY` env var to be set. Keys can be found at
+# https://etherscan.io/myapikey.
+#
+# Usage:
+#
+#       hardhat deploy --network NETWORK
+#       etherscan-verify NETWORK
+#
+# For example
+#
+#       hardhat deploy --network goerli
+#       etherscan-verify goerli
+#
+set -euxo pipefail
+
+NETWORK=$1
+
+VERIFYING_KEYS_ADDRESS=$(cat contracts/deployments/$1/VerifyingKeys.json | jq -r .address)
+RESCUE_LIB_ADDRESS=$(cat contracts/deployments/$1/RescueLib.json | jq -r .address)
+
+CAPE_ADDRESS=$(cat contracts/deployments/$1/CAPE.json | jq -r .address)
+CONSTRUCTOR_ARGS="$(cat contracts/deployments/$1/CAPE.json | jq -r '.args| join(" ")')"
+
+# Has to be a file with .js extension.
+LIBRARIES="$(mktemp -t "cape-libraries-XXXXXXXX.js")"
+cat <<EOF > $LIBRARIES
+module.exports = $(cat contracts/deployments/$NETWORK/CAPE.json | jq -r '.libraries')
+EOF
+
+hardhat verify --network $NETWORK $RESCUE_LIB_ADDRESS
+hardhat verify --network $NETWORK $VERIFYING_KEYS_ADDRESS
+hardhat verify --network $NETWORK --libraries $LIBRARIES $CAPE_ADDRESS $CONSTRUCTOR_ARGS

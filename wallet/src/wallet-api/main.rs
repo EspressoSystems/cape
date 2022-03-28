@@ -78,8 +78,9 @@ mod tests {
         testing::{port, retry},
         ui::*,
     };
+    use ethers::prelude::Address;
     use jf_cap::{
-        keys::{AuditorKeyPair, FreezerKeyPair, UserKeyPair},
+        keys::{AuditorKeyPair, AuditorPubKey, FreezerKeyPair, FreezerPubKey, UserKeyPair},
         structs::{AssetCode, AssetDefinition as JfAssetDefinition, AssetPolicy},
     };
     use net::{client, UserAddress};
@@ -923,6 +924,131 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(defined_asset.symbol, Some("my-defined-asset".into()));
+    }
+
+    #[async_std::test]
+    #[traced_test]
+    async fn test_sponsor() {
+        let server = TestServer::new().await;
+
+        // Set parameters for /sponsor.
+        let erc20_code = Address::from([1u8; 20]);
+        let sponsor_addr = Address::from([2u8; 20]);
+        let viewing_threshold = 10;
+        let view_amount = true;
+        let view_address = false;
+
+        // Should fail if a wallet is not already open.
+        server
+            .requires_wallet_post::<sol::AssetDefinition>(&format!(
+                "sponsor/erc20/{}/sponsor/{}/view_amount/{}/view_address/{}/viewing_threshold/{}",
+                erc20_code, sponsor_addr, view_amount, view_address, viewing_threshold
+            ))
+            .await;
+
+        // Now open a wallet.
+        server
+            .post::<()>(&format!(
+                "newwallet/{}/{}/path/{}",
+                server.get::<String>("getmnemonic").await.unwrap(),
+                base64("my-password".as_bytes()),
+                server.path()
+            ))
+            .await
+            .unwrap();
+
+        // Create keys.
+        server.post::<PubKey>("newkey/viewing").await.unwrap();
+        server.post::<PubKey>("newkey/freezing").await.unwrap();
+        let info = server.get::<WalletSummary>("getinfo").await.unwrap();
+        let viewing_key = &info.viewing_keys[0];
+        let freezing_key = &info.freezing_keys[0];
+
+        // Test /sponsor
+        let asset = server
+            .post::<sol::AssetDefinition>(&format!(
+                "sponsor/erc20/{:#x}/sponsor/{:#x}/freezing_key/{}/viewing_key/{}/view_amount/{}/view_address/{}/viewing_threshold/{}",
+                erc20_code, sponsor_addr, freezing_key, viewing_key, view_amount, view_address, viewing_threshold
+            ))
+            .await
+            .unwrap();
+        assert_eq!(
+            &AuditorPubKey::from(asset.policy.auditor_pk.clone()),
+            viewing_key
+        );
+        assert_eq!(
+            &FreezerPubKey::from(asset.policy.freezer_pk.clone()),
+            freezing_key
+        );
+        assert_eq!(asset.policy.reveal_threshold, viewing_threshold);
+        // Should add the asset to the library.
+        let info = server
+            .get::<WalletSummary>("getinfo")
+            .await
+            .unwrap()
+            .assets
+            .into_iter()
+            .find(|info| info.definition.code == asset.code.into())
+            .unwrap();
+        // `wrapped_erc20` is None because the asset isn't sponsored yet. We have only built the
+        // body of the sponsor transaction.
+        assert_eq!(info.wrapped_erc20, None);
+        assert_eq!(sol::AssetDefinition::from(info.definition), asset);
+
+        // sponsor should return an asset with the default freezer public key if it's not given.
+        let erc20_code = Address::from([2; 20]);
+        let asset = server
+                .post::<sol::AssetDefinition>(&format!(
+                    "sponsor/erc20/{:#x}/sponsor/{:#x}/viewing_key/{}/view_amount/{}/view_address/{}/viewing_threshold/{}",
+                    erc20_code, sponsor_addr, viewing_key, view_amount, view_address, viewing_threshold
+                ))
+                .await
+                .unwrap();
+        assert!(!AssetPolicy::from(asset.policy).is_freezer_pub_key_set());
+
+        // sponsor should return an asset with the default auditor public key and no reveal
+        // threshold if an auditor public key isn't given.
+        let erc20_code = Address::from([3; 20]);
+        let asset = server
+            .post::<sol::AssetDefinition>(&format!(
+                "sponsor/erc20/{:#x}/sponsor/{:#x}/freezing_key/{}",
+                erc20_code, sponsor_addr, freezing_key
+            ))
+            .await
+            .unwrap();
+        assert_eq!(asset.policy.reveal_threshold, 0);
+        assert!(!AssetPolicy::from(asset.policy).is_auditor_pub_key_set());
+
+        // sponsor should return an asset with no reveal threshold if it's not given.
+        let erc20_code = Address::from([4; 20]);
+        let asset = server
+                .post::<sol::AssetDefinition>(&format!(
+                    "sponsor/erc20/{:#x}/sponsor/{:#x}/freezing_key/{}/viewing_key/{}/view_amount/{}/view_address/{}",
+                    erc20_code, sponsor_addr, freezing_key, viewing_key, view_amount, view_address
+                ))
+                .await
+                .unwrap();
+        assert_eq!(asset.policy.reveal_threshold, 0);
+
+        // sponsor should create an asset with a given symbol.
+        let erc20_code = Address::from([5; 20]);
+        let asset = server
+                .post::<sol::AssetDefinition>(&format!(
+                    "sponsor/symbol/{}/erc20/{:#x}/sponsor/{:#x}/freezing_key/{}/viewing_key/{}/view_amount/{}/view_address/{}",
+                    base64::encode_config("my-wrapped-asset", base64::URL_SAFE_NO_PAD), erc20_code,
+                    sponsor_addr, freezing_key, viewing_key, view_amount, view_address
+                ))
+                .await
+                .unwrap();
+        let info = server
+            .get::<WalletSummary>("getinfo")
+            .await
+            .unwrap()
+            .assets
+            .into_iter()
+            .find(|info| info.definition.code == asset.code.into())
+            .unwrap();
+        assert_eq!(info.symbol, Some("my-wrapped-asset".into()));
     }
 
     #[async_std::test]

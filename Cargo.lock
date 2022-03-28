@@ -1161,6 +1161,7 @@ dependencies = [
  "commit",
  "eqs",
  "escargot",
+ "espresso-macros 0.1.0 (git+https://github.com/EspressoSystems/espresso-macros.git)",
  "ethers 0.6.0 (git+https://github.com/gakonst/ethers-rs?branch=master)",
  "futures",
  "futures-util",

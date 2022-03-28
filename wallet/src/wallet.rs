@@ -90,6 +90,22 @@ pub trait CapeWalletExt<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> {
         cap_asset_policy: AssetPolicy,
     ) -> Result<AssetDefinition, CapeWalletError>;
 
+    ///
+    async fn build_wrap(
+        &mut self,
+        cap_asset: AssetDefinition,
+        dst_addr: UserAddress,
+        amount: u64,
+    ) -> Result<RecordOpening, CapeWalletError>;
+
+    ///
+    async fn submit_wrap(
+        &mut self,
+        src_addr: EthereumAddr,
+        cap_asset: AssetDefinition,
+        ro: RecordOpening,
+    ) -> Result<(), CapeWalletError>;
+
     /// Wrap some ERC-20 tokens into a CAPE asset.
     ///
     /// This function will withdraw `amount` tokens from the account with address `src_addr` of the
@@ -187,13 +203,31 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
         Ok(asset)
     }
 
-    async fn record_to_wrap(
+    async fn build_wrap(
         &mut self,
-        src_addr: EthereumAddr,
         cap_asset: AssetDefinition,
         dst_addr: UserAddress,
         amount: u64,
-    ) -> RecordOpening {
+    ) -> Result<RecordOpening, CapeWalletError> {
+        let mut state = self.lock().await;
+
+        let pub_key = state.backend().get_public_key(&dst_addr).await?;
+
+        Ok(RecordOpening::new(
+            state.rng(),
+            amount,
+            cap_asset,
+            pub_key,
+            FreezeFlag::Unfrozen,
+        ))
+    }
+
+    async fn submit_wrap(
+        &mut self,
+        src_addr: EthereumAddr,
+        cap_asset: AssetDefinition,
+        ro: RecordOpening,
+    ) -> Result<(), CapeWalletError> {
         let mut state = self.lock().await;
 
         let erc20_code = match state.backend().get_wrapped_erc20_code(&cap_asset).await? {
@@ -205,16 +239,12 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
             }
         };
 
-        let pub_key = state.backend().get_public_key(&dst_addr).await?;
-
-        RecordOpening::new(
-            state.rng(),
-            amount,
-            cap_asset,
-            pub_key,
-            FreezeFlag::Unfrozen,
-        )
+        state
+            .backend_mut()
+            .wrap_erc20(erc20_code, src_addr, ro)
+            .await
     }
+
     async fn wrap(
         &mut self,
         src_addr: EthereumAddr,
@@ -222,12 +252,9 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
         dst_addr: UserAddress,
         amount: u64,
     ) -> Result<(), CapeWalletError> {
-        let ro = record_to_wrap(&mut self, src_addr, cap_asset, dst_addr, amount)?;
+        let ro = self.build_wrap(cap_asset.clone(), dst_addr, amount).await?;
 
-        state
-            .backend_mut()
-            .wrap_erc20(erc20_code, src_addr, ro)
-            .await
+        self.submit_wrap(src_addr, cap_asset, ro).await
     }
 
     async fn burn(

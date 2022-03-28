@@ -12,6 +12,7 @@ use async_std::fs::{read_dir, File};
 use cap_rust_sandbox::{
     ledger::CapeLedger,
     model::{Erc20Code, EthereumAddr},
+    types::RecordOpening,
 };
 use cape_wallet::{
     ui::*,
@@ -309,6 +310,7 @@ pub struct RouteBinding {
 #[allow(non_camel_case_types)]
 #[derive(AsRefStr, Copy, Clone, Debug, EnumIter, EnumString, strum_macros::Display)]
 pub enum ApiRouteKey {
+    buildwrap,
     closewallet,
     exportasset,
     freeze,
@@ -329,13 +331,13 @@ pub enum ApiRouteKey {
     recoverkey,
     resetpassword,
     send,
+    submitwrap,
     transaction,
     transactionhistory,
     unfreeze,
     unwrap,
     updateasset,
     view,
-    wrap,
     getrecords,
     lastusedkeystore,
     getprivatekey,
@@ -812,10 +814,10 @@ async fn newasset(
     Ok(asset)
 }
 
-async fn wrap(
+async fn buildwrap(
     bindings: &HashMap<String, RouteBinding>,
     wallet: &mut Option<Wallet>,
-) -> Result<(), tide::Error> {
+) -> Result<RecordOpening, tide::Error> {
     let wallet = require_wallet(wallet)?;
 
     let destination = bindings
@@ -823,6 +825,21 @@ async fn wrap(
         .unwrap()
         .value
         .to::<UserAddress>()?;
+    let asset_code = bindings.get(":asset").unwrap().value.to::<AssetCode>()?;
+    let asset_definition = wallet.asset(asset_code).await.unwrap().definition;
+    let amount = bindings.get(":amount").unwrap().value.as_u64()?;
+    Ok(wallet
+        .build_wrap(asset_definition, destination.into(), amount)
+        .await?
+        .into())
+}
+
+async fn submitwrap(
+    bindings: &HashMap<String, RouteBinding>,
+    wallet: &mut Option<Wallet>,
+) -> Result<(), tide::Error> {
+    let wallet = require_wallet(wallet)?;
+
     let eth_address = bindings
         .get(":eth_address")
         .unwrap()
@@ -830,10 +847,14 @@ async fn wrap(
         .to::<EthereumAddr>()?;
     let asset_code = bindings.get(":asset").unwrap().value.to::<AssetCode>()?;
     let asset_definition = wallet.asset(asset_code).await.unwrap().definition;
-    let amount = bindings.get(":amount").unwrap().value.as_u64()?;
+    let ro = bindings
+        .get(":record")
+        .unwrap()
+        .value
+        .to::<RecordOpening>()?;
 
     Ok(wallet
-        .wrap(eth_address, asset_definition, destination.into(), amount)
+        .submit_wrap(eth_address, asset_definition, jf_cap::structs::RecordOpening::from(ro))
         .await?)
 }
 
@@ -1154,6 +1175,7 @@ pub async fn dispatch_url(
     let wallet = &mut *state.wallet.lock().await;
     let key = ApiRouteKey::from_str(segments.0).expect("Unknown route");
     match key {
+        ApiRouteKey::buildwrap => response(&req, buildwrap(bindings, wallet).await?),
         ApiRouteKey::closewallet => response(&req, closewallet(wallet).await?),
         ApiRouteKey::exportasset => response(&req, exportasset(bindings, wallet).await?),
         ApiRouteKey::freeze => dummy_url_eval(route_pattern, bindings),
@@ -1186,6 +1208,7 @@ pub async fn dispatch_url(
             resetpassword(options, bindings, rng, faucet_key_pair, wallet).await?,
         ),
         ApiRouteKey::send => response(&req, send(bindings, wallet).await?),
+        ApiRouteKey::submitwrap => response(&req, submitwrap(bindings, wallet).await?),
         ApiRouteKey::transaction => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::transactionhistory => {
             response(&req, transactionhistory(bindings, wallet).await?)
@@ -1194,7 +1217,6 @@ pub async fn dispatch_url(
         ApiRouteKey::unwrap => response(&req, unwrap(bindings, wallet).await?),
         ApiRouteKey::updateasset => response(&req, updateasset(bindings, wallet).await?),
         ApiRouteKey::view => dummy_url_eval(route_pattern, bindings),
-        ApiRouteKey::wrap => response(&req, wrap(bindings, wallet).await?),
         ApiRouteKey::getrecords => response(&req, get_records(wallet).await?),
         ApiRouteKey::lastusedkeystore => response(&req, get_last_keystore(options).await?),
     }

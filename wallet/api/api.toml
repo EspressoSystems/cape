@@ -215,15 +215,23 @@ the current wallet if a sender isn't given. Returns a serialized receipt which c
 the transaction through the validation process.
 """
 
-[route.wrap]
+[route.buildwrap]
 METHOD = "POST"
-PATH = ["wrap/destination/:destination/ethaddress/:eth_address/asset/:asset/amount/:amount"]
+PATH = ["buildwrap/destination/:destination/asset/:asset/amount/:amount"]
 ":destination" = "TaggedBase64"
-":eth_address" = "TaggedBase64"
 ":asset" = "TaggedBase64"
 ":amount" = "Integer"
 DOC = """
-Wrap amount units of the given asset from the Ethereum address to the destination.
+Wrap amount units of the given asset to the destination. Returns the asset record with the given code and amount. To submit the wrap operation, use `submitwrap`.
+"""
+[route.submitwrap]
+METHOD = "POST"
+PATH = ["submitwrap/ethaddress/:eth_address/asset/:asset/record/:record"]
+":eth_address" = "TaggedBase64"
+":asset" = "TaggedBase64"
+":record" = "TaggedBase64"
+DOC = """
+Submit a wrapped asset from the Ethereum address. To wrap the asset, use `buildwrap`.
 """
 
 [route.unwrap]

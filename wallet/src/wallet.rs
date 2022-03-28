@@ -187,13 +187,13 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
         Ok(asset)
     }
 
-    async fn wrap(
+    async fn record_to_wrap(
         &mut self,
         src_addr: EthereumAddr,
         cap_asset: AssetDefinition,
         dst_addr: UserAddress,
         amount: u64,
-    ) -> Result<(), CapeWalletError> {
+    ) -> RecordOpening {
         let mut state = self.lock().await;
 
         let erc20_code = match state.backend().get_wrapped_erc20_code(&cap_asset).await? {
@@ -207,13 +207,22 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
 
         let pub_key = state.backend().get_public_key(&dst_addr).await?;
 
-        let ro = RecordOpening::new(
+        RecordOpening::new(
             state.rng(),
             amount,
             cap_asset,
             pub_key,
             FreezeFlag::Unfrozen,
-        );
+        )
+    }
+    async fn wrap(
+        &mut self,
+        src_addr: EthereumAddr,
+        cap_asset: AssetDefinition,
+        dst_addr: UserAddress,
+        amount: u64,
+    ) -> Result<(), CapeWalletError> {
+        let ro = record_to_wrap(&mut self, src_addr, cap_asset, dst_addr, amount)?;
 
         state
             .backend_mut()

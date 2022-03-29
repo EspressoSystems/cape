@@ -160,6 +160,18 @@ async fn integration_test_wrapped_assets_can_be_frozen() -> Result<()> {
     let (note, _keypair, outputs) =
         FreezeNote::generate(rng, inputs.clone(), txn_fee_info, &proving_key)?;
 
+    // Update the local merkle tree with the new record commitments
+    assert_eq!(note.output_commitments.len(), 2);
+    let frozen_record = outputs[0].clone();
+    assert_eq!(frozen_record.freeze_flag, FreezeFlag::Frozen);
+    let frozen_record_commitment = RecordCommitment::from(&frozen_record).to_field_element();
+    assert_eq!(
+        frozen_record_commitment,
+        note.output_commitments[1].to_field_element()
+    );
+    mt.push(note.output_commitments[0].to_field_element());
+    mt.push(note.output_commitments[1].to_field_element());
+
     // Submit the block with the freeze note
     let block_with_freeze_note = CapeBlock::generate(
         vec![TransactionNote::Freeze(Box::new(note.clone()))],
@@ -176,21 +188,6 @@ async fn integration_test_wrapped_assets_can_be_frozen() -> Result<()> {
         .ensure_mined()
         .print_gas("Submit freeze note");
 
-    //// Check the status of the frozen asset record
-
-    // 1. Update the local merkle tree with the new record commitments
-    assert_eq!(note.output_commitments.len(), 2);
-    let frozen_record = outputs[0].clone();
-    assert_eq!(frozen_record.freeze_flag, FreezeFlag::Frozen);
-    let frozen_record_commitment = RecordCommitment::from(&frozen_record).to_field_element();
-    assert_eq!(
-        frozen_record_commitment,
-        note.output_commitments[1].to_field_element()
-    );
-    mt.push(note.output_commitments[0].to_field_element());
-    mt.push(note.output_commitments[1].to_field_element());
-
-    // 2. Compare the root of the local merkle with the root of the CAPE contract merkle tree
     compare_roots_records_test_cape_contract(&mt, &cape_contract, true).await;
 
     Ok(())

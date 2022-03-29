@@ -136,27 +136,21 @@ async fn integration_test_wrapped_assets_can_be_frozen() -> Result<()> {
 
     let fee = 0;
 
-    let root = mt.commitment().root_value;
-    let acc_member_witness = AccMemberWitness {
-        merkle_path: mt.get_leaf(WRAPPED_RECORD_POS).expect_ok().unwrap().1.path,
-        root,
-        uid: WRAPPED_RECORD_POS,
-    };
-
     let freeze_note_input_wrapped_asset_record = FreezeNoteInput {
         ro: wrapped_ro,
-        acc_member_witness,
+        acc_member_witness: AccMemberWitness::lookup_from_tree(&mt, WRAPPED_RECORD_POS)
+            .expect_ok()
+            .unwrap()
+            .1,
         keypair: &freeze_keypair,
     };
 
-    let acc_member_witness = AccMemberWitness {
-        merkle_path: mt.get_leaf(FAUCET_RECORD_POS).expect_ok().unwrap().1.path,
-        root,
-        uid: FAUCET_RECORD_POS,
-    };
     let fee_input = FeeInput {
         ro: faucet_record_opening.clone(),
-        acc_member_witness,
+        acc_member_witness: AccMemberWitness::lookup_from_tree(&mt, FAUCET_RECORD_POS)
+            .expect_ok()
+            .unwrap()
+            .1,
         owner_keypair: &faucet_key_pair,
     };
 

@@ -69,10 +69,7 @@ mod tests {
     };
     use ark_serialize::CanonicalDeserialize;
     use async_std::fs;
-    use cap_rust_sandbox::{
-        ledger::CapeLedger,
-        model::{Erc20Code, EthereumAddr},
-    };
+    use cap_rust_sandbox::{ledger::CapeLedger, model::EthereumAddr};
     use cape_wallet::{
         mocks::test_asset_signing_key,
         testing::{port, retry},
@@ -1011,7 +1008,7 @@ mod tests {
             .unwrap();
 
         // Sponsor an asset.
-        let sponsored_asset = server
+        let asset = server
             .post::<sol::AssetDefinition>(&format!(
                 "buildsponsor/erc20/{:#x}/sponsor/{:#x}",
                 erc20_code, sponsor_addr
@@ -1024,12 +1021,12 @@ mod tests {
                 "submitsponsor/erc20/{:#x}/sponsor/{:#x}",
                 erc20_code, sponsor_addr
             ))
-            .body_json(&sponsored_asset)
+            .body_json(&asset)
             .unwrap()
             .send()
             .await
             .unwrap();
-        let sponsored_asset: JfAssetDefinition = sponsored_asset.into();
+        let asset: JfAssetDefinition = asset.into();
 
         // Create an address to receive the wrapped asset.
         server.post::<PubKey>("newkey/sending").await.unwrap();
@@ -1043,7 +1040,7 @@ mod tests {
         server
             .post::<String>(&format!(
                 "buildwrap/destination/{}/asset/{}/amount/{}",
-                invalid_destination, sponsored_asset.code, 10
+                invalid_destination, asset.code, 10
             ))
             .await
             .expect_err("buildwrap succeeded with an invalid user address");
@@ -1059,7 +1056,7 @@ mod tests {
         let ro = server
             .post::<sol::RecordOpening>(&format!(
                 "buildwrap/destination/{}/asset/{}/amount/{}",
-                destination, sponsored_asset.code, 10
+                destination, asset.code, 10
             ))
             .await
             .unwrap();
@@ -1246,25 +1243,24 @@ mod tests {
         let invalid_source = UserAddress::from(
             UserKeyPair::generate(&mut ChaChaRng::from_seed([50u8; 32])).address(),
         );
-        let invalid_eth_addr = Erc20Code(EthereumAddr([0u8; 20]));
         let invalid_asset = AssetDefinition::dummy();
         server
             .post::<TransactionReceipt<CapeLedger>>(&format!(
-                "unwrap/source/{}/ethaddress/{}/asset/{}/amount/{}/fee/{}",
+                "unwrap/source/{}/ethaddress/{:#x}/asset/{}/amount/{}/fee/{}",
                 invalid_source, eth_addr, asset, DEFAULT_WRAPPED_AMT, 1
             ))
             .await
             .expect_err("unwrap succeeded with an invalid source address");
         server
             .post::<TransactionReceipt<CapeLedger>>(&format!(
-                "unwrap/source/{}/ethaddress/{}/asset/{}/amount/{}/fee/{}",
-                source, invalid_eth_addr, asset, DEFAULT_WRAPPED_AMT, 1
+                "unwrap/source/{}/ethaddress/0xinvalid/asset/{}/amount/{}/fee/{}",
+                source, asset, DEFAULT_WRAPPED_AMT, 1
             ))
             .await
             .expect_err("unwrap succeeded with an invalid Ethereum address");
         server
             .post::<TransactionReceipt<CapeLedger>>(&format!(
-                "unwrap/source/{}/ethaddress/{}/asset/{}/amount/{}/fee/{}",
+                "unwrap/source/{}/ethaddress/{:#x}/asset/{}/amount/{}/fee/{}",
                 source, eth_addr, invalid_asset, DEFAULT_WRAPPED_AMT, 1
             ))
             .await
@@ -1273,7 +1269,7 @@ mod tests {
         // unwrap should succeed with the correct information.
         server
             .post::<TransactionReceipt<CapeLedger>>(&format!(
-                "unwrap/source/{}/ethaddress/{}/asset/{}/amount/{}/fee/{}",
+                "unwrap/source/{}/ethaddress/{:#x}/asset/{}/amount/{}/fee/{}",
                 source, eth_addr, asset, DEFAULT_WRAPPED_AMT, fee
             ))
             .await

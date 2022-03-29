@@ -9,7 +9,7 @@
 
 use crate::web::{NodeOpt, WebState};
 use async_std::fs::{read_dir, File};
-use cap_rust_sandbox::{ledger::CapeLedger, model::EthereumAddr};
+use cap_rust_sandbox::ledger::CapeLedger;
 use cape_wallet::{
     ui::*,
     wallet::{CapeWalletError, CapeWalletExt},
@@ -946,18 +946,14 @@ async fn unwrap(
 ) -> Result<TransactionReceipt<CapeLedger>, tide::Error> {
     let wallet = require_wallet(wallet)?;
 
-    let source = bindings.get(":source").unwrap().value.to::<UserAddress>()?;
-    let eth_address = bindings
-        .get(":eth_address")
-        .unwrap()
-        .value
-        .to::<EthereumAddr>()?;
-    let asset = bindings.get(":asset").unwrap().value.to::<AssetCode>()?;
-    let amount = bindings.get(":amount").unwrap().value.as_u64()?;
-    let fee = bindings.get(":fee").unwrap().value.as_u64()?;
+    let source = bindings[":source"].value.to::<UserAddress>()?;
+    let eth_address: Address = bindings[":eth_address"].value.as_string()?.parse()?;
+    let asset = bindings[":asset"].value.to::<AssetCode>()?;
+    let amount = bindings[":amount"].value.as_u64()?;
+    let fee = bindings[":fee"].value.as_u64()?;
 
     Ok(wallet
-        .burn(&source.into(), eth_address, &asset, amount, fee)
+        .burn(&source.into(), eth_address.into(), &asset, amount, fee)
         .await?)
 }
 

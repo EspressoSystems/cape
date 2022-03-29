@@ -185,6 +185,8 @@ async fn request_fee_assets(
         net::UserAddress(faucet_addr.clone()),
         net::UserAddress(pub_key.address())
     );
+    let bal = wallet.balance(&AssetCode::native()).await;
+    tracing::info!("Wallet balance before transfer: {}", bal);
     wallet
         .transfer(
             Some(&faucet_addr),
@@ -193,8 +195,10 @@ async fn request_fee_assets(
             req.state().fee_size,
         )
         .await
-        .map_err(faucet_error)
-        .unwrap();
+        .map_err(|err| {
+            tracing::error!("Failed to transfer {}", err);
+            faucet_error(err)
+        })?;
     net::server::response(&req, ())
 }
 
@@ -249,6 +253,8 @@ pub async fn init_web_server(
             .unwrap();
     }
 
+    let bal = wallet.balance(&AssetCode::native()).await;
+    tracing::info!("Wallet balance before init: {}", bal);
     let state = FaucetState {
         wallet: Arc::new(Mutex::new(wallet)),
         grant_size: opt.grant_size,

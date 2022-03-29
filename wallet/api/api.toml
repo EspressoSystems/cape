@@ -238,7 +238,7 @@ The request body should be the record opening returned by `buildwrap`.
 METHOD = "POST"
 PATH = ["unwrap/source/:source/ethaddress/:eth_address/asset/:asset/amount/:amount/fee/:fee"]
 ":source" = "TaggedBase64"
-":eth_address" = "TaggedBase64"
+":eth_address" = "Literal"
 ":asset" = "TaggedBase64"
 ":amount" = "Integer"
 ":fee" = "Integer"

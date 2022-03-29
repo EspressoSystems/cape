@@ -13,7 +13,7 @@
 // for everything left before it works properly.
 #![deny(warnings)]
 
-use cap_rust_sandbox::deploy::deploy_erc20_token;
+use cap_rust_sandbox::{deploy::deploy_erc20_token, universal_param::UNIVERSAL_PARAM};
 use cape_wallet::backend::{CapeBackend, CapeBackendConfig};
 use cape_wallet::mocks::*;
 use cape_wallet::testing::get_burn_amount;
@@ -27,11 +27,11 @@ use cape_wallet::CapeWalletExt;
 use ethers::prelude::Address;
 use futures::stream::{iter, StreamExt};
 use jf_cap::keys::UserAddress;
+use jf_cap::keys::UserKeyPair;
 use jf_cap::keys::UserPubKey;
 use jf_cap::proof::UniversalParam;
 use jf_cap::structs::AssetCode;
 use jf_cap::structs::FreezeFlag;
-use jf_cap::{keys::UserKeyPair, proof::universal_setup_for_staging};
 use rand::seq::SliceRandom;
 use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
 use seahorse::txn_builder::RecordInfo;
@@ -313,7 +313,7 @@ async fn main() {
     let mut balances = HashMap::new();
     let args = Args::from_args();
     let mut rng = ChaChaRng::seed_from_u64(args.seed.unwrap_or(0));
-    let universal_param = universal_setup_for_staging(2usize.pow(16), &mut rng).unwrap();
+    let universal_param = &*UNIVERSAL_PARAM;
     let tmp_dir = TempDir::new("random_in_mem_test_sender").unwrap();
     tmp_dirs.push(tmp_dir);
     let (network, mut wallet) = if args.demo_connection {
@@ -322,7 +322,7 @@ async fn main() {
         let network = get_network_from_args(&args);
         let mut wallet = connect_to_demo_backend(
             &network,
-            &universal_param,
+            universal_param,
             &mut rng,
             tmp_dirs.last().unwrap().path(),
         )
@@ -354,12 +354,8 @@ async fn main() {
         }
         (network, wallet)
     } else {
-        create_backend_and_sender_wallet(
-            &mut rng,
-            &universal_param,
-            tmp_dirs.last().unwrap().path(),
-        )
-        .await
+        create_backend_and_sender_wallet(&mut rng, universal_param, tmp_dirs.last().unwrap().path())
+            .await
     };
 
     event!(Level::INFO, "Sender wallet has some initial balance");
@@ -383,7 +379,7 @@ async fn main() {
         tmp_dirs.push(tmp_dir);
         let (k, mut w) = create_wallet(
             &mut rng,
-            &universal_param,
+            universal_param,
             &network,
             tmp_dirs.last().unwrap().path(),
         )

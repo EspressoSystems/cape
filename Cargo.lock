@@ -3543,7 +3543,7 @@ checksum = "1aab8fc367588b89dcee83ab0fd66b72b50b72fa1904d7095045ace2b0c81c35"
 [[package]]
 name = "jf-cap"
 version = "0.0.1"
-source = "git+https://github.com/EspressoSystems/cap.git#d4d22d8c67178cd17fad3acc9129fbd8a9d5f529"
+source = "git+https://github.com/EspressoSystems/cap.git#4c879a53fb46c8dec4a00f87c086fb5d29266c96"
 dependencies = [
  "anyhow",
  "ark-bn254",

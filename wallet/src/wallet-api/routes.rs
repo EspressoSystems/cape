@@ -9,10 +9,7 @@
 
 use crate::web::{NodeOpt, WebState};
 use async_std::fs::{read_dir, File};
-use cap_rust_sandbox::{
-    ledger::CapeLedger,
-    model::{Erc20Code, EthereumAddr},
-};
+use cap_rust_sandbox::{ledger::CapeLedger, model::EthereumAddr};
 use cape_wallet::{
     ui::*,
     wallet::{CapeWalletError, CapeWalletExt},
@@ -21,9 +18,12 @@ use ethers::prelude::Address;
 use futures::{prelude::*, stream::iter};
 use jf_cap::{
     keys::{AuditorPubKey, FreezerPubKey, UserKeyPair, UserPubKey},
-    structs::{AssetCode, AssetPolicy},
+    structs::{AssetCode, AssetDefinition as JfAssetDefinition, AssetPolicy},
 };
-use net::{server::response, TaggedBlob, UserAddress};
+use net::{
+    server::{request_body, response},
+    TaggedBlob, UserAddress,
+};
 use rand_chacha::ChaChaRng;
 use seahorse::{
     asset_library::Icon,
@@ -44,7 +44,7 @@ use std::str::FromStr;
 use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, EnumIter, EnumString};
 use tagged_base64::TaggedBase64;
-use tide::{http::Method, StatusCode};
+use tide::{http::Method, Request, StatusCode};
 
 #[derive(Debug, Snafu, Serialize, Deserialize)]
 #[snafu(module(error))]
@@ -310,6 +310,7 @@ pub struct RouteBinding {
 #[allow(non_camel_case_types)]
 #[derive(AsRefStr, Copy, Clone, Debug, EnumIter, EnumString, strum_macros::Display)]
 pub enum ApiRouteKey {
+    buildsponsor,
     buildwrap,
     closewallet,
     exportasset,
@@ -331,8 +332,8 @@ pub enum ApiRouteKey {
     recoverkey,
     resetpassword,
     send,
+    submitsponsor,
     submitwrap,
-    sponsor,
     transaction,
     transactionhistory,
     unfreeze,
@@ -783,31 +784,14 @@ async fn newasset(
         };
     };
 
-    // If an ERC20 code is given, sponsor the asset. Otherwise, define an asset.
-    let code = match bindings.get(":erc20") {
-        Some(erc20_code) => {
-            let erc20_code = erc20_code.value.to::<Erc20Code>()?;
-            let sponsor_address = bindings
-                .get(":sponsor")
-                .unwrap()
-                .value
-                .to::<EthereumAddr>()?;
-            wallet
-                .sponsor(symbol, erc20_code, sponsor_address, policy)
-                .await?
-                .code
-        }
-        None => {
-            let description = match bindings.get(":description") {
-                Some(description) => description.value.as_base64()?,
-                _ => Vec::new(),
-            };
-            wallet
-                .define_asset(symbol, &description, policy)
-                .await?
-                .code
-        }
+    let description = match bindings.get(":description") {
+        Some(description) => description.value.as_base64()?,
+        _ => Vec::new(),
     };
+    let code = wallet
+        .define_asset(symbol, &description, policy)
+        .await?
+        .code;
 
     // The asset lookup will always succeed after we just created the asset.
     let info = wallet.asset(code).await.unwrap();
@@ -815,7 +799,7 @@ async fn newasset(
     Ok(asset)
 }
 
-async fn sponsor(
+async fn buildsponsor(
     bindings: &HashMap<String, RouteBinding>,
     wallet: &mut Option<Wallet>,
 ) -> Result<sol::AssetDefinition, tide::Error> {
@@ -864,6 +848,31 @@ async fn sponsor(
         .build_sponsor(symbol, erc20_code.into(), sponsor_address.into(), policy)
         .await?;
     Ok(asset.into())
+}
+
+async fn submitsponsor(
+    req: &mut Request<WebState>,
+    bindings: &HashMap<String, RouteBinding>,
+    wallet: &mut Option<Wallet>,
+) -> Result<AssetInfo, tide::Error> {
+    let wallet = require_wallet(wallet)?;
+    let asset = JfAssetDefinition::from(request_body::<sol::AssetDefinition, _>(req).await?);
+    let erc20_code: Address = bindings[":erc20"].value.as_string()?.parse()?;
+    let sponsor: Address = bindings[":sponsor"].value.as_string()?.parse()?;
+
+    // Before actually submitting the sponsor, make sure we can find the info that we need to return.
+    let info = wallet
+        .asset(asset.code)
+        .await
+        .ok_or_else(|| wallet_error(CapeWalletError::UndefinedAsset { asset: asset.code }))?;
+
+    // Submit to the contract.
+    wallet
+        .submit_sponsor(erc20_code.into(), sponsor.into(), &asset)
+        .await
+        .map_err(wallet_error)?;
+
+    Ok(AssetInfo::from_info(wallet, info).await)
 }
 
 async fn buildwrap(
@@ -1217,19 +1226,20 @@ async fn getprivatekey(
 }
 
 pub async fn dispatch_url(
-    req: tide::Request<WebState>,
+    mut req: Request<WebState>,
     route_pattern: &str,
     bindings: &HashMap<String, RouteBinding>,
 ) -> Result<tide::Response, tide::Error> {
     let segments = route_pattern.split_once('/').unwrap_or((route_pattern, ""));
     let route_params = segments.1.split('/').collect::<Vec<_>>();
-    let state = req.state();
+    let state = req.state().clone();
     let options = &state.options;
     let rng = &mut *state.rng.lock().await;
     let faucet_key_pair = &state.faucet_key_pair;
     let wallet = &mut *state.wallet.lock().await;
     let key = ApiRouteKey::from_str(segments.0).expect("Unknown route");
     match key {
+        ApiRouteKey::buildsponsor => response(&req, buildsponsor(bindings, wallet).await?),
         ApiRouteKey::buildwrap => response(&req, buildwrap(bindings, wallet).await?),
         ApiRouteKey::closewallet => response(&req, closewallet(wallet).await?),
         ApiRouteKey::exportasset => response(&req, exportasset(bindings, wallet).await?),
@@ -1263,8 +1273,11 @@ pub async fn dispatch_url(
             resetpassword(options, bindings, rng, faucet_key_pair, wallet).await?,
         ),
         ApiRouteKey::send => response(&req, send(bindings, wallet).await?),
+        ApiRouteKey::submitsponsor => {
+            let res = submitsponsor(&mut req, bindings, wallet).await?;
+            response(&req, res)
+        }
         ApiRouteKey::submitwrap => response(&req, submitwrap(bindings, wallet).await?),
-        ApiRouteKey::sponsor => response(&req, sponsor(bindings, wallet).await?),
         ApiRouteKey::transaction => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::transactionhistory => {
             response(&req, transactionhistory(bindings, wallet).await?)

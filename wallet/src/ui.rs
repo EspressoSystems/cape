@@ -79,7 +79,7 @@ impl From<JfAssetDefinition> for AssetDefinition {
             },
             address_viewable: policy.is_user_address_revealed(),
             amount_viewable: policy.is_amount_revealed(),
-            blind_viewable: policy.reveal_map().internal()[3],
+            blind_viewable: policy.is_blinding_factor_revealed(),
             viewing_threshold: policy.reveal_threshold(),
         }
     }

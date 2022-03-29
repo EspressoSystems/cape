@@ -17,14 +17,17 @@ use cap_rust_sandbox::test_utils::{
 use cap_rust_sandbox::types as sol;
 use cap_rust_sandbox::types::GenericInto;
 use ethers::prelude::U256;
+use jf_cap::errors::TxnApiError;
 use jf_cap::freeze::{FreezeNote, FreezeNoteInput};
 use jf_cap::keys::{CredIssuerPubKey, FreezerKeyPair, UserKeyPair, UserPubKey};
-use jf_cap::proof::freeze::preprocess;
+use jf_cap::proof::freeze::preprocess as freeze_preprocess;
+use jf_cap::proof::transfer::preprocess as transfer_preprocess;
 use jf_cap::proof::universal_setup_for_staging;
 use jf_cap::structs::{
     AssetCode, AssetDefinition, AssetPolicy, FeeInput, FreezeFlag, RecordCommitment, RecordOpening,
     TxnFeeInfo,
 };
+use jf_cap::transfer::{TransferNote, TransferNoteInput};
 use jf_cap::{AccMemberWitness, MerkleTree, TransactionNote};
 use rand::SeedableRng;
 use rand_chacha::ChaChaRng;
@@ -36,6 +39,8 @@ async fn integration_test_wrapped_assets_can_be_frozen() -> Result<()> {
 
     const FAUCET_RECORD_POS: u64 = 0;
     const WRAPPED_RECORD_POS: u64 = 1;
+    const FEE_CHANGE_RECORD_POS: u64 = 2;
+    const FROZEN_RECORD_POS: u64 = 3;
 
     let cape_contract = deploy_cape_test().await;
 
@@ -95,7 +100,7 @@ async fn integration_test_wrapped_assets_can_be_frozen() -> Result<()> {
     let wrapped_ro = RecordOpening::new(
         rng,
         deposited_amount,
-        asset_def,
+        asset_def.clone(),
         user_key_pair.pub_key(),
         FreezeFlag::Unfrozen,
     );
@@ -132,7 +137,7 @@ async fn integration_test_wrapped_assets_can_be_frozen() -> Result<()> {
     let mut prng = ChaChaRng::from_seed([0x8au8; 32]);
     let max_degree = 65538;
     let srs = universal_setup_for_staging(max_degree, &mut prng)?;
-    let (proving_key, _, _) = preprocess(&srs, 2, CapeLedger::merkle_height())?;
+    let (proving_key, _, _) = freeze_preprocess(&srs, 2, CapeLedger::merkle_height())?;
 
     let fee = 0;
 
@@ -156,7 +161,7 @@ async fn integration_test_wrapped_assets_can_be_frozen() -> Result<()> {
 
     let inputs = vec![freeze_note_input_wrapped_asset_record];
 
-    let (txn_fee_info, _fee_chg_ro) = TxnFeeInfo::new(rng, fee_input.clone(), fee)?;
+    let (txn_fee_info, fee_chg_ro) = TxnFeeInfo::new(rng, fee_input.clone(), fee)?;
     let (note, _keypair, outputs) =
         FreezeNote::generate(rng, inputs.clone(), txn_fee_info, &proving_key)?;
 
@@ -168,6 +173,11 @@ async fn integration_test_wrapped_assets_can_be_frozen() -> Result<()> {
     assert_eq!(
         frozen_record_commitment,
         note.output_commitments[1].to_field_element()
+    );
+    let fee_change_record_commitment = RecordCommitment::from(&fee_chg_ro).to_field_element();
+    assert_eq!(
+        fee_change_record_commitment,
+        note.output_commitments[0].to_field_element()
     );
     mt.push(note.output_commitments[0].to_field_element());
     mt.push(note.output_commitments[1].to_field_element());
@@ -189,6 +199,54 @@ async fn integration_test_wrapped_assets_can_be_frozen() -> Result<()> {
         .print_gas("Submit freeze note");
 
     compare_roots_records_test_cape_contract(&mt, &cape_contract, true).await;
+
+    // Try to build a transfer transaction, it fails as the record is now frozen
+
+    let (proving_key, _, _) = transfer_preprocess(&srs, 2, 2, CapeLedger::merkle_height())?;
+    let input = TransferNoteInput {
+        ro: frozen_record.clone(),
+        acc_member_witness: AccMemberWitness::lookup_from_tree(&mt, FROZEN_RECORD_POS)
+            .expect_ok()
+            .unwrap()
+            .1,
+        owner_keypair: &user_key_pair,
+        cred: None,
+    };
+
+    let fee_input = FeeInput {
+        ro: fee_chg_ro.clone(),
+        acc_member_witness: AccMemberWitness::lookup_from_tree(&mt, FEE_CHANGE_RECORD_POS)
+            .expect_ok()
+            .unwrap()
+            .1,
+        owner_keypair: &faucet_key_pair,
+    };
+
+    let (txn_fee_info, _fee_chg_ro) = TxnFeeInfo::new(rng, fee_input, fee).unwrap();
+
+    let output = RecordOpening::new(
+        rng,
+        frozen_record.amount,
+        asset_def.clone(),
+        faucet_key_pair.pub_key().clone(),
+        FreezeFlag::Unfrozen,
+    );
+
+    let transfer_note_res = TransferNote::generate_non_native(
+        rng,
+        vec![input],
+        &[output],
+        txn_fee_info,
+        999,
+        &proving_key,
+        vec![],
+    );
+    if let TxnApiError::InvalidParameter(s) = transfer_note_res.unwrap_err() {
+        assert_eq!(
+            s,
+            "Input and output records must be unfrozen ones.".to_string()
+        );
+    }
 
     Ok(())
 }

@@ -155,7 +155,6 @@ pub trait CapeWalletExt<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> {
     async fn submit_wrap(
         &mut self,
         src_addr: EthereumAddr,
-        cap_asset: AssetDefinition,
         ro: RecordOpening,
     ) -> Result<(), CapeWalletError>;
 
@@ -288,11 +287,11 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
     async fn submit_wrap(
         &mut self,
         src_addr: EthereumAddr,
-        cap_asset: AssetDefinition,
         ro: RecordOpening,
     ) -> Result<(), CapeWalletError> {
         let mut state = self.lock().await;
 
+        let cap_asset = ro.asset_def.clone();
         let erc20_code = match state.backend().get_wrapped_erc20_code(&cap_asset).await? {
             Some(code) => code,
             None => {
@@ -315,9 +314,9 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
         dst_addr: UserAddress,
         amount: u64,
     ) -> Result<(), CapeWalletError> {
-        let ro = self.build_wrap(cap_asset.clone(), dst_addr, amount).await?;
+        let ro = self.build_wrap(cap_asset, dst_addr, amount).await?;
 
-        self.submit_wrap(src_addr, cap_asset, ro).await
+        self.submit_wrap(src_addr, ro).await
     }
 
     async fn burn(

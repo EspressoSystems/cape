@@ -904,11 +904,8 @@ async fn submitwrap(
 
     let eth_address: Address = bindings[":eth_address"].value.as_string()?.parse()?;
     let ro = JfRecordOpening::from(request_body::<sol::RecordOpening, _>(req).await?);
-    let asset_definition = ro.asset_def.clone();
 
-    Ok(wallet
-        .submit_wrap(eth_address.into(), asset_definition, ro)
-        .await?)
+    Ok(wallet.submit_wrap(eth_address.into(), ro).await?)
 }
 
 async fn mint(

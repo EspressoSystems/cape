@@ -7,7 +7,7 @@
 
 #![deny(warnings)]
 mod events;
-mod faucet;
+pub mod faucet;
 mod note_types;
 mod reentrancy;
 pub mod submit_block;

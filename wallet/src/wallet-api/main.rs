@@ -994,8 +994,8 @@ mod tests {
     #[traced_test]
     async fn test_wrap() {
         // Set parameters for sponsor and wrap.
-        let erc20_code = Erc20Code(EthereumAddr([1u8; 20]));
-        let sponsor_addr = EthereumAddr([2u8; 20]);
+        let erc20_code = Address::from([1u8; 20]);
+        let sponsor_addr = Address::from([2u8; 20]);
 
         // Open a wallet.
         let server = TestServer::new().await;
@@ -1011,13 +1011,25 @@ mod tests {
             .unwrap();
 
         // Sponsor an asset.
-        let sponsored_asset = server
-            .post::<AssetInfo>(&format!(
-                "newasset/erc20/{}/sponsor/{}",
+        let asset = server
+            .post::<sol::AssetDefinition>(&format!(
+                "buildsponsor/erc20/{:#x}/sponsor/{:#x}",
                 erc20_code, sponsor_addr
             ))
             .await
             .unwrap();
+        server
+            .client
+            .post(&format!(
+                "submitsponsor/erc20/{:#x}/sponsor/{:#x}",
+                erc20_code, sponsor_addr
+            ))
+            .body_json(&asset)
+            .unwrap()
+            .send()
+            .await
+            .unwrap();
+        let asset: JfAssetDefinition = asset.into();
 
         // Create an address to receive the wrapped asset.
         server.post::<PubKey>("newkey/sending").await.unwrap();
@@ -1027,25 +1039,24 @@ mod tests {
 
         // wrap should fail if any of the destination, Ethereum address, and asset is invalid.
         let invalid_destination = UserAddress::from(UserKeyPair::generate(&mut rng).address());
-        let invalid_eth_addr = Erc20Code(EthereumAddr([0u8; 20]));
         let invalid_asset = AssetDefinition::dummy();
         server
             .post::<()>(&format!(
-                "wrap/destination/{}/ethaddress/{}/asset/{}/amount/{}",
-                invalid_destination, sponsor_addr, sponsored_asset, 10
+                "wrap/destination/{}/ethaddress/{:#x}/asset/{}/amount/{}",
+                invalid_destination, sponsor_addr, asset.code, 10
             ))
             .await
             .expect_err("wrap succeeded with an invalid user address");
         server
             .post::<()>(&format!(
-                "wrap/destination/{}/ethaddress/{}/asset/{}/amount/{}",
-                destination, invalid_eth_addr, sponsored_asset, 10
+                "wrap/destination/{}/ethaddress/0xinvalid/asset/{}/amount/{}",
+                destination, asset.code, 10
             ))
             .await
             .expect_err("wrap succeeded with an invalid Ethereum address");
         server
             .post::<()>(&format!(
-                "wrap/destination/{}/ethaddress/{}/asset/{}/amount/{}",
+                "wrap/destination/{}/ethaddress/{:#x}/asset/{}/amount/{}",
                 destination, sponsor_addr, invalid_asset, 10
             ))
             .await
@@ -1054,8 +1065,8 @@ mod tests {
         // wrap should succeed with the correct information.
         server
             .post::<()>(&format!(
-                "wrap/destination/{}/ethaddress/{}/asset/{}/amount/{}",
-                destination, sponsor_addr, sponsored_asset.definition.code, 10
+                "wrap/destination/{}/ethaddress/{:#x}/asset/{}/amount/{}",
+                destination, sponsor_addr, asset.code, 10
             ))
             .await
             .unwrap();

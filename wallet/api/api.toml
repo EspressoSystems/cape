@@ -219,7 +219,7 @@ the transaction through the validation process.
 METHOD = "POST"
 PATH = ["wrap/destination/:destination/ethaddress/:eth_address/asset/:asset/amount/:amount"]
 ":destination" = "TaggedBase64"
-":eth_address" = "TaggedBase64"
+":eth_address" = "Literal"
 ":asset" = "TaggedBase64"
 ":amount" = "Integer"
 DOC = """
@@ -230,7 +230,7 @@ Wrap amount units of the given asset from the Ethereum address to the destinatio
 METHOD = "POST"
 PATH = ["unwrap/source/:source/ethaddress/:eth_address/asset/:asset/amount/:amount/fee/:fee"]
 ":source" = "TaggedBase64"
-":eth_address" = "TaggedBase64"
+":eth_address" = "Literal"
 ":asset" = "TaggedBase64"
 ":amount" = "Integer"
 ":fee" = "Integer"

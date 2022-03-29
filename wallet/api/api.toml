@@ -222,16 +222,18 @@ PATH = ["buildwrap/destination/:destination/asset/:asset/amount/:amount"]
 ":asset" = "TaggedBase64"
 ":amount" = "Integer"
 DOC = """
-Wrap amount units of the given asset to the destination. Returns the asset record with the given code and amount. To submit the wrap operation, use `submitwrap`.
+Build, but do not submit, a wrap transaction.
 """
+
 [route.submitwrap]
 METHOD = "POST"
 PATH = ["submitwrap/ethaddress/:eth_address/asset/:asset/record/:record"]
-":eth_address" = "TaggedBase64"
+":eth_address" = "Literal"
 ":asset" = "TaggedBase64"
-":record" = "TaggedBase64"
+":record" = "Literal"
 DOC = """
-Submit a wrapped asset from the Ethereum address. To wrap the asset, use `buildwrap`.
+Submit a wrap transaction to the CAPE contract.
+The request body should be the record opening returned by `buildwrap`. `:asset` must be the same that was used to build the record opening.
 """
 
 [route.unwrap]

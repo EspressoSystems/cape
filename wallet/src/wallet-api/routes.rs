@@ -12,7 +12,6 @@ use async_std::fs::{read_dir, File};
 use cap_rust_sandbox::{
     ledger::CapeLedger,
     model::{Erc20Code, EthereumAddr},
-    types::RecordOpening,
 };
 use cape_wallet::{
     ui::*,
@@ -870,7 +869,7 @@ async fn sponsor(
 async fn buildwrap(
     bindings: &HashMap<String, RouteBinding>,
     wallet: &mut Option<Wallet>,
-) -> Result<RecordOpening, tide::Error> {
+) -> Result<String, tide::Error> {
     let wallet = require_wallet(wallet)?;
 
     let destination = bindings
@@ -881,10 +880,11 @@ async fn buildwrap(
     let asset_code = bindings.get(":asset").unwrap().value.to::<AssetCode>()?;
     let asset_definition = wallet.asset(asset_code).await.unwrap().definition;
     let amount = bindings.get(":amount").unwrap().value.as_u64()?;
-    Ok(wallet
+    let ro: sol::RecordOpening = wallet
         .build_wrap(asset_definition, destination.into(), amount)
         .await?
-        .into())
+        .into();
+    Ok(serde_json::to_string(&ro).unwrap())
 }
 
 async fn submitwrap(
@@ -897,17 +897,19 @@ async fn submitwrap(
         .get(":eth_address")
         .unwrap()
         .value
-        .to::<EthereumAddr>()?;
+        .as_string()?
+        .parse()?;
     let asset_code = bindings.get(":asset").unwrap().value.to::<AssetCode>()?;
     let asset_definition = wallet.asset(asset_code).await.unwrap().definition;
-    let ro = bindings
-        .get(":record")
-        .unwrap()
-        .value
-        .to::<RecordOpening>()?;
+    let ro_str = bindings.get(":record").unwrap().value.as_string()?;
+    let ro: sol::RecordOpening = serde_json::from_str(&ro_str).unwrap();
 
     Ok(wallet
-        .submit_wrap(eth_address, asset_definition, jf_cap::structs::RecordOpening::from(ro))
+        .submit_wrap(
+            eth_address,
+            asset_definition,
+            jf_cap::structs::RecordOpening::from(ro),
+        )
         .await?)
 }
 

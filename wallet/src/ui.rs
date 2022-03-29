@@ -466,6 +466,7 @@ impl TransactionHistoryEntry {
 pub mod sol {
     use super::*;
     use cap_rust_sandbox::types;
+    use jf_cap::structs::RecordOpening as JfRecordOpening;
 
     // Primitive types like big integers and addresses just get serialized as hex strings.
     #[ser_test(ark(false))]
@@ -683,6 +684,55 @@ pub mod sol {
     impl From<AssetPolicy> for JfAssetPolicy {
         fn from(p: AssetPolicy) -> Self {
             types::AssetPolicy::from(p).into()
+        }
+    }
+
+    #[ser_test(ark(false))]
+    #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+    pub struct RecordOpening {
+        pub amount: u64,
+        pub asset_def: AssetDefinition,
+        pub user_addr: EdOnBN254Point,
+        pub enc_key: [u8; 32],
+        pub freeze_flag: bool,
+        pub blind: U256,
+    }
+
+    impl From<types::RecordOpening> for RecordOpening {
+        fn from(r: types::RecordOpening) -> Self {
+            Self {
+                amount: r.amount,
+                asset_def: r.asset_def.into(),
+                user_addr: r.user_addr.into(),
+                enc_key: r.enc_key,
+                freeze_flag: r.freeze_flag,
+                blind: r.blind.into(),
+            }
+        }
+    }
+
+    impl From<RecordOpening> for types::RecordOpening {
+        fn from(r: RecordOpening) -> Self {
+            Self {
+                amount: r.amount,
+                asset_def: r.asset_def.into(),
+                user_addr: r.user_addr.into(),
+                enc_key: r.enc_key,
+                freeze_flag: r.freeze_flag,
+                blind: r.blind.into(),
+            }
+        }
+    }
+
+    impl From<JfRecordOpening> for RecordOpening {
+        fn from(r: JfRecordOpening) -> Self {
+            types::RecordOpening::from(r).into()
+        }
+    }
+
+    impl From<RecordOpening> for JfRecordOpening {
+        fn from(r: RecordOpening) -> Self {
+            types::RecordOpening::from(r).into()
         }
     }
 }

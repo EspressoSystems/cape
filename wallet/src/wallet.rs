@@ -105,6 +105,7 @@ pub trait CapeWalletExt<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> {
         cap_asset: AssetDefinition,
         ro: RecordOpening,
     ) -> Result<(), CapeWalletError>;
+
     /// Construct the information required to sponsor an asset, but do not submit a transaction.
     ///
     /// A new asset definition is created, added to the asset library, and returned. This asset can

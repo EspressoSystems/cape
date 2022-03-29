@@ -1055,8 +1055,8 @@ mod tests {
     #[traced_test]
     async fn test_wrap() {
         // Set parameters for sponsor and wrap.
-        let erc20_code = Erc20Code(EthereumAddr([1u8; 20]));
-        let sponsor_addr = EthereumAddr([2u8; 20]);
+        let erc20_code = Address::from([1u8; 20]);
+        let sponsor_addr = Address::from([2u8; 20]);
 
         // Open a wallet.
         let server = TestServer::new().await;
@@ -1086,37 +1086,66 @@ mod tests {
         let sending_key = &info.sending_keys[0];
         let destination: UserAddress = sending_key.address().into();
 
-        // wrap should fail if any of the destination, Ethereum address, and asset is invalid.
+        // buildwrap should fail if the destination or asset is invalid.
         let invalid_destination = UserAddress::from(UserKeyPair::generate(&mut rng).address());
-        let invalid_eth_addr = Erc20Code(EthereumAddr([0u8; 20]));
         let invalid_asset = AssetDefinition::dummy();
         server
-            .post::<()>(&format!(
-                "wrap/destination/{}/ethaddress/{}/asset/{}/amount/{}",
-                invalid_destination, sponsor_addr, sponsored_asset, 10
+            .post::<String>(&format!(
+                "buildwrap/destination/{}/asset/{}/amount/{}",
+                invalid_destination, sponsored_asset, 10
             ))
             .await
-            .expect_err("wrap succeeded with an invalid user address");
+            .expect_err("buildwrap succeeded with an invalid user address");
         server
-            .post::<()>(&format!(
-                "wrap/destination/{}/ethaddress/{}/asset/{}/amount/{}",
-                destination, invalid_eth_addr, sponsored_asset, 10
+            .post::<String>(&format!(
+                "buildwrap/destination/{}/asset/{}/amount/{}",
+                destination, invalid_asset, 10
             ))
             .await
-            .expect_err("wrap succeeded with an invalid Ethereum address");
-        server
-            .post::<()>(&format!(
-                "wrap/destination/{}/ethaddress/{}/asset/{}/amount/{}",
-                destination, sponsor_addr, invalid_asset, 10
-            ))
-            .await
-            .expect_err("wrap succeeded with an invalid asset");
+            .expect_err("buildwrap succeeded with an invalid asset");
 
-        // wrap should succeed with the correct information.
+        // buildwrap should succeed with the correct information.
+        let ro = server
+            .post::<String>(&format!(
+                "buildwrap/destination/{}/asset/{}/amount/{}",
+                destination, sponsored_asset.definition.code, 10
+            ))
+            .await
+            .unwrap();
+
+        println!("ro:     {}", ro);
+
+        // submitwrap should fail if any of the Ethereum address, asset, and record opening is invalid.
+        let invalid_eth_addr = EthereumAddr([0u8; 20]);
+        let invalid_asset = AssetDefinition::dummy();
+        let invalid_ro = serde_json::to_string(&sol::RecordOpening::default()).unwrap();
         server
             .post::<()>(&format!(
-                "wrap/destination/{}/ethaddress/{}/asset/{}/amount/{}",
-                destination, sponsor_addr, sponsored_asset.definition.code, 10
+                "submitwrap/eth_address/{}/asset/{}/record/{}",
+                invalid_eth_addr, sponsored_asset, ro
+            ))
+            .await
+            .expect_err("submitwrap succeeded with an invalid Ethereum address");
+        server
+            .post::<()>(&format!(
+                "submitwrap/eth_address/{}/asset/{}/record/{}",
+                sponsor_addr, invalid_asset, ro
+            ))
+            .await
+            .expect_err("submitwrap succeeded with an invalid asset");
+        server
+            .post::<()>(&format!(
+                "submitwrap/eth_address/{}/asset/{}/record/{}",
+                sponsor_addr, sponsored_asset, invalid_ro
+            ))
+            .await
+            .expect_err("submitwrap succeeded with an invalid record opening");
+
+        // submitwrap should succeed with the correct information.
+        server
+            .post::<()>(&format!(
+                "submitwrap/eth_address/{}/asset/{}/record/{}",
+                sponsor_addr, sponsored_asset, ro
             ))
             .await
             .unwrap();

@@ -9,20 +9,21 @@
 
 use crate::web::{NodeOpt, WebState};
 use async_std::fs::{read_dir, File};
-use cap_rust_sandbox::{
-    ledger::CapeLedger,
-    model::{Erc20Code, EthereumAddr},
-};
+use cap_rust_sandbox::ledger::CapeLedger;
 use cape_wallet::{
     ui::*,
     wallet::{CapeWalletError, CapeWalletExt},
 };
+use ethers::prelude::Address;
 use futures::{prelude::*, stream::iter};
 use jf_cap::{
     keys::{AuditorPubKey, FreezerPubKey, UserKeyPair, UserPubKey},
-    structs::{AssetCode, AssetPolicy},
+    structs::{AssetCode, AssetDefinition as JfAssetDefinition, AssetPolicy},
 };
-use net::{server::response, TaggedBlob, UserAddress};
+use net::{
+    server::{request_body, response},
+    TaggedBlob, UserAddress,
+};
 use rand_chacha::ChaChaRng;
 use seahorse::{
     asset_library::Icon,
@@ -43,7 +44,7 @@ use std::str::FromStr;
 use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, EnumIter, EnumString};
 use tagged_base64::TaggedBase64;
-use tide::{http::Method, StatusCode};
+use tide::{http::Method, Request, StatusCode};
 
 #[derive(Debug, Snafu, Serialize, Deserialize)]
 #[snafu(module(error))]
@@ -309,6 +310,7 @@ pub struct RouteBinding {
 #[allow(non_camel_case_types)]
 #[derive(AsRefStr, Copy, Clone, Debug, EnumIter, EnumString, strum_macros::Display)]
 pub enum ApiRouteKey {
+    buildsponsor,
     closewallet,
     exportasset,
     freeze,
@@ -329,6 +331,7 @@ pub enum ApiRouteKey {
     recoverkey,
     resetpassword,
     send,
+    submitsponsor,
     transaction,
     transactionhistory,
     unfreeze,
@@ -780,36 +783,95 @@ async fn newasset(
         };
     };
 
-    // If an ERC20 code is given, sponsor the asset. Otherwise, define an asset.
-    let code = match bindings.get(":erc20") {
-        Some(erc20_code) => {
-            let erc20_code = erc20_code.value.to::<Erc20Code>()?;
-            let sponsor_address = bindings
-                .get(":sponsor")
-                .unwrap()
-                .value
-                .to::<EthereumAddr>()?;
-            wallet
-                .sponsor(symbol, erc20_code, sponsor_address, policy)
-                .await?
-                .code
-        }
-        None => {
-            let description = match bindings.get(":description") {
-                Some(description) => description.value.as_base64()?,
-                _ => Vec::new(),
-            };
-            wallet
-                .define_asset(symbol, &description, policy)
-                .await?
-                .code
-        }
+    let description = match bindings.get(":description") {
+        Some(description) => description.value.as_base64()?,
+        _ => Vec::new(),
     };
+    let code = wallet
+        .define_asset(symbol, &description, policy)
+        .await?
+        .code;
 
     // The asset lookup will always succeed after we just created the asset.
     let info = wallet.asset(code).await.unwrap();
     let asset = AssetInfo::from_info(wallet, info).await;
     Ok(asset)
+}
+
+async fn buildsponsor(
+    bindings: &HashMap<String, RouteBinding>,
+    wallet: &mut Option<Wallet>,
+) -> Result<sol::AssetDefinition, tide::Error> {
+    let wallet = require_wallet(wallet)?;
+    let symbol = match bindings.get(":symbol") {
+        Some(param) => param.value.as_string()?,
+        None => String::new(),
+    };
+
+    // Construct the asset policy.
+    let mut policy = AssetPolicy::default();
+    if let Some(freezing_key) = bindings.get(":freezing_key") {
+        policy = policy.set_freezer_pub_key(freezing_key.value.to::<FreezerPubKey>()?)
+    };
+    if let Some(viewing_key) = bindings.get(":viewing_key") {
+        // Always reveal blinding factor if a viewing key is given.
+        policy = policy
+            .set_auditor_pub_key(viewing_key.value.to::<AuditorPubKey>()?)
+            .reveal_blinding_factor()?;
+
+        // Only if a viewing key is given, can amount and user address be revealed and viewing
+        // threshold be specified.
+        if let Some(view_flag) = bindings.get(":view_amount") {
+            if view_flag.value.as_boolean()? {
+                policy = policy.reveal_amount()?;
+            }
+        }
+        if let Some(view_flag) = bindings.get(":view_address") {
+            if view_flag.value.as_boolean()? {
+                policy = policy.reveal_user_address()?;
+            }
+        }
+        if let Some(threshold) = bindings.get(":viewing_threshold") {
+            policy = policy.set_reveal_threshold(threshold.value.as_u64()?);
+        };
+    };
+
+    let erc20_code: Address = bindings[":erc20"].value.as_string()?.parse()?;
+    let sponsor_address: Address = bindings
+        .get(":sponsor")
+        .unwrap()
+        .value
+        .as_string()?
+        .parse()?;
+    let asset = wallet
+        .build_sponsor(symbol, erc20_code.into(), sponsor_address.into(), policy)
+        .await?;
+    Ok(asset.into())
+}
+
+async fn submitsponsor(
+    req: &mut Request<WebState>,
+    bindings: &HashMap<String, RouteBinding>,
+    wallet: &mut Option<Wallet>,
+) -> Result<AssetInfo, tide::Error> {
+    let wallet = require_wallet(wallet)?;
+    let asset = JfAssetDefinition::from(request_body::<sol::AssetDefinition, _>(req).await?);
+    let erc20_code: Address = bindings[":erc20"].value.as_string()?.parse()?;
+    let sponsor: Address = bindings[":sponsor"].value.as_string()?.parse()?;
+
+    // Before actually submitting the sponsor, make sure we can find the info that we need to return.
+    let info = wallet
+        .asset(asset.code)
+        .await
+        .ok_or_else(|| wallet_error(CapeWalletError::UndefinedAsset { asset: asset.code }))?;
+
+    // Submit to the contract.
+    wallet
+        .submit_sponsor(erc20_code.into(), sponsor.into(), &asset)
+        .await
+        .map_err(wallet_error)?;
+
+    Ok(AssetInfo::from_info(wallet, info).await)
 }
 
 async fn wrap(
@@ -818,22 +880,19 @@ async fn wrap(
 ) -> Result<(), tide::Error> {
     let wallet = require_wallet(wallet)?;
 
-    let destination = bindings
-        .get(":destination")
-        .unwrap()
-        .value
-        .to::<UserAddress>()?;
-    let eth_address = bindings
-        .get(":eth_address")
-        .unwrap()
-        .value
-        .to::<EthereumAddr>()?;
-    let asset_code = bindings.get(":asset").unwrap().value.to::<AssetCode>()?;
+    let destination = bindings[":destination"].value.to::<UserAddress>()?;
+    let eth_address: Address = bindings[":eth_address"].value.as_string()?.parse()?;
+    let asset_code = bindings[":asset"].value.to::<AssetCode>()?;
     let asset_definition = wallet.asset(asset_code).await.unwrap().definition;
-    let amount = bindings.get(":amount").unwrap().value.as_u64()?;
+    let amount = bindings[":amount"].value.as_u64()?;
 
     Ok(wallet
-        .wrap(eth_address, asset_definition, destination.into(), amount)
+        .wrap(
+            eth_address.into(),
+            asset_definition,
+            destination.into(),
+            amount,
+        )
         .await?)
 }
 
@@ -868,18 +927,14 @@ async fn unwrap(
 ) -> Result<TransactionReceipt<CapeLedger>, tide::Error> {
     let wallet = require_wallet(wallet)?;
 
-    let source = bindings.get(":source").unwrap().value.to::<UserAddress>()?;
-    let eth_address = bindings
-        .get(":eth_address")
-        .unwrap()
-        .value
-        .to::<EthereumAddr>()?;
-    let asset = bindings.get(":asset").unwrap().value.to::<AssetCode>()?;
-    let amount = bindings.get(":amount").unwrap().value.as_u64()?;
-    let fee = bindings.get(":fee").unwrap().value.as_u64()?;
+    let source = bindings[":source"].value.to::<UserAddress>()?;
+    let eth_address: Address = bindings[":eth_address"].value.as_string()?.parse()?;
+    let asset = bindings[":asset"].value.to::<AssetCode>()?;
+    let amount = bindings[":amount"].value.as_u64()?;
+    let fee = bindings[":fee"].value.as_u64()?;
 
     Ok(wallet
-        .burn(&source.into(), eth_address, &asset, amount, fee)
+        .burn(&source.into(), eth_address.into(), &asset, amount, fee)
         .await?)
 }
 
@@ -1141,19 +1196,20 @@ async fn getprivatekey(
 }
 
 pub async fn dispatch_url(
-    req: tide::Request<WebState>,
+    mut req: Request<WebState>,
     route_pattern: &str,
     bindings: &HashMap<String, RouteBinding>,
 ) -> Result<tide::Response, tide::Error> {
     let segments = route_pattern.split_once('/').unwrap_or((route_pattern, ""));
     let route_params = segments.1.split('/').collect::<Vec<_>>();
-    let state = req.state();
+    let state = req.state().clone();
     let options = &state.options;
     let rng = &mut *state.rng.lock().await;
     let faucet_key_pair = &state.faucet_key_pair;
     let wallet = &mut *state.wallet.lock().await;
     let key = ApiRouteKey::from_str(segments.0).expect("Unknown route");
     match key {
+        ApiRouteKey::buildsponsor => response(&req, buildsponsor(bindings, wallet).await?),
         ApiRouteKey::closewallet => response(&req, closewallet(wallet).await?),
         ApiRouteKey::exportasset => response(&req, exportasset(bindings, wallet).await?),
         ApiRouteKey::freeze => dummy_url_eval(route_pattern, bindings),
@@ -1186,6 +1242,10 @@ pub async fn dispatch_url(
             resetpassword(options, bindings, rng, faucet_key_pair, wallet).await?,
         ),
         ApiRouteKey::send => response(&req, send(bindings, wallet).await?),
+        ApiRouteKey::submitsponsor => {
+            let res = submitsponsor(&mut req, bindings, wallet).await?;
+            response(&req, res)
+        }
         ApiRouteKey::transaction => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::transactionhistory => {
             response(&req, transactionhistory(bindings, wallet).await?)

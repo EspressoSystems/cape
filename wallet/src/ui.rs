@@ -10,10 +10,11 @@
 use crate::wallet::{CapeWallet, CapeWalletBackend, CapeWalletExt};
 use cap_rust_sandbox::ledger::{CapeLedger, CapeTransactionKind};
 use cap_rust_sandbox::model::Erc20Code;
+use espresso_macros::ser_test;
 use futures::stream::{iter, StreamExt};
 use jf_cap::{
     keys::{AuditorKeyPair, AuditorPubKey, FreezerKeyPair, FreezerPubKey, UserKeyPair, UserPubKey},
-    structs::{AssetCode, AssetDefinition as JfAssetDefinition, AssetPolicy},
+    structs::{AssetCode, AssetDefinition as JfAssetDefinition, AssetPolicy as JfAssetPolicy},
 };
 use net::UserAddress;
 use reef::cap;
@@ -31,6 +32,7 @@ use std::io::Cursor;
 use std::str::FromStr;
 
 /// UI-friendly asset definition.
+#[ser_test(ark(false))]
 #[derive(Clone, Debug, Default, Deserialize, Eq, Hash, PartialEq, Serialize)]
 pub struct AssetDefinition {
     pub code: AssetCode,
@@ -40,6 +42,7 @@ pub struct AssetDefinition {
     pub viewing_key: Option<AuditorPubKey>,
     pub address_viewable: bool,
     pub amount_viewable: bool,
+    pub blind_viewable: bool,
     pub viewing_threshold: u64,
 }
 
@@ -76,6 +79,7 @@ impl From<JfAssetDefinition> for AssetDefinition {
             },
             address_viewable: policy.is_user_address_revealed(),
             amount_viewable: policy.is_amount_revealed(),
+            blind_viewable: policy.is_blinding_factor_revealed(),
             viewing_threshold: policy.reveal_threshold(),
         }
     }
@@ -88,7 +92,7 @@ impl From<AssetDefinition> for JfAssetDefinition {
             return JfAssetDefinition::native();
         }
 
-        let mut policy = AssetPolicy::default();
+        let mut policy = JfAssetPolicy::default();
         if let Some(freezing_key) = definition.freezing_key {
             policy = policy.set_freezer_pub_key(freezing_key);
         }
@@ -99,6 +103,9 @@ impl From<AssetDefinition> for JfAssetDefinition {
             }
             if definition.amount_viewable {
                 policy = policy.reveal_amount().unwrap();
+            }
+            if definition.blind_viewable {
+                policy = policy.reveal_blinding_factor().unwrap();
             }
             policy = policy.set_reveal_threshold(definition.viewing_threshold);
         }
@@ -129,13 +136,14 @@ impl FromStr for AssetDefinition {
         // This parse method is meant for a friendly, discoverable CLI interface. It parses a
         // comma-separated list of key-value pairs, like `address_viewable:true`. This allows the
         // fields to be specified in any order, or not at all. Recognized fields are "code",
-        // "freezing key", "viewing key", "address viewable", "amount viewable", and "viewing
-        // threshold".
+        // "freezing key", "viewing key", "address viewable", "amount viewable", "blind viewable",
+        // and "viewing threshold".
         let mut code = None;
         let mut freezing_key = None;
         let mut viewing_key = None;
         let mut address_viewable = false;
         let mut amount_viewable = false;
+        let mut blind_viewable = false;
         let mut viewing_threshold = 0;
         for kv in s.split(',') {
             let (key, value) = match kv.split_once(':') {
@@ -174,6 +182,11 @@ impl FromStr for AssetDefinition {
                         .parse()
                         .map_err(|_| format!("expected bool, got {}", value))?;
                 }
+                "blind_viewable" => {
+                    blind_viewable = value
+                        .parse()
+                        .map_err(|_| format!("expected bool, got {}", value))?;
+                }
                 "viewing_threshold" => {
                     viewing_threshold = value
                         .parse()
@@ -194,13 +207,15 @@ impl FromStr for AssetDefinition {
             viewing_key,
             address_viewable,
             amount_viewable,
+            blind_viewable,
             viewing_threshold,
         })
     }
 }
 
 /// UI-friendly details about an asset type.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[ser_test(ark(false))]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct AssetInfo {
     pub definition: AssetDefinition,
     pub mint_info: Option<MintInfo>,
@@ -306,7 +321,8 @@ pub enum BalanceInfo {
     AllBalances(HashMap<UserAddress, HashMap<AssetCode, u64>>),
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[ser_test(ark(false))]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct WalletSummary {
     pub addresses: Vec<UserAddress>,
     pub sending_keys: Vec<UserPubKey>,
@@ -338,7 +354,8 @@ impl From<RecordInfo> for Record {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[ser_test(ark(false))]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Account {
     pub records: Vec<Record>,
     pub balance: u64,
@@ -392,7 +409,8 @@ impl Account {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[ser_test(ark(false))]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct TransactionHistoryEntry {
     pub time: String,
     pub asset: AssetCode,
@@ -440,6 +458,231 @@ impl TransactionHistoryEntry {
                 },
                 None => "unknown".to_string(),
             },
+        }
+    }
+}
+
+/// Solidity types, serialized as JSON in a MetaMask-compatible format.
+pub mod sol {
+    use super::*;
+    use cap_rust_sandbox::types;
+
+    // Primitive types like big integers and addresses just get serialized as hex strings.
+    #[ser_test(ark(false))]
+    #[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
+    #[serde(into = "String", try_from = "String")]
+    pub struct U256(ethers::prelude::U256);
+
+    impl From<ethers::prelude::U256> for U256 {
+        fn from(x: ethers::prelude::U256) -> Self {
+            Self(x)
+        }
+    }
+
+    impl From<U256> for ethers::prelude::U256 {
+        fn from(x: U256) -> Self {
+            x.0
+        }
+    }
+
+    impl From<U256> for String {
+        fn from(x: U256) -> Self {
+            format!("{:#x}", x.0)
+        }
+    }
+
+    impl TryFrom<String> for U256 {
+        type Error = <ethers::prelude::U256 as FromStr>::Err;
+
+        fn try_from(s: String) -> Result<Self, Self::Error> {
+            Ok(Self(s.parse()?))
+        }
+    }
+
+    impl From<U256> for AssetCode {
+        fn from(x: U256) -> Self {
+            types::AssetCodeSol(x.into()).into()
+        }
+    }
+
+    impl From<AssetCode> for U256 {
+        fn from(x: AssetCode) -> Self {
+            types::AssetCodeSol::from(x).0.into()
+        }
+    }
+
+    #[ser_test(ark(false))]
+    #[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
+    #[serde(into = "String", try_from = "String")]
+    pub struct Address(ethers::prelude::Address);
+
+    impl From<ethers::prelude::Address> for Address {
+        fn from(x: ethers::prelude::Address) -> Self {
+            Self(x)
+        }
+    }
+
+    impl From<Address> for ethers::prelude::Address {
+        fn from(x: Address) -> Self {
+            x.0
+        }
+    }
+
+    impl From<Address> for String {
+        fn from(x: Address) -> Self {
+            format!("{:#x}", x.0)
+        }
+    }
+
+    impl TryFrom<String> for Address {
+        type Error = <ethers::prelude::Address as FromStr>::Err;
+
+        fn try_from(s: String) -> Result<Self, Self::Error> {
+            Ok(Self(s.parse()?))
+        }
+    }
+
+    #[ser_test(ark(false))]
+    #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+    pub struct EdOnBN254Point {
+        pub x: U256,
+        pub y: U256,
+    }
+
+    impl From<types::EdOnBN254Point> for EdOnBN254Point {
+        fn from(p: types::EdOnBN254Point) -> Self {
+            Self {
+                x: p.x.into(),
+                y: p.y.into(),
+            }
+        }
+    }
+
+    impl From<EdOnBN254Point> for types::EdOnBN254Point {
+        fn from(p: EdOnBN254Point) -> Self {
+            Self {
+                x: p.x.into(),
+                y: p.y.into(),
+            }
+        }
+    }
+
+    impl From<EdOnBN254Point> for AuditorPubKey {
+        fn from(p: EdOnBN254Point) -> Self {
+            types::EdOnBN254Point::from(p).into()
+        }
+    }
+
+    impl From<AuditorPubKey> for EdOnBN254Point {
+        fn from(p: AuditorPubKey) -> Self {
+            types::EdOnBN254Point::from(p).into()
+        }
+    }
+
+    impl From<EdOnBN254Point> for FreezerPubKey {
+        fn from(p: EdOnBN254Point) -> Self {
+            types::EdOnBN254Point::from(p).into()
+        }
+    }
+
+    impl From<FreezerPubKey> for EdOnBN254Point {
+        fn from(p: FreezerPubKey) -> Self {
+            types::EdOnBN254Point::from(p).into()
+        }
+    }
+
+    #[ser_test(ark(false))]
+    #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+    pub struct AssetDefinition {
+        pub code: U256,
+        pub policy: AssetPolicy,
+    }
+
+    impl From<types::AssetDefinition> for AssetDefinition {
+        fn from(a: types::AssetDefinition) -> Self {
+            Self {
+                code: a.code.into(),
+                policy: a.policy.into(),
+            }
+        }
+    }
+
+    impl From<AssetDefinition> for types::AssetDefinition {
+        fn from(a: AssetDefinition) -> Self {
+            Self {
+                code: a.code.into(),
+                policy: a.policy.into(),
+            }
+        }
+    }
+
+    impl From<JfAssetDefinition> for AssetDefinition {
+        fn from(a: JfAssetDefinition) -> Self {
+            types::AssetDefinition::from(a).into()
+        }
+    }
+
+    impl From<AssetDefinition> for JfAssetDefinition {
+        fn from(a: AssetDefinition) -> Self {
+            types::AssetDefinition::from(a).into()
+        }
+    }
+
+    impl From<super::AssetDefinition> for AssetDefinition {
+        fn from(a: super::AssetDefinition) -> Self {
+            JfAssetDefinition::from(a).into()
+        }
+    }
+
+    impl From<AssetDefinition> for super::AssetDefinition {
+        fn from(a: AssetDefinition) -> Self {
+            JfAssetDefinition::from(a).into()
+        }
+    }
+
+    #[ser_test(ark(false))]
+    #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+    pub struct AssetPolicy {
+        pub auditor_pk: EdOnBN254Point,
+        pub cred_pk: EdOnBN254Point,
+        pub freezer_pk: EdOnBN254Point,
+        pub reveal_map: U256,
+        pub reveal_threshold: u64,
+    }
+
+    impl From<types::AssetPolicy> for AssetPolicy {
+        fn from(p: types::AssetPolicy) -> Self {
+            Self {
+                auditor_pk: p.auditor_pk.into(),
+                cred_pk: p.cred_pk.into(),
+                freezer_pk: p.freezer_pk.into(),
+                reveal_map: p.reveal_map.into(),
+                reveal_threshold: p.reveal_threshold,
+            }
+        }
+    }
+
+    impl From<AssetPolicy> for types::AssetPolicy {
+        fn from(p: AssetPolicy) -> Self {
+            Self {
+                auditor_pk: p.auditor_pk.into(),
+                cred_pk: p.cred_pk.into(),
+                freezer_pk: p.freezer_pk.into(),
+                reveal_map: p.reveal_map.into(),
+                reveal_threshold: p.reveal_threshold,
+            }
+        }
+    }
+
+    impl From<JfAssetPolicy> for AssetPolicy {
+        fn from(p: JfAssetPolicy) -> Self {
+            types::AssetPolicy::from(p).into()
+        }
+    }
+
+    impl From<AssetPolicy> for JfAssetPolicy {
+        fn from(p: AssetPolicy) -> Self {
+            types::AssetPolicy::from(p).into()
         }
     }
 }

@@ -5,12 +5,12 @@
 // This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+use crate::universal_param::UNIVERSAL_PARAM;
 use anyhow::Result;
 use ark_bn254::{Bn254, Fq, Fr};
 use ark_ff::PrimeField;
 use ark_std::{convert::TryInto, test_rng};
 use itertools::izip;
-use jf_cap::proof::universal_setup_for_staging;
 use jf_plonk::{
     circuit::{Arithmetization, Circuit, PlonkCircuit},
     proof_system::{
@@ -35,9 +35,7 @@ pub(crate) fn gen_plonk_proof_for_test(
 > {
     // 1. Simulate universal setup
     let rng = &mut test_rng();
-    let n = 64;
-    let max_degree = n + 2;
-    let srs = universal_setup_for_staging(max_degree, rng)?;
+    let srs = &*UNIVERSAL_PARAM;
 
     // 2. Create circuits
     let circuits = (0..num_proof)
@@ -56,7 +54,7 @@ pub(crate) fn gen_plonk_proof_for_test(
     let mut prove_keys = vec![];
     let mut ver_keys = vec![];
     for c in circuits.iter() {
-        let (pk, vk) = PlonkKzgSnark::<Bn254>::preprocess(&srs, c)?;
+        let (pk, vk) = PlonkKzgSnark::<Bn254>::preprocess(srs, c)?;
         prove_keys.push(pk);
         ver_keys.push(vk);
     }

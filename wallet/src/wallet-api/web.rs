@@ -19,7 +19,7 @@ use async_std::{
     task::{spawn, JoinHandle},
 };
 use cap_rust_sandbox::model::EthereumAddr;
-use ethers::prelude::Address;
+use ethers::prelude::{Address, H160};
 use jf_cap::{keys::UserKeyPair, structs::AssetCode};
 use net::server;
 use rand_chacha::ChaChaRng;
@@ -35,7 +35,7 @@ use tide::{
 };
 use tide_tracing::TraceMiddleware;
 
-pub const DEFAULT_ETH_ADDR: EthereumAddr = EthereumAddr([2; 20]);
+pub const DEFAULT_ETH_ADDR: Address = H160([2; 20]);
 pub const DEFAULT_WRAPPED_AMT: u64 = 1000;
 pub const DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR: u64 = 500;
 pub const DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR: u64 = 400;
@@ -447,7 +447,7 @@ async fn populatefortest(req: tide::Request<WebState>) -> Result<tide::Response,
     let mut random_addr = [0u8; 20];
     rng.fill_bytes(&mut random_addr);
     let erc20_code = Erc20Code(EthereumAddr(random_addr));
-    let sponsor_addr = DEFAULT_ETH_ADDR;
+    let sponsor_addr: EthereumAddr = DEFAULT_ETH_ADDR.into();
     let asset_def = wallet
         .sponsor(
             "dummy_wrapped_asset".into(),

@@ -219,7 +219,7 @@ the transaction through the validation process.
 METHOD = "POST"
 PATH = ["wrap/destination/:destination/ethaddress/:eth_address/asset/:asset/amount/:amount"]
 ":destination" = "TaggedBase64"
-":eth_address" = "TaggedBase64"
+":eth_address" = "Literal"
 ":asset" = "TaggedBase64"
 ":amount" = "Integer"
 DOC = """
@@ -230,7 +230,7 @@ Wrap amount units of the given asset from the Ethereum address to the destinatio
 METHOD = "POST"
 PATH = ["unwrap/source/:source/ethaddress/:eth_address/asset/:asset/amount/:amount/fee/:fee"]
 ":source" = "TaggedBase64"
-":eth_address" = "TaggedBase64"
+":eth_address" = "Literal"
 ":asset" = "TaggedBase64"
 ":amount" = "Integer"
 ":fee" = "Integer"
@@ -243,44 +243,6 @@ METHOD = "POST"
 PATH = [
   # `symbol` may be added as a parameter in the future but it's not used for now.
   # Only if `viewing_key` is given, can `view_amount`, `view_address` and `viewing_threshold` be specified.
-
-  # Paths for asset sponsor.
-  "newasset/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address/viewing_threshold/:viewing_threshold",
-  "newasset/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address",
-  "newasset/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/viewing_threshold/:viewing_threshold",
-  "newasset/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount",
-  "newasset/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_address/:view_address/viewing_threshold/:viewing_threshold",
-  "newasset/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_address/:view_address",
-  "newasset/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/viewing_threshold/:viewing_threshold",
-  "newasset/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key",
-  "newasset/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key",
-  "newasset/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address/viewing_threshold/:viewing_threshold",
-  "newasset/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address",
-  "newasset/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_amount/:view_amount/viewing_threshold/:viewing_threshold",
-  "newasset/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_amount/:view_amount",
-  "newasset/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_address/:view_address/viewing_threshold/:viewing_threshold",
-  "newasset/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_address/:view_address",
-  "newasset/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/viewing_threshold/:viewing_threshold",
-  "newasset/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key",
-  "newasset/erc20/:erc20/sponsor/:sponsor",
-  "newasset/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address/viewing_threshold/:viewing_threshold",
-  "newasset/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address",
-  "newasset/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/viewing_threshold/:viewing_threshold",
-  "newasset/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount",
-  "newasset/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_address/:view_address/viewing_threshold/:viewing_threshold",
-  "newasset/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_address/:view_address",
-  "newasset/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/viewing_threshold/:viewing_threshold",
-  "newasset/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key",
-  "newasset/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key",
-  "newasset/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address/viewing_threshold/:viewing_threshold",
-  "newasset/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address",
-  "newasset/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_amount/:view_amount/viewing_threshold/:viewing_threshold",
-  "newasset/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_amount/:view_amount",
-  "newasset/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_address/:view_address/viewing_threshold/:viewing_threshold",
-  "newasset/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_address/:view_address",
-  "newasset/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/viewing_threshold/:viewing_threshold",
-  "newasset/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key",
-  "newasset/symbol/:symbol/erc20/:erc20/sponsor/:sponsor",
 
   # Paths for asset definition with a given description.
   "newasset/description/:description/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address/viewing_threshold/:viewing_threshold",
@@ -369,6 +331,70 @@ PATH = [
 ":viewing_threshold" = "Integer"
 DOC = """
 Sponsor or define an asset, depending on if an ERC20 code is given. Reports the asset definition.
+"""
+
+[route.buildsponsor]
+METHOD = "POST"
+PATH = [
+  "buildsponsor/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address/viewing_threshold/:viewing_threshold",
+  "buildsponsor/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address",
+  "buildsponsor/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/viewing_threshold/:viewing_threshold",
+  "buildsponsor/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount",
+  "buildsponsor/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_address/:view_address/viewing_threshold/:viewing_threshold",
+  "buildsponsor/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_address/:view_address",
+  "buildsponsor/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/viewing_threshold/:viewing_threshold",
+  "buildsponsor/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key",
+  "buildsponsor/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key",
+  "buildsponsor/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address/viewing_threshold/:viewing_threshold",
+  "buildsponsor/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address",
+  "buildsponsor/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_amount/:view_amount/viewing_threshold/:viewing_threshold",
+  "buildsponsor/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_amount/:view_amount",
+  "buildsponsor/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_address/:view_address/viewing_threshold/:viewing_threshold",
+  "buildsponsor/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_address/:view_address",
+  "buildsponsor/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/viewing_threshold/:viewing_threshold",
+  "buildsponsor/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key",
+  "buildsponsor/erc20/:erc20/sponsor/:sponsor",
+  "buildsponsor/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address/viewing_threshold/:viewing_threshold",
+  "buildsponsor/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address",
+  "buildsponsor/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/viewing_threshold/:viewing_threshold",
+  "buildsponsor/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount",
+  "buildsponsor/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_address/:view_address/viewing_threshold/:viewing_threshold",
+  "buildsponsor/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_address/:view_address",
+  "buildsponsor/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/viewing_threshold/:viewing_threshold",
+  "buildsponsor/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key",
+  "buildsponsor/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key",
+  "buildsponsor/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address/viewing_threshold/:viewing_threshold",
+  "buildsponsor/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address",
+  "buildsponsor/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_amount/:view_amount/viewing_threshold/:viewing_threshold",
+  "buildsponsor/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_amount/:view_amount",
+  "buildsponsor/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_address/:view_address/viewing_threshold/:viewing_threshold",
+  "buildsponsor/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_address/:view_address",
+  "buildsponsor/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/viewing_threshold/:viewing_threshold",
+  "buildsponsor/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key",
+  "buildsponsor/symbol/:symbol/erc20/:erc20/sponsor/:sponsor",
+]
+":erc20" = "Literal"
+":sponsor" = "Literal"
+":symbol" = "Base64"
+":freezing_key" = "TaggedBase64"
+":viewing_key" = "TaggedBase64"
+":view_amount" = "Boolean"
+":view_address" = "Boolean"
+":viewing_threshold" = "Integer"
+DOC = """
+Build, but do not submit, a sponsor transaction.
+"""
+
+[route.submitsponsor]
+METHOD = "POST"
+PATH = ["submitsponsor/erc20/:erc20/sponsor/:sponsor"]
+":erc20" = "Literal"
+":sponsor" = "Literal"
+DOC = """
+Submit a sponsor transaction to the CAPE contract.
+
+The request body should be the asset definition returned by `buildsponsor`. `:erc20` and `:sponsor`
+must be the same that were used to build the asset definition.
 """
 
 [route.updateasset]

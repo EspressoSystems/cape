@@ -31,9 +31,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const treeDepth = 24;
   const nRoots = 1000;
 
-  // To update, update pass new UserPubKey tagged blob:
+  // To change, update change FAUCET_MANAGER_ENCRYPTION_KEY in rust/src/cape/faucet.rs
   //
-  // cargo run --bin faucet-gen-typescript -- --pub-key  "USERPUBKEY~muN7V...Zl1KxQ"
+  // cargo run --bin faucet-gen-typescript
   //
   // and copy/paste the output.
 

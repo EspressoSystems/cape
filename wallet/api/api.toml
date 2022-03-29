@@ -227,13 +227,11 @@ Build, but do not submit, a wrap transaction.
 
 [route.submitwrap]
 METHOD = "POST"
-PATH = ["submitwrap/ethaddress/:eth_address/asset/:asset/record/:record"]
+PATH = ["submitwrap/ethaddress/:eth_address"]
 ":eth_address" = "Literal"
-":asset" = "TaggedBase64"
-":record" = "Literal"
 DOC = """
 Submit a wrap transaction to the CAPE contract.
-The request body should be the record opening returned by `buildwrap`. `:asset` must be the same that was used to build the record opening.
+The request body should be the record opening returned by `buildwrap`.
 """
 
 [route.unwrap]

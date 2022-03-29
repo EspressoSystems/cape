@@ -18,7 +18,10 @@ use ethers::prelude::Address;
 use futures::{prelude::*, stream::iter};
 use jf_cap::{
     keys::{AuditorPubKey, FreezerPubKey, UserKeyPair, UserPubKey},
-    structs::{AssetCode, AssetDefinition as JfAssetDefinition, AssetPolicy},
+    structs::{
+        AssetCode, AssetDefinition as JfAssetDefinition, AssetPolicy,
+        RecordOpening as JfRecordOpening,
+    },
 };
 use net::{
     server::{request_body, response},
@@ -878,7 +881,7 @@ async fn submitsponsor(
 async fn buildwrap(
     bindings: &HashMap<String, RouteBinding>,
     wallet: &mut Option<Wallet>,
-) -> Result<String, tide::Error> {
+) -> Result<sol::RecordOpening, tide::Error> {
     let wallet = require_wallet(wallet)?;
 
     let destination = bindings
@@ -886,39 +889,29 @@ async fn buildwrap(
         .unwrap()
         .value
         .to::<UserAddress>()?;
-    let asset_code = bindings.get(":asset").unwrap().value.to::<AssetCode>()?;
+    let asset_code = bindings[":asset"].value.to::<AssetCode>()?;
     let asset_definition = wallet.asset(asset_code).await.unwrap().definition;
-    let amount = bindings.get(":amount").unwrap().value.as_u64()?;
+    let amount = bindings[":amount"].value.as_u64()?;
     let ro: sol::RecordOpening = wallet
         .build_wrap(asset_definition, destination.into(), amount)
         .await?
         .into();
-    Ok(serde_json::to_string(&ro).unwrap())
+    Ok(ro)
 }
 
 async fn submitwrap(
+    req: &mut Request<WebState>,
     bindings: &HashMap<String, RouteBinding>,
     wallet: &mut Option<Wallet>,
 ) -> Result<(), tide::Error> {
     let wallet = require_wallet(wallet)?;
 
-    let eth_address = bindings
-        .get(":eth_address")
-        .unwrap()
-        .value
-        .as_string()?
-        .parse()?;
-    let asset_code = bindings.get(":asset").unwrap().value.to::<AssetCode>()?;
-    let asset_definition = wallet.asset(asset_code).await.unwrap().definition;
-    let ro_str = bindings.get(":record").unwrap().value.as_string()?;
-    let ro: sol::RecordOpening = serde_json::from_str(&ro_str).unwrap();
+    let eth_address: Address = bindings[":eth_address"].value.as_string()?.parse()?;
+    let ro = JfRecordOpening::from(request_body::<sol::RecordOpening, _>(req).await?);
+    let asset_definition = ro.asset_def.clone();
 
     Ok(wallet
-        .submit_wrap(
-            eth_address,
-            asset_definition,
-            jf_cap::structs::RecordOpening::from(ro),
-        )
+        .submit_wrap(eth_address.into(), asset_definition, ro)
         .await?)
 }
 
@@ -1277,7 +1270,10 @@ pub async fn dispatch_url(
             let res = submitsponsor(&mut req, bindings, wallet).await?;
             response(&req, res)
         }
-        ApiRouteKey::submitwrap => response(&req, submitwrap(bindings, wallet).await?),
+        ApiRouteKey::submitwrap => {
+            let res = submitwrap(&mut req, bindings, wallet).await?;
+            response(&req, res)
+        }
         ApiRouteKey::transaction => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::transactionhistory => {
             response(&req, transactionhistory(bindings, wallet).await?)

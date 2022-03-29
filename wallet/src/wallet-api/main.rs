@@ -1012,12 +1012,24 @@ mod tests {
 
         // Sponsor an asset.
         let sponsored_asset = server
-            .post::<AssetInfo>(&format!(
-                "newasset/erc20/{}/sponsor/{}",
+            .post::<sol::AssetDefinition>(&format!(
+                "buildsponsor/erc20/{:#x}/sponsor/{:#x}",
                 erc20_code, sponsor_addr
             ))
             .await
             .unwrap();
+        server
+            .client
+            .post(&format!(
+                "submitsponsor/erc20/{:#x}/sponsor/{:#x}",
+                erc20_code, sponsor_addr
+            ))
+            .body_json(&sponsored_asset)
+            .unwrap()
+            .send()
+            .await
+            .unwrap();
+        let sponsored_asset: JfAssetDefinition = sponsored_asset.into();
 
         // Create an address to receive the wrapped asset.
         server.post::<PubKey>("newkey/sending").await.unwrap();
@@ -1027,65 +1039,57 @@ mod tests {
 
         // buildwrap should fail if the destination or asset is invalid.
         let invalid_destination = UserAddress::from(UserKeyPair::generate(&mut rng).address());
-        let invalid_asset = AssetDefinition::dummy();
+        let invalid_code = AssetCode::dummy();
         server
             .post::<String>(&format!(
                 "buildwrap/destination/{}/asset/{}/amount/{}",
-                invalid_destination, sponsored_asset, 10
+                invalid_destination, sponsored_asset.code, 10
             ))
             .await
             .expect_err("buildwrap succeeded with an invalid user address");
         server
             .post::<String>(&format!(
                 "buildwrap/destination/{}/asset/{}/amount/{}",
-                destination, invalid_asset, 10
+                destination, invalid_code, 10
             ))
             .await
             .expect_err("buildwrap succeeded with an invalid asset");
 
         // buildwrap should succeed with the correct information.
         let ro = server
-            .post::<String>(&format!(
+            .post::<sol::RecordOpening>(&format!(
                 "buildwrap/destination/{}/asset/{}/amount/{}",
-                destination, sponsored_asset.definition.code, 10
+                destination, sponsored_asset.code, 10
             ))
             .await
             .unwrap();
 
-        println!("ro:     {}", ro);
-
-        // submitwrap should fail if any of the Ethereum address, asset, and record opening is invalid.
-        let invalid_eth_addr = EthereumAddr([0u8; 20]);
-        let invalid_asset = AssetDefinition::dummy();
-        let invalid_ro = serde_json::to_string(&sol::RecordOpening::default()).unwrap();
+        // submitwrap should fail if the Ethereum address or record opening is invalid.
+        let invalid_ro = sol::RecordOpening::default();
         server
-            .post::<()>(&format!(
-                "submitwrap/eth_address/{}/asset/{}/record/{}",
-                invalid_eth_addr, sponsored_asset, ro
-            ))
+            .client
+            .post(&format!("submitwrap/ethaddress/0xinvalid"))
+            .body_json(&ro)
+            .unwrap()
+            .send()
             .await
             .expect_err("submitwrap succeeded with an invalid Ethereum address");
         server
-            .post::<()>(&format!(
-                "submitwrap/eth_address/{}/asset/{}/record/{}",
-                sponsor_addr, invalid_asset, ro
-            ))
-            .await
-            .expect_err("submitwrap succeeded with an invalid asset");
-        server
-            .post::<()>(&format!(
-                "submitwrap/eth_address/{}/asset/{}/record/{}",
-                sponsor_addr, sponsored_asset, invalid_ro
-            ))
+            .client
+            .post(&format!("submitwrap/ethaddress/{:#x}", sponsor_addr))
+            .body_json(&invalid_ro)
+            .unwrap()
+            .send()
             .await
             .expect_err("submitwrap succeeded with an invalid record opening");
 
         // submitwrap should succeed with the correct information.
         server
-            .post::<()>(&format!(
-                "submitwrap/eth_address/{}/asset/{}/record/{}",
-                sponsor_addr, sponsored_asset, ro
-            ))
+            .client
+            .post(&format!("submitwrap/ethaddress/{:#x}", sponsor_addr))
+            .body_json(&ro)
+            .unwrap()
+            .send()
             .await
             .unwrap();
     }

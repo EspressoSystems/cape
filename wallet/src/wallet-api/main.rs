@@ -88,12 +88,10 @@ mod tests {
     };
     use serde::de::DeserializeOwned;
     use std::collections::hash_map::HashMap;
-    use std::collections::HashSet;
     use std::convert::TryInto;
     use std::fmt::Debug;
     use std::io::Cursor;
     use std::iter::once;
-    use std::iter::FromIterator;
     use std::path::{Path, PathBuf};
     use surf::Url;
     use tempdir::TempDir;
@@ -331,7 +329,7 @@ mod tests {
 
         // Should get None on first try if no last wallet.
         let opt = server
-            .get::<Option<PathBuf>>("lastusedkeystore")
+            .get::<Option<KeyStoreLocation>>("lastusedkeystore")
             .await
             .unwrap();
         assert!(opt.is_none());
@@ -339,49 +337,49 @@ mod tests {
         let url = format!("newwallet/{}/{}/path/{}", mnemonic, password, server.path());
         server.post::<()>(&url).await.unwrap();
 
-        let mut path = server
-            .get::<Option<PathBuf>>("lastusedkeystore")
+        let mut loc = server
+            .get::<Option<KeyStoreLocation>>("lastusedkeystore")
             .await
             .unwrap();
-        assert_eq!(fmt_path(path.as_ref().unwrap()), server.path());
+        assert_eq!(fmt_path(&loc.unwrap().path), server.path());
 
         // We should still get the same path after opening the wallet
         server
             .post::<()>(&format!("openwallet/{}/path/{}", password, server.path()))
             .await
             .unwrap();
-        path = server
-            .get::<Option<PathBuf>>("lastusedkeystore")
+        loc = server
+            .get::<Option<KeyStoreLocation>>("lastusedkeystore")
             .await
             .unwrap();
-        assert_eq!(fmt_path(path.as_ref().unwrap()), server.path());
+        assert_eq!(fmt_path(&loc.as_ref().unwrap().path), server.path());
 
         // Open the wallet with the we path we retrieved
         server
             .post::<()>(&format!(
                 "openwallet/{}/path/{}",
                 password,
-                fmt_path(path.as_ref().unwrap())
+                fmt_path(&loc.as_ref().unwrap().path)
             ))
             .await
             .unwrap();
 
         // Test that the last path is updated when we create a new wallet w/ a new path
-        let second_path = fmt_path(TempDir::new("test_cape_wallet_2").unwrap().path());
-
         server
             .post::<()>(&format!(
-                "newwallet/{}/{}/path/{}",
-                mnemonic, password, second_path
+                "newwallet/{}/{}/name/{}",
+                mnemonic,
+                password,
+                base64::encode_config("test_wallet_2", base64::URL_SAFE_NO_PAD),
             ))
             .await
             .unwrap();
 
-        path = server
-            .get::<Option<PathBuf>>("lastusedkeystore")
+        loc = server
+            .get::<Option<KeyStoreLocation>>("lastusedkeystore")
             .await
             .unwrap();
-        assert_eq!(fmt_path(path.as_ref().unwrap()), second_path);
+        assert_eq!(loc.unwrap().name, Some("test_wallet_2".into()));
 
         // repopen the first wallet and see the path returned is also the original
         server
@@ -389,11 +387,11 @@ mod tests {
             .await
             .unwrap();
 
-        path = server
-            .get::<Option<PathBuf>>("lastusedkeystore")
+        loc = server
+            .get::<Option<KeyStoreLocation>>("lastusedkeystore")
             .await
             .unwrap();
-        assert_eq!(fmt_path(path.as_ref().unwrap()), server.path());
+        assert_eq!(fmt_path(&loc.unwrap().path), server.path());
     }
 
     #[cfg(feature = "slow-tests")]
@@ -1766,6 +1764,8 @@ mod tests {
     #[traced_test]
     async fn test_listkeystores() {
         let server = TestServer::new().await;
+        // Keystore names may include whatever characters the user wants.
+        let keystore_name = "named/key \\store";
 
         // There are not keystores yet.
         assert_eq!(
@@ -1779,38 +1779,17 @@ mod tests {
                 "newwallet/{}/{}/name/{}",
                 server.get::<String>("getmnemonic").await.unwrap(),
                 base64("my-password".as_bytes()),
-                base64("named_keystore".as_bytes()),
+                base64(keystore_name.as_bytes()),
             ))
             .await
             .unwrap();
         assert_eq!(
-            vec![String::from("named_keystore")],
+            vec![String::from(keystore_name)],
             server.get::<Vec<String>>("listkeystores").await.unwrap()
         );
 
-        // Create a key store by path, in the directory containing named keystores.
-        server
-            .post::<()>(&format!(
-                "newwallet/{}/{}/path/{}",
-                server.get::<String>("getmnemonic").await.unwrap(),
-                base64("my-password".as_bytes()),
-                server.path()
-            ))
-            .await
-            .unwrap();
-        let from_server_vec = server.get::<Vec<String>>("listkeystores").await.unwrap();
-        let expected: HashSet<String> =
-            vec![String::from("named_keystore"), String::from("test_wallet")]
-                .into_iter()
-                .collect();
-
-        assert_eq!(
-            expected,
-            HashSet::from_iter(from_server_vec.iter().cloned())
-        );
-
         // Create a wallet in a different directory, and make sure it is not listed.
-        let new_dir = TempDir::new("non_keystoer_dir").unwrap();
+        let new_dir = TempDir::new("non_keystore_dir").unwrap();
         server
             .post::<()>(&format!(
                 "newwallet/{}/{}/path/{}",
@@ -1822,10 +1801,7 @@ mod tests {
             .unwrap();
 
         let from_server_vec = server.get::<Vec<String>>("listkeystores").await.unwrap();
-        assert_eq!(
-            expected,
-            HashSet::from_iter(from_server_vec.iter().cloned())
-        );
+        assert_eq!(vec![String::from(keystore_name)], from_server_vec);
     }
 
     #[async_std::test]

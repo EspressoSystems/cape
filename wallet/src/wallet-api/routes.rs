@@ -618,7 +618,10 @@ async fn listkeystores(options: &NodeOpt) -> Result<Vec<String>, tide::Error> {
     let mut entries = read_dir(options.keystores_dir()).await?;
     let mut keystores = vec![];
     while let Some(entry) = entries.next().await {
-        keystores.push(entry?.file_name().to_str().unwrap().to_owned());
+        let path: PathBuf = entry?.path().into();
+        if let Some(name) = KeyStoreLocation::from(path).name {
+            keystores.push(name);
+        }
     }
     Ok(keystores)
 }
@@ -1017,8 +1020,8 @@ pub async fn get_records(wallet: &mut Option<Wallet>) -> Result<Vec<RecordInfo>,
     Ok(wallet.records().await.collect::<Vec<_>>())
 }
 
-pub async fn get_last_keystore(options: &NodeOpt) -> Result<Option<PathBuf>, tide::Error> {
-    Ok(read_last_path(options).await?)
+pub async fn get_last_keystore(options: &NodeOpt) -> Result<Option<KeyStoreLocation>, tide::Error> {
+    Ok(read_last_path(options).await?.map(KeyStoreLocation::from))
 }
 
 async fn getaccount(

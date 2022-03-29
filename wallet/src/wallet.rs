@@ -90,22 +90,6 @@ pub trait CapeWalletExt<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> {
         cap_asset_policy: AssetPolicy,
     ) -> Result<AssetDefinition, CapeWalletError>;
 
-    ///
-    async fn build_wrap(
-        &mut self,
-        cap_asset: AssetDefinition,
-        dst_addr: UserAddress,
-        amount: u64,
-    ) -> Result<RecordOpening, CapeWalletError>;
-
-    ///
-    async fn submit_wrap(
-        &mut self,
-        src_addr: EthereumAddr,
-        cap_asset: AssetDefinition,
-        ro: RecordOpening,
-    ) -> Result<(), CapeWalletError>;
-
     /// Construct the information required to sponsor an asset, but do not submit a transaction.
     ///
     /// A new asset definition is created, added to the asset library, and returned. This asset can
@@ -152,6 +136,27 @@ pub trait CapeWalletExt<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> {
         dst_addr: UserAddress,
         amount: u64,
         // We may return a `WrapReceipt`, i.e., a record commitment to track wraps, once it's defined.
+    ) -> Result<(), CapeWalletError>;
+
+    /// Construct the information required to wrap an asset, but do not submit a transaction.
+    ///
+    /// A new record opening is created and returned. This function will not invoke the contract.
+    /// For a version which does, use [CapeWalletExt::wrap].
+    async fn build_wrap(
+        &mut self,
+        cap_asset: AssetDefinition,
+        dst_addr: UserAddress,
+        amount: u64,
+    ) -> Result<RecordOpening, CapeWalletError>;
+
+    /// Submit a wrap transaction to the CAPE contract.
+    ///
+    /// `ro` should be the record opening returned by `build_wrap`.
+    async fn submit_wrap(
+        &mut self,
+        src_addr: EthereumAddr,
+        cap_asset: AssetDefinition,
+        ro: RecordOpening,
     ) -> Result<(), CapeWalletError>;
 
     /// Burn some wrapped tokens, unlocking the corresponding ERC-20 tokens into the account

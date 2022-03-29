@@ -884,11 +884,7 @@ async fn buildwrap(
 ) -> Result<sol::RecordOpening, tide::Error> {
     let wallet = require_wallet(wallet)?;
 
-    let destination = bindings
-        .get(":destination")
-        .unwrap()
-        .value
-        .to::<UserAddress>()?;
+    let destination = bindings[":destination"].value.to::<UserAddress>()?;
     let asset_code = bindings[":asset"].value.to::<AssetCode>()?;
     let asset_definition = wallet.asset(asset_code).await.unwrap().definition;
     let amount = bindings[":amount"].value.as_u64()?;

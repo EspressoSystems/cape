@@ -54,6 +54,12 @@
               files = "\\.rs$";
               pass_filenames = false;
             };
+            cargo-sort = {
+              enable = true;
+              description = "Ensure Cargo.toml are sorted";
+              entry = "cargo sort -w";
+              pass_filenames = false;
+            };
           };
         };
       };

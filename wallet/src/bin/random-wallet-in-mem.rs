@@ -37,6 +37,7 @@ use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
 use seahorse::txn_builder::RecordInfo;
 use seahorse::{events::EventIndex, hd::KeyTree};
 use std::collections::HashMap;
+use std::convert::TryInto;
 use std::path::Path;
 use std::time::Duration;
 use structopt::StructOpt;
@@ -52,15 +53,74 @@ struct Args {
 
     /// Spin up this many wallets to talk to each other
     num_wallets: u64,
+
+    #[structopt(short, long)]
+    demo_connection: bool,
+
+    #[structopt(long)]
+    eqs_url: Option<Url>,
+
+    #[structopt(long)]
+    address_book_url: Option<Url>,
+
+    #[structopt(long)]
+    relayer_url: Option<Url>,
+
+    #[structopt(long)]
+    faucet_url: Option<Url>,
+
+    #[structopt(long)]
+    contract_address: Option<Address>,
 }
 
 struct NetworkInfo {
-    sender_key: UserKeyPair,
+    sender_key: Option<UserKeyPair>,
     eqs_url: Url,
     relayer_url: Url,
     address_book_url: Url,
     contract_address: Address,
-    _eqs_dir: TempDir,
+    _eqs_dir: Option<TempDir>,
+}
+
+fn get_network_from_args(args: &Args) -> NetworkInfo {
+    NetworkInfo {
+        sender_key: None,
+        eqs_url: args.eqs_url.as_ref().unwrap().clone(),
+        relayer_url: args.relayer_url.as_ref().unwrap().clone(),
+        address_book_url: args.address_book_url.as_ref().unwrap().clone(),
+        contract_address: *args.contract_address.as_ref().unwrap(),
+        _eqs_dir: None,
+    }
+}
+
+/// Create a wallet w/ a backend connected to a local environment already running
+async fn connect_to_demo_backend<'a>(
+    network: &NetworkInfo,
+    universal_param: &'a UniversalParam,
+    rng: &mut ChaChaRng,
+    storage: &Path,
+) -> CapeWallet<'a, CapeBackend<'a, ()>> {
+    let mut loader = MockCapeWalletLoader {
+        path: storage.to_path_buf(),
+        key: KeyTree::random(rng).0,
+    };
+    let backend = CapeBackend::new(
+        universal_param,
+        CapeBackendConfig {
+            rpc_url: rpc_url_for_test(),
+            eqs_url: network.eqs_url.clone(),
+            relayer_url: network.relayer_url.clone(),
+            address_book_url: network.address_book_url.clone(),
+            contract_address: network.contract_address,
+            eth_mnemonic: None,
+            min_polling_delay: Duration::from_millis(500),
+        },
+        &mut loader,
+    )
+    .await
+    .unwrap();
+
+    CapeWallet::new(backend).await.unwrap()
 }
 
 #[allow(clippy::needless_lifetimes)]
@@ -72,12 +132,12 @@ async fn create_backend_and_sender_wallet<'a>(
     let network_tuple = create_test_network(rng, universal_param, None).await;
     let (eqs_url, eqs_dir, _join_eqs) = spawn_eqs(network_tuple.3).await;
     let network = NetworkInfo {
-        sender_key: network_tuple.0,
+        sender_key: Some(network_tuple.0),
         eqs_url,
         relayer_url: network_tuple.1,
         address_book_url: network_tuple.2,
         contract_address: network_tuple.3,
-        _eqs_dir: eqs_dir,
+        _eqs_dir: Some(eqs_dir),
     };
 
     let mut loader = MockCapeWalletLoader {
@@ -102,10 +162,9 @@ async fn create_backend_and_sender_wallet<'a>(
     .unwrap();
 
     let mut wallet = CapeWallet::new(backend).await.unwrap();
-
     wallet
         .add_user_key(
-            network.sender_key.clone(),
+            network.sender_key.as_ref().unwrap().clone(),
             "sending account".into(),
             EventIndex::default(),
         )
@@ -113,10 +172,10 @@ async fn create_backend_and_sender_wallet<'a>(
         .unwrap();
 
     wallet
-        .await_key_scan(&network.sender_key.address())
+        .await_key_scan(&network.sender_key.as_ref().unwrap().address())
         .await
         .unwrap();
-    let pub_key = network.sender_key.pub_key();
+    let pub_key = network.sender_key.as_ref().unwrap().pub_key();
 
     let address = pub_key.address();
     event!(
@@ -176,6 +235,45 @@ async fn create_wallet<'a>(
     )
 }
 
+fn add_balance(
+    addr: &UserAddress,
+    amount: u64,
+    asset: &AssetCode,
+    balances: &mut HashMap<UserAddress, HashMap<AssetCode, u64>>,
+) {
+    let balance_ref: &mut u64 = balances
+        .entry(addr.clone())
+        .or_default()
+        .entry(*asset)
+        .or_default();
+    *balance_ref += amount;
+}
+
+fn remove_balance(
+    addr: &UserAddress,
+    amount: u64,
+    asset: &AssetCode,
+    balances: &mut HashMap<UserAddress, HashMap<AssetCode, u64>>,
+) {
+    assert!(
+        balances.contains_key(addr),
+        "Test never recorded the sender having any assets"
+    );
+
+    let assets = balances.get_mut(addr).unwrap();
+    let balance = *assets.get(asset).unwrap_or(&0);
+
+    assert!(
+        balance >= amount,
+        "Address {} only has {} balance but is trying to burn {}.",
+        addr,
+        balance,
+        amount
+    );
+
+    assets.insert(*asset, balance - amount);
+}
+
 fn update_balances(
     send_addr: &UserAddress,
     receiver_addr: &UserAddress,
@@ -196,7 +294,7 @@ fn update_balances(
     // Udate with asset code
     let send_balance = *sender_assets.get(asset).unwrap_or(&0);
     assert!(
-        send_balance > amount,
+        send_balance >= amount,
         "Address {} only has {} balance but is trying to send {}.",
         send_addr,
         send_balance,
@@ -218,12 +316,48 @@ async fn main() {
     let universal_param = &*UNIVERSAL_PARAM;
     let tmp_dir = TempDir::new("random_in_mem_test_sender").unwrap();
     tmp_dirs.push(tmp_dir);
-    let (network, mut wallet) = create_backend_and_sender_wallet(
-        &mut rng,
-        universal_param,
-        tmp_dirs.last().unwrap().path(),
-    )
-    .await;
+    let (network, mut wallet) = if args.demo_connection {
+        tracing_subscriber::fmt().pretty().init();
+        event!(Level::INFO, "Connecting to Demo Environment");
+        let network = get_network_from_args(&args);
+        let mut wallet = connect_to_demo_backend(
+            &network,
+            universal_param,
+            &mut rng,
+            tmp_dirs.last().unwrap().path(),
+        )
+        .await;
+        let pk = wallet
+            .generate_user_key("sending account".into(), None)
+            .await
+            .unwrap();
+        // fund wallet with native tokens from the faucet
+        let faucet_url = args.faucet_url.unwrap();
+        let client: surf::Client = surf::Config::new()
+            .set_base_url(faucet_url)
+            .set_timeout(None)
+            .try_into()
+            .unwrap();
+        client.get("healthcheck").send().await.unwrap();
+        let mut _res = client
+            .post("request_fee_assets")
+            .body(bincode::serialize(&pk).unwrap())
+            .await
+            .unwrap();
+        while wallet
+            .balance_breakdown(&pk.address(), &AssetCode::native())
+            .await
+            == 0
+        {
+            event!(Level::INFO, "waiting for initial balance");
+            retry_delay().await;
+        }
+        (network, wallet)
+    } else {
+        create_backend_and_sender_wallet(&mut rng, universal_param, tmp_dirs.last().unwrap().path())
+            .await
+    };
+
     event!(Level::INFO, "Sender wallet has some initial balance");
     fund_eth_wallet(&mut wallet).await;
     event!(Level::INFO, "Funded Sender wallet with eth");
@@ -239,7 +373,8 @@ async fn main() {
     let mut wallets = vec![];
     let mut public_keys = vec![];
 
-    for _i in 0..(args.num_wallets) {
+    for i in 0..(args.num_wallets) {
+        event!(Level::INFO, "Creating wallet: {}", i + 1);
         let tmp_dir = TempDir::new("random_in_mem_test").unwrap();
         tmp_dirs.push(tmp_dir);
         let (k, mut w) = create_wallet(
@@ -264,9 +399,10 @@ async fn main() {
         fund_eth_wallet(&mut w).await;
         event!(Level::INFO, "Funded new wallet with eth");
         // Fund the wallet with some native asset for paying fees
-        transfer_token(&mut wallet, k.address(), 200, AssetCode::native(), 1)
+        let txn = transfer_token(&mut wallet, k.address(), 200, AssetCode::native(), 1)
             .await
             .unwrap();
+        wallet.await_transaction(&txn).await.unwrap();
 
         balances.insert(k.address().clone(), HashMap::new());
         balances
@@ -287,12 +423,14 @@ async fn main() {
                 event!(Level::INFO, "Minting");
                 let minter = wallets.choose_mut(&mut rng).unwrap();
                 let address = minter.pub_keys().await[0].address();
-                let asset = mint_token(minter).await.unwrap();
+                let (asset, maybe_txn) = mint_token(minter).await.unwrap();
                 event!(Level::INFO, "minted custom asset.  Code: {}", asset.code);
-                balances.get_mut(&address).unwrap().insert(
-                    asset.code,
-                    minter.balance_breakdown(&address, &asset.code).await,
-                );
+                if maybe_txn.is_some() {
+                    balances
+                        .get_mut(&address)
+                        .unwrap()
+                        .insert(asset.code, 1u64 << 32);
+                }
             }
             OperationType::Transfer => {
                 event!(Level::INFO, "Transfering");
@@ -381,7 +519,7 @@ async fn main() {
 
                 freeze_token(freezer, &asset_def.code, record.ro.amount, owner_address)
                     .await
-                    .unwrap();
+                    .ok();
             }
             OperationType::Unfreeze => {
                 event!(Level::INFO, "Unfreezing");
@@ -405,7 +543,7 @@ async fn main() {
                 );
                 unfreeze_token(freezer, &asset_def.code, record.ro.amount, owner_address)
                     .await
-                    .unwrap();
+                    .ok();
             }
             OperationType::Wrap => {
                 event!(Level::INFO, "Wrapping");
@@ -420,6 +558,12 @@ async fn main() {
                 )
                 .await
                 .unwrap();
+                add_balance(
+                    &wrapper_key.address(),
+                    100,
+                    &sponsored_asset.code,
+                    &mut balances,
+                );
             }
             OperationType::Burn => {
                 event!(Level::INFO, "Burning");
@@ -438,9 +582,19 @@ async fn main() {
                             amount,
                             asset.definition.code
                         );
-                        burn_token(burner, asset.definition.clone(), amount)
-                            .await
-                            .unwrap();
+                        match burn_token(burner, asset.definition.clone(), amount).await {
+                            Ok(_) => {
+                                remove_balance(
+                                    &burner.pub_keys().await[0].address(),
+                                    amount,
+                                    &asset.definition.code,
+                                    &mut balances,
+                                );
+                            }
+                            Err(err) => {
+                                event!(Level::ERROR, "Error generating burn txn: {}", err);
+                            }
+                        }
                     }
                 } else {
                     event!(Level::INFO, "no burnable assets, skipping burn operation");

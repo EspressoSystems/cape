@@ -226,6 +226,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
             address(this),
             ro.amount
         );
+
         emit Erc20TokensDeposited(abi.encode(ro), erc20Address, msg.sender);
     }
 

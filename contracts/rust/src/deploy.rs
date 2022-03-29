@@ -10,9 +10,9 @@ use crate::ethereum::{deploy, get_funded_client};
 use crate::model::CAPE_MERKLE_HEIGHT;
 use crate::test_utils::contract_abi_path;
 use crate::types::{
-    AssetRegistry, GenericInto, SimpleToken, TestBN254, TestCAPE, TestCapeTypes, TestEdOnBN254,
-    TestPlonkVerifier, TestPolynomialEval, TestRecordsMerkleTree, TestRescue, TestRootStore,
-    TestTranscript, TestVerifyingKeys,
+    AssetRegistry, GenericInto, MaliciousToken, SimpleToken, TestBN254, TestCAPE, TestCapeTypes,
+    TestEdOnBN254, TestPlonkVerifier, TestPolynomialEval, TestRecordsMerkleTree, TestRescue,
+    TestRootStore, TestTranscript, TestVerifyingKeys,
 };
 use ethers::prelude::{k256::ecdsa::SigningKey, Address, Http, Provider, SignerMiddleware, Wallet};
 use std::sync::Arc;
@@ -70,6 +70,11 @@ mk_deploy_fun!(
     deploy_erc20_token,
     SimpleToken<EthMiddleware>,
     "SimpleToken.sol/SimpleToken"
+);
+mk_deploy_fun!(
+    deploy_malicious_erc20_token,
+    MaliciousToken<EthMiddleware>,
+    "MaliciousToken.sol/MaliciousToken"
 );
 mk_deploy_fun!(
     deploy_test_plonk_verifier_contract,

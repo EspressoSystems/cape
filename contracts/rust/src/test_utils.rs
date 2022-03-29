@@ -11,10 +11,11 @@ use crate::helpers::compare_merkle_root_from_contract_and_jf_tree;
 use crate::ledger::CapeLedger;
 use crate::types::TestRecordsMerkleTree;
 use crate::types::{SimpleToken, TestCAPE};
+use crate::universal_param::UNIVERSAL_PARAM;
 use ethers::prelude::TransactionReceipt;
 use ethers::prelude::{Address, H160, U256};
 use jf_cap::keys::{UserKeyPair, UserPubKey};
-use jf_cap::proof::{universal_setup_for_staging, UniversalParam};
+use jf_cap::proof::UniversalParam;
 use jf_cap::structs::{
     AssetDefinition, BlindFactor, FeeInput, FreezeFlag, RecordOpening, TxnFeeInfo,
 };
@@ -146,12 +147,10 @@ pub fn generate_burn_tx(
 ) -> BurnNote {
     let mut rng = ChaChaRng::from_seed([42; 32]);
 
-    let srs = universal_setup_for_staging(2usize.pow(16), &mut rng).unwrap();
-
     // 2 inputs: fee input record and wrapped asset record
     // 2 outputs: changed fee asset record, burn output record
     let xfr_prove_key =
-        jf_cap::proof::transfer::preprocess(&srs, 2, 2, CapeLedger::merkle_height())
+        jf_cap::proof::transfer::preprocess(&*UNIVERSAL_PARAM, 2, 2, CapeLedger::merkle_height())
             .unwrap()
             .0;
     let valid_until = 2u64.pow(jf_cap::constants::MAX_TIMESTAMP_LEN as u32) - 1;

@@ -12,23 +12,26 @@ name = "address-book"
 path = "src/main.rs"
 
 [dependencies]
-futures = "0.3.21"
 async-std = { version = "1.6.0", features = ["attributes"] }
 atomic_store = { git = "https://github.com/EspressoSystems/atomicstore.git" }
 bincode = "1.3.3"
+dirs = "4.0.0"
+futures = "0.3.21"
+hex = "0.4.3"
 itertools = "0.10.1"
-jf-cap = { features=["std"], git = "https://github.com/EspressoSystems/cap.git" }
+jf-cap = { features = ["std"], git = "https://github.com/EspressoSystems/cap.git" }
 net = { git = "https://github.com/EspressoSystems/net.git" }
 once_cell = "1"
+rand = "0.8.5"
 rand_chacha = "0.3.1"
 serde = { version = "1.0", features = ["derive"] }
-surf = "2.3.2"
-tide = "0.16.0"
 signal-hook = "0.3.13"
 signal-hook-async-std = "0.2.2"
-tracing = "0.1.26"
-hex = "0.4.3"
-rand = "0.8.5"
-dirs = "4.0.0"
+surf = "2.3.2"
 tempdir = "0.3.7"
+tide = "0.16.0"
+tide-tracing = "0.0.11"
+tracing = "0.1.26"
+tracing-futures = "0.2"
+tracing-log = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }

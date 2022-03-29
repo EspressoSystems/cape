@@ -4,7 +4,6 @@ version = "0.2.0"
 authors = ["Espresso Systems <hello@espressosys.com>"]
 edition = "2021"
 license = "GPL-3.0-or-later"
-
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
@@ -17,7 +16,7 @@ dirs = "4.0"
 ethers = { git = "https://github.com/gakonst/ethers-rs", branch = "master" }
 
 jf-cap = { features = ["test_apis"], git = "https://github.com/EspressoSystems/cap.git" }
-jf-primitives = { features=["std"], git = "https://github.com/EspressoSystems/jellyfish.git" }
+jf-primitives = { features = ["std"], git = "https://github.com/EspressoSystems/jellyfish.git" }
 key-set = { git = "https://github.com/EspressoSystems/key-set.git" }
 
 lazy_static = "1.4.0"
@@ -31,14 +30,16 @@ snafu = { version = "0.7", features = ["backtraces"] }
 structopt = { version = "0.3" }
 surf = { version = "2.3.2", optional = true }
 tide = "0.16.0"
+tide-tracing = "0.0.11"
 tide-websockets = "0.4.0"
 toml = "0.5"
 tracing = "0.1.26"
+tracing-futures = "0.2"
+tracing-log = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 [dev-dependencies]
 surf = "2.3.2"
-
 
 [features]
 testing = ["surf"]

@@ -16,6 +16,7 @@ use std::sync::Arc;
 use std::{fs, time::Duration};
 use tempdir::TempDir;
 use tide::{prelude::*, StatusCode};
+use tide_tracing::TraceMiddleware;
 
 pub mod signal;
 
@@ -156,6 +157,7 @@ pub async fn init_web_server<T: Store + 'static>(
     let mut app = tide::with_state(ServerState {
         store: Arc::new(store),
     });
+    app.with(TraceMiddleware::new());
     app.at("/insert_pubkey").post(insert_pubkey);
     app.at("/request_pubkey").post(request_pubkey);
     app.at("/healthcheck").get(healthcheck);

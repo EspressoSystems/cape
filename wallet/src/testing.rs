@@ -47,9 +47,8 @@ use rand::{
 };
 use rand_chacha::ChaChaRng;
 use relayer::testing::start_minimal_relayer_for_test;
-use seahorse::testing::await_transaction;
 use seahorse::txn_builder::RecordInfo;
-use seahorse::txn_builder::{TransactionReceipt, TransactionStatus};
+use seahorse::txn_builder::TransactionReceipt;
 use std::collections::HashSet;
 use std::time::Duration;
 use surf::Url;
@@ -233,7 +232,7 @@ impl Distribution<OperationType> for Standard {
 /// to the Asset Policy
 pub async fn mint_token<'a>(
     wallet: &mut CapeWallet<'a, CapeBackend<'a, ()>>,
-) -> Result<AssetDefinition, CapeWalletError> {
+) -> Result<(AssetDefinition, Option<TransactionReceipt<CapeLedger>>), CapeWalletError> {
     let freeze_key = &wallet.freezer_pub_keys().await[0];
     let audit_key = &wallet.auditor_pub_keys().await[0];
     let policy = AssetPolicy::default()
@@ -253,23 +252,11 @@ pub async fn mint_token<'a>(
 
     // Mint some custom asset
     event!(Level::INFO, "minting my asset type {}", my_asset.code);
-    loop {
-        let txn = wallet
-            .mint(&address, 1, &my_asset.code, 1u64 << 32, address.clone())
-            .await
-            .expect("failed to generate mint transaction");
-        let status = wallet
-            .await_transaction(&txn)
-            .await
-            .expect("error waiting for mint to complete");
-        if status.succeeded() {
-            break;
-        }
-        // The mint transaction is allowed to fail due to contention from other clients.
-        event!(Level::WARN, "mint transaction failed, retrying...");
-        retry_delay().await;
-    }
-    Ok(my_asset)
+    let txn = wallet
+        .mint(&address, 1, &my_asset.code, 1u64 << 32, address.clone())
+        .await
+        .ok();
+    Ok((my_asset, txn))
 }
 
 /// Return records the freezer has access to freeze or unfreeze but does not own.
@@ -303,12 +290,11 @@ pub async fn freeze_token<'a>(
     asset: &AssetCode,
     amount: u64,
     owner_address: UserAddress,
-) -> Result<TransactionStatus, CapeWalletError> {
+) -> Result<TransactionReceipt<CapeLedger>, CapeWalletError> {
     let freeze_address = freezer.pub_keys().await[0].address();
-    let txn = freezer
+    freezer
         .freeze(&freeze_address, 1, asset, amount, owner_address)
-        .await?;
-    freezer.await_transaction(&txn).await
+        .await
 }
 
 pub async fn unfreeze_token<'a>(
@@ -316,13 +302,11 @@ pub async fn unfreeze_token<'a>(
     asset: &AssetCode,
     amount: u64,
     owner_address: UserAddress,
-) -> Result<TransactionStatus, CapeWalletError> {
+) -> Result<TransactionReceipt<CapeLedger>, CapeWalletError> {
     let unfreeze_address = freezer.pub_keys().await[0].address();
-    let txn = freezer
+    freezer
         .unfreeze(&unfreeze_address, 1, asset, amount, owner_address)
         .await
-        .unwrap();
-    freezer.await_transaction(&txn).await
 }
 
 pub async fn wrap_simple_token<'a>(
@@ -333,12 +317,6 @@ pub async fn wrap_simple_token<'a>(
     amount: u64,
 ) -> Result<(), CapeWalletError> {
     let wrapper_eth_addr = wrapper.eth_address().await.unwrap();
-
-    let total_native_balance = wrapper
-        .balance_breakdown(wrapper_addr, &AssetCode::native())
-        .await;
-    assert!(total_native_balance > 0);
-
     // Prepare to wrap: deposit some ERC20 tokens into the wrapper's ETH wallet.
     erc20_contract
         .transfer(wrapper_eth_addr.clone().into(), amount.into())
@@ -380,9 +358,9 @@ pub async fn burn_token<'a>(
     burner: &mut CapeWallet<'a, CapeBackend<'a, ()>>,
     cape_asset: AssetDefinition,
     amount: u64,
-) -> Result<(), CapeWalletError> {
+) -> Result<TransactionReceipt<CapeLedger>, CapeWalletError> {
     let burner_key = burner.pub_keys().await[0].clone();
-    let receipt = burner
+    burner
         .burn(
             &burner_key.address(),
             burner.eth_address().await.unwrap().clone(),
@@ -391,9 +369,6 @@ pub async fn burn_token<'a>(
             1,
         )
         .await
-        .unwrap();
-    await_transaction(&receipt, burner, &[]).await;
-    Ok(())
 }
 
 pub async fn transfer_token<'a>(

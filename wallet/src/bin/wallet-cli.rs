@@ -272,7 +272,7 @@ fn cape_specific_cli_commands<'a>() -> Vec<Command<'a, CapeCli>> {
         ),
         command!(
             burn,
-            "burn an asset",
+            "burn some of a wrapped asset and withdraw the funds to an ERC-20 account",
             CapeCli,
             |io,
              wallet,
@@ -319,7 +319,7 @@ pub struct CapeArgs {
     /// followed by a newline, and the input will be read without an editor.
     pub non_interactive: bool,
 
-    /// URL for the Ethereum Query Service.
+    /// URL for the CAPE Ethereum Query Service.
     #[structopt(
         short,
         long,
@@ -337,7 +337,7 @@ pub struct CapeArgs {
     )]
     pub relayer_url: Url,
 
-    /// URL for the Ethereum Query Service.
+    /// URL for the CAPE Address Book.
     #[structopt(
         short,
         long,
@@ -494,7 +494,7 @@ mod tests {
                 ),
                 command!(
                     burn,
-                    "burn an asset",
+                    "burn some of a wrapped asset and withdraw the funds to an ERC-20 account",
                     Self,
                     |io,
                      wallet,

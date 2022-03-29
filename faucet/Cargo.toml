@@ -14,26 +14,29 @@ name = "faucet-wallet-test-setup"
 path = "src/faucet_wallet_test_setup.rs"
 
 [dependencies]
-cap-rust-sandbox = { path ="../contracts/rust" }
-cape_wallet = { path ="../wallet" }
+
+async-std = "1.10.0"
+bincode = "1.3.3"
+cap-rust-sandbox = { path = "../contracts/rust" }
+cape_wallet = { path = "../wallet" }
+ethers = { git = "https://github.com/gakonst/ethers-rs", branch = "master" }
+futures = "0.3.0"
+hex = "0.4.3"
 
 jf-cap = { git = "https://github.com/EspressoSystems/cap.git" }
 key-set = { git = "https://github.com/EspressoSystems/key-set.git" }
 net = { git = "https://github.com/EspressoSystems/net.git" }
-seahorse = { git = "https://github.com/EspressoSystems/seahorse.git" }
-
-async-std = "1.10.0"
-bincode = "1.3.3"
-ethers = { git = "https://github.com/gakonst/ethers-rs", branch = "master" }
-futures = "0.3.0"
-hex = "0.4.3"
 rand = "0.8.5"
 rand_chacha = "0.3.1"
+seahorse = { git = "https://github.com/EspressoSystems/seahorse.git" }
 serde = "1.0.136"
 snafu = "0.7.0"
 structopt = "0.3.26"
 surf = "2.3.2"
 tempdir = "0.3.7"
 tide = "0.16.0"
+tide-tracing = "0.0.11"
 tracing = "0.1.26"
+tracing-futures = "0.2"
+tracing-log = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }

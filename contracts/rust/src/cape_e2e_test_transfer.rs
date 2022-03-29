@@ -23,7 +23,6 @@ use crate::{
 use anyhow::Result;
 use ethers::prelude::U256;
 use jf_cap::keys::{UserKeyPair, UserPubKey};
-
 use jf_cap::structs::{AssetDefinition, FreezeFlag, RecordCommitment, RecordOpening};
 use jf_cap::transfer::{TransferNote, TransferNoteInput};
 use jf_cap::AccMemberWitness;

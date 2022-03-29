@@ -40,6 +40,7 @@ use tide::{
     security::{CorsMiddleware, Origin},
     StatusCode,
 };
+use tide_tracing::TraceMiddleware;
 
 #[derive(Debug, StructOpt)]
 #[structopt(
@@ -254,6 +255,7 @@ pub async fn init_web_server(
         fee_size: opt.fee_size,
     };
     let mut app = tide::with_state(state);
+    app.with(TraceMiddleware::new());
     app.with(
         CorsMiddleware::new()
             .allow_methods("GET, POST".parse::<HeaderValue>().unwrap())

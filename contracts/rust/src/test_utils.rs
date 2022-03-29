@@ -14,11 +14,10 @@ use crate::types::{SimpleToken, TestCAPE};
 use ethers::prelude::TransactionReceipt;
 use ethers::prelude::{Address, H160, U256};
 use jf_cap::keys::{UserKeyPair, UserPubKey};
-use jf_cap::proof::UniversalParam;
+use jf_cap::proof::{universal_setup_for_staging, UniversalParam};
 use jf_cap::structs::{
     AssetDefinition, BlindFactor, FeeInput, FreezeFlag, RecordOpening, TxnFeeInfo,
 };
-use jf_cap::testing_apis::universal_setup_for_test;
 use jf_cap::transfer::{TransferNote, TransferNoteInput};
 use jf_cap::{AccMemberWitness, BaseField, MerkleTree, TransactionVerifyingKey};
 use jf_utils::CanonicalBytes;
@@ -147,7 +146,7 @@ pub fn generate_burn_tx(
 ) -> BurnNote {
     let mut rng = ChaChaRng::from_seed([42; 32]);
 
-    let srs = universal_setup_for_test(2usize.pow(16), &mut rng).unwrap();
+    let srs = universal_setup_for_staging(2usize.pow(16), &mut rng).unwrap();
 
     // 2 inputs: fee input record and wrapped asset record
     // 2 outputs: changed fee asset record, burn output record

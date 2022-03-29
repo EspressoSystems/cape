@@ -7,13 +7,13 @@
 
 use crate::deploy::deploy_test_verifying_keys_contract;
 use crate::ethereum::get_funded_client;
+use crate::universal_param::UNIVERSAL_PARAM;
 use crate::{types as sol, types::TestVerifyingKeys};
 use anyhow::Result;
 use ark_std::{rand::Rng, test_rng};
 use ethers::prelude::*;
 use jf_cap::proof::{freeze, mint, transfer};
 use jf_cap::structs::NoteType;
-use jf_cap::testing_apis::universal_setup_for_test;
 
 const TREE_DEPTH: u8 = 24;
 const SUPPORTED_VKS: [(NoteType, u8, u8, u8); 3] = [
@@ -51,29 +51,22 @@ async fn test_get_encoded_id() -> Result<()> {
 #[tokio::test]
 async fn test_get_vk_by_id() -> Result<()> {
     let contract = deploy_test_verifying_keys_contract().await;
-    let rng = &mut test_rng();
-
-    let max_degree = 2usize.pow(17);
-    let srs = universal_setup_for_test(max_degree, rng).unwrap();
+    let srs = &*UNIVERSAL_PARAM;
 
     for (note_type, num_input, num_output, tree_depth) in SUPPORTED_VKS {
         // load rust vk
         let vk = match note_type {
             NoteType::Transfer => {
-                let (_, vk, _) = transfer::preprocess(
-                    &srs,
-                    num_input as usize,
-                    num_output as usize,
-                    tree_depth,
-                )?;
+                let (_, vk, _) =
+                    transfer::preprocess(srs, num_input as usize, num_output as usize, tree_depth)?;
                 vk.get_verifying_key()
             }
             NoteType::Mint => {
-                let (_, vk, _) = mint::preprocess(&srs, tree_depth)?;
+                let (_, vk, _) = mint::preprocess(srs, tree_depth)?;
                 vk.get_verifying_key()
             }
             NoteType::Freeze => {
-                let (_, vk, _) = freeze::preprocess(&srs, num_input as usize, tree_depth)?;
+                let (_, vk, _) = freeze::preprocess(srs, num_input as usize, tree_depth)?;
                 vk.get_verifying_key()
             }
         };

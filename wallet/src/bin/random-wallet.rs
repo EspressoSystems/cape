@@ -11,7 +11,7 @@
 #![deny(warnings)]
 
 use async_std::task::sleep;
-use cap_rust_sandbox::deploy::deploy_erc20_token;
+use cap_rust_sandbox::{deploy::deploy_erc20_token, universal_param::UNIVERSAL_PARAM};
 use cape_wallet::backend::{CapeBackend, CapeBackendConfig};
 use cape_wallet::mocks::*;
 use cape_wallet::testing::create_test_network;
@@ -23,10 +23,10 @@ use cape_wallet::testing::{
 };
 use cape_wallet::CapeWallet;
 use jf_cap::keys::UserKeyPair;
+use jf_cap::keys::UserPubKey;
 use jf_cap::structs::AssetCode;
 use jf_cap::structs::AssetPolicy;
 use jf_cap::structs::FreezeFlag;
-use jf_cap::{keys::UserPubKey, testing_apis::universal_setup_for_test};
 use rand::distributions::weighted::WeightedError;
 use rand::seq::SliceRandom;
 use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
@@ -110,7 +110,7 @@ async fn main() {
 
     let mut rng = ChaChaRng::seed_from_u64(args.seed.unwrap_or(0));
 
-    let universal_param = universal_setup_for_test(2usize.pow(16), &mut rng).unwrap();
+    let universal_param = &*UNIVERSAL_PARAM;
     let mut loader = MockCapeWalletLoader {
         path: args.storage,
         key: KeyTree::random(&mut rng).0,
@@ -118,13 +118,13 @@ async fn main() {
 
     // Everyone creates own relayer and EQS, not sure it works without EQS
     let (sender_key, relayer_url, address_book_url, contract_address, _) =
-        create_test_network(&mut rng, &universal_param, None).await;
+        create_test_network(&mut rng, universal_param, None).await;
     // Spawn our own EQS since we have our own relayer and contract connection.
     // TODO connect to an existing EQS.
     let (eqs_url, _eqs_dir, _join_eqs) = spawn_eqs(contract_address).await;
     println!("Ledger Created");
     let backend = CapeBackend::new(
-        &universal_param,
+        universal_param,
         CapeBackendConfig {
             rpc_url: rpc_url_for_test(),
             eqs_url,

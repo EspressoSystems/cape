@@ -240,13 +240,13 @@ mod test {
         model::CapeModelTxn,
         test_utils::contract_abi_path,
         types::{GenericInto, CAPE},
+        universal_param::UNIVERSAL_PARAM,
     };
     use ethers::{prelude::PendingTransaction, providers::Middleware, types::Address};
     use jf_cap::{
         keys::UserKeyPair,
         sign_receiver_memos,
         structs::{AssetDefinition, FreezeFlag, RecordOpening},
-        testing_apis::universal_setup_for_test,
         transfer::{TransferNote, TransferNoteInput},
         AccMemberWitness, MerkleTree, TransactionNote,
     };
@@ -286,9 +286,9 @@ mod test {
         receiver: UserPubKey,
         records: &MerkleTree,
     ) -> (CapeModelTxn, Vec<ReceiverMemo>, Signature) {
-        let srs = universal_setup_for_test(2usize.pow(16), rng).unwrap();
+        let srs = &*UNIVERSAL_PARAM;
         let xfr_prove_key =
-            jf_cap::proof::transfer::preprocess(&srs, 1, 2, CapeLedger::merkle_height())
+            jf_cap::proof::transfer::preprocess(srs, 1, 2, CapeLedger::merkle_height())
                 .unwrap()
                 .0;
         let valid_until = 2u64.pow(jf_cap::constants::MAX_TIMESTAMP_LEN as u32) - 1;

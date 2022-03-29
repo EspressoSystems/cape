@@ -10,10 +10,9 @@
 //!
 //! The list of transaction types supported are declared through `SUPPORTED_VKS`.
 
-use cap_rust_sandbox::types as sol;
+use cap_rust_sandbox::{types as sol, universal_param::UNIVERSAL_PARAM};
 use jf_cap::proof::{freeze, mint, transfer};
 use jf_cap::structs::NoteType;
-use jf_cap::testing_apis::universal_setup_for_test;
 use std::process::Command;
 use std::{fs::OpenOptions, io::prelude::*, path::PathBuf};
 
@@ -30,10 +29,7 @@ const SUPPORTED_VKS: [(NoteType, u8, u8, u8); 6] = [
 ];
 
 fn main() {
-    // current list of `SUPPORTED_VK` won't exceed `2^17` constraints.
-    let max_degree = 2usize.pow(17);
-    let rng = &mut ark_std::test_rng();
-    let srs = universal_setup_for_test(max_degree, rng).unwrap();
+    let srs = &*UNIVERSAL_PARAM;
 
     for (note_type, num_input, num_output, tree_depth) in SUPPORTED_VKS {
         // calculate the path to solidity file
@@ -57,16 +53,16 @@ fn main() {
         let vk = match note_type {
             NoteType::Transfer => {
                 let (_, vk, _) =
-                    transfer::preprocess(&srs, num_input as usize, num_output as usize, tree_depth)
+                    transfer::preprocess(srs, num_input as usize, num_output as usize, tree_depth)
                         .unwrap();
                 vk.get_verifying_key()
             }
             NoteType::Mint => {
-                let (_, vk, _) = mint::preprocess(&srs, tree_depth).unwrap();
+                let (_, vk, _) = mint::preprocess(srs, tree_depth).unwrap();
                 vk.get_verifying_key()
             }
             NoteType::Freeze => {
-                let (_, vk, _) = freeze::preprocess(&srs, num_input as usize, tree_depth).unwrap();
+                let (_, vk, _) = freeze::preprocess(srs, num_input as usize, tree_depth).unwrap();
                 vk.get_verifying_key()
             }
         };

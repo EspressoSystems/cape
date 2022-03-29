@@ -18,13 +18,13 @@ use crate::{
     },
     types::field_to_u256,
     types::{GenericInto, NullifierSol},
+    universal_param::UNIVERSAL_PARAM,
 };
 use anyhow::Result;
 use ethers::prelude::U256;
 use jf_cap::keys::{UserKeyPair, UserPubKey};
 
 use jf_cap::structs::{AssetDefinition, FreezeFlag, RecordCommitment, RecordOpening};
-use jf_cap::testing_apis::universal_setup_for_test;
 use jf_cap::transfer::{TransferNote, TransferNoteInput};
 use jf_cap::AccMemberWitness;
 use jf_cap::MerkleLeafProof;
@@ -55,9 +55,7 @@ async fn test_2user_maybe_submit(should_submit: bool) -> Result<()> {
 
     let mut prng = ChaChaRng::from_seed([0x8au8; 32]);
 
-    let max_degree = 2usize.pow(16);
-    let srs = universal_setup_for_test(max_degree, &mut prng)?;
-    let (prove_keys, verif_keys) = keysets_for_test(&srs);
+    let (prove_keys, verif_keys) = keysets_for_test(&*UNIVERSAL_PARAM);
 
     println!("CRS set up: {}s", now.elapsed().as_secs_f32());
     let now = Instant::now();

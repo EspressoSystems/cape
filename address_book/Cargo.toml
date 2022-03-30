@@ -10,6 +10,7 @@ default-run = "address-book"
 [[bin]]
 name = "address-book"
 path = "src/main.rs"
+doc = false
 
 [dependencies]
 async-std = { version = "1.6.0", features = ["attributes"] }

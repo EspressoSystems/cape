@@ -402,7 +402,7 @@ async fn main() {
         let txn = transfer_token(&mut wallet, k.address(), 200, AssetCode::native(), 1)
             .await
             .unwrap();
-        wallet.await_transaction(&txn).await.unwrap();
+        w.await_transaction(&txn).await.unwrap();
 
         balances.insert(k.address().clone(), HashMap::new());
         balances
@@ -453,6 +453,13 @@ async fn main() {
                     {
                         asset_balances.push(asset.definition.code);
                     }
+                }
+                if asset_balances.is_empty() {
+                    event!(
+                        Level::WARN,
+                        "Wallet has no balance.  Wallet Address: {}",
+                        sender_address
+                    );
                 }
                 // Randomly choose an asset type for the transfer.
                 let asset = asset_balances.choose(&mut rng).unwrap();

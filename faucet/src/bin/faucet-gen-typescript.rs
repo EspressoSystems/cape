@@ -1,4 +1,11 @@
-use cap_rust_sandbox::types::EdOnBN254Point;
+// Copyright (c) 2022 Espresso Systems (espressosys.com)
+// This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
+
+// This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+// This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+// You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+use cap_rust_sandbox::{cape::faucet::FAUCET_MANAGER_ENCRYPTION_KEY, types::EdOnBN254Point};
 use faucet::faucet_wallet_test_setup::u256_to_hex;
 use jf_cap::keys::UserPubKey;
 use std::str::FromStr;
@@ -7,7 +14,7 @@ use structopt::StructOpt;
 #[derive(Debug, StructOpt)]
 #[structopt(name = "Faucet setup utility")]
 struct Options {
-    #[structopt(long, env = "FAUCET_PUB_KEY")]
+    #[structopt(long, default_value = FAUCET_MANAGER_ENCRYPTION_KEY)]
     pub_key: String,
 }
 

@@ -793,10 +793,6 @@ impl<'a> SystemUnderTest<'a> for CapeTest {
     ) -> Self::MockBackend {
         MockCapeBackend::new_for_test(ledger, storage, key_stream).unwrap()
     }
-
-    fn universal_param(&self) -> &'a UniversalParam {
-        &*UNIVERSAL_PARAM
-    }
 }
 
 // CAPE-specific tests

@@ -5,7 +5,7 @@
 // This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::model::*;
+use crate::{model::*, universal_param::UNIVERSAL_PARAM};
 use arbitrary::{Arbitrary, Unstructured};
 use arbitrary_wrappers::*;
 use ark_serialize::*;
@@ -13,6 +13,7 @@ use commit::{Commitment, Committable, RawCommitmentBuilder};
 use espresso_macros::ser_test;
 use jf_cap::{
     keys::{AuditorKeyPair, AuditorPubKey},
+    proof::UniversalParam,
     structs::{AssetCode, AssetDefinition, Nullifier, RecordCommitment, RecordOpening},
     TransactionNote,
 };
@@ -313,5 +314,9 @@ impl Ledger for CapeLedger {
 
     fn merkle_height() -> u8 {
         CAPE_MERKLE_HEIGHT
+    }
+
+    fn srs() -> &'static UniversalParam {
+        &*UNIVERSAL_PARAM
     }
 }

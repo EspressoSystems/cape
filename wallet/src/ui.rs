@@ -465,7 +465,7 @@ impl TransactionHistoryEntry {
 }
 
 #[ser_test(ark(false))]
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct KeyStoreLocation {
     pub path: PathBuf,
     pub name: Option<String>,

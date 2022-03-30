@@ -5,6 +5,9 @@
 // This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+//! A script to export enviornment variables for test deployments of the CAPE
+//! contract with hardhat.
+
 use cap_rust_sandbox::helpers::compute_faucet_key_pair_from_mnemonic;
 use cap_rust_sandbox::types::EdOnBN254Point;
 use ethers::{abi::AbiEncode, prelude::U256};

@@ -5,6 +5,7 @@
 // This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+#![doc = include_str!("../../README.md")]
 #[warn(unused_imports)]
 use cap_rust_sandbox::{
     ethereum::{ensure_connected_to_contract, get_provider_from_url},

@@ -110,9 +110,12 @@ mod test {
         // Get the address out of
         // deploying "CAPE" (tx: 0x64...211)...: deployed at 0x8A791620dd6260079BF849Dc5567aDC3F2FdC318 with 7413790 gas
         let re = Regex::new(r#""CAPE".*(0x[0-9a-fA-F]{40})"#).unwrap();
-        let address = re.captures_iter(&text).next().unwrap()[1]
+        let address = re
+            .captures_iter(&text)
+            .next()
+            .unwrap_or_else(|| panic!("Address not found in {}", text))[1]
             .parse::<Address>()
-            .unwrap();
+            .unwrap_or_else(|_| panic!("Address not found in {}", text));
 
         let client = get_funded_client().await.unwrap();
         let contract = CAPE::new(address, client.clone());

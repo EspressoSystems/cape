@@ -29,6 +29,7 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::time::Duration;
 use structopt::StructOpt;
+use tagged_base64::TaggedBase64;
 use tide::{
     http::{headers::HeaderValue, Method, Url},
     security::{CorsMiddleware, Origin},
@@ -178,7 +179,10 @@ impl NodeOpt {
     }
 
     pub fn keystore_path(&self, name: &str) -> PathBuf {
-        [self.keystores_dir().as_path(), Path::new(name)]
+        // base64-encode the name to remove characters with special meaning in the file system, like
+        // slashes.
+        let enc = TaggedBase64::new("KEYSTORE", name.as_bytes()).unwrap();
+        [self.keystores_dir().as_path(), Path::new(&enc.to_string())]
             .iter()
             .collect()
     }

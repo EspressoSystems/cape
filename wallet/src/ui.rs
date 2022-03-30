@@ -29,7 +29,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::{self, Display, Formatter};
 use std::io::Cursor;
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
+use tagged_base64::TaggedBase64;
 
 /// UI-friendly asset definition.
 #[ser_test(ark(false))]
@@ -459,6 +461,40 @@ impl TransactionHistoryEntry {
                 None => "unknown".to_string(),
             },
         }
+    }
+}
+
+#[ser_test(ark(false))]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct KeyStoreLocation {
+    pub path: PathBuf,
+    pub name: Option<String>,
+}
+
+impl From<PathBuf> for KeyStoreLocation {
+    fn from(path: PathBuf) -> Self {
+        // Decode the name from TaggedBase64; if it fails to decode or has the wrong tag, then this
+        // is not a named keystore file.
+        let name = path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .and_then(|name| TaggedBase64::parse(name).ok())
+            .and_then(|tb64| {
+                if tb64.tag() == "KEYSTORE" {
+                    std::str::from_utf8(&tb64.value())
+                        .ok()
+                        .map(|s| s.to_owned())
+                } else {
+                    None
+                }
+            });
+        Self { path, name }
+    }
+}
+
+impl From<&Path> for KeyStoreLocation {
+    fn from(path: &Path) -> Self {
+        path.to_owned().into()
     }
 }
 

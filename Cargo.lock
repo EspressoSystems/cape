@@ -4892,7 +4892,7 @@ dependencies = [
 [[package]]
 name = "reef"
 version = "0.2.0"
-source = "git+https://github.com/EspressoSystems/reef.git#89f43d9ac455204b40c5ae543b6c106057a362eb"
+source = "git+https://github.com/EspressoSystems/reef.git#e5457f0e078a7f2bc451def9eba2b8b3c35ed80c"
 dependencies = [
  "arbitrary",
  "arbitrary-wrappers",
@@ -4901,6 +4901,8 @@ dependencies = [
  "funty 1.1.0",
  "itertools 0.10.3",
  "jf-cap",
+ "lazy_static",
+ "rand_chacha 0.3.1",
  "serde",
  "snafu 0.6.10",
  "strum_macros",
@@ -5287,7 +5289,7 @@ dependencies = [
 [[package]]
 name = "seahorse"
 version = "0.2.0"
-source = "git+https://github.com/EspressoSystems/seahorse.git#709c1e45a5b57416e69e17e1df55e1ab58300b9d"
+source = "git+https://github.com/EspressoSystems/seahorse.git#ef1316bde5e7bb4bbae706f36254895ed5e53f67"
 dependencies = [
  "arbitrary",
  "arbitrary-wrappers",

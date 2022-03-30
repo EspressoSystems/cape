@@ -12,7 +12,7 @@ use crate::test_utils::contract_abi_path;
 use crate::types::{
     AssetRegistry, GenericInto, MaliciousToken, SimpleToken, TestBN254, TestCAPE, TestCapeTypes,
     TestEdOnBN254, TestPlonkVerifier, TestPolynomialEval, TestRecordsMerkleTree, TestRescue,
-    TestRootStore, TestTranscript, TestVerifyingKeys,
+    TestRootStore, TestTranscript, TestVerifyingKeys, CAPE,
 };
 use ethers::prelude::{k256::ecdsa::SigningKey, Address, Http, Provider, SignerMiddleware, Wallet};
 use std::sync::Arc;
@@ -20,12 +20,17 @@ use std::sync::Arc;
 // Middleware used for locally signing transactions
 pub type EthMiddleware = SignerMiddleware<Provider<Http>, Wallet<SigningKey>>;
 
-pub async fn deploy_cape_test() -> TestCAPE<EthMiddleware> {
+pub async fn deploy_test_cape() -> TestCAPE<EthMiddleware> {
     let client = get_funded_client().await.unwrap();
-    deploy_cape_test_with_deployer(client).await
+    deploy_test_cape_with_deployer(client).await
 }
 
-pub async fn deploy_cape_test_with_deployer(
+pub async fn deploy_cape() -> CAPE<EthMiddleware> {
+    let client = get_funded_client().await.unwrap();
+    deploy_cape_with_deployer(client).await
+}
+
+pub async fn deploy_test_cape_with_deployer(
     deployer: Arc<EthMiddleware>,
 ) -> TestCAPE<EthMiddleware> {
     // deploy the PlonkVerifier
@@ -47,6 +52,28 @@ pub async fn deploy_cape_test_with_deployer(
     .await
     .unwrap();
     TestCAPE::new(contract.address(), deployer)
+}
+
+pub async fn deploy_cape_with_deployer(deployer: Arc<EthMiddleware>) -> CAPE<EthMiddleware> {
+    // deploy the PlonkVerifier
+    let verifier = deploy(
+        deployer.clone(),
+        &contract_abi_path("verifier/PlonkVerifier.sol/PlonkVerifier"),
+        (),
+    )
+    .await
+    .unwrap();
+
+    // deploy CAPE.sol
+    let contract = deploy(
+        deployer.clone(),
+        &contract_abi_path("CAPE.sol/CAPE"),
+        CAPEConstructorArgs::new(CAPE_MERKLE_HEIGHT, 1000, verifier.address())
+            .generic_into::<(u8, u64, Address)>(),
+    )
+    .await
+    .unwrap();
+    CAPE::new(contract.address(), deployer)
 }
 
 macro_rules! mk_deploy_fun {

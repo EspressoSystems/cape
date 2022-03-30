@@ -10,7 +10,7 @@
 use anyhow::Result;
 use cap_rust_sandbox::{
     cape::CapeBlock,
-    deploy::deploy_cape_test,
+    deploy::deploy_test_cape,
     ledger::CapeLedger,
     test_utils::PrintGas,
     types::{GenericInto, MerkleRootSol},
@@ -32,7 +32,7 @@ async fn main() -> Result<()> {
         (0, 0, 1),
         (0, 0, 2),
     ] {
-        let contract = deploy_cape_test().await;
+        let contract = deploy_test_cape().await;
 
         // Slow to run this each time
         let params = TxnsParams::generate_txns(

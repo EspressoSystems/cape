@@ -8,7 +8,7 @@
 use anyhow::Result;
 use cap_rust_sandbox::assertion::EnsureMined;
 use cap_rust_sandbox::cape::CapeBlock;
-use cap_rust_sandbox::deploy::{deploy_cape_test, deploy_erc20_token};
+use cap_rust_sandbox::deploy::{deploy_cape, deploy_erc20_token};
 use cap_rust_sandbox::ledger::CapeLedger;
 use cap_rust_sandbox::model::{erc20_asset_description, Erc20Code, EthereumAddr};
 use cap_rust_sandbox::test_utils::{
@@ -36,13 +36,12 @@ use reef::Ledger;
 #[tokio::test]
 async fn integration_test_wrapped_assets_can_be_frozen() -> Result<()> {
     // Deploy the contracts
-
     const FAUCET_RECORD_POS: u64 = 0;
     const WRAPPED_RECORD_POS: u64 = 1;
     const FEE_CHANGE_RECORD_POS: u64 = 2;
     const FROZEN_RECORD_POS: u64 = 3;
 
-    let cape_contract = deploy_cape_test().await;
+    let cape_contract = deploy_cape().await;
 
     let mut mt = MerkleTree::new(CapeLedger::merkle_height()).unwrap();
 

@@ -7,7 +7,7 @@
 
 #![cfg_attr(debug_assertions, allow(dead_code))]
 use crate::{
-    deploy::{deploy_cape_test_with_deployer, EthMiddleware},
+    deploy::{deploy_test_cape_with_deployer, EthMiddleware},
     test_utils::contract_abi_path,
     types::{TestCAPE, CAPE},
 };
@@ -38,7 +38,7 @@ impl EthConnection {
     pub async fn for_test() -> Self {
         let provider = get_provider();
         let client = get_funded_client().await.unwrap();
-        let contract = deploy_cape_test_with_deployer(client.clone()).await;
+        let contract = deploy_test_cape_with_deployer(client.clone()).await;
         Self::connect(provider, client, contract.address())
     }
 

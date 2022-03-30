@@ -153,9 +153,10 @@ pub fn init_web_server(
 #[cfg(any(test, feature = "testing"))]
 pub mod testing {
     use super::*;
-    use async_std::{sync::Arc, task::sleep};
+    use async_std::task::sleep;
+    use cap_rust_sandbox::test_utils::upcast_test_cape_to_cape;
     use cap_rust_sandbox::{
-        deploy::deploy_cape_test, ledger::CapeLedger, test_utils::create_faucet, types::TestCAPE,
+        deploy::deploy_test_cape, ledger::CapeLedger, test_utils::create_faucet, types::TestCAPE,
     };
     use jf_cap::{
         keys::UserKeyPair,
@@ -166,7 +167,7 @@ pub mod testing {
     use std::time::Duration;
 
     /// `faucet_key_pair` - If not provided, a random faucet key pair will be generated.
-    pub async fn deploy_test_contract_with_faucet(
+    pub async fn deploy_cape_contract_with_faucet(
         faucet_key_pair: Option<UserKeyPair>,
     ) -> (
         TestCAPE<EthMiddleware>,
@@ -174,9 +175,12 @@ pub mod testing {
         RecordOpening,
         MerkleTree,
     ) {
-        let cape_contract = deploy_cape_test().await;
-        let (faucet_key_pair, faucet_record_opening) =
-            create_faucet(&cape_contract, faucet_key_pair).await;
+        let cape_contract = deploy_test_cape().await;
+        let (faucet_key_pair, faucet_record_opening) = create_faucet(
+            &upcast_test_cape_to_cape(cape_contract.clone()),
+            faucet_key_pair,
+        )
+        .await;
         let mut records = MerkleTree::new(CapeLedger::merkle_height()).unwrap();
         let faucet_comm = RecordCommitment::from(&faucet_record_opening);
         records.push(faucet_comm.to_field_element());
@@ -186,10 +190,6 @@ pub mod testing {
             faucet_record_opening,
             records,
         )
-    }
-
-    pub fn upcast_test_cape_to_cape(test_cape: TestCAPE<EthMiddleware>) -> CAPE<EthMiddleware> {
-        CAPE::new(test_cape.address(), Arc::new(test_cape.client().clone()))
     }
 
     const RELAYER_STARTUP_RETRIES: usize = 8;
@@ -224,7 +224,7 @@ pub mod testing {
         MerkleTree,
     ) {
         let (contract, faucet, faucet_rec, records) =
-            deploy_test_contract_with_faucet(faucet_key_pair).await;
+            deploy_cape_contract_with_faucet(faucet_key_pair).await;
         init_web_server(upcast_test_cape_to_cape(contract.clone()), port.to_string());
         wait_for_server(port).await;
         (contract, faucet, faucet_rec, records)
@@ -235,6 +235,7 @@ pub mod testing {
 mod test {
     use super::*;
     use async_std::sync::{Arc, Mutex};
+    use cap_rust_sandbox::test_utils::upcast_test_cape_to_cape;
     use cap_rust_sandbox::{
         cape::CAPEConstructorArgs,
         ethereum::{deploy, get_funded_client},
@@ -262,8 +263,7 @@ mod test {
     use std::iter::once;
     use surf::Url;
     use testing::{
-        deploy_test_contract_with_faucet, start_minimal_relayer_for_test, upcast_test_cape_to_cape,
-        wait_for_server,
+        deploy_cape_contract_with_faucet, start_minimal_relayer_for_test, wait_for_server,
     };
 
     lazy_static! {
@@ -327,7 +327,7 @@ mod test {
         let mut rng = ChaChaRng::from_seed([42; 32]);
         let user = UserKeyPair::generate(&mut rng);
 
-        let (contract, faucet, faucet_rec, records) = deploy_test_contract_with_faucet(None).await;
+        let (contract, faucet, faucet_rec, records) = deploy_cape_contract_with_faucet(None).await;
         let (transaction, memos, sig) =
             generate_transfer(&mut rng, &faucet, faucet_rec, user.pub_key(), &records);
         let provider = contract.client().provider().clone();

@@ -8,7 +8,7 @@
 #![cfg(test)]
 #![deny(warnings)]
 
-use crate::deploy::deploy_cape_test;
+use crate::deploy::deploy_test_cape;
 use crate::test_utils::keysets_for_test;
 use crate::{
     cape::*,
@@ -60,7 +60,7 @@ async fn test_2user_maybe_submit(should_submit: bool) -> Result<()> {
     let now = Instant::now();
 
     let contract = if should_submit {
-        Some(deploy_cape_test().await)
+        Some(deploy_test_cape().await)
     } else {
         None
     };

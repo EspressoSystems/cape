@@ -18,7 +18,10 @@ use ethers::prelude::Address;
 use futures::{prelude::*, stream::iter};
 use jf_cap::{
     keys::{AuditorPubKey, FreezerPubKey, UserKeyPair, UserPubKey},
-    structs::{AssetCode, AssetDefinition as JfAssetDefinition, AssetPolicy},
+    structs::{
+        AssetCode, AssetDefinition as JfAssetDefinition, AssetPolicy,
+        RecordOpening as JfRecordOpening,
+    },
 };
 use net::{
     server::{request_body, response},
@@ -311,6 +314,7 @@ pub struct RouteBinding {
 #[derive(AsRefStr, Copy, Clone, Debug, EnumIter, EnumString, strum_macros::Display)]
 pub enum ApiRouteKey {
     buildsponsor,
+    buildwrap,
     closewallet,
     exportasset,
     freeze,
@@ -332,13 +336,13 @@ pub enum ApiRouteKey {
     resetpassword,
     send,
     submitsponsor,
+    submitwrap,
     transaction,
     transactionhistory,
     unfreeze,
     unwrap,
     updateasset,
     view,
-    wrap,
     getrecords,
     lastusedkeystore,
     getprivatekey,
@@ -874,26 +878,34 @@ async fn submitsponsor(
     Ok(AssetInfo::from_info(wallet, info).await)
 }
 
-async fn wrap(
+async fn buildwrap(
+    bindings: &HashMap<String, RouteBinding>,
+    wallet: &mut Option<Wallet>,
+) -> Result<sol::RecordOpening, tide::Error> {
+    let wallet = require_wallet(wallet)?;
+
+    let destination = bindings[":destination"].value.to::<UserAddress>()?;
+    let asset_code = bindings[":asset"].value.to::<AssetCode>()?;
+    let asset_definition = wallet.asset(asset_code).await.unwrap().definition;
+    let amount = bindings[":amount"].value.as_u64()?;
+    let ro: sol::RecordOpening = wallet
+        .build_wrap(asset_definition, destination.into(), amount)
+        .await?
+        .into();
+    Ok(ro)
+}
+
+async fn submitwrap(
+    req: &mut Request<WebState>,
     bindings: &HashMap<String, RouteBinding>,
     wallet: &mut Option<Wallet>,
 ) -> Result<(), tide::Error> {
     let wallet = require_wallet(wallet)?;
 
-    let destination = bindings[":destination"].value.to::<UserAddress>()?;
     let eth_address: Address = bindings[":eth_address"].value.as_string()?.parse()?;
-    let asset_code = bindings[":asset"].value.to::<AssetCode>()?;
-    let asset_definition = wallet.asset(asset_code).await.unwrap().definition;
-    let amount = bindings[":amount"].value.as_u64()?;
+    let ro = JfRecordOpening::from(request_body::<sol::RecordOpening, _>(req).await?);
 
-    Ok(wallet
-        .wrap(
-            eth_address.into(),
-            asset_definition,
-            destination.into(),
-            amount,
-        )
-        .await?)
+    Ok(wallet.submit_wrap(eth_address.into(), ro).await?)
 }
 
 async fn mint(
@@ -1210,6 +1222,7 @@ pub async fn dispatch_url(
     let key = ApiRouteKey::from_str(segments.0).expect("Unknown route");
     match key {
         ApiRouteKey::buildsponsor => response(&req, buildsponsor(bindings, wallet).await?),
+        ApiRouteKey::buildwrap => response(&req, buildwrap(bindings, wallet).await?),
         ApiRouteKey::closewallet => response(&req, closewallet(wallet).await?),
         ApiRouteKey::exportasset => response(&req, exportasset(bindings, wallet).await?),
         ApiRouteKey::freeze => dummy_url_eval(route_pattern, bindings),
@@ -1246,6 +1259,10 @@ pub async fn dispatch_url(
             let res = submitsponsor(&mut req, bindings, wallet).await?;
             response(&req, res)
         }
+        ApiRouteKey::submitwrap => {
+            let res = submitwrap(&mut req, bindings, wallet).await?;
+            response(&req, res)
+        }
         ApiRouteKey::transaction => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::transactionhistory => {
             response(&req, transactionhistory(bindings, wallet).await?)
@@ -1254,7 +1271,6 @@ pub async fn dispatch_url(
         ApiRouteKey::unwrap => response(&req, unwrap(bindings, wallet).await?),
         ApiRouteKey::updateasset => response(&req, updateasset(bindings, wallet).await?),
         ApiRouteKey::view => dummy_url_eval(route_pattern, bindings),
-        ApiRouteKey::wrap => response(&req, wrap(bindings, wallet).await?),
         ApiRouteKey::getrecords => response(&req, get_records(wallet).await?),
         ApiRouteKey::lastusedkeystore => response(&req, get_last_keystore(options).await?),
     }

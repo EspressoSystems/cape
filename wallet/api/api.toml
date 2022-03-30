@@ -215,15 +215,23 @@ the current wallet if a sender isn't given. Returns a serialized receipt which c
 the transaction through the validation process.
 """
 
-[route.wrap]
+[route.buildwrap]
 METHOD = "POST"
-PATH = ["wrap/destination/:destination/ethaddress/:eth_address/asset/:asset/amount/:amount"]
+PATH = ["buildwrap/destination/:destination/asset/:asset/amount/:amount"]
 ":destination" = "TaggedBase64"
-":eth_address" = "Literal"
 ":asset" = "TaggedBase64"
 ":amount" = "Integer"
 DOC = """
-Wrap amount units of the given asset from the Ethereum address to the destination.
+Build, but do not submit, a wrap transaction.
+"""
+
+[route.submitwrap]
+METHOD = "POST"
+PATH = ["submitwrap/ethaddress/:eth_address"]
+":eth_address" = "Literal"
+DOC = """
+Submit a wrap transaction to the CAPE contract.
+The request body should be the record opening returned by `buildwrap`.
 """
 
 [route.unwrap]

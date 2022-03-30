@@ -1034,37 +1034,59 @@ mod tests {
         let sending_key = &info.sending_keys[0];
         let destination: UserAddress = sending_key.address().into();
 
-        // wrap should fail if any of the destination, Ethereum address, and asset is invalid.
+        // buildwrap should fail if the destination or asset is invalid.
         let invalid_destination = UserAddress::from(UserKeyPair::generate(&mut rng).address());
-        let invalid_asset = AssetDefinition::dummy();
+        let invalid_code = AssetCode::dummy();
         server
-            .post::<()>(&format!(
-                "wrap/destination/{}/ethaddress/{:#x}/asset/{}/amount/{}",
-                invalid_destination, sponsor_addr, asset.code, 10
+            .post::<String>(&format!(
+                "buildwrap/destination/{}/asset/{}/amount/{}",
+                invalid_destination, asset.code, 10
             ))
             .await
-            .expect_err("wrap succeeded with an invalid user address");
+            .expect_err("buildwrap succeeded with an invalid user address");
         server
-            .post::<()>(&format!(
-                "wrap/destination/{}/ethaddress/0xinvalid/asset/{}/amount/{}",
+            .post::<String>(&format!(
+                "buildwrap/destination/{}/asset/{}/amount/{}",
+                destination, invalid_code, 10
+            ))
+            .await
+            .expect_err("buildwrap succeeded with an invalid asset");
+
+        // buildwrap should succeed with the correct information.
+        let ro = server
+            .post::<sol::RecordOpening>(&format!(
+                "buildwrap/destination/{}/asset/{}/amount/{}",
                 destination, asset.code, 10
             ))
             .await
-            .expect_err("wrap succeeded with an invalid Ethereum address");
-        server
-            .post::<()>(&format!(
-                "wrap/destination/{}/ethaddress/{:#x}/asset/{}/amount/{}",
-                destination, sponsor_addr, invalid_asset, 10
-            ))
-            .await
-            .expect_err("wrap succeeded with an invalid asset");
+            .unwrap();
 
-        // wrap should succeed with the correct information.
+        // submitwrap should fail if the Ethereum address or record opening is invalid.
+        let invalid_ro = sol::RecordOpening::default();
         server
-            .post::<()>(&format!(
-                "wrap/destination/{}/ethaddress/{:#x}/asset/{}/amount/{}",
-                destination, sponsor_addr, asset.code, 10
-            ))
+            .client
+            .post(&format!("submitwrap/ethaddress/0xinvalid"))
+            .body_json(&ro)
+            .unwrap()
+            .send()
+            .await
+            .expect_err("submitwrap succeeded with an invalid Ethereum address");
+        server
+            .client
+            .post(&format!("submitwrap/ethaddress/{:#x}", sponsor_addr))
+            .body_json(&invalid_ro)
+            .unwrap()
+            .send()
+            .await
+            .expect_err("submitwrap succeeded with an invalid record opening");
+
+        // submitwrap should succeed with the correct information.
+        server
+            .client
+            .post(&format!("submitwrap/ethaddress/{:#x}", sponsor_addr))
+            .body_json(&ro)
+            .unwrap()
+            .send()
             .await
             .unwrap();
     }

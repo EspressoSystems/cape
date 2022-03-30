@@ -12,7 +12,7 @@ mod test {
     use super::FAUCET_MANAGER_ENCRYPTION_KEY;
     use crate::{
         assertion::Matcher,
-        deploy::deploy_cape_test_with_deployer,
+        deploy::deploy_test_cape_with_deployer,
         ethereum::get_funded_client,
         model::CAPE_MERKLE_HEIGHT,
         types::{self as sol, field_to_u256, GenericInto, TestCAPE, CAPE},
@@ -32,7 +32,7 @@ mod test {
         let rng = &mut ark_std::test_rng();
         let deployer = get_funded_client().await?;
         let non_deployer = get_funded_client().await?;
-        let contract = deploy_cape_test_with_deployer(deployer.clone()).await;
+        let contract = deploy_test_cape_with_deployer(deployer.clone()).await;
         let faucet_manager = UserKeyPair::generate(rng);
 
         // after Cape deployment, faucet is not yet setup

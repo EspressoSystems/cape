@@ -8,7 +8,7 @@
 #![cfg(test)]
 
 use crate::assertion::Matcher;
-use crate::deploy::deploy_cape_test;
+use crate::deploy::deploy_test_cape;
 use crate::model::{erc20_asset_description, Erc20Code, EthereumAddr};
 use crate::types as sol;
 use crate::types::{AssetCodeSol, GenericInto};
@@ -20,7 +20,7 @@ mod errors_when_calling_deposit_erc20 {
     use std::sync::Arc;
 
     use super::*;
-    use crate::deploy::{deploy_cape_test, deploy_erc20_token};
+    use crate::deploy::{deploy_erc20_token, deploy_test_cape};
     use crate::model::{erc20_asset_description, Erc20Code, EthereumAddr};
     use crate::types as sol;
     use crate::types::TestCAPE;
@@ -39,7 +39,7 @@ mod errors_when_calling_deposit_erc20 {
         expected_error_message: &str,
         wrong_call: WrongCallDepositErc20,
     ) -> Result<()> {
-        let cape_contract = deploy_cape_test().await;
+        let cape_contract = deploy_test_cape().await;
 
         // Deploy ERC20 token contract. The caller of this method receives 1000 * 10**18 tokens
         let erc20_token_contract = deploy_erc20_token().await;
@@ -160,7 +160,7 @@ mod errors_when_calling_deposit_erc20 {
 
 #[tokio::test]
 async fn test_erc20_description() -> Result<()> {
-    let contract = deploy_cape_test().await;
+    let contract = deploy_test_cape().await;
     let sponsor = Address::random();
     let asset_address = Address::random();
     let asset_code = Erc20Code(EthereumAddr(asset_address.to_fixed_bytes()));
@@ -175,7 +175,7 @@ async fn test_erc20_description() -> Result<()> {
 
 #[tokio::test]
 async fn test_check_foreign_asset_code() -> Result<()> {
-    let contract = deploy_cape_test().await;
+    let contract = deploy_test_cape().await;
 
     // Fails for random record opening with random asset code.
     let rng = &mut ark_std::test_rng();

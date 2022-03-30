@@ -7,7 +7,7 @@
 
 #![cfg(test)]
 use crate::assertion::Matcher;
-use crate::deploy::{deploy_cape_test, deploy_malicious_erc20_token};
+use crate::deploy::{deploy_malicious_erc20_token, deploy_test_cape};
 use crate::model::{erc20_asset_description, Erc20Code, EthereumAddr};
 use crate::types::{self as sol};
 use crate::types::{GenericInto, TestCAPE};
@@ -19,7 +19,7 @@ use std::sync::Arc;
 
 #[tokio::test]
 async fn test_reentrancy_guard() -> Result<()> {
-    let cape_contract = deploy_cape_test().await;
+    let cape_contract = deploy_test_cape().await;
     let malicious_erc20_contract = deploy_malicious_erc20_token().await;
     let malicious_erc20_address = malicious_erc20_contract.address();
 

@@ -8,11 +8,13 @@
 use anyhow::Result;
 use cap_rust_sandbox::assertion::EnsureMined;
 use cap_rust_sandbox::cape::CapeBlock;
-use cap_rust_sandbox::deploy::{deploy_cape_test, deploy_erc20_token};
+use cap_rust_sandbox::deploy::{deploy_erc20_token, deploy_test_cape};
 use cap_rust_sandbox::helpers::compare_merkle_root_from_contract_and_jf_tree;
 use cap_rust_sandbox::ledger::CapeLedger;
 use cap_rust_sandbox::model::{erc20_asset_description, Erc20Code, EthereumAddr};
-use cap_rust_sandbox::test_utils::{check_erc20_token_balance, ContractsInfo};
+use cap_rust_sandbox::test_utils::{
+    check_erc20_token_balance, upcast_test_cape_to_cape, ContractsInfo,
+};
 use cap_rust_sandbox::types::{self as sol, RecordCommitmentSol};
 use cap_rust_sandbox::types::{GenericInto, MerkleRootSol, RecordOpening as RecordOpeningSol};
 use ethers::abi::AbiDecode;
@@ -181,12 +183,16 @@ async fn integration_test_wrapping_erc20_tokens() -> Result<()> {
     let cape_block = CapeBlock::generate(params.txns, vec![], miner.address())?;
 
     // Deploy CAPE contract
-    let cape_contract = deploy_cape_test().await;
+    let cape_contract = deploy_test_cape().await;
 
     // Deploy ERC20 token contract. The client deploying the erc20 token contract receives 1000 * 10**18 tokens
     let erc20_token_contract = deploy_erc20_token().await;
 
-    let contracts_info = ContractsInfo::new(&cape_contract, &erc20_token_contract).await;
+    let contracts_info = ContractsInfo::new(
+        &upcast_test_cape_to_cape(cape_contract.clone()),
+        &erc20_token_contract,
+    )
+    .await;
 
     let ro1 = call_and_check_deposit_erc20(
         true,

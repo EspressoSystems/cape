@@ -9,7 +9,7 @@
 
 use crate::assertion::Matcher;
 use crate::cape::{CapeBlock, DOM_SEP_CAPE_BURN};
-use crate::deploy::deploy_cape_test;
+use crate::deploy::deploy_test_cape;
 use crate::ledger::CapeLedger;
 use crate::types as sol;
 use crate::types::{GenericInto, MerkleRootSol};
@@ -22,7 +22,7 @@ use reef::Ledger;
 
 #[tokio::test]
 async fn test_contains_burn_prefix() {
-    let contract = deploy_cape_test().await;
+    let contract = deploy_test_cape().await;
 
     let dom_sep_str = std::str::from_utf8(DOM_SEP_CAPE_BURN).unwrap();
     for (input, expected) in [
@@ -46,7 +46,7 @@ async fn test_contains_burn_prefix() {
 
 #[tokio::test]
 async fn test_contains_burn_record() {
-    let contract = deploy_cape_test().await;
+    let contract = deploy_test_cape().await;
 
     assert!(!contract
         .contains_burn_record(sol::BurnNote::default())
@@ -64,7 +64,7 @@ async fn test_contains_burn_record() {
 
 #[tokio::test]
 async fn test_check_burn_bad_prefix() {
-    let contract = deploy_cape_test().await;
+    let contract = deploy_test_cape().await;
     let mut note = sol::BurnNote::default();
     let extra = [
         hex::decode("ffffffffffffffffffffffff").unwrap(),
@@ -79,7 +79,7 @@ async fn test_check_burn_bad_prefix() {
 
 #[tokio::test]
 async fn test_check_burn_bad_record_commitment() {
-    let contract = deploy_cape_test().await;
+    let contract = deploy_test_cape().await;
     let mut note = sol::BurnNote::default();
     let extra = [
         DOM_SEP_CAPE_BURN.to_vec(),
@@ -114,7 +114,7 @@ async fn test_check_transfer_expired_note_triggers_an_error() -> Result<()> {
     };
 
     // Set the height to expire note
-    let contract = deploy_cape_test().await;
+    let contract = deploy_test_cape().await;
     contract.set_height(valid_until + 1).send().await?.await?;
 
     contract
@@ -134,7 +134,7 @@ async fn test_check_transfer_expired_note_triggers_an_error() -> Result<()> {
 
 #[tokio::test]
 async fn test_check_transfer_note_with_burn_prefix_rejected() {
-    let contract = deploy_cape_test().await;
+    let contract = deploy_test_cape().await;
     let mut note = sol::TransferNote::default();
     let extra = [
         DOM_SEP_CAPE_BURN.to_vec(),
@@ -149,7 +149,7 @@ async fn test_check_transfer_note_with_burn_prefix_rejected() {
 
 #[tokio::test]
 async fn test_check_transfer_without_burn_prefix_accepted() {
-    let contract = deploy_cape_test().await;
+    let contract = deploy_test_cape().await;
     let note = sol::TransferNote::default();
     assert!(contract.check_transfer(note).call().await.is_ok());
 }

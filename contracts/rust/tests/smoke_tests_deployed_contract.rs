@@ -27,7 +27,7 @@ use jf_cap::{MerkleTree, TransactionNote};
 use reef::Ledger;
 
 #[tokio::test]
-async fn integration_test_unwrapping() -> Result<()> {
+async fn smoke_tests() -> Result<()> {
     // Deploy the contracts
     let cape_contract = deploy_cape().await;
 

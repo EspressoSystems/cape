@@ -31,8 +31,8 @@ services:
     image: ${CAPE_SERVICES_IMAGE:-ghcr.io/espressosystems/cape/services:main}
     ports:
       - $CAPE_RELAYER_PORT:$CAPE_RELAYER_PORT
-    # Relayer panics if it can't connect to geth on startup.
-    command: sh -c "sleep 2 && /app/relayer/minimal-relayer"
+    # Panics if it can't connect to geth on startup.
+    command: sh -c "sleep 5 && /app/relayer/minimal-relayer"
     environment:
       - CAPE_CONTRACT_ADDRESS=$CAPE_CONTRACT_ADDRESS
       - CAPE_EQS_URL=http://eqs:$CAPE_RELAYER_PORT
@@ -48,7 +48,8 @@ services:
     image: ${CAPE_SERVICES_IMAGE:-ghcr.io/espressosystems/cape/services:main}
     ports:
       - $CAPE_EQS_PORT:$CAPE_EQS_PORT
-    command: /app/eqs/eqs
+    # Panics if it can't connect to geth on startup.
+    command: sh -c "sleep 5 && /app/eqs/eqs"
     working_dir: /app/eqs
     volumes:
       - $CAPE_EQS_STORE_PATH:/mnt/eqs

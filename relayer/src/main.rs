@@ -30,6 +30,7 @@ mod txn_queue;
 async fn main() -> std::io::Result<()> {
     tracing_subscriber::fmt()
         .compact()
+        .with_ansi(false)
         .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
         .init();
     let queue = Arc::new(RwLock::new(TxnQueue::new()));

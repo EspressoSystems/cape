@@ -12,6 +12,7 @@ use structopt::StructOpt;
 async fn main() -> std::io::Result<()> {
     tracing_subscriber::fmt()
         .compact()
+        .with_ansi(false)
         .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
         .init();
     eqs::run_eqs(&EQSOptions::from_args()).await

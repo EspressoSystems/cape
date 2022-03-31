@@ -191,7 +191,7 @@ mod test {
     async fn test_is_connected_to_contract() -> Result<()> {
         let provider = get_provider();
         let block_before = provider.get_block_number().await?;
-        let contract = deploy_cape_test().await;
+        let contract = deploy_test_cape().await;
 
         // Checking a random address returns false.
         assert!(!is_connected_to_contract(&provider, Address::random()).await?);

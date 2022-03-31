@@ -13,10 +13,6 @@ path = "src/faucet.rs"
 name = "faucet-wallet-test-setup"
 path = "src/faucet_wallet_test_setup.rs"
 
-[[bin]]
-name = "gen_faucet_keys"
-path = "src/bin/gen_faucet_keys.rs"
-
 [dependencies]
 ark-std = "0.3.0"
 

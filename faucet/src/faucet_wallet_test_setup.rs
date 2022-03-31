@@ -5,9 +5,10 @@
 // This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+use cap_rust_sandbox::helpers::compute_faucet_key_pair_from_mnemonic;
 use cap_rust_sandbox::types::EdOnBN254Point;
 use ethers::{abi::AbiEncode, prelude::U256};
-use seahorse::hd::{KeyTree, Mnemonic};
+use seahorse::hd::Mnemonic;
 use structopt::StructOpt;
 
 pub fn u256_to_hex(n: U256) -> String {
@@ -32,12 +33,7 @@ async fn main() -> Result<(), std::io::Error> {
 
     // We don't actually want to create a wallet, just generate a key, so we will directly generate
     // the key stream that the faucet wallet will use.
-    let pub_key = KeyTree::from_mnemonic(&mnemonic)
-        // This should really, be a public Seahorse API, like `KeyTree::wallet_sending_key_stream`.
-        .derive_sub_tree("wallet".as_bytes())
-        .derive_sub_tree("user".as_bytes())
-        .derive_user_key_pair(&0u64.to_le_bytes())
-        .pub_key();
+    let pub_key = compute_faucet_key_pair_from_mnemonic(&mnemonic).pub_key();
 
     eprintln!("Faucet manager encryption key: {}", pub_key);
     eprintln!(

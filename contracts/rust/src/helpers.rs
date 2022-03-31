@@ -9,8 +9,18 @@ use ark_ed_on_bn254::Fq as Fr254;
 use ark_ff::{BigInteger, PrimeField};
 use ark_serialize::*;
 use ethers::prelude::*;
+use jf_cap::keys::UserKeyPair;
 use jf_cap::structs::Nullifier;
 use jf_cap::NodeValue;
+use seahorse::hd::{KeyTree, Mnemonic};
+
+pub fn compute_faucet_key_pair_from_mnemonic(mnemonic: &Mnemonic) -> UserKeyPair {
+    KeyTree::from_mnemonic(mnemonic)
+        // This should really, be a public Seahorse API, like `KeyTree::wallet_sending_key_stream`.
+        .derive_sub_tree("wallet".as_bytes())
+        .derive_sub_tree("user".as_bytes())
+        .derive_user_key_pair(&0u64.to_le_bytes())
+}
 
 pub fn convert_u256_to_bytes_le(num: U256) -> Vec<u8> {
     let mut u8_arr = [0u8; 32];

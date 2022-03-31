@@ -131,6 +131,14 @@ async fn smoke_tests() -> Result<()> {
         .ensure_mined()
         .print_gas("Credit deposit");
 
+    // The ERC20 tokens have been deposited inside the CAPE contract
+    check_erc20_token_balance(
+        &contracts_info.erc20_token_contract,
+        cape_contract_address,
+        U256::from(deposited_amount),
+    )
+    .await;
+
     // Create burn transaction and record opening based on the content of the records merkle tree
     let unwrapped_assets_recipient_eth_address = final_recipient_of_unwrapped_assets.address();
 
@@ -157,19 +165,6 @@ async fn smoke_tests() -> Result<()> {
     // )
     // .unwrap();
 
-    // Alter the burn record opening to trigger an error in the CAPE contract
-    // when checking that the record opening and its commitment inside the burn transaction match.
-    // cape_block.burn_notes[0].burned_ro.amount = 2222;
-    //
-    // cape_contract
-    //     .submit_cape_block(cape_block.clone().into())
-    //     .call()
-    //     .await
-    //     .should_revert_with_message("Bad record commitment");
-    //
-    // // Use the right burned amount and check the transaction goes through
-    // cape_block.burn_notes[0].burned_ro.amount = deposited_amount;
-    //
     // cape_contract
     //     .submit_cape_block(cape_block.clone().into())
     //     .send()

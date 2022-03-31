@@ -71,6 +71,16 @@ pub fn upcast_test_cape_to_cape(test_cape: TestCAPE<EthMiddleware>) -> CAPE<EthM
     CAPE::new(test_cape.address(), Arc::new(test_cape.client().clone()))
 }
 
+pub fn compute_faucet_record_opening(faucet_pub_key: UserPubKey) -> RecordOpening {
+    RecordOpening {
+        pub_key: faucet_pub_key,
+        asset_def: AssetDefinition::native(),
+        amount: u64::MAX / 2,
+        freeze_flag: FreezeFlag::Unfrozen,
+        blind: BlindFactor::from(BaseField::from(0)),
+    }
+}
+
 /// Generates a user key pair that controls the faucet if a key pair isn't provided, and calls the
 /// contract for inserting a record commitment inside the merkle tree containing some native fee
 /// asset records.
@@ -97,13 +107,7 @@ pub async fn create_faucet(
         .unwrap();
 
     // Duplicate the record opening created by the contract.
-    let faucet_rec = RecordOpening {
-        pub_key: faucet_key_pair.pub_key(),
-        asset_def: AssetDefinition::native(),
-        amount: u64::MAX / 2,
-        freeze_flag: FreezeFlag::Unfrozen,
-        blind: BlindFactor::from(BaseField::from(0)),
-    };
+    let faucet_rec = compute_faucet_record_opening(faucet_key_pair.pub_key());
 
     (faucet_key_pair, faucet_rec)
 }

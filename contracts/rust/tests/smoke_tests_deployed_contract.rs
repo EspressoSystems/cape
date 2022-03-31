@@ -6,15 +6,15 @@
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use anyhow::Result;
-use cap_rust_sandbox::assertion::{EnsureMined, Matcher};
+use cap_rust_sandbox::assertion::EnsureMined;
 use cap_rust_sandbox::cape::CapeBlock;
 use cap_rust_sandbox::deploy::{deploy_cape, deploy_erc20_token};
 use cap_rust_sandbox::ethereum::get_funded_client;
 use cap_rust_sandbox::ledger::CapeLedger;
 use cap_rust_sandbox::model::{erc20_asset_description, Erc20Code, EthereumAddr};
 use cap_rust_sandbox::test_utils::{
-    check_erc20_token_balance, compare_roots_records_test_cape_contract, create_faucet,
-    generate_burn_tx, ContractsInfo, PrintGas,
+    check_erc20_token_balance, compare_roots_records_test_cape_contract,
+    compute_faucet_record_opening, create_faucet, generate_burn_tx, ContractsInfo, PrintGas,
 };
 use cap_rust_sandbox::types as sol;
 use cap_rust_sandbox::types::{GenericInto, CAPE};
@@ -25,8 +25,6 @@ use jf_cap::structs::{
     AssetCode, AssetDefinition, AssetPolicy, FreezeFlag, RecordCommitment, RecordOpening,
 };
 use jf_cap::{MerkleTree, TransactionNote};
-use rand::SeedableRng;
-use rand_chacha::ChaChaRng;
 use reef::Ledger;
 use std::env;
 
@@ -49,21 +47,22 @@ async fn smoke_tests() -> Result<()> {
     // Generate a new client that will receive the unwrapped assets
     let final_recipient_of_unwrapped_assets = get_funded_client().await?;
 
+    let mut mt = MerkleTree::new(CapeLedger::merkle_height()).unwrap();
+
     // Create some fee asset record if needed
     let (faucet_key_pair, faucet_record_opening) =
         if env::var("DEPLOYED_CAPE_CONTRACT_ADDRESS").is_err() {
             create_faucet(&cape_contract, None).await
         } else {
-            let faucet_key_pair = env::var("FAUCET_KEY_PAIR").unwrap();
-            println!("FAUCET_KEY_PAIR={:?}", faucet_key_pair);
-            let user_key_pair: UserKeyPair = serde_json::from_str(&faucet_key_pair).unwrap();
+            let faucet_key_pair_str = env::var("FAUCET_KEY_PAIR").unwrap();
+            println!("FAUCET_KEY_PAIR={:?}", faucet_key_pair_str);
+            let faucet_key_pair: UserKeyPair = serde_json::from_str(&faucet_key_pair_str).unwrap();
 
-            // TODO this is not the right record opening
-            let rng = &mut ark_std::test_rng();
-            let ro = RecordOpening::rand_for_test(rng);
-            (user_key_pair, ro)
+            let ro = compute_faucet_record_opening(faucet_key_pair.pub_key());
+            (faucet_key_pair, ro)
         };
     let faucet_record_comm = RecordCommitment::from(&faucet_record_opening).to_field_element();
+    mt.push(faucet_record_comm);
 
     // Sponsor CAPE asset
     let rng = &mut ark_std::test_rng();
@@ -111,6 +110,7 @@ async fn smoke_tests() -> Result<()> {
     );
 
     let wrapped_record_comm = RecordCommitment::from(&wrapped_ro).to_field_element();
+    mt.push(wrapped_record_comm);
 
     // We call the CAPE contract from the address that owns the ERC20 tokens
     contracts_info
@@ -149,48 +149,55 @@ async fn smoke_tests() -> Result<()> {
     const POS_FEE_COMM: u64 = 0;
     const POS_WRAPPED_ASSET_COMM: u64 = 1;
 
-    // let cape_burn_tx = generate_burn_tx(
-    //     &faucet_key_pair,
-    //     faucet_record_opening,
-    //     wrapped_ro,
-    //     &mt,
-    //     POS_FEE_COMM,
-    //     POS_WRAPPED_ASSET_COMM,
-    //     unwrapped_assets_recipient_eth_address,
-    // );
-    //
-    // // Create and submit new block with the burn transaction
-    // let burn_transaction_note =
-    //     TransactionNote::Transfer(Box::new(cape_burn_tx.clone().transfer_note));
-    // let mut cape_block = CapeBlock::generate(
-    //     vec![burn_transaction_note],
-    //     vec![cape_burn_tx.clone().burned_ro],
-    //     miner.address(),
-    // )
-    // .unwrap();
+    let cape_burn_tx = generate_burn_tx(
+        &faucet_key_pair,
+        faucet_record_opening,
+        wrapped_ro,
+        &mt,
+        POS_FEE_COMM,
+        POS_WRAPPED_ASSET_COMM,
+        unwrapped_assets_recipient_eth_address,
+    );
 
-    // cape_contract
-    //     .submit_cape_block(cape_block.clone().into())
-    //     .send()
-    //     .await?
-    //     .await?
-    //     .print_gas("Burn transaction");
-    //
-    // // The recipient has received the ERC20 tokens
-    // check_erc20_token_balance(
-    //     &contracts_info.erc20_token_contract,
-    //     unwrapped_assets_recipient_eth_address,
-    //     U256::from(deposited_amount),
-    // )
-    // .await;
-    //
-    // // The ERC20 tokens have left the CAPE contract
-    // check_erc20_token_balance(
-    //     &contracts_info.erc20_token_contract,
-    //     cape_contract_address,
-    //     U256::from(0),
-    // )
-    // .await;
+    // Create and submit new block with the burn transaction
+    let burn_transaction_note =
+        TransactionNote::Transfer(Box::new(cape_burn_tx.clone().transfer_note));
+    let cape_block = CapeBlock::generate(
+        vec![burn_transaction_note],
+        vec![cape_burn_tx.clone().burned_ro],
+        miner.address(),
+    )
+    .unwrap();
+
+    cape_contract
+        .submit_cape_block(cape_block.clone().into())
+        .send()
+        .await?
+        .await?
+        .print_gas("Burn transaction");
+
+    // The recipient has received the ERC20 tokens
+    check_erc20_token_balance(
+        &contracts_info.erc20_token_contract,
+        unwrapped_assets_recipient_eth_address,
+        U256::from(deposited_amount),
+    )
+    .await;
+
+    // The ERC20 tokens have left the CAPE contract
+    check_erc20_token_balance(
+        &contracts_info.erc20_token_contract,
+        cape_contract_address,
+        U256::from(0),
+    )
+    .await;
+
+    // Check that the records merkle tree is updated correctly, in particular that the burned record commitment is NOT inserted
+    let burned_tx_fee_rc =
+        cape_block.burn_notes[0].transfer_note.output_commitments[0].to_field_element();
+    mt.push(burned_tx_fee_rc);
+
+    compare_roots_records_test_cape_contract(&mt, &cape_contract, true).await;
 
     Ok(())
 }

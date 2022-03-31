@@ -5,7 +5,7 @@
 // This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-pub const FAUCET_MANAGER_ENCRYPTION_KEY: &str = "USERPUBKEY~Gqoj9n3Ukd79jKV6L3q083AxJ9OiqP_z4nvVU_Gh-i8gAAAAAAAAAIhPWzWc8XSDsOQsoyBApAkt-EozfMGsMXzb1Ba5g2hP9w";
+pub const FAUCET_MANAGER_ENCRYPTION_KEY: &str = "USERPUBKEY~muN7VKxj1GbJ4D6rU6gANdvwD05oPKy_XmhkBxSByq0gAAAAAAAAAIRN-Rik8czFiToI8Ft5fsIf9HAEtWHDsOHh-ZBJZl1KxQ";
 
 #[cfg(test)]
 mod test {

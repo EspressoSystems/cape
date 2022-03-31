@@ -531,3 +531,10 @@ To run an end-to-end test against rinkeby
 - Similar to Rinkeby section (replace RINKEBY with GOERLI) and use `--network goerli`.
 - Faucets: [Simple](https://goerli-faucet.slock.it),
   [Social](https://faucet.goerli.mudit.blog/).
+
+### Running the smoke tests on some deployed contract
+
+Run the following command for executing the smoke tests on a CAPE contract deployed on Goerli testnet
+where `CONTRACT_ADDRESS` is the address of the CAPE contract to be tested.
+
+    MNEMONIC="$GOERLI_MNEMONIC" CAPE_WEB3_PROVIDER_URL="$GOERLI_URL" DEPLOYED_CAPE_CONTRACT_ADDRESS="$CONTRACT_ADDRESS" cargo test -- smoke_tests

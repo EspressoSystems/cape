@@ -71,7 +71,12 @@
           curl
           coreutils
           bashInteractive
+          cacert
         ];
+        runAsRoot = ''
+          mkdir -p /etc/ssl/certs
+          cp ${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt
+        '';
       };
       devShell =
         let

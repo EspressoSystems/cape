@@ -57,7 +57,6 @@ async fn smoke_tests() -> Result<()> {
             create_faucet(&cape_contract, None).await
         } else {
             let faucet_mnemonic_str = env::var("CAPE_FAUCET_MANAGER_MNEMONIC").unwrap();
-            println!("CAPE_FAUCET_MANAGER_MNEMONIC={:?}", faucet_mnemonic_str);
             let mnemonic = Mnemonic::from_phrase(faucet_mnemonic_str.replace('-', " ")).unwrap();
             let faucet_key_pair: UserKeyPair = compute_faucet_key_pair_from_mnemonic(&mnemonic);
 
@@ -178,14 +177,6 @@ async fn smoke_tests() -> Result<()> {
         .await?
         .await?
         .print_gas("Burn transaction");
-
-    // The recipient has received the ERC20 tokens
-    check_erc20_token_balance(
-        &contracts_info.erc20_token_contract,
-        unwrapped_assets_recipient_eth_address,
-        U256::from(deposited_amount),
-    )
-    .await;
 
     // The ERC20 tokens have left the CAPE contract
     check_erc20_token_balance(

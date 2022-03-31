@@ -40,7 +40,7 @@ pub struct EQSOptions {
     pub rpc_url: String,
 
     /// Address for CAPE contract
-    #[structopt(long, env = "CAPE_CONTRACT_ADDRESS")]
+    #[structopt(long, env = "CAPE_CONTRACT_ADDRESS", required_unless("temp-test-run"))]
     pub cape_address: Option<Address>,
 
     /// Invoke as a test-only instance; will create and use test contract

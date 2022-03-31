@@ -150,3 +150,45 @@ pub async fn deploy_test_records_merkle_tree_contract(
     .unwrap();
     TestRecordsMerkleTree::new(contract.address(), client)
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::ethereum::{
+        ensure_connected_to_contract, get_provider, has_code_at_block, is_connected_to_contract,
+    };
+    use anyhow::Result;
+    use ethers::prelude::Middleware;
+
+    #[tokio::test]
+    async fn test_is_connected_to_contract() -> Result<()> {
+        let provider = get_provider();
+        let block_before = provider.get_block_number().await?;
+        let contract = deploy_cape_test().await;
+
+        // Checking a random address returns false.
+        assert!(!is_connected_to_contract(&provider, Address::random()).await?);
+
+        // Checking the correct address returns true.
+        assert!(is_connected_to_contract(&provider, contract.address()).await?);
+
+        // Check this doesn't panic.
+        ensure_connected_to_contract(&provider, contract.address()).await?;
+
+        // Checking the correct address before the contract was deployed returns false.
+        assert!(
+            !has_code_at_block(&provider, contract.address(), Some(block_before.into())).await?
+        );
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[should_panic]
+    async fn test_ensure_connected_panics_if_not_connected() {
+        let provider = get_provider();
+        ensure_connected_to_contract(&provider, Address::random())
+            .await
+            .unwrap();
+    }
+}

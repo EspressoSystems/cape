@@ -17,7 +17,7 @@ use ethers::{
     abi::{Abi, Tokenize},
     contract::Contract,
     prelude::{
-        artifacts::BytecodeObject, coins_bip39::English, Address, ContractFactory, Http,
+        artifacts::BytecodeObject, coins_bip39::English, Address, BlockId, ContractFactory, Http,
         LocalWallet, Middleware, MnemonicBuilder, Provider, Signer, SignerMiddleware,
         TransactionRequest, U256,
     },
@@ -84,7 +84,10 @@ pub fn get_provider() -> Provider<Http> {
         Ok(url) => url,
         Err(_) => "http://localhost:8545".to_string(),
     };
+    get_provider_from_url(&rpc_url)
+}
 
+pub fn get_provider_from_url(rpc_url: &str) -> Provider<Http> {
     Provider::<Http>::try_from(rpc_url).expect("could not instantiate HTTP Provider")
 }
 
@@ -207,4 +210,36 @@ pub async fn deploy<M: 'static + Middleware, T: Send + Tokenize>(
 
     let contract = factory.deploy(constructor_args)?.legacy().send().await?;
     Ok(contract)
+}
+
+/// Panic if no contract code found at specified address.
+pub async fn ensure_connected_to_contract(
+    provider: &Provider<Http>,
+    contract_address: Address,
+) -> Result<()> {
+    if !is_connected_to_contract(provider, contract_address).await? {
+        panic!("No contract code found at {}", contract_address);
+    }
+    Ok(())
+}
+
+/// Check if the default provider can find a deployed contract at the specified address.
+pub async fn is_connected_to_contract(
+    provider: &Provider<Http>,
+    contract_address: Address,
+) -> Result<bool> {
+    has_code_at_block(provider, contract_address, None).await
+}
+
+/// Check if the provider can find a deployed contract at the specified address.
+/// This function is used for testing.
+/// * `block` - The ethereum block number to check against, `None` implies the
+/// latest block
+pub(crate) async fn has_code_at_block(
+    provider: &Provider<Http>,
+    contract_address: Address,
+    block: Option<BlockId>,
+) -> Result<bool> {
+    let code = provider.get_code(contract_address, block).await?;
+    Ok(!code.to_vec().is_empty())
 }

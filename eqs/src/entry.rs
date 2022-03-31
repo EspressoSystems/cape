@@ -16,9 +16,19 @@ use async_std::{
     sync::{Arc, RwLock},
     task::sleep,
 };
-use cap_rust_sandbox::universal_param::verifier_keys;
+use cap_rust_sandbox::{
+    ethereum::{ensure_connected_to_contract, get_provider_from_url},
+    universal_param::verifier_keys,
+};
 
 pub async fn run(opt: &EQSOptions) -> std::io::Result<()> {
+    if !opt.temp_test_run {
+        let provider = get_provider_from_url(opt.rpc_url());
+        ensure_connected_to_contract(&provider, opt.cape_address().unwrap())
+            .await
+            .unwrap();
+    }
+
     let (state_persistence, query_result_state) = if opt.reset_state() {
         (
             StatePersistence::new(&opt.store_path(), "eth_query").unwrap(),

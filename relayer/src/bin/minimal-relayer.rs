@@ -6,9 +6,13 @@
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #[warn(unused_imports)]
-use cap_rust_sandbox::types::CAPE;
-use coins_bip39::English;
-use ethers::prelude::*;
+use cap_rust_sandbox::{
+    ethereum::{ensure_connected_to_contract, get_provider_from_url},
+    types::CAPE,
+};
+use ethers::prelude::{
+    coins_bip39::English, Address, Middleware, MnemonicBuilder, Signer, SignerMiddleware,
+};
 use relayer::{init_web_server, DEFAULT_RELAYER_PORT};
 use std::sync::Arc;
 use structopt::StructOpt;
@@ -39,8 +43,12 @@ async fn main() -> std::io::Result<()> {
     let opt = MinimalRelayerOptions::from_args();
 
     // Set up a client to submit ETH transactions.
-    let provider = Provider::<Http>::try_from(opt.rpc_url.clone())
-        .expect("could not instantiate HTTP Provider");
+    let provider = get_provider_from_url(&opt.rpc_url);
+
+    ensure_connected_to_contract(&provider, opt.cape_address)
+        .await
+        .unwrap();
+
     let wallet = MnemonicBuilder::<English>::default()
         .phrase(opt.mnemonic.as_str())
         .build()

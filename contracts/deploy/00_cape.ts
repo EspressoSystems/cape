@@ -37,11 +37,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   //
   // and copy/paste the output.
 
-  // Derived from USERPUBKEY~muN7VKxj1GbJ4D6rU6gANdvwD05oPKy_XmhkBxSByq0gAAAAAAAAAIRN-Rik8czFiToI8Ft5fsIf9HAEtWHDsOHh-ZBJZl1KxQ
-  let faucetManagerEncKey = "0x844df918a4f1ccc5893a08f05b797ec21ff47004b561c3b0e1e1f99049665d4a";
+  // Derived from USERPUBKEY~Gqoj9n3Ukd79jKV6L3q083AxJ9OiqP_z4nvVU_Gh-i8gAAAAAAAAAIhPWzWc8XSDsOQsoyBApAkt-EozfMGsMXzb1Ba5g2hP9w
+  let faucetManagerEncKey = "0x884f5b359cf17483b0e42ca32040a4092df84a337cc1ac317cdbd416b983684f";
   let faucetManagerAddress = {
-    x: BigNumber.from("0x2dca81140764685ebfac3c684e0ff0db3500a853ab3ee0c966d463ac547be39a"),
-    y: BigNumber.from("0x228cf79945e37cfbb3f43f150b977639a12c900c949e23ed1dcd250578314393"),
+    x: BigNumber.from("0x2ffaa1f153d57be2f3ffa8a2d3273170f3b47a2f7aa58cfdde91d47df623aa1a"),
+    y: BigNumber.from("0x0869c1246d9577b7b406785c210911e10093bb13f5d054a3c4d41bc9a64dd50d"),
   };
 
   // Override values with environment variable if set.

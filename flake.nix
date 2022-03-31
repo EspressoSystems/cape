@@ -26,7 +26,22 @@
     }:
     flake-utils.lib.eachDefaultSystem (system:
     let
-      overlays = [ (import rust-overlay) ];
+      overlays = [
+        (import rust-overlay)
+        (final: prev:
+          let
+            runInLinuxVMNoKVM = drv:
+              final.lib.overrideDerivation (final.vmTools.runInLinuxVM drv)
+                (_: { requiredSystemFeatures = [ ]; });
+            modifiedVmTools = prev.vmTools // {
+              runInLinuxVM = runInLinuxVMNoKVM;
+            };
+          in
+          {
+            dockerTools =
+              prev.dockerTools.override { vmTools = modifiedVmTools; };
+          })
+      ];
       pkgs = import nixpkgs {
         inherit system overlays;
       };

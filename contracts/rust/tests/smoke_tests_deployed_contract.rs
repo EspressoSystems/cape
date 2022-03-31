@@ -54,10 +54,14 @@ async fn smoke_tests() -> Result<()> {
         if env::var("DEPLOYED_CAPE_CONTRACT_ADDRESS").is_err() {
             create_faucet(&cape_contract, None).await
         } else {
-            // TODO this is not the right key / record opening
-            let mut rng = ChaChaRng::from_seed([42; 32]);
-            let ro = RecordOpening::rand_for_test(&mut rng);
-            (UserKeyPair::generate(&mut rng), ro)
+            let faucet_key_pair = env::var("FAUCET_KEY_PAIR").unwrap();
+            println!("FAUCET_KEY_PAIR={:?}", faucet_key_pair);
+            let user_key_pair: UserKeyPair = serde_json::from_str(&faucet_key_pair).unwrap();
+
+            // TODO this is not the right record opening
+            let rng = &mut ark_std::test_rng();
+            let ro = RecordOpening::rand_for_test(rng);
+            (user_key_pair, ro)
         };
     let faucet_record_comm = RecordCommitment::from(&faucet_record_opening).to_field_element();
 

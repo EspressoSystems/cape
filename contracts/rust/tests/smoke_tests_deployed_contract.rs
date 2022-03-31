@@ -10,6 +10,7 @@ use cap_rust_sandbox::assertion::EnsureMined;
 use cap_rust_sandbox::cape::CapeBlock;
 use cap_rust_sandbox::deploy::{deploy_cape, deploy_erc20_token};
 use cap_rust_sandbox::ethereum::get_funded_client;
+use cap_rust_sandbox::helpers::compute_faucet_key_pair_from_mnemonic;
 use cap_rust_sandbox::ledger::CapeLedger;
 use cap_rust_sandbox::model::{erc20_asset_description, Erc20Code, EthereumAddr};
 use cap_rust_sandbox::test_utils::{
@@ -26,6 +27,7 @@ use jf_cap::structs::{
 };
 use jf_cap::{MerkleTree, TransactionNote};
 use reef::Ledger;
+use seahorse::hd::Mnemonic;
 use std::env;
 
 #[tokio::test]
@@ -54,9 +56,10 @@ async fn smoke_tests() -> Result<()> {
         if env::var("DEPLOYED_CAPE_CONTRACT_ADDRESS").is_err() {
             create_faucet(&cape_contract, None).await
         } else {
-            let faucet_key_pair_str = env::var("FAUCET_KEY_PAIR").unwrap();
-            println!("FAUCET_KEY_PAIR={:?}", faucet_key_pair_str);
-            let faucet_key_pair: UserKeyPair = serde_json::from_str(&faucet_key_pair_str).unwrap();
+            let faucet_mnemonic_str = env::var("CAPE_FAUCET_MANAGER_MNEMONIC").unwrap();
+            println!("CAPE_FAUCET_MANAGER_MNEMONIC={:?}", faucet_mnemonic_str);
+            let mnemonic = Mnemonic::from_phrase(faucet_mnemonic_str.replace('-', " ")).unwrap();
+            let faucet_key_pair: UserKeyPair = compute_faucet_key_pair_from_mnemonic(&mnemonic);
 
             let ro = compute_faucet_record_opening(faucet_key_pair.pub_key());
             (faucet_key_pair, ro)

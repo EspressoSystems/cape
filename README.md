@@ -555,7 +555,7 @@ Then run
 Run [smoke-test-goerli](./bin/smoke-test-goerli) with a custom mnemonic (here `TEST_MNEMONIC`):
 
 ```console
-env MY_FAUCET_MANGER_MNEMONIC="$TEST_MNEMONIC" smoke-test-goerli
+env MY_FAUCET_MANAGER_MNEMONIC="$TEST_MNEMONIC" smoke-test-goerli
 ```
 
 If you get a `replacement fee too low` error, re-run the command.

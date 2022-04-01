@@ -222,7 +222,7 @@ PATH = ["buildwrap/destination/:destination/asset/:asset/amount/:amount"]
 ":asset" = "TaggedBase64"
 ":amount" = "Integer"
 DOC = """
-Build, but do not submit, a wrap transaction.
+Build, but do not submit, a wrap transaction. Returns the record opening corresponding to the wrap.
 """
 
 [route.submitwrap]
@@ -484,6 +484,21 @@ PATH = ["view/:asset", "view/key/:key"]
 ":key" = "TaggedBase64"
 DOC = """
 View the given asset or view the asset associated with the given viewing key.
+"""
+
+
+[route.recordopening]
+METHOD = "POST"
+PATH = [
+  "recordopening/address/:address/asset/:asset/amount/:amount/freeze/:freeze",
+  "recordopening/address/:address/asset/:asset/amount/:amount"
+]
+":address" = "TaggedBase64"
+":asset" = "TaggedBase64"
+":amount" = "Integer"
+":freeze" = "Boolean"
+DOC = """
+Create an record opening of an asset for the given address.
 """
 
 [route.transaction]

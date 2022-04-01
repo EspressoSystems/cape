@@ -44,12 +44,18 @@ async fn main() -> Result<(), std::io::Error> {
     let enc_key_bytes: [u8; 32] = pub_key.enc_key().into();
     let address: EdOnBN254Point = pub_key.address().into();
 
-    println!("CAPE_FAUCET_MANAGER_MNEMONIC=\"{}\"", opt.mnemonic);
+    println!("export CAPE_FAUCET_MANAGER_MNEMONIC=\"{}\"", opt.mnemonic);
     println!(
-        "CAPE_FAUCET_MANAGER_ENC_KEY=0x{}",
+        "export CAPE_FAUCET_MANAGER_ENC_KEY=0x{}",
         hex::encode(enc_key_bytes)
     );
-    println!("CAPE_FAUCET_MANAGER_ADDRESS_X=0x{}", u256_to_hex(address.x));
-    println!("CAPE_FAUCET_MANAGER_ADDRESS_Y=0x{}", u256_to_hex(address.y));
+    println!(
+        "export CAPE_FAUCET_MANAGER_ADDRESS_X=0x{}",
+        u256_to_hex(address.x)
+    );
+    println!(
+        "export CAPE_FAUCET_MANAGER_ADDRESS_Y=0x{}",
+        u256_to_hex(address.y)
+    );
     Ok(())
 }

@@ -14,8 +14,8 @@ use cap_rust_sandbox::helpers::compute_faucet_key_pair_from_mnemonic;
 use cap_rust_sandbox::ledger::CapeLedger;
 use cap_rust_sandbox::model::{erc20_asset_description, Erc20Code, EthereumAddr};
 use cap_rust_sandbox::test_utils::{
-    check_erc20_token_balance, compare_roots_records_test_cape_contract,
-    compute_faucet_record_opening, create_faucet, generate_burn_tx, ContractsInfo, PrintGas,
+    compare_roots_records_test_cape_contract, compute_faucet_record_opening, create_faucet,
+    generate_burn_tx, ContractsInfo, PrintGas,
 };
 use cap_rust_sandbox::types as sol;
 use cap_rust_sandbox::types::{GenericInto, CAPE};
@@ -142,19 +142,29 @@ async fn smoke_tests() -> Result<()> {
     println!("Submitting empty block to credit deposit.");
     cape_contract
         .submit_cape_block(empty_block.clone().into())
+        .gas(5_000_000) // If the gas estimate is made against an outdated state it will be too low.
         .send()
         .await?
         .await?
         .ensure_mined()
         .print_gas("Credit deposit");
 
-    // The ERC20 tokens have been deposited inside the CAPE contract
-    check_erc20_token_balance(
-        &contracts_info.erc20_token_contract,
-        cape_contract_address,
-        U256::from(deposited_amount),
-    )
-    .await;
+    println!("Verifying tokens have been deposited into CAPE contract.");
+    for attempt in 0..3 {
+        let balance = contracts_info
+            .erc20_token_contract
+            .balance_of(cape_contract_address)
+            .call()
+            .await?;
+        if balance == U256::from(deposited_amount) {
+            break;
+        };
+        if attempt == 2 {
+            panic!("Tokens were not deposited.")
+        };
+        println!("Tokens were not deposited yet, retrying ...");
+        std::thread::sleep(std::time::Duration::from_secs(1))
+    }
 
     // Create burn transaction and record opening based on the content of the records merkle tree
     let unwrapped_assets_recipient_eth_address = final_recipient_of_unwrapped_assets.address();
@@ -190,13 +200,22 @@ async fn smoke_tests() -> Result<()> {
         .ensure_mined()
         .print_gas("Burn transaction");
 
-    // The ERC20 tokens have left the CAPE contract
-    check_erc20_token_balance(
-        &contracts_info.erc20_token_contract,
-        cape_contract_address,
-        U256::from(0),
-    )
-    .await;
+    println!("Verifying tokens exited CAPE contract.");
+    for attempt in 0..3 {
+        let balance = contracts_info
+            .erc20_token_contract
+            .balance_of(cape_contract_address)
+            .call()
+            .await?;
+        if balance == U256::from(0) {
+            break;
+        };
+        if attempt == 2 {
+            panic!("Tokens did not exit CAPE contract")
+        };
+        println!("Tokens did not exit CAPE contract yet, retrying ...");
+        std::thread::sleep(std::time::Duration::from_secs(1))
+    }
 
     // Check that the records merkle tree is updated correctly, in particular that the burned record commitment is NOT inserted
     let burned_tx_fee_rc =

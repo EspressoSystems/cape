@@ -8,7 +8,7 @@ echo "Exporting key for mnemonic"
 source <(cargo run --bin faucet-wallet-test-setup -- --mnemonic "$MNEMONIC")
 
 echo "Deploying contracts"
-hardhat deploy --network goerli
+hardhat deploy --network goerli "$@"
 
 echo "Running smoke test"
 export CAPE_CONTRACT_ADDRESS=$(cat contracts/deployments/goerli/CAPE.json | jq -r .address)

@@ -52,7 +52,7 @@ export CAPE_WALLET_PORT=50040
 
 # Create a faucet manager wallet and export variables printed to stdout
 export CAPE_FAUCET_MANAGER_MNEMONIC="$TEST_MNEMONIC"
-set -a; source <(target/release/faucet-wallet-test-setup); set +a;
+source <(target/release/faucet-wallet-test-setup)
 
 # Start a go-ethereum/geth node
 run-geth --verbosity 1 &

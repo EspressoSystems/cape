@@ -19,7 +19,7 @@ use futures::{prelude::*, stream::iter};
 use jf_cap::{
     keys::{AuditorPubKey, FreezerPubKey, UserKeyPair, UserPubKey},
     structs::{
-        AssetCode, AssetDefinition as JfAssetDefinition, AssetPolicy,
+        AssetCode, AssetDefinition as JfAssetDefinition, AssetPolicy, FreezeFlag,
         RecordOpening as JfRecordOpening,
     },
 };
@@ -332,6 +332,7 @@ pub enum ApiRouteKey {
     newkey,
     newwallet,
     openwallet,
+    recordopening,
     recoverkey,
     resetpassword,
     send,
@@ -1153,6 +1154,33 @@ pub async fn importasset(
     Ok(AssetInfo::from_info(wallet, info).await)
 }
 
+async fn recordopening(
+    bindings: &HashMap<String, RouteBinding>,
+    wallet: &mut Option<Wallet>,
+) -> Result<sol::RecordOpening, tide::Error> {
+    let wallet = require_wallet(wallet)?;
+
+    let address = bindings[":address"].value.to::<UserAddress>()?;
+    let asset_code = bindings[":asset"].value.to::<AssetCode>()?;
+    let asset_definition = wallet.asset(asset_code).await.unwrap().definition;
+    let amount = bindings[":amount"].value.as_u64()?;
+    let freeze = match bindings.get(":freeze") {
+        Some(flag) => {
+            if flag.value.as_boolean()? {
+                FreezeFlag::Frozen
+            } else {
+                FreezeFlag::Unfrozen
+            }
+        }
+        None => FreezeFlag::Unfrozen,
+    };
+    let ro: sol::RecordOpening = wallet
+        .record_opening(asset_definition, address.into(), amount, freeze)
+        .await?
+        .into();
+    Ok(ro)
+}
+
 async fn transactionhistory(
     bindings: &HashMap<String, RouteBinding>,
     wallet: &mut Option<Wallet>,
@@ -1250,6 +1278,7 @@ pub async fn dispatch_url(
             &req,
             openwallet(options, bindings, rng, faucet_key_pair, wallet).await?,
         ),
+        ApiRouteKey::recordopening => response(&req, recordopening(bindings, wallet).await?),
         ApiRouteKey::recoverkey => {
             response(&req, recoverkey(&route_params, bindings, wallet).await?)
         }

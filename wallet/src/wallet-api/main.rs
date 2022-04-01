@@ -1036,14 +1036,14 @@ mod tests {
         let invalid_destination = UserAddress::from(UserKeyPair::generate(&mut rng).address());
         let invalid_code = AssetCode::dummy();
         server
-            .post::<String>(&format!(
+            .post::<sol::RecordOpening>(&format!(
                 "buildwrap/destination/{}/asset/{}/amount/{}",
                 invalid_destination, asset.code, 10
             ))
             .await
             .expect_err("buildwrap succeeded with an invalid user address");
         server
-            .post::<String>(&format!(
+            .post::<sol::RecordOpening>(&format!(
                 "buildwrap/destination/{}/asset/{}/amount/{}",
                 destination, invalid_code, 10
             ))
@@ -2292,5 +2292,78 @@ mod tests {
                 panic!("Expected PrivateKey::Freezing, found {:?}", freezer_key);
             }
         }
+    }
+
+    #[async_std::test]
+    #[traced_test]
+    async fn test_recordopening() {
+        let server = TestServer::new().await;
+        let mut rng = ChaChaRng::from_seed([1; 32]);
+
+        // Create a wallet.
+        server
+            .post::<()>(&format!(
+                "newwallet/{}/{}/path/{}",
+                server.get::<String>("getmnemonic").await.unwrap(),
+                base64("my-password".as_bytes()),
+                server.path(),
+            ))
+            .await
+            .unwrap();
+
+        // Create an address.
+        server.post::<PubKey>("newkey/sending").await.unwrap();
+        let info = server.get::<WalletSummary>("getinfo").await.unwrap();
+        let sending_key = &info.sending_keys[0];
+        let address: UserAddress = sending_key.address().into();
+
+        // Define an asset.
+        let description = base64::encode_config(&[3u8; 32], base64::URL_SAFE_NO_PAD);
+        let asset = server
+            .post::<AssetInfo>(&format!("newasset/description/{}", description))
+            .await
+            .unwrap()
+            .definition
+            .code;
+
+        // recordopening should fail with an invalid address or asset.
+        let invalid_addr = UserAddress::from(UserKeyPair::generate(&mut rng).address());
+        let invalid_asset = AssetCode::dummy();
+        server
+            .post::<sol::RecordOpening>(&format!(
+                "recordopening/address/{}/asset/{}/amount/{}/freeze/true",
+                invalid_addr, asset, 10
+            ))
+            .await
+            .expect_err("recordopening succeeded with invalid address");
+        server
+            .post::<sol::RecordOpening>(&format!(
+                "recordopening/address/{}/asset/{}/amount/{}/freeze/true",
+                address, invalid_asset, 10
+            ))
+            .await
+            .expect_err("recordopening succeeded with invalid asset");
+
+        // recordopening should create the record opening with the correct information.
+        let ro = server
+            .post::<sol::RecordOpening>(&format!(
+                "recordopening/address/{}/asset/{}/amount/{}/freeze/true",
+                address, asset, 10
+            ))
+            .await
+            .unwrap();
+        assert_eq!(ro.amount, 10);
+        assert_eq!(ro.asset_def.code, asset.into());
+        assert!(ro.freeze_flag);
+        let ro = server
+            .post::<sol::RecordOpening>(&format!(
+                "recordopening/address/{}/asset/{}/amount/{}",
+                address, asset, 10
+            ))
+            .await
+            .unwrap();
+        assert_eq!(ro.amount, 10);
+        assert_eq!(ro.asset_def.code, asset.into());
+        assert!(!ro.freeze_flag);
     }
 }

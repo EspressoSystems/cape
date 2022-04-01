@@ -175,6 +175,15 @@ pub trait CapeWalletExt<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> {
         fee: u64,
     ) -> Result<TransactionReceipt<CapeLedger>, CapeWalletError>;
 
+    /// Construct the record opening of an asset for the given address.
+    async fn record_opening(
+        &mut self,
+        asset: AssetDefinition,
+        address: UserAddress,
+        amount: u64,
+        freeze_flag: FreezeFlag,
+    ) -> Result<RecordOpening, CapeWalletError>;
+
     /// Get the ERC-20 asset code that this asset wraps, if this is a wrapped asset.
     async fn wrapped_erc20(&self, asset: AssetCode) -> Option<Erc20Code>;
 
@@ -271,17 +280,8 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
         dst_addr: UserAddress,
         amount: u64,
     ) -> Result<RecordOpening, CapeWalletError> {
-        let mut state = self.lock().await;
-
-        let pub_key = state.backend().get_public_key(&dst_addr).await?;
-
-        Ok(RecordOpening::new(
-            state.rng(),
-            amount,
-            cap_asset,
-            pub_key,
-            FreezeFlag::Unfrozen,
-        ))
+        self.record_opening(cap_asset, dst_addr, amount, FreezeFlag::Unfrozen)
+            .await
     }
 
     async fn submit_wrap(
@@ -360,6 +360,26 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
             ro: Box::new(info.outputs[1].clone()),
         });
         self.submit(txn, info).await
+    }
+
+    async fn record_opening(
+        &mut self,
+        asset: AssetDefinition,
+        address: UserAddress,
+        amount: u64,
+        freeze_flag: FreezeFlag,
+    ) -> Result<RecordOpening, CapeWalletError> {
+        let mut state = self.lock().await;
+
+        let pub_key = state.backend().get_public_key(&address).await?;
+
+        Ok(RecordOpening::new(
+            state.rng(),
+            amount,
+            asset,
+            pub_key,
+            freeze_flag,
+        ))
     }
 
     async fn wrapped_erc20(&self, asset: AssetCode) -> Option<Erc20Code> {

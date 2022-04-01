@@ -77,17 +77,11 @@ pub struct FaucetOptions {
     pub fee_size: u64,
 
     /// URL for the Ethereum Query Service.
-    #[structopt(
-        short,
-        long,
-        env = "CAPE_EQS_URL",
-        default_value = "http://localhost:50087"
-    )]
+    #[structopt(long, env = "CAPE_EQS_URL", default_value = "http://localhost:50087")]
     pub eqs_url: Url,
 
     /// URL for the CAPE relayer.
     #[structopt(
-        short,
         long,
         env = "CAPE_RELAYER_URL",
         default_value = "http://localhost:50077"
@@ -96,7 +90,6 @@ pub struct FaucetOptions {
 
     /// URL for the Ethereum Query Service.
     #[structopt(
-        short,
         long,
         env = "CAPE_ADDRESS_BOOK_URL",
         default_value = "http://localhost:50078"
@@ -104,12 +97,11 @@ pub struct FaucetOptions {
     pub address_book_url: Url,
 
     /// Address of the CAPE smart contract.
-    #[structopt(short, long, env = "CAPE_CONTRACT_ADDRESS")]
+    #[structopt(long, env = "CAPE_CONTRACT_ADDRESS")]
     pub contract_address: Address,
 
     /// URL for Ethers HTTP Provider
     #[structopt(
-        short,
         long,
         env = "CAPE_WEB3_PROVIDER_URL",
         default_value = "http://localhost:8545"

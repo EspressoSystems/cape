@@ -22,7 +22,6 @@ use structopt::StructOpt;
 struct MinimalRelayerOptions {
     /// URL for Ethers provider
     #[structopt(
-        short = "u",
         long,
         env = "CAPE_WEB3_PROVIDER_URL",
         default_value = "http://localhost:8545"

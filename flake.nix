@@ -26,22 +26,7 @@
     }:
     flake-utils.lib.eachDefaultSystem (system:
     let
-      overlays = [
-        (import rust-overlay)
-        (final: prev:
-          let
-            runInLinuxVMNoKVM = drv:
-              final.lib.overrideDerivation (final.vmTools.runInLinuxVM drv)
-                (_: { requiredSystemFeatures = [ ]; });
-            modifiedVmTools = prev.vmTools // {
-              runInLinuxVM = runInLinuxVMNoKVM;
-            };
-          in
-          {
-            dockerTools =
-              prev.dockerTools.override { vmTools = modifiedVmTools; };
-          })
-      ];
+      overlays = [ (import rust-overlay) ];
       pkgs = import nixpkgs {
         inherit system overlays;
       };
@@ -88,10 +73,11 @@
           bashInteractive
           cacert
         ];
-        runAsRoot = ''
-          mkdir -p /etc/ssl/certs
-          cp ${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt
-        '';
+        config = {
+          Env = [
+            "SSL_CERT_FILE=/etc/ssl/certs/ca-bundle.crt"
+          ];
+        };
       };
       devShell =
         let

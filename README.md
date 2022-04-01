@@ -563,5 +563,5 @@ If you get a `replacement fee too low` error, re-run the command up to 2 to 3 ti
 To start from scratch and ignore existing deployments pass `--reset`:
 
 ```console
-env MY_FAUCET_MANGER_MNEMONIC="$TEST_MNEMONIC" smoke-test-goerli --reset
+env MY_FAUCET_MANAGER_MNEMONIC="$TEST_MNEMONIC" smoke-test-goerli --reset
 ```

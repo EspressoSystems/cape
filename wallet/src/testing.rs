@@ -86,6 +86,7 @@ pub async fn retry<Fut: Future<Output = bool>>(f: impl Fn() -> Fut) {
 }
 
 /// `faucet_key_pair` - If not provided, a random faucet key pair will be generated.
+#[allow(clippy::needless_lifetimes)]
 pub async fn create_test_network<'a>(
     rng: &mut ChaChaRng,
     universal_param: &'a UniversalParam,

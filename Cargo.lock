@@ -43,7 +43,6 @@ dependencies = [
  "surf",
  "tempdir",
  "tide",
- "tide-tracing",
  "tracing",
  "tracing-futures",
  "tracing-log",
@@ -1194,7 +1193,6 @@ dependencies = [
  "tagged-base64",
  "tempdir",
  "tide",
- "tide-tracing",
  "tide-websockets",
  "toml",
  "tracing",
@@ -2099,7 +2097,6 @@ dependencies = [
  "surf",
  "tagged-base64",
  "tide",
- "tide-tracing",
  "tide-websockets",
  "toml",
  "tracing",
@@ -2760,7 +2757,6 @@ dependencies = [
  "surf",
  "tempdir",
  "tide",
- "tide-tracing",
  "tracing",
  "tracing-futures",
  "tracing-log",
@@ -4958,7 +4954,6 @@ dependencies = [
  "structopt",
  "surf",
  "tide",
- "tide-tracing",
  "tide-websockets",
  "toml",
  "tracing",
@@ -6146,18 +6141,6 @@ dependencies = [
  "route-recognizer",
  "serde",
  "serde_json",
-]
-
-[[package]]
-name = "tide-tracing"
-version = "0.0.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9737dbee8b322744e5c0fb4d7baf1e1fae332056cbc1f8a356162a6211b853f4"
-dependencies = [
- "async-trait",
- "tide",
- "tracing",
- "tracing-futures",
 ]
 
 [[package]]

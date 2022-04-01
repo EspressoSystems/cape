@@ -97,7 +97,7 @@ pub async fn get_funded_client() -> Result<Arc<EthMiddleware>> {
 
     // If MNEMONIC is set, try to use it to create a wallet,
     // otherwise create a random wallet.
-    let deployer_wallet = match env::var("MNEMONIC") {
+    let deployer_wallet = match env::var("ETH_MNEMONIC") {
         Ok(val) => MnemonicBuilder::<English>::default()
             .phrase(val.as_str())
             .build()?,

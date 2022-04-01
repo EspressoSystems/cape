@@ -57,14 +57,14 @@ describes the project at a high level.
   - [Gas Usage](#gas-usage)
     - [Gas Reporter](#gas-reporter)
     - [Gas usage of block submissions](#gas-usage-of-block-submissions)
-  - [CI](#ci)
+  - [CI Tests](#ci-tests)
     - [Nightly CI builds](#nightly-ci-builds)
 - [Deployment](#deployment)
   - [Linking to deployed contracts](#linking-to-deployed-contracts)
   - [Etherscan verification](#etherscan-verification)
   - [Testnets](#testnets)
-    - [Rinkeby](#rinkeby)
     - [Goerli](#goerli)
+    - [Running the smoke tests](#running-the-smoke-tests)
 
 ## Obtaining the source code
 
@@ -511,63 +511,51 @@ https://etherscan.io/myapikey.
 
 ## Testnets
 
-### Rinkeby
-
-- Set the RINKEBY_URL in the .env file. A project can be created at
-  https://infura.io/dashboard/ethereum.
-- Set the RINKEBY_MNEMONIC in the .env file.
-- Run the following command
-
-To run the hardhat tests against rinkeby
-
-    hardhat test --network rinkeby
-
-To run an end-to-end test against rinkeby
-
-    cape-test-rinkeby
-
 ### Goerli
 
-- Similar to Rinkeby section (replace RINKEBY with GOERLI) and use `--network goerli`.
-- Faucets: [Simple](https://goerli-faucet.slock.it),
+- Faucets to get Goerli Ether: [Simple](https://goerli-faucet.slock.it),
   [Social](https://faucet.goerli.mudit.blog/).
+- Set the GOERLI_URL in the .env file. A project can be created at
+  https://infura.io/dashboard/ethereum.
+- Set the GOERLI_MNEMONIC (the Ethereum mnenmonic for your goerli wallet) in the
+  .env file.
 
-### Running the smoke tests on some deployed contract
+To deploy to goerli (if you get a `replacement fee too low` error, re-run it
+until it exits without error):
 
-#### Deploy the CAPE contract on Goerli
+    hardhat test --network goerli
 
-If the CAPE contract is already deployed you can skip to the next section.
+The CAPE contract address is printed to the console right after deployment and
+also saved in a file. To find it, run
 
-- Generate the faucet manager keys, e.g.:
-
-```
-> [nix-shell:~/repositories/Translucence/cape]$ cargo run --bin faucet-wallet-test-setup
-    Finished dev [unoptimized + debuginfo] target(s) in 0.19s
-     Running `target/debug/faucet-wallet-test-setup`
-Faucet manager encryption key: USERPUBKEY~ekZ5WsvbY5c74x9ZtW6_mwyxsCo9UMNreIecAf-4Vq0gAAAAAAAAAPGTZ7plvedP88dKH2J7i7z3fD3CKfSK9iC1mxTOdH4F1w
-Faucet manager address: ADDR~ekZ5WsvbY5c74x9ZtW6_mwyxsCo9UMNreIecAf-4Vq1L
-CAPE_FAUCET_MANAGER_MNEMONIC="hello hello hello hello hello hello hello hello hello hello hello good"
-CAPE_FAUCET_MANAGER_ENC_KEY=0xf19367ba65bde74ff3c74a1f627b8bbcf77c3dc229f48af620b59b14ce747e05
-CAPE_FAUCET_MANAGER_ADDRESS_X=0x2d56b8ff019c87786bc3503d2ab0b10c9bbf6eb5591fe33b9763dbcb5a79467a
-CAPE_FAUCET_MANAGER_ADDRESS_Y=0x21682e859e3d9eedb883221a4d5aab1157a154196a1ad93df975b43ba3fd4f4e
+```console
+cat contracts/deployments/goerli/CAPE.json | jq -r '.address'
 ```
 
-- Update the deployment script in order to handle this new key. Follow the instructions at
-  `contracts/deploy/00_cape.ts`, line 34
+### Running the smoke tests
 
-- Deploy the CAPE contract on Goerli
+#### On the main testnet deployment
 
-  `hardhat deploy --network goerli`
+- Ensure the contract is deployed (e. g. `hardhat test --network goerli`) was run.
+- Ensure _no_ transcations have been run on the CAPE contract after deployment.
 
-#### Run the tests
-
-Set the following environment variables in the .env file:
+Set the following environment variable in the .env file:
 
 - `CAPE_FAUCET_MANAGER_MNEMONIC`: is the mnemonic for the Faucet manager's keys.
-- `DEPLOYED_CAPE_CONTRACT_ADDRESS`: is the address of the CAPE contract to be tested (obtained from running the previous hardhat command)
-- `GOERLI_MNEMONIC`: the mnemonic for the Goerli network
-- `$GOERLI_URL`: url of the Web3 provider to connect to the Goerli network
 
 Then run
 
-    MNEMONIC="$GOERLI_MNEMONIC" CAPE_WEB3_PROVIDER_URL="$GOERLI_URL" cargo test --release -- smoke_tests
+```bash
+    export CAPE_CONTRACT_ADDRESS=$(cat contracts/deployments/goerli/CAPE.json | jq -r .address)
+    env ETH_MNEMONIC="$GOERLI_MNEMONIC" CAPE_WEB3_PROVIDER_URL="$GOERLI_URL" cargo test --release -- smoke_tests --nocapture
+```
+
+#### With custom faucet manager mnemonic for testing
+
+Run [smoke-test-goerli](./bin/smoke-test-goerli) with a custom mnemonic (here `TEST_MNEMONIC`):
+
+```console
+env MY_FAUCET_MANAGER_MNEMONIC="$TEST_MNEMONIC" smoke-test-goerli
+```
+
+If you get a `replacement fee too low` error, re-run the command.

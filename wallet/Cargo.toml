@@ -20,7 +20,7 @@ commit = { git = "https://github.com/EspressoSystems/commit.git", tag = "0.1.0" 
 eqs = { path = "../eqs" }
 escargot = "0.5.2"
 espresso-macros = { git = "https://github.com/EspressoSystems/espresso-macros" }
-ethers = { git = "https://github.com/gakonst/ethers-rs", branch = "master" }
+ethers = { git = "https://github.com/gakonst/ethers-rs" }
 futures = "0.3.0"
 futures-util = "0.3.8"
 itertools = "0.10.3"

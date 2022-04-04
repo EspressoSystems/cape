@@ -16,7 +16,7 @@ async-std = { version = "1.10.0", features = ["unstable", "attributes", "tokio1"
 bincode = "1.3.3"
 cap-rust-sandbox = { path = "../contracts/rust" }
 # may switch to `ethers = "0.6.2"` in the future; keeping this for compatibility for now
-ethers = { git = "https://github.com/gakonst/ethers-rs", branch = "master" }
+ethers = { git = "https://github.com/gakonst/ethers-rs" }
 
 jf-cap = { features = ["test_apis"], git = "https://github.com/EspressoSystems/cap.git" }
 jf-primitives = { features = ["std"], git = "https://github.com/EspressoSystems/jellyfish.git" }

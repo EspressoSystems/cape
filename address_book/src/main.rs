@@ -29,7 +29,7 @@ async fn main() -> Result<(), std::io::Error> {
         .init();
 
     let store_path = address_book_store_path();
-    tide::log::info!("Using store path {:?}", store_path);
+    tracing::info!("Using store path {:?}", store_path);
     fs::create_dir_all(&store_path)?;
     let store = FileStore::new(store_path);
 

@@ -22,7 +22,6 @@ use std::collections::hash_map::HashMap;
 use std::path::PathBuf;
 use std::str::FromStr;
 use tide::StatusCode;
-use tide_tracing::TraceMiddleware;
 
 #[derive(Clone, Debug, Snafu, Serialize, Deserialize)]
 pub enum Error {
@@ -211,7 +210,6 @@ pub(crate) fn init_web_server(
         api: api.clone(),
     });
     web_server
-        .with(TraceMiddleware::new())
         .with(server::trace)
         .with(server::add_error_body::<_, EQSNetError>);
     web_server.at("/").get(crate::disco::compose_help);

@@ -23,7 +23,6 @@ use net::server::{add_error_body, request_body, response};
 use serde::{Deserialize, Serialize};
 use snafu::Snafu;
 use tide::StatusCode;
-use tide_tracing::TraceMiddleware;
 
 #[derive(Clone, Debug, Snafu, Serialize, Deserialize)]
 pub enum Error {
@@ -140,7 +139,6 @@ pub fn init_web_server(
     port: String,
 ) -> task::JoinHandle<Result<(), std::io::Error>> {
     let mut web_server = tide::with_state(WebState { contract });
-    web_server.with(TraceMiddleware::new());
     web_server.at("/healthcheck").get(healthcheck);
     web_server
         .with(add_error_body::<_, Error>)

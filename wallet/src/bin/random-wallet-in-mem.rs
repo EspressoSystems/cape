@@ -94,6 +94,7 @@ fn get_network_from_args(args: &Args) -> NetworkInfo {
 }
 
 /// Create a wallet w/ a backend connected to a local environment already running
+#[allow(clippy::needless_lifetimes)]
 async fn connect_to_demo_backend<'a>(
     network: &NetworkInfo,
     universal_param: &'a UniversalParam,
@@ -197,6 +198,7 @@ async fn create_backend_and_sender_wallet<'a>(
     (network, wallet)
 }
 
+#[allow(clippy::needless_lifetimes)]
 async fn create_wallet<'a>(
     rng: &mut ChaChaRng,
     universal_param: &'a UniversalParam,

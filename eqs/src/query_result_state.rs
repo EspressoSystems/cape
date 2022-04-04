@@ -16,6 +16,8 @@ use seahorse::events::LedgerEvent;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet, VecDeque};
 
+use crate::configuration::Confirmations;
+
 /// The index of a single event in the Ethereum event stream.
 ///
 /// Events are indexed using `(block_number, log_index)`, where `block_number` is the index of the
@@ -32,6 +34,9 @@ pub struct QueryResultState {
     pub verifier_keys: VerifierKeySet,
     pub last_reported_index: Option<EthEventIndex>,
     pub contract_address: Option<Address>,
+
+    // Configuration
+    pub num_confirmations: Confirmations,
 
     // accumulated list of CAPE events
     pub events: Vec<LedgerEvent<CapeLedger>>,
@@ -59,6 +64,8 @@ impl QueryResultState {
             verifier_keys,
             last_reported_index: None,
             contract_address: None,
+
+            num_confirmations: Confirmations::default(),
 
             events: Vec::new(),
 

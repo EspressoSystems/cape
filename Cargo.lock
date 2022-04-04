@@ -26,7 +26,6 @@ name = "address_book"
 version = "0.0.2"
 dependencies = [
  "async-std",
- "atomic_store",
  "bincode",
  "dirs",
  "futures",

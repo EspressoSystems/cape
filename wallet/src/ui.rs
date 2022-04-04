@@ -458,7 +458,7 @@ impl TransactionHistoryEntry {
                     Ok(status) => status.to_string(),
                     Err(_) => "unknown".to_string(),
                 },
-                None => "unknown".to_string(),
+                None => "accepted".to_string(),
             },
         }
     }

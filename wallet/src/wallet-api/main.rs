@@ -1503,6 +1503,11 @@ mod tests {
             .get::<Vec<TransactionHistoryEntry>>("transactionhistory")
             .await
             .unwrap();
+
+        // At this point everything should be accepted, even the received transactions.
+        for h in &history {
+            assert_eq!(h.status, "accepted");
+        }
         // We just made 2 transfers, there may be more from populatefortest.
         assert!(history.len() >= 2);
         let history = history[history.len() - 2..].to_vec();

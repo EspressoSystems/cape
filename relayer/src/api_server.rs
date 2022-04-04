@@ -55,6 +55,7 @@ pub(crate) fn init_web_server(
     web_server.at("/submit").post(submit_endpoint);
     let port = std::env::var("PORT").unwrap_or_else(|_| DEFAULT_RELAYER_PORT.to_string());
     let addr = format!("0.0.0.0:{}", port);
+    tracing::info!("RELAYER ADDRESS {}", addr);
     let join_handle = async_std::task::spawn(web_server.listen(addr));
     Ok(join_handle)
 }

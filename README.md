@@ -163,7 +163,7 @@ To build the project run
     cargo build --release
 
 The `--release` flag is recommended because without it many cryptographic
-computations the project relies one become unbearably slow.
+computations the project relies on become unbearably slow.
 
 ## Docker images
 
@@ -228,6 +228,11 @@ The port of the node can be changed with `RPC_PORT`. For example,
 To run all the tests against both nodes
 
     cape-test-all
+
+To run the wallet tests against the CAPE services running locally:
+
+    cape-demo-local
+    cargo run --release --bin random-wallet-in-mem -- 5 --demo-connection=true --eqs-url http://localhost:50010 --address-book-url http://localhost:50000 --relayer-url http://localhost:50020 --faucet-url http://localhost:50030 --contract-address 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9
 
 ## Interactive development
 

@@ -15,5 +15,7 @@ async fn main() -> std::io::Result<()> {
         .with_ansi(false)
         .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
         .init();
+    let opt = EQSOptions::from_args();
+    tracing::info!("EQS option: {:?}", opt);
     eqs::run_eqs(&EQSOptions::from_args()).await
 }

@@ -198,6 +198,8 @@ pub async fn init_web_server(
     opt: &FaucetOptions,
     faucet_key_pair: Option<UserKeyPair>,
 ) -> std::io::Result<JoinHandle<std::io::Result<()>>> {
+    tracing::info!("FAUCET OPTIONS {:?}", opt);
+
     let mut password = opt.faucet_password.clone();
     if password.is_empty() {
         password = Alphanumeric.sample_string(&mut rand::thread_rng(), 16);

@@ -240,7 +240,6 @@ pub(crate) fn init_web_server(
             }
         });
     }
-
     let port = opt.eqs_port().to_string();
     let addr = format!("0.0.0.0:{}", port);
     let join_handle = async_std::task::spawn(web_server.listen(addr));

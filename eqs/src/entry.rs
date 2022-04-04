@@ -27,6 +27,7 @@ pub async fn run(opt: &EQSOptions) -> std::io::Result<()> {
         ensure_connected_to_contract(&provider, opt.cape_address().unwrap())
             .await
             .unwrap();
+        tracing::info!("RPC URL: {}", opt.rpc_url);
     }
 
     let (state_persistence, query_result_state) = if opt.reset_state() {

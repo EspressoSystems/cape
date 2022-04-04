@@ -23,7 +23,7 @@ espresso-macros = { git = "https://github.com/EspressoSystems/espresso-macros" }
 ethers = { git = "https://github.com/gakonst/ethers-rs", branch = "master" }
 futures = "0.3.0"
 futures-util = "0.3.8"
-itertools = "0.10.1"
+itertools = "0.10.3"
 jf-cap = { features = ["test_apis"], git = "https://github.com/EspressoSystems/cap.git" }
 jf-plonk = { features = ["std"], git = "https://github.com/EspressoSystems/jellyfish.git" }
 jf-primitives = { features = ["std"], git = "https://github.com/EspressoSystems/jellyfish.git" }

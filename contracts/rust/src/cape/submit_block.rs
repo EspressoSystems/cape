@@ -76,7 +76,7 @@ mod tests {
     use super::*;
     use crate::{
         assertion::Matcher,
-        deploy::deploy_cape_test,
+        deploy::deploy_test_cape,
         ledger::CapeLedger,
         test_utils::PrintGas,
         types::{GenericInto, MerkleRootSol, NullifierSol},
@@ -95,7 +95,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_compute_num_commitments() {
-        let contract = deploy_cape_test().await;
+        let contract = deploy_test_cape().await;
         let rng = &mut ark_std::test_rng();
 
         for _run in 0..10 {
@@ -163,7 +163,7 @@ mod tests {
         num_mint_tx: usize,
         num_freeze_tx: usize,
     ) -> Result<()> {
-        let contract = deploy_cape_test().await;
+        let contract = deploy_test_cape().await;
 
         let rng = &mut ark_std::test_rng();
 
@@ -234,7 +234,7 @@ mod tests {
         };
 
         // We redeploy the contract so that we start with a clean state.
-        let contract = deploy_cape_test().await;
+        let contract = deploy_test_cape().await;
 
         let cape_block = CapeBlock::generate(vec![altered_tx_note], vec![], miner.address())?;
 
@@ -281,7 +281,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_submit_empty_block_to_cape_contract() -> Result<()> {
-        let contract = deploy_cape_test().await;
+        let contract = deploy_test_cape().await;
 
         // Create an empty block transactions
         let rng = &mut ark_std::test_rng();
@@ -306,7 +306,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_block_height() -> Result<()> {
-        let contract = deploy_cape_test().await;
+        let contract = deploy_test_cape().await;
         assert_eq!(contract.block_height().call().await?, 0u64);
 
         let rng = &mut ark_std::test_rng();
@@ -334,7 +334,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_event_block_committed() -> Result<()> {
-        let contract = deploy_cape_test().await;
+        let contract = deploy_test_cape().await;
 
         let rng = &mut ark_std::test_rng();
         let params = TxnsParams::generate_txns(rng, 1, 0, 0, CapeLedger::merkle_height());
@@ -367,7 +367,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_check_domestic_asset_code_in_submit_cape_block() -> Result<()> {
-        let contract = deploy_cape_test().await;
+        let contract = deploy_test_cape().await;
         let rng = &mut ark_std::test_rng();
         let params = TxnsParams::generate_txns(rng, 0, 1, 0, CapeLedger::merkle_height());
 

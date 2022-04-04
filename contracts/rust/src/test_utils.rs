@@ -9,8 +9,8 @@ use crate::cape::{BurnNote, DOM_SEP_CAPE_BURN};
 use crate::deploy::EthMiddleware;
 use crate::helpers::compare_merkle_root_from_contract_and_jf_tree;
 use crate::ledger::CapeLedger;
-use crate::types::TestRecordsMerkleTree;
 use crate::types::{SimpleToken, TestCAPE};
+use crate::types::{TestRecordsMerkleTree, CAPE};
 use crate::universal_param::UNIVERSAL_PARAM;
 use ethers::prelude::TransactionReceipt;
 use ethers::prelude::{Address, H160, U256};
@@ -30,9 +30,9 @@ use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct ContractsInfo {
-    pub cape_contract: TestCAPE<EthMiddleware>,
+    pub cape_contract: CAPE<EthMiddleware>,
     pub erc20_token_contract: SimpleToken<EthMiddleware>,
-    pub cape_contract_for_erc20_owner: TestCAPE<EthMiddleware>,
+    pub cape_contract_for_erc20_owner: CAPE<EthMiddleware>,
     pub erc20_token_address: H160,
     pub owner_of_erc20_tokens_client: EthMiddleware,
     pub owner_of_erc20_tokens_client_address: H160,
@@ -41,7 +41,7 @@ pub struct ContractsInfo {
 // TODO try to parametrize the struct with the trait M:Middleware
 impl ContractsInfo {
     pub async fn new(
-        cape_contract_ref: &TestCAPE<EthMiddleware>,
+        cape_contract_ref: &CAPE<EthMiddleware>,
         erc20_token_contract_ref: &SimpleToken<EthMiddleware>,
     ) -> Self {
         let cape_contract = cape_contract_ref.clone();
@@ -51,7 +51,7 @@ impl ContractsInfo {
         let owner_of_erc20_tokens_client = erc20_token_contract.client().clone();
         let owner_of_erc20_tokens_client_address = owner_of_erc20_tokens_client.address();
 
-        let cape_contract_for_erc20_owner = TestCAPE::new(
+        let cape_contract_for_erc20_owner = CAPE::new(
             cape_contract_ref.address(),
             Arc::from(owner_of_erc20_tokens_client.clone()),
         );
@@ -67,11 +67,25 @@ impl ContractsInfo {
     }
 }
 
+pub fn upcast_test_cape_to_cape(test_cape: TestCAPE<EthMiddleware>) -> CAPE<EthMiddleware> {
+    CAPE::new(test_cape.address(), Arc::new(test_cape.client().clone()))
+}
+
+pub fn compute_faucet_record_opening(faucet_pub_key: UserPubKey) -> RecordOpening {
+    RecordOpening {
+        pub_key: faucet_pub_key,
+        asset_def: AssetDefinition::native(),
+        amount: u64::MAX / 2,
+        freeze_flag: FreezeFlag::Unfrozen,
+        blind: BlindFactor::from(BaseField::from(0)),
+    }
+}
+
 /// Generates a user key pair that controls the faucet if a key pair isn't provided, and calls the
 /// contract for inserting a record commitment inside the merkle tree containing some native fee
 /// asset records.
 pub async fn create_faucet(
-    contract: &TestCAPE<EthMiddleware>,
+    contract: &CAPE<EthMiddleware>,
     faucet_key_pair: Option<UserKeyPair>,
 ) -> (UserKeyPair, RecordOpening) {
     let faucet_key_pair = match faucet_key_pair {
@@ -91,16 +105,9 @@ pub async fn create_faucet(
         .unwrap()
         .await
         .unwrap();
-    assert_eq!(contract.get_num_leaves().call().await.unwrap(), 1.into());
 
     // Duplicate the record opening created by the contract.
-    let faucet_rec = RecordOpening {
-        pub_key: faucet_key_pair.pub_key(),
-        asset_def: AssetDefinition::native(),
-        amount: u64::MAX / 2,
-        freeze_flag: FreezeFlag::Unfrozen,
-        blind: BlindFactor::from(BaseField::from(0)),
-    };
+    let faucet_rec = compute_faucet_record_opening(faucet_key_pair.pub_key());
 
     (faucet_key_pair, faucet_rec)
 }
@@ -223,7 +230,7 @@ pub async fn compare_roots_records_merkle_tree_contract(
 
 pub async fn compare_roots_records_test_cape_contract(
     mt: &MerkleTree,
-    contract: &TestCAPE<EthMiddleware>,
+    contract: &CAPE<EthMiddleware>,
     should_be_equal: bool,
 ) {
     let root_fr254 = mt.commitment().root_value;

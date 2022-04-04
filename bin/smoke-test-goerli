@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Fail if mnenomic is not set.
+MNEMONIC="$MY_FAUCET_MANAGER_MNEMONIC"
+
+echo "Exporting key for mnemonic"
+source <(cargo run --bin faucet-wallet-test-setup -- --mnemonic "$MNEMONIC")
+
+echo "Deploying contracts"
+hardhat deploy --network goerli "$@"
+
+echo "Running smoke test"
+export CAPE_CONTRACT_ADDRESS=$(cat contracts/deployments/goerli/CAPE.json | jq -r .address)
+env ETH_MNEMONIC="$GOERLI_MNEMONIC" CAPE_WEB3_PROVIDER_URL="$GOERLI_URL" \
+    cargo test --release -- smoke_tests --nocapture

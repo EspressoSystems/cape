@@ -7,7 +7,7 @@
 
 #![cfg_attr(debug_assertions, allow(dead_code))]
 use crate::{
-    deploy::{deploy_cape_test_with_deployer, EthMiddleware},
+    deploy::{deploy_test_cape_with_deployer, EthMiddleware},
     test_utils::contract_abi_path,
     types::{TestCAPE, CAPE},
 };
@@ -38,7 +38,7 @@ impl EthConnection {
     pub async fn for_test() -> Self {
         let provider = get_provider();
         let client = get_funded_client().await.unwrap();
-        let contract = deploy_cape_test_with_deployer(client.clone()).await;
+        let contract = deploy_test_cape_with_deployer(client.clone()).await;
         Self::connect(provider, client, contract.address())
     }
 
@@ -97,7 +97,7 @@ pub async fn get_funded_client() -> Result<Arc<EthMiddleware>> {
 
     // If MNEMONIC is set, try to use it to create a wallet,
     // otherwise create a random wallet.
-    let deployer_wallet = match env::var("MNEMONIC") {
+    let deployer_wallet = match env::var("ETH_MNEMONIC") {
         Ok(val) => MnemonicBuilder::<English>::default()
             .phrase(val.as_str())
             .build()?,

@@ -331,7 +331,7 @@ impl From<CAPEConstructorArgs> for (u8, u64, Address) {
 mod tests {
     use super::*;
     use crate::assertion::Matcher;
-    use crate::deploy::deploy_cape_test;
+    use crate::deploy::deploy_test_cape;
     use crate::ethereum::get_funded_client;
     use crate::ledger::CapeLedger;
     use crate::types::{GenericInto, MerkleRootSol, RecordCommitmentSol, TestCapeTypes};
@@ -351,7 +351,7 @@ mod tests {
         let miner = UserKeyPair::generate(rng);
 
         // simulate initial contract state to contain those record to be consumed
-        let contract = deploy_cape_test().await;
+        let contract = deploy_test_cape().await;
         for root in params.txns.iter().map(|txn| txn.merkle_root()).unique() {
             contract
                 .add_root(root.generic_into::<MerkleRootSol>().0)
@@ -372,7 +372,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_derive_record_commitment() {
-        let contract = deploy_cape_test().await;
+        let contract = deploy_test_cape().await;
         let mut rng = ark_std::test_rng();
 
         for _run in 0..10 {
@@ -396,7 +396,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_derive_record_commitment_checks_reveal_map() {
-        let contract = deploy_cape_test().await;
+        let contract = deploy_test_cape().await;
         let mut ro = sol::RecordOpening::default();
         ro.asset_def.policy.reveal_map = U256::from(2).pow(12.into());
 
@@ -480,7 +480,7 @@ mod tests {
 
         #[tokio::test]
         async fn test_check_domestic_asset_code() -> Result<()> {
-            let contract = deploy_cape_test().await;
+            let contract = deploy_test_cape().await;
 
             // Create a matching pair of codes
             let rng = &mut ark_std::test_rng();

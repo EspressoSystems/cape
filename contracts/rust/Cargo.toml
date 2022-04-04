@@ -8,6 +8,14 @@ license = "GPL-3.0-or-later"
 [lib]
 doctest = false
 
+[[bin]]
+name = "gas-usage"
+doc = false
+
+[[bin]]
+name = "gen-vk-libraries"
+doc = false
+
 [dependencies]
 anyhow = "1.0.39"
 arbitrary = { version = "1.0", features = ["derive"] }

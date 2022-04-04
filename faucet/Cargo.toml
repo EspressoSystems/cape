@@ -8,10 +8,20 @@ license = "GPL-3.0-or-later"
 [[bin]]
 name = "faucet"
 path = "src/faucet.rs"
+doc = false
 
 [[bin]]
 name = "faucet-wallet-test-setup"
 path = "src/faucet_wallet_test_setup.rs"
+doc = false
+
+[[bin]]
+name = "faucet-gen-typescript"
+doc = false
+
+[[bin]]
+name = "faucet-shower"
+doc = false
 
 [dependencies]
 ark-std = "0.3.0"

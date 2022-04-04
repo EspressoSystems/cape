@@ -71,7 +71,7 @@ impl Store for FileStore {
                 Some(bincode::deserialize(&bytes).expect("Failed to deserialize public key."))
             }
             Err(err) => {
-                tide::log::error!(
+                tracing::error!(
                     "Attempt to read address {:?} failed. {}",
                     self.path(address),
                     err

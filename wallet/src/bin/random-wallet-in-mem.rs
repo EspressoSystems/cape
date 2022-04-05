@@ -405,6 +405,7 @@ async fn main() {
             .await
             .unwrap();
         w.await_transaction(&txn).await.unwrap();
+        wallet.await_transaction(&txn).await.unwrap();
 
         balances.insert(k.address().clone(), HashMap::new());
         balances
@@ -462,6 +463,7 @@ async fn main() {
                         "Wallet has no balance.  Wallet Address: {}",
                         sender_address
                     );
+                    continue;
                 }
                 // Randomly choose an asset type for the transfer.
                 let asset = asset_balances.choose(&mut rng).unwrap();

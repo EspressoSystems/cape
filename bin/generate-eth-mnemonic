@@ -3,15 +3,14 @@ import argparse
 
 from hdwallet import BIP44HDWallet as HDWallet
 from hdwallet.derivations import BIP44Derivation as Derivation
+from hdwallet.utils import generate_mnemonic
 from hdwallet.cryptocurrencies import EthereumMainnet
 
 parser = argparse.ArgumentParser(
-    description="Derive address and/and private key from a mnemonic."
+    description="Generate mnemonic and derive address and/or private key."
 )
 parser.add_argument(
-    "--mnemonic",
-    "-m",
-    required=True,
+    "--mnemonic", "-m", help="Pass a mnemonic. If none is passed it will be generated."
 )
 parser.add_argument(
     "--num-keys",
@@ -29,10 +28,9 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
-hdwallet = HDWallet(cryptocurrency=EthereumMainnet).from_mnemonic(
-    mnemonic=args.mnemonic
-)
+words = args.mnemonic or generate_mnemonic(strength=128)
 
+hdwallet = HDWallet(cryptocurrency=EthereumMainnet).from_mnemonic(words)
 # Clean default BIP44 derivation indexes/paths
 hdwallet.clean_derivation()
 
@@ -41,5 +39,5 @@ for address_index in range(args.num_keys):
         cryptocurrency=EthereumMainnet, account=0, change=False, address=address_index
     )
     hdwallet.from_path(path=derivation)
-    print(getattr(hdwallet, args.property)())
+    print(f"{words},{getattr(hdwallet, args.property)()}")
     hdwallet.clean_derivation()

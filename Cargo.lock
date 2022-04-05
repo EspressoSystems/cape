@@ -26,7 +26,7 @@ name = "address_book"
 version = "0.0.2"
 dependencies = [
  "async-std",
- "atomic_store 0.1.0 (git+https://github.com/EspressoSystems/atomicstore.git)",
+ "atomic_store",
  "bincode",
  "dirs",
  "futures",
@@ -697,19 +697,6 @@ name = "atomic-waker"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "065374052e7df7ee4047b1160cca5e1467a12351a40b3da123c870ba0b8eda2a"
-
-[[package]]
-name = "atomic_store"
-version = "0.1.0"
-source = "git+https://github.com/EspressoSystems/atomicstore.git?tag=0.1.0#a719ad0ec86831fb9b0cb9d9a4889e1bdf0f91e6"
-dependencies = [
- "ark-serialize",
- "bincode",
- "chrono",
- "glob",
- "serde",
- "snafu 0.6.10",
-]
 
 [[package]]
 name = "atomic_store"
@@ -2072,7 +2059,7 @@ name = "eqs"
 version = "0.0.2"
 dependencies = [
  "async-std",
- "atomic_store 0.1.0 (git+https://github.com/EspressoSystems/atomicstore.git)",
+ "atomic_store",
  "bincode",
  "cap-rust-sandbox",
  "commit",
@@ -4938,10 +4925,8 @@ name = "relayer"
 version = "0.2.0"
 dependencies = [
  "async-std",
- "atomic_store 0.1.0 (git+https://github.com/EspressoSystems/atomicstore.git?tag=0.1.0)",
  "bincode",
  "cap-rust-sandbox",
- "dirs",
  "ethers 0.6.0 (git+https://github.com/gakonst/ethers-rs?branch=master)",
  "jf-cap",
  "jf-primitives",
@@ -4957,11 +4942,8 @@ dependencies = [
  "structopt",
  "surf",
  "tide",
- "tide-websockets",
- "toml",
  "tracing",
  "tracing-futures",
- "tracing-log",
  "tracing-subscriber",
 ]
 
@@ -5296,7 +5278,7 @@ dependencies = [
  "async-scoped",
  "async-std",
  "async-trait",
- "atomic_store 0.1.0 (git+https://github.com/EspressoSystems/atomicstore.git)",
+ "atomic_store",
  "bincode",
  "bip0039",
  "chacha20",

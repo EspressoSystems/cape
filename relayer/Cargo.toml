@@ -8,10 +8,8 @@ license = "GPL-3.0-or-later"
 
 [dependencies]
 async-std = { version = "1.10.0", features = ["unstable", "attributes", "tokio1"] }
-atomic_store = { git = "https://github.com/EspressoSystems/atomicstore.git", tag = "0.1.0" }
 bincode = "1.3.3"
 cap-rust-sandbox = { path = "../contracts/rust" }
-dirs = "4.0"
 # may switch to `ethers = "0.6.2"` in the future; keeping this for compatibility for now
 ethers = { git = "https://github.com/gakonst/ethers-rs", branch = "master" }
 
@@ -30,11 +28,8 @@ snafu = { version = "0.7", features = ["backtraces"] }
 structopt = { version = "0.3" }
 surf = { version = "2.3.2", optional = true }
 tide = "0.16.0"
-tide-websockets = "0.4.0"
-toml = "0.5"
 tracing = "0.1.26"
 tracing-futures = "0.2"
-tracing-log = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 [dev-dependencies]

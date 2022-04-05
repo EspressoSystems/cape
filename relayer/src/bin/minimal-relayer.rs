@@ -39,6 +39,11 @@ struct MinimalRelayerOptions {
 
 #[async_std::main]
 async fn main() -> std::io::Result<()> {
+    tracing_subscriber::fmt()
+        .compact()
+        .with_ansi(false)
+        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env());
+
     let opt = MinimalRelayerOptions::from_args();
 
     // Set up a client to submit ETH transactions.

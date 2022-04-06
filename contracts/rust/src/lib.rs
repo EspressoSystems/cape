@@ -5,6 +5,12 @@
 // This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+//! This crate contains
+//!
+//! - Test code for the CAPE smart contracts.
+//! - A model of the CAPE system.
+//! - Utilities to interact with the CAPE smart contracts.
+
 #[warn(unused_imports)]
 #[macro_use]
 extern crate num_derive;

@@ -8,7 +8,13 @@
 use dirs::data_local_dir;
 use ethers::prelude::Address;
 use serde::{Deserialize, Serialize};
-use std::{env, num::ParseIntError, path::PathBuf, str::FromStr, time::Duration};
+use std::{
+    env,
+    num::{NonZeroU64, ParseIntError},
+    path::PathBuf,
+    str::FromStr,
+    time::Duration,
+};
 use structopt::StructOpt;
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, PartialOrd)]
@@ -35,13 +41,8 @@ impl Default for Confirmations {
 
 impl FromStr for Confirmations {
     type Err = ParseIntError;
-    fn from_str(s: &str) -> Result<Self, ParseIntError> {
-        let n = s.parse::<u64>()?;
-        if n == 0 {
-            panic!("Confirmations must be >= 1")
-        } else {
-            Ok(Confirmations(n))
-        }
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self(s.parse::<NonZeroU64>()?.into()))
     }
 }
 

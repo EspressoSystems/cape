@@ -11,11 +11,6 @@ use address_book::{address_book_store_path, init_web_server, signal::handle_sign
 use signal_hook::consts::{SIGINT, SIGTERM};
 use signal_hook_async_std::Signals;
 
-/// Run a web server that provides a key/value store mapping user
-/// addresses to public keys.
-///
-/// The store path can be customized via the `CAPE_ADDRESS_BOOK_STORE_PATH` env
-/// var. If the directory does not exist the server will try to create it.
 #[async_std::main]
 async fn main() -> Result<(), std::io::Error> {
     let signals = Signals::new(&[SIGINT, SIGTERM]).expect("Failed to create signals.");

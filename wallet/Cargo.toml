@@ -9,6 +9,14 @@ license = "GPL-3.0-or-later"
 name = "wallet-api"
 path = "src/wallet-api/main.rs"
 
+[[bin]]
+name = "random-wallet"
+doc = false
+
+[[bin]]
+name = "random-wallet-in-mem"
+doc = false
+
 [dependencies]
 address_book = { path = "../address_book" }
 async-std = { version = "1.9.0", features = ["unstable", "attributes"] }
@@ -20,7 +28,7 @@ commit = { git = "https://github.com/EspressoSystems/commit.git", tag = "0.1.0" 
 eqs = { path = "../eqs" }
 escargot = "0.5.2"
 espresso-macros = { git = "https://github.com/EspressoSystems/espresso-macros" }
-ethers = { git = "https://github.com/gakonst/ethers-rs", branch = "master" }
+ethers = { git = "https://github.com/gakonst/ethers-rs" }
 futures = "0.3.0"
 futures-util = "0.3.8"
 itertools = "0.10.3"

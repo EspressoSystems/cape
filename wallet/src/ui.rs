@@ -417,6 +417,8 @@ pub struct TransactionHistoryEntry {
     pub time: String,
     pub asset: AssetCode,
     pub kind: String,
+    // String representation of the TaggedBase64 encoded hash
+    pub hash: Option<String>,
     /// Sending keys used to build this transaction, if available.
     ///
     /// If we sent this transaction, `senders` records the addresses of the spending keys used to
@@ -446,6 +448,21 @@ impl TransactionHistoryEntry {
                 CapeTransactionKind::Burn => "burn".to_string(),
                 CapeTransactionKind::Wrap => "wrap".to_string(),
                 CapeTransactionKind::Faucet => "faucet".to_string(),
+            },
+            hash: {
+                entry
+                    .hash
+                    .map(|hash| {
+                        bincode::serialize(&hash)
+                            .ok()
+                            .map(|bytes| {
+                                TaggedBase64::new("HASH", &bytes)
+                                    .ok()
+                                    .map(|tb| tb.to_string())
+                            })
+                            .flatten()
+                    })
+                    .flatten()
             },
             senders: entry.senders.into_iter().map(UserAddress::from).collect(),
             receivers: entry

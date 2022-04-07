@@ -24,6 +24,7 @@ use cap_rust_sandbox::ethereum::get_provider;
 use cap_rust_sandbox::ledger::CapeLedger;
 use cap_rust_sandbox::test_utils::keysets_for_test;
 use cap_rust_sandbox::types::SimpleToken;
+use eqs::configuration::Confirmations;
 use eqs::{configuration::EQSOptions, run_eqs};
 use ethers::prelude::Address;
 use ethers::providers::Middleware;
@@ -198,6 +199,7 @@ pub async fn spawn_eqs(cape_address: Address) -> (Url, TempDir, JoinHandle<std::
         cape_address: Some(cape_address),
         rpc_url: rpc_url_for_test().to_string(),
         temp_test_run: false,
+        num_confirmations: Confirmations::default(),
     };
     let join = spawn(async move { run_eqs(&opt).await });
     let url = Url::parse(&format!("http://localhost:{}", eqs_port)).unwrap();

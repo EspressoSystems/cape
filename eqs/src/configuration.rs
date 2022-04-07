@@ -7,8 +7,44 @@
 
 use dirs::data_local_dir;
 use ethers::prelude::Address;
-use std::{env, path::PathBuf, time::Duration};
+use serde::{Deserialize, Serialize};
+use std::{
+    env,
+    num::{NonZeroU64, ParseIntError},
+    path::PathBuf,
+    str::FromStr,
+    time::Duration,
+};
 use structopt::StructOpt;
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, PartialOrd)]
+pub struct Confirmations(u64);
+
+/// A number of Ethereum block confirmations. The minimum value is 1 which
+/// corresponds to accepting a block immediately when first seen.
+impl Confirmations {
+    /// Get the latest confirmed block number with the current number of confirmations.
+    pub fn latest_confirmed_block_number(&self, latest_block_number: u64) -> Option<u64> {
+        if latest_block_number > (self.0 - 1) {
+            Some(latest_block_number - (self.0 - 1))
+        } else {
+            None
+        }
+    }
+}
+
+impl Default for Confirmations {
+    fn default() -> Self {
+        Self(1)
+    }
+}
+
+impl FromStr for Confirmations {
+    type Err = ParseIntError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self(s.parse::<NonZeroU64>()?.into()))
+    }
+}
 
 // TODO: migrate to clap; clap 3.0 incorporates most of StructOpt
 #[derive(Debug, StructOpt)]
@@ -59,6 +95,13 @@ pub struct EQSOptions {
     /// Web service port .
     #[structopt(long, default_value = "50087", env = "CAPE_EQS_PORT")]
     pub eqs_port: u16,
+
+    /// Number of Ethereum block confirmations required to include a block.
+    /// Setting it to 1 means a block is accepted as valid when first seen.
+    /// The default values of 6 makes it unlikely larger re-orgs are observed
+    /// on the Goerli testnet.
+    #[structopt(long, default_value = "6", env = "CAPE_EQS_NUM_CONFIRMATIONS")]
+    pub num_confirmations: Confirmations,
 }
 
 fn default_data_path() -> PathBuf {

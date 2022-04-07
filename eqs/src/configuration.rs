@@ -98,7 +98,9 @@ pub struct EQSOptions {
 
     /// Number of Ethereum block confirmations required to include a block.
     /// Setting it to 1 means a block is accepted as valid when first seen.
-    #[structopt(long, default_value = "2", env = "CAPE_EQS_NUM_CONFIRMATIONS")]
+    /// The default values of 6 makes it unlikely larger re-orgs are observed
+    /// on the Goerli testnet.
+    #[structopt(long, default_value = "6", env = "CAPE_EQS_NUM_CONFIRMATIONS")]
     pub num_confirmations: Confirmations,
 }
 

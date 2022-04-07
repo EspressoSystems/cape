@@ -62,7 +62,7 @@ if __name__ == "__main__":
         "--period",
         type=int,
         default=0,
-        help="Mining period in secodns, 0 implies instant mining",
+        help="Block time in seconds, 0 implies instant mining",
     )
     args = parser.parse_args()
     genesis = make_genesis_block(args.gas_limit, args.addresses, args.period)

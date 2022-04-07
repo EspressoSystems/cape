@@ -68,12 +68,14 @@ impl EthPolling {
                 );
             }
 
-            if state_updater.num_confirmations < opt.num_confirmations {
-                panic!(
-                    "Cannot increase the number of confirmations: persisted state \
+            if let Some(persisted_num_confirmations) = state_updater.num_confirmations {
+                if persisted_num_confirmations < opt.num_confirmations {
+                    panic!(
+                        "Cannot increase the number of confirmations: persisted state \
                      uses {:?} which is smaller than {:?}",
-                    state_updater.num_confirmations, opt.num_confirmations
-                )
+                        state_updater.num_confirmations, opt.num_confirmations
+                    )
+                }
             }
 
             if let Some(persisted_contract_address) = state_updater.contract_address {

@@ -36,7 +36,7 @@ pub struct QueryResultState {
     pub contract_address: Option<Address>,
 
     // Configuration
-    pub num_confirmations: Confirmations,
+    pub num_confirmations: Option<Confirmations>,
 
     // accumulated list of CAPE events
     pub events: Vec<LedgerEvent<CapeLedger>>,
@@ -65,7 +65,7 @@ impl QueryResultState {
             last_reported_index: None,
             contract_address: None,
 
-            num_confirmations: Confirmations::default(),
+            num_confirmations: None,
 
             events: Vec::new(),
 

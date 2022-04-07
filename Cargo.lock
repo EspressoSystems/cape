@@ -699,15 +699,15 @@ checksum = "065374052e7df7ee4047b1160cca5e1467a12351a40b3da123c870ba0b8eda2a"
 
 [[package]]
 name = "atomic_store"
-version = "0.1.0"
-source = "git+https://github.com/EspressoSystems/atomicstore.git#b036409be09a472aa2fb54b1a138572df485fa1e"
+version = "0.1.1"
+source = "git+https://github.com/EspressoSystems/atomicstore.git#e116cea2de934fd315f690d07d45b3bb7a213654"
 dependencies = [
  "ark-serialize",
  "bincode",
  "chrono",
  "glob",
  "serde",
- "snafu 0.7.0",
+ "snafu",
 ]
 
 [[package]]
@@ -1113,7 +1113,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha3 0.9.1",
- "snafu 0.7.0",
+ "snafu",
  "strum_macros",
  "tagged-base64",
  "tokio",
@@ -1172,7 +1172,7 @@ dependencies = [
  "serde_derive",
  "serde_json",
  "shellexpand",
- "snafu 0.7.0",
+ "snafu",
  "structopt",
  "strum",
  "strum_macros",
@@ -2077,7 +2077,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_json",
- "snafu 0.7.0",
+ "snafu",
  "structopt",
  "strum",
  "strum_macros",
@@ -2515,7 +2515,7 @@ dependencies = [
  "seahorse",
  "serde",
  "serde_json",
- "snafu 0.7.0",
+ "snafu",
  "structopt",
  "surf",
  "tempdir",
@@ -3339,7 +3339,7 @@ dependencies = [
 [[package]]
 name = "jf-plonk"
 version = "0.1.0"
-source = "git+https://github.com/EspressoSystems/jellyfish.git#9590fac7466ce955c31d94dc9996854f58f7fe2f"
+source = "git+https://github.com/EspressoSystems/jellyfish.git#1fc9a4861e39175a776dc8da109a0bdc1ebb1c5c"
 dependencies = [
  "ark-bls12-377",
  "ark-bls12-381",
@@ -3368,7 +3368,7 @@ dependencies = [
 [[package]]
 name = "jf-primitives"
 version = "0.1.0"
-source = "git+https://github.com/EspressoSystems/jellyfish.git#9590fac7466ce955c31d94dc9996854f58f7fe2f"
+source = "git+https://github.com/EspressoSystems/jellyfish.git#1fc9a4861e39175a776dc8da109a0bdc1ebb1c5c"
 dependencies = [
  "ark-ec",
  "ark-ff",
@@ -3390,7 +3390,7 @@ dependencies = [
 [[package]]
 name = "jf-rescue"
 version = "0.1.0"
-source = "git+https://github.com/EspressoSystems/jellyfish.git#9590fac7466ce955c31d94dc9996854f58f7fe2f"
+source = "git+https://github.com/EspressoSystems/jellyfish.git#1fc9a4861e39175a776dc8da109a0bdc1ebb1c5c"
 dependencies = [
  "ark-bls12-377",
  "ark-bls12-381",
@@ -3415,7 +3415,7 @@ dependencies = [
 [[package]]
 name = "jf-utils"
 version = "0.1.0"
-source = "git+https://github.com/EspressoSystems/jellyfish.git#9590fac7466ce955c31d94dc9996854f58f7fe2f"
+source = "git+https://github.com/EspressoSystems/jellyfish.git#1fc9a4861e39175a776dc8da109a0bdc1ebb1c5c"
 dependencies = [
  "anyhow",
  "ark-ec",
@@ -3426,14 +3426,14 @@ dependencies = [
  "jf-utils-derive",
  "serde",
  "sha2 0.10.2",
- "snafu 0.7.0",
+ "snafu",
  "tagged-base64",
 ]
 
 [[package]]
 name = "jf-utils-derive"
 version = "0.1.0"
-source = "git+https://github.com/EspressoSystems/jellyfish.git#9590fac7466ce955c31d94dc9996854f58f7fe2f"
+source = "git+https://github.com/EspressoSystems/jellyfish.git#1fc9a4861e39175a776dc8da109a0bdc1ebb1c5c"
 dependencies = [
  "ark-std",
  "quote",
@@ -3487,7 +3487,7 @@ checksum = "67c21572b4949434e4fc1e1978b99c5f77064153c59d998bf13ecd96fb5ecba7"
 [[package]]
 name = "key-set"
 version = "0.2.0"
-source = "git+https://github.com/EspressoSystems/key-set.git#4d73b07b963c64c71c3bb94ad1422cee0d235fea"
+source = "git+https://github.com/EspressoSystems/key-set.git#76804010f56b7b551a8cb6cb409fd9cecfb40aed"
 dependencies = [
  "ark-serialize",
  "bincode",
@@ -3496,7 +3496,7 @@ dependencies = [
  "jf-cap",
  "serde",
  "serde_with",
- "snafu 0.6.10",
+ "snafu",
 ]
 
 [[package]]
@@ -3737,7 +3737,7 @@ dependencies = [
 [[package]]
 name = "net"
 version = "0.2.0"
-source = "git+https://github.com/EspressoSystems/net.git#6e98531d741f8a37acabfadfd71d154bba4e61c4"
+source = "git+https://github.com/EspressoSystems/net.git#e02a9dd03dd9dd4415d3958f7569a30deb491b81"
 dependencies = [
  "ark-serialize",
  "ark-std",
@@ -3750,7 +3750,7 @@ dependencies = [
  "jf-utils",
  "serde",
  "serde_json",
- "snafu 0.6.10",
+ "snafu",
  "surf",
  "tagged-base64",
  "tide",
@@ -4651,7 +4651,7 @@ dependencies = [
 [[package]]
 name = "reef"
 version = "0.2.0"
-source = "git+https://github.com/EspressoSystems/reef.git#e5457f0e078a7f2bc451def9eba2b8b3c35ed80c"
+source = "git+https://github.com/EspressoSystems/reef.git#34144a56f4317ded58c1092e512d6112bb567df2"
 dependencies = [
  "arbitrary",
  "arbitrary-wrappers",
@@ -4663,7 +4663,7 @@ dependencies = [
  "lazy_static",
  "rand_chacha 0.3.1",
  "serde",
- "snafu 0.6.10",
+ "snafu",
  "strum_macros",
 ]
 
@@ -4711,7 +4711,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_json",
- "snafu 0.7.0",
+ "snafu",
  "structopt",
  "surf",
  "tide",
@@ -5042,7 +5042,7 @@ dependencies = [
 [[package]]
 name = "seahorse"
 version = "0.2.0"
-source = "git+https://github.com/EspressoSystems/seahorse.git#ef1316bde5e7bb4bbae706f36254895ed5e53f67"
+source = "git+https://github.com/EspressoSystems/seahorse.git#e6a13185016b39ff6f7b64461b54ce208f9ae2ea"
 dependencies = [
  "arbitrary",
  "arbitrary-wrappers",
@@ -5080,7 +5080,7 @@ dependencies = [
  "rustyline",
  "serde",
  "sha3 0.9.1",
- "snafu 0.6.10",
+ "snafu",
  "structopt",
  "strum",
  "strum_macros",
@@ -5423,35 +5423,13 @@ checksum = "f2dd574626839106c320a323308629dcb1acfc96e32a8cba364ddc61ac23ee83"
 
 [[package]]
 name = "snafu"
-version = "0.6.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eab12d3c261b2308b0d80c26fffb58d17eba81a4be97890101f416b478c79ca7"
-dependencies = [
- "backtrace",
- "doc-comment",
- "snafu-derive 0.6.10",
-]
-
-[[package]]
-name = "snafu"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2eba135d2c579aa65364522eb78590cdf703176ef71ad4c32b00f58f7afb2df5"
 dependencies = [
  "backtrace",
  "doc-comment",
- "snafu-derive 0.7.0",
-]
-
-[[package]]
-name = "snafu-derive"
-version = "0.6.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1508efa03c362e23817f96cde18abed596a25219a8b2c66e8db33c03543d315b"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
+ "snafu-derive",
 ]
 
 [[package]]

@@ -360,7 +360,7 @@ impl From<RecordInfo> for Record {
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Account {
     pub records: Vec<Record>,
-    pub balance: u64,
+    pub balances: HashMap<AssetCode, u64>,
     pub assets: HashMap<AssetCode, AssetInfo>,
     pub description: String,
     pub used: bool,
@@ -402,7 +402,7 @@ impl Account {
         Self {
             records: info.records.into_iter().map(|rec| rec.into()).collect(),
             assets,
-            balance: info.balance,
+            balances: info.balances,
             description: info.description,
             used: info.used,
             scan_index,

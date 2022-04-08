@@ -713,10 +713,18 @@ async fn getbalance(
 
     match (address, asset) {
         (Some(address), Some(asset)) => Ok(BalanceInfo::Balance(one_balance(address, asset).await)),
-        (Some(address), None) => Ok(BalanceInfo::AccountBalances(
+        (Some(address), None) => Ok(BalanceInfo::AccountBalances((
             account_balances(address).await,
-        )),
-        (None, None) => Ok(BalanceInfo::AllBalances(all_balances().await)),
+            known_assets(wallet).await,
+        ))),
+        (None, None) => {
+            let asset_map = if wallet.pub_keys().await.is_empty() {
+                HashMap::default()
+            } else {
+                known_assets(wallet).await
+            };
+            Ok(BalanceInfo::AllBalances((all_balances().await, asset_map)))
+        }
         (None, Some(_)) => {
             // There is no endpoint that includes asset but not address, so the request parsing code
             // should not allow us to reach here.

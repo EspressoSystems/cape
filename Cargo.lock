@@ -1085,7 +1085,7 @@ dependencies = [
  "async-trait",
  "bincode",
  "commit",
- "espresso-macros 0.1.0 (git+https://github.com/EspressoSystems/espresso-macros.git)",
+ "espresso-macros 0.1.0 (git+https://github.com/EspressoSystems/espresso-macros)",
  "ethers",
  "ethers-contract",
  "ethers-contract-abigen",
@@ -1148,7 +1148,7 @@ dependencies = [
  "commit",
  "eqs",
  "escargot",
- "espresso-macros 0.1.0 (git+https://github.com/EspressoSystems/espresso-macros.git)",
+ "espresso-macros 0.1.0 (git+https://github.com/EspressoSystems/espresso-macros)",
  "ethers",
  "futures",
  "futures-util",
@@ -2148,7 +2148,7 @@ dependencies = [
 [[package]]
 name = "espresso-macros"
 version = "0.1.0"
-source = "git+https://github.com/EspressoSystems/espresso-macros.git#9e0b0258c99757c567676c4dd92f1501db0cf580"
+source = "git+https://github.com/EspressoSystems/espresso-macros#9e0b0258c99757c567676c4dd92f1501db0cf580"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -5058,7 +5058,7 @@ dependencies = [
  "chrono",
  "commit",
  "derivative",
- "espresso-macros 0.1.0 (git+https://github.com/EspressoSystems/espresso-macros.git)",
+ "espresso-macros 0.1.0 (git+https://github.com/EspressoSystems/espresso-macros)",
  "futures",
  "generic-array 0.14.5",
  "hmac 0.11.0",

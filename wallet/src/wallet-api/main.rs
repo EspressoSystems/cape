@@ -556,8 +556,9 @@ mod tests {
         // because we haven't added any keys or received any records.
         assert_eq!(
             server.get::<BalanceInfo>("getbalance/all").await.unwrap(),
-            BalanceInfo::AllBalances(HashMap::default())
+            BalanceInfo::AllBalances((HashMap::default(), HashMap::default()))
         );
+        let assets = server.get::<WalletSummary>("getinfo").await.unwrap().assets;
         assert_eq!(
             server
                 .get::<BalanceInfo>(&format!("getbalance/address/{}", addr))
@@ -569,7 +570,12 @@ mod tests {
             // find none, and return a balance of 0 for that asset type. Since the wallet always
             // knows about the native asset type, this will actually return some data, rather than
             // an empty map or an error.
-            BalanceInfo::AccountBalances(once((AssetCode::native(), 0)).collect())
+            // let mut native_info = AssetInfo::default;
+            // native_info.mint_info = Some("native")
+            BalanceInfo::AccountBalances((
+                once((AssetCode::native(), 0)).collect(),
+                once((AssetCode::native(), assets[0].clone())).collect()
+            ))
         );
         assert_eq!(
             server

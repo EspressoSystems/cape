@@ -1,3 +1,10 @@
+# Copyright (c) 2022 Espresso Systems (espressosys.com)
+# This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
+#
+# This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+# You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 {
   description = "A devShell example";
 
@@ -59,6 +66,40 @@
               description = "Ensure Cargo.toml are sorted";
               entry = "cargo sort -w";
               pass_filenames = false;
+            };
+            license-header-c-style = {
+              enable = true;
+              description = "Ensure files with c-style comments have license header";
+              entry = "insert_license --license-filepath .license-header  --comment-style \"//\"";
+              types_or = [ "rust" "ts" "javascript" ];
+              excludes = [
+                "bindings/mod\\.rs" # generated file
+              ];
+              pass_filenames = true;
+            };
+            license-header-solidity = {
+              enable = true;
+              description = "Ensure solidity files have license header";
+              entry = "insert_license --license-filepath .license-header-solidity  --comment-style \"//\"";
+              types = [ "solidity" ];
+              pass_filenames = true;
+            };
+            license-header-hash = {
+              enable = true;
+              description = "Ensure files with hash style comments have license header";
+              entry = "insert_license --license-filepath .license-header --comment-style \"#\"";
+              types_or = [ "bash" "python" "toml" "nix" ];
+              excludes = [
+                "poetry.lock"
+              ];
+              pass_filenames = true;
+            };
+            license-header-html = {
+              enable = true;
+              description = "Ensure markdown files have license header";
+              entry = "insert_license --license-filepath .license-header --comment-style \"<!--| ~| -->\"";
+              types_or = [ "markdown" ];
+              pass_filenames = true;
             };
           };
         };

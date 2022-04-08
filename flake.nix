@@ -69,7 +69,7 @@
             };
             license-header-c-style = {
               enable = true;
-              description = "Ensure files have license header";
+              description = "Ensure files with c-style comments have license header";
               entry = "insert_license --license-filepath .license-header  --comment-style \"//\"";
               types_or = [ "rust" "ts" ];
               excludes = [
@@ -86,12 +86,19 @@
             };
             license-header-hash = {
               enable = true;
-              description = "Ensure scripts have license header";
+              description = "Ensure files with hash style comments have license header";
               entry = "insert_license --license-filepath .license-header --comment-style \"#\"";
               types_or = [ "bash" "python" "toml" "nix" ];
               excludes = [
                 "poetry.lock"
               ];
+              pass_filenames = true;
+            };
+            license-header-html = {
+              enable = true;
+              description = "Ensure markdown files have license header";
+              entry = "insert_license --license-filepath .license-header --comment-style \"<!--| ~| -->\"";
+              types_or = [ "markdown" ];
               pass_filenames = true;
             };
           };

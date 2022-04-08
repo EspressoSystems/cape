@@ -903,12 +903,12 @@ dependencies = [
 
 [[package]]
 name = "blake2b_simd"
-version = "0.5.11"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "afa748e348ad3be8263be728124b24a24f268266f6f5d58af9d75f6a40b5c587"
+checksum = "72936ee4afc7f8f736d1c38383b56480b5497b4617b4a77bdbf1d2ababc76127"
 dependencies = [
  "arrayref",
- "arrayvec 0.5.2",
+ "arrayvec 0.7.2",
  "constant_time_eq",
 ]
 
@@ -1174,7 +1174,7 @@ dependencies = [
  "shellexpand",
  "snafu",
  "structopt",
- "strum",
+ "strum 0.20.0",
  "strum_macros",
  "surf",
  "tagged-base64",
@@ -2079,7 +2079,7 @@ dependencies = [
  "serde_json",
  "snafu",
  "structopt",
- "strum",
+ "strum 0.20.0",
  "strum_macros",
  "surf",
  "tagged-base64",
@@ -3339,7 +3339,7 @@ dependencies = [
 [[package]]
 name = "jf-plonk"
 version = "0.1.0"
-source = "git+https://github.com/EspressoSystems/jellyfish.git#1fc9a4861e39175a776dc8da109a0bdc1ebb1c5c"
+source = "git+https://github.com/EspressoSystems/jellyfish.git#5eb3059c44ac41ef493a3f4002b13682413ed190"
 dependencies = [
  "ark-bls12-377",
  "ark-bls12-381",
@@ -3368,7 +3368,7 @@ dependencies = [
 [[package]]
 name = "jf-primitives"
 version = "0.1.0"
-source = "git+https://github.com/EspressoSystems/jellyfish.git#1fc9a4861e39175a776dc8da109a0bdc1ebb1c5c"
+source = "git+https://github.com/EspressoSystems/jellyfish.git#5eb3059c44ac41ef493a3f4002b13682413ed190"
 dependencies = [
  "ark-ec",
  "ark-ff",
@@ -3390,7 +3390,7 @@ dependencies = [
 [[package]]
 name = "jf-rescue"
 version = "0.1.0"
-source = "git+https://github.com/EspressoSystems/jellyfish.git#1fc9a4861e39175a776dc8da109a0bdc1ebb1c5c"
+source = "git+https://github.com/EspressoSystems/jellyfish.git#5eb3059c44ac41ef493a3f4002b13682413ed190"
 dependencies = [
  "ark-bls12-377",
  "ark-bls12-381",
@@ -3415,7 +3415,7 @@ dependencies = [
 [[package]]
 name = "jf-utils"
 version = "0.1.0"
-source = "git+https://github.com/EspressoSystems/jellyfish.git#1fc9a4861e39175a776dc8da109a0bdc1ebb1c5c"
+source = "git+https://github.com/EspressoSystems/jellyfish.git#5eb3059c44ac41ef493a3f4002b13682413ed190"
 dependencies = [
  "anyhow",
  "ark-ec",
@@ -3433,7 +3433,7 @@ dependencies = [
 [[package]]
 name = "jf-utils-derive"
 version = "0.1.0"
-source = "git+https://github.com/EspressoSystems/jellyfish.git#1fc9a4861e39175a776dc8da109a0bdc1ebb1c5c"
+source = "git+https://github.com/EspressoSystems/jellyfish.git#5eb3059c44ac41ef493a3f4002b13682413ed190"
 dependencies = [
  "ark-std",
  "quote",
@@ -4843,9 +4843,9 @@ dependencies = [
 
 [[package]]
 name = "rust-argon2"
-version = "0.8.3"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4b18820d944b33caa75a71378964ac46f58517c92b6ae5f762636247c09e78fb"
+checksum = "b50162d19404029c1ceca6f6980fe40d45c8b369f6f44446fa14bb39573b5bb9"
 dependencies = [
  "base64 0.13.0",
  "blake2b_simd",
@@ -5042,7 +5042,7 @@ dependencies = [
 [[package]]
 name = "seahorse"
 version = "0.2.0"
-source = "git+https://github.com/EspressoSystems/seahorse.git#e6a13185016b39ff6f7b64461b54ce208f9ae2ea"
+source = "git+https://github.com/EspressoSystems/seahorse.git#0bcc4bd0ba42b9ae14099205b98f796c8e382fcb"
 dependencies = [
  "arbitrary",
  "arbitrary-wrappers",
@@ -5082,7 +5082,7 @@ dependencies = [
  "sha3 0.9.1",
  "snafu",
  "structopt",
- "strum",
+ "strum 0.24.0",
  "strum_macros",
  "surf",
  "tagged-base64",
@@ -5628,6 +5628,12 @@ name = "strum"
 version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7318c509b5ba57f18533982607f24070a55d353e90d4cae30c467cdb2ad5ac5c"
+
+[[package]]
+name = "strum"
+version = "0.24.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e96acfc1b70604b8b2f1ffa4c57e59176c7dbb05d556c71ecd2f5498a1dee7f8"
 
 [[package]]
 name = "strum_macros"

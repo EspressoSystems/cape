@@ -60,6 +60,24 @@
               entry = "cargo sort -w";
               pass_filenames = false;
             };
+            license-header = {
+              enable = true;
+              description = "Ensure files have license header";
+              entry = "insert_license --license-filepath .license-header  --comment-style \"//\"";
+              types_or = [ "rust" "ts" ];
+              excludes = [
+                "bindings/mod\\.rs" # a generated file
+              ];
+              pass_filenames = true;
+            };
+            license-header-solidity = {
+              enable = true;
+              description = "Ensure solidity files have license header";
+              entry = "insert_license --license-filepath .license-header-solidity  --comment-style \"//\"";
+              types = [ "solidity" ];
+              pass_filenames = true;
+            };
+
           };
         };
       };

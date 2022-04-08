@@ -89,7 +89,7 @@ pub struct EQSOptions {
     pub reset_store_state: bool,
 
     /// Polling interval, in milliseconds, for commits to the contract.
-    #[structopt(long, default_value = "500", env = "CAPE_EQS_POLL_INTERVAL")]
+    #[structopt(long, default_value = "500", env = "CAPE_EQS_POLL_INTERVAL_MS")]
     pub query_interval: u64,
 
     /// Web service port .

@@ -88,9 +88,9 @@ pub struct EQSOptions {
     #[structopt(long)]
     pub reset_store_state: bool,
 
-    /// Polling frequency, in milliseconds, for commits to the contract.
-    #[structopt(long, default_value = "500")]
-    pub query_frequency: u64,
+    /// Polling interval, in milliseconds, for commits to the contract.
+    #[structopt(long, default_value = "500", env = "CAPE_EQS_POLL_INTERVAL_MS")]
+    pub query_interval: u64,
 
     /// Web service port .
     #[structopt(long, default_value = "50087", env = "CAPE_EQS_PORT")]
@@ -164,8 +164,8 @@ impl EQSOptions {
         self.reset_store_state
     }
 
-    pub(crate) fn query_frequency(&self) -> Duration {
-        Duration::from_millis(self.query_frequency)
+    pub(crate) fn query_interval(&self) -> Duration {
+        Duration::from_millis(self.query_interval)
     }
 
     pub(crate) fn eqs_port(&self) -> u16 {

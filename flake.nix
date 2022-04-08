@@ -71,7 +71,7 @@
               enable = true;
               description = "Ensure files with c-style comments have license header";
               entry = "insert_license --license-filepath .license-header  --comment-style \"//\"";
-              types_or = [ "rust" "ts" ];
+              types_or = [ "rust" "ts" "javascript" ];
               excludes = [
                 "bindings/mod\\.rs" # generated file
               ];

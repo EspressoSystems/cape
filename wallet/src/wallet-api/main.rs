@@ -1507,6 +1507,7 @@ mod tests {
         // At this point everything should be accepted, even the received transactions.
         for h in &history {
             assert_eq!(h.status, "accepted");
+            assert!(h.hash.is_some());
         }
         // We just made 2 transfers, there may be more from populatefortest.
         assert!(history.len() >= 2);

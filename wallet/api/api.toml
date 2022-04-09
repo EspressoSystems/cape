@@ -415,20 +415,16 @@ must be the same that were used to build the asset definition.
 [route.updateasset]
 METHOD = "POST"
 PATH = [
-  "updateasset/:asset/symbol/:symbol",
-  "updateasset/:asset/description/:description",
-  "updateasset/:asset/icon/:icon",
-  "updateasset/:asset/symbol/:symbol/description/:description",
-  "updateasset/:asset/symbol/:symbol/icon/:icon",
-  "updateasset/:asset/description/:description/icon/:icon",
-  "updateasset/:asset/symbol/:symbol/description/:description/icon/:icon",
+  "updateasset/:asset",
 ]
 ":asset" = "TaggedBase64"
-":symbol" = "Base64"
-":description" = "Base64"
-":icon" = "Base64"
 DOC = """
 Edit the local metadata associated with the given asset code.
+
+Parameters to update are past as fields of the request body. Available parameters are
+* `symbol`: `Literal`
+* `description`: `Literal`
+* `icon`: `Base64`
 
 Will fail if the asset code does not exist in the wallet. Will have no effect on verified assets.
 """

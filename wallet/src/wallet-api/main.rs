@@ -2018,8 +2018,8 @@ mod tests {
     #[traced_test]
     async fn test_updateasset() {
         let server = TestServer::new().await;
-        let symbol = base64::encode_config("symbol".as_bytes(), base64::URL_SAFE_NO_PAD);
-        let description = base64::encode_config("description".as_bytes(), base64::URL_SAFE_NO_PAD);
+        let symbol = "symbol".to_owned();
+        let description = "description".to_owned();
 
         // Generate a simple icon in raw bytes: 4 bytes for width, 4 for height, and then
         // width*height*3 zerox bytes for the pixels. Use 64x64 so seahorse doesn't resize the icon.
@@ -2039,33 +2039,17 @@ mod tests {
         let mut icon_cursor = Cursor::new(vec![]);
         icon.write_png(&mut icon_cursor).unwrap();
         let icon_bytes = icon_cursor.into_inner();
-        // We use URL_SAFE_NO_PAD for URL parameters
-        let icon = base64::encode_config(&icon_bytes, base64::URL_SAFE_NO_PAD);
-        // We use standard base 64 for responses, since that's what HTML image converts expect.
-        let icon_response = base64::encode(&icon_bytes);
+        let icon = base64::encode(&icon_bytes);
 
         // Should fail if a wallet is not already open.
         server
-            .requires_wallet_post::<AssetInfo>(&format!(
-                "updateasset/{}/symbol/{}",
-                AssetCode::native(),
-                symbol
-            ))
-            .await;
-        server
-            .requires_wallet_post::<AssetInfo>(&format!(
-                "updateasset/{}/description/{}",
-                AssetCode::native(),
-                description
-            ))
-            .await;
-        server
-            .requires_wallet_post::<AssetInfo>(&format!(
-                "updateasset/{}/icon/{}",
-                AssetCode::native(),
-                icon
-            ))
-            .await;
+            .client
+            .post(&format!("updateasset/{}", AssetCode::native()))
+            .body_json(&UpdateAsset::default())
+            .unwrap()
+            .send()
+            .await
+            .unwrap_err();
 
         // Create a wallet.
         server
@@ -2079,12 +2063,18 @@ mod tests {
             .unwrap();
 
         // Update the metadata of the native asset, one field at a time.
-        let info = server
-            .post::<AssetInfo>(&format!(
-                "updateasset/{}/symbol/{}",
-                AssetCode::native(),
-                symbol
-            ))
+        let info: AssetInfo = server
+            .client
+            .post(&format!("updateasset/{}", AssetCode::native()))
+            .body_json(&UpdateAsset {
+                symbol: Some(symbol.clone()),
+                ..Default::default()
+            })
+            .unwrap()
+            .send()
+            .await
+            .unwrap()
+            .body_json()
             .await
             .unwrap();
         assert_eq!(
@@ -2100,12 +2090,18 @@ mod tests {
         );
         assert_eq!(info.symbol.unwrap(), "symbol");
 
-        let info = server
-            .post::<AssetInfo>(&format!(
-                "updateasset/{}/description/{}",
-                AssetCode::native(),
-                description
-            ))
+        let info: AssetInfo = server
+            .client
+            .post(&format!("updateasset/{}", AssetCode::native()))
+            .body_json(&UpdateAsset {
+                description: Some(description.clone()),
+                ..Default::default()
+            })
+            .unwrap()
+            .send()
+            .await
+            .unwrap()
+            .body_json()
             .await
             .unwrap();
         assert_eq!(
@@ -2121,12 +2117,18 @@ mod tests {
         );
         assert_eq!(info.description.unwrap(), "description");
 
-        let info = server
-            .post::<AssetInfo>(&format!(
-                "updateasset/{}/icon/{}",
-                AssetCode::native(),
-                icon
-            ))
+        let info: AssetInfo = server
+            .client
+            .post(&format!("updateasset/{}", AssetCode::native()))
+            .body_json(&UpdateAsset {
+                icon: Some(icon.clone()),
+                ..Default::default()
+            })
+            .unwrap()
+            .send()
+            .await
+            .unwrap()
+            .body_json()
             .await
             .unwrap();
         assert_eq!(
@@ -2140,47 +2142,7 @@ mod tests {
                 .find(|asset| asset.definition.code == info.definition.code)
                 .unwrap()
         );
-        assert_eq!(info.icon.unwrap(), icon_response);
-
-        // Test route parsing for updating multiple fields at a time, although updating with the
-        // same data will have no affect.
-        server
-            .post::<AssetInfo>(&format!(
-                "updateasset/{}/symbol/{}/description/{}",
-                AssetCode::native(),
-                symbol,
-                description
-            ))
-            .await
-            .unwrap();
-        server
-            .post::<AssetInfo>(&format!(
-                "updateasset/{}/symbol/{}/icon/{}",
-                AssetCode::native(),
-                symbol,
-                icon
-            ))
-            .await
-            .unwrap();
-        server
-            .post::<AssetInfo>(&format!(
-                "updateasset/{}/description/{}/icon/{}",
-                AssetCode::native(),
-                description,
-                icon
-            ))
-            .await
-            .unwrap();
-        server
-            .post::<AssetInfo>(&format!(
-                "updateasset/{}/symbol/{}/description/{}/icon/{}",
-                AssetCode::native(),
-                symbol,
-                description,
-                icon
-            ))
-            .await
-            .unwrap();
+        assert_eq!(info.icon.unwrap(), icon);
     }
 
     #[async_std::test]

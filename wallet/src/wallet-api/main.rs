@@ -1612,7 +1612,7 @@ mod tests {
             info.assets[0].clone()
         };
 
-        // The wrapper addressœd it so we can check the account interface.
+        // The wrapper addressed it so we can check the account interface.
         let mut addresses = info.addresses.into_iter();
         let address = loop {
             let address = addresses.next().unwrap();
@@ -1800,7 +1800,7 @@ mod tests {
         // Keystore names may include whatever characters the user wants.
         let keystore_name = "named/key \\store";
 
-        // There are not keystores yet.
+        // There are no keystore yet.
         assert_eq!(
             Vec::<String>::new(),
             server.get::<Vec<String>>("listkeystores").await.unwrap()

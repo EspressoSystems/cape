@@ -107,8 +107,7 @@ pub async fn create_test_network<'a>(
         Url::parse(&format!("http://localhost:{}", address_book_port())).unwrap();
 
     // Set up a network that includes a minimal relayer, connected to a real Ethereum
-    // blockchain, as well as a mock EQS which will track the blockchain in parallel, since we
-    // don't yet have a real EQS.
+    // blockchain, as well as a mock EQS which will track the blockchain in parallel.
     let relayer_port = port().await;
     let (contract, sender_key, sender_rec, records) =
         start_minimal_relayer_for_test(relayer_port, faucet_key_pair).await;

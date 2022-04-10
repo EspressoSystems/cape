@@ -293,7 +293,7 @@ fn update_balances(
     }
 
     let sender_assets = balances.get_mut(send_addr).unwrap();
-    // Udate with asset code
+    // Update with asset code
     let send_balance = *sender_assets.get(asset).unwrap_or(&0);
     assert!(
         send_balance >= amount,
@@ -441,7 +441,7 @@ async fn main() {
 
                 let recipient_pk = public_keys.choose(&mut rng).unwrap();
                 // Can't choose weighted and check this because async lambda not allowed.
-                // There is probably a betterw way
+                // TODO Look for a possible better way
                 if sender.pub_keys().await[0] == *recipient_pk {
                     continue;
                 }

@@ -22,7 +22,7 @@ contract RootStore {
 
         _roots = new uint256[](nRoots);
 
-        // Intially all roots are set to zero.
+        // Initially all roots are set to zero.
         // This value is such that no adversary can extend a branch from this root node.
         // See proposition 2, page 48 of the AT-Spec document EspressoSystems/AT-spec@01f71ce
     }

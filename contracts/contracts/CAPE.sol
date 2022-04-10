@@ -36,7 +36,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
     IPlonkVerifier private _verifier;
     uint256[] public pendingDeposits;
 
-    // NOTE: used for faucet in testnet only, removed for mainnet
+    // NOTE: used for faucet in testnet only, will be removed for mainnet
     address public deployer;
     bool public faucetInitialized;
 
@@ -154,7 +154,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
     ) RecordsMerkleTree(merkleTreeHeight) RootStore(nRoots) {
         _verifier = IPlonkVerifier(verifierAddr);
 
-        // NOTE: used for faucet in testnet only, removed for mainnet
+        // NOTE: used for faucet in testnet only, will be removed for mainnet
         deployer = msg.sender;
     }
 

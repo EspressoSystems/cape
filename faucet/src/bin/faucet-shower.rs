@@ -44,9 +44,13 @@ pub struct Options {
     #[structopt(short, long, default_value = "10")]
     pub num_wallets: usize,
 
-    /// size of grant for each new wallet
+    /// number of records to create in each new wallet
+    #[structopt(short, long, default_value = "1")]
+    pub num_records: u64,
+
+    /// size of each record to create in the new wallets
     #[structopt(short, long, default_value = "1000000")]
-    pub transfer_size: u64,
+    pub record_size: u64,
 
     /// URL for the Ethereum Query Service.
     #[structopt(long, env = "CAPE_EQS_URL", default_value = "http://localhost:50087")]
@@ -162,10 +166,12 @@ async fn main() {
     // can discover a record to transfer from.
     parent.await_key_scan(&parent_key.address()).await.unwrap();
     let balance = parent.balance(&AssetCode::native()).await;
-    if balance < opt.transfer_size * (opt.num_wallets as u64) {
+    if balance < opt.record_size * (opt.num_records as u64) * (opt.num_wallets as u64) {
         eprintln!(
             "Insufficient balance for transferring {} units to {} wallets: {}",
-            opt.transfer_size, opt.num_wallets, balance
+            opt.record_size * opt.num_records,
+            opt.num_wallets,
+            balance
         );
         exit(1);
     }
@@ -175,7 +181,7 @@ async fn main() {
     // already reported all of the mnemonics needed to recover the funds.
     println!(
         "Transferring {} units each to the following wallets:",
-        opt.transfer_size
+        opt.record_size * opt.num_records
     );
     for (_, mnemonic, key) in &children {
         println!("{} {}", mnemonic, key);
@@ -183,35 +189,38 @@ async fn main() {
 
     // Do the transfers.
     for (_, _, key) in &children {
-        match parent
-            .transfer(
-                None,
-                &AssetCode::native(),
-                &[(key.address(), opt.transfer_size)],
-                0,
-            )
-            .await
-        {
-            Ok(receipt) => match parent.await_transaction(&receipt).await {
-                Ok(TransactionStatus::Retired) => {
-                    println!("Transferred {} units to {}", opt.transfer_size, key)
-                }
-                Ok(status) => eprintln!(
-                    "Transfer to {} did not complete successfully: {}",
-                    key, status
-                ),
-                Err(err) => eprintln!("Error while waiting for transfer to {}: {}", key, err),
-            },
-            Err(err) => eprintln!("Failed to transfer to {}: {}", key, err),
+        for _ in 0..opt.num_records {
+            match parent
+                .transfer(
+                    None,
+                    &AssetCode::native(),
+                    &[(key.address(), opt.record_size)],
+                    0,
+                )
+                .await
+            {
+                Ok(receipt) => match parent.await_transaction(&receipt).await {
+                    Ok(TransactionStatus::Retired) => {
+                        println!("Transferred {} units to {}", opt.record_size, key)
+                    }
+                    Ok(status) => eprintln!(
+                        "Transfer to {} did not complete successfully: {}",
+                        key, status
+                    ),
+                    Err(err) => eprintln!("Error while waiting for transfer to {}: {}", key, err),
+                },
+                Err(err) => eprintln!("Failed to transfer to {}: {}", key, err),
+            }
         }
     }
 
     // Wait for the children to report the new balances.
     for (wallet, _, key) in &children {
-        while wallet.balance(&AssetCode::native()).await < opt.transfer_size {
+        while wallet.balance(&AssetCode::native()).await < opt.record_size * opt.num_records {
             eprintln!(
                 "Waiting for {} to receive {} tokens",
-                key, opt.transfer_size
+                key,
+                opt.record_size * opt.num_records
             );
             async_std::task::sleep(Duration::from_secs(1)).await;
         }

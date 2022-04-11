@@ -49,7 +49,7 @@ mod tests {
             .await?
             .await?;
 
-        // XXX Adapted from seahorse
+        // Adapted from seahorse
         // https://github.com/EspressoSystems/seahorse/blob/ace20bc5f1bcf5b88ca0562799b8e80e6c52e933/src/persistence.rs#L574
         // Generate some memos with default UserKeyPair
         let key_pair = UserKeyPair::default();

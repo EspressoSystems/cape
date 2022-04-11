@@ -7,7 +7,7 @@
  ~ You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
  -->
 
-# Ethererum Query Service (EQS)
+# Ethereum Query Service (EQS)
 
 This crate contains a service that monitors the state of the CAPE smart contract
 and provides an API to query that state.

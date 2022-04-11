@@ -227,7 +227,7 @@ pub async fn init_web_server(
     .unwrap();
     let mut wallet = CapeWallet::new(backend).await.unwrap();
 
-    // If a faucet key pair is provided, add it to the wallet. Othereise, if we're initializing
+    // If a faucet key pair is provided, add it to the wallet. Otherwise, if we're initializing
     // for the first time, we need to generate a key. The faucet should be set up so that the
     // first HD sending key is the faucet key.
     if let Some(key) = faucet_key_pair {

@@ -317,15 +317,10 @@ pub enum PrivateKey {
 pub enum BalanceInfo {
     /// The balance of a single asset, in a single account.
     Balance(u64),
-    /// All the balances of an account, by asset type.
-    AccountBalances((HashMap<AssetCode, u64>, HashMap<AssetCode, AssetInfo>)),
+    /// All the balances of an account, by asset type with asset info.
+    AccountBalances(HashMap<AssetCode, (u64, AssetInfo)>),
     /// All the balances of all accounts owned by the wallet.
-    AllBalances(
-        (
-            HashMap<UserAddress, HashMap<AssetCode, u64>>,
-            HashMap<AssetCode, AssetInfo>,
-        ),
-    ),
+    AllBalances(HashMap<UserAddress, HashMap<AssetCode, (u64, AssetInfo)>>),
 }
 
 #[ser_test(ark(false))]

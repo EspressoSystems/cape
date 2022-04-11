@@ -693,10 +693,10 @@ async fn getbalance(
         wallet.balance_breakdown(&address.into(), &asset).await
     };
     let account_balances = |address: UserAddress| async move {
-        iter(known_assets(wallet).await.into_keys())
-            .then(|asset| {
+        iter(known_assets(wallet).await)
+            .then(|(code, info)| {
                 let address = address.clone();
-                async move { (asset, one_balance(address, asset).await) }
+                async move { (code, (one_balance(address, code).await, info)) }
             })
             .collect()
             .await

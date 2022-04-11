@@ -171,7 +171,7 @@ mod tests {
             &self.options
         }
 
-        async fn wait(port: u64) {
+        async fn wait(port: u16) {
             retry(|| async move {
                 // Use a one-off request, rather than going through the client, because we want to
                 // skip the middleware, which can cause connect() to return an Err() even if the

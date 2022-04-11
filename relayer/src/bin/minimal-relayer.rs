@@ -13,7 +13,7 @@ use cap_rust_sandbox::{
 use ethers::prelude::{
     coins_bip39::English, Address, Middleware, MnemonicBuilder, Signer, SignerMiddleware,
 };
-use relayer::{init_web_server, DEFAULT_RELAYER_PORT};
+use relayer::{init_web_server, NonceCountRule, DEFAULT_RELAYER_PORT};
 use std::sync::Arc;
 use structopt::StructOpt;
 
@@ -35,6 +35,18 @@ struct MinimalRelayerOptions {
     /// Mnemonic phrase for ETH wallet, for paying submission gas fees.
     #[structopt(env = "CAPE_RELAYER_WALLET_MNEMONIC")]
     mnemonic: String,
+
+    /// Port the relayer web server listens on.
+    #[structopt(long, env = "CAPE_RELAYER_PORT", default_value = DEFAULT_RELAYER_PORT)]
+    port: u16,
+
+    /// Describes how transaction nonces should be calculated.
+    /// "mined": only count mined transaction when creating the nonce.
+    /// "pending": include pending transactions when creating the nonce.
+    /// Including "pending" transactions allows the relayer to submit
+    /// the next transaction after the previous one hit the nodes' mempool.
+    #[structopt(long, env = "CAPE_RELAYER_NONCE_COUNT_RULE", default_value = "mined")]
+    nonce_count_rule: NonceCountRule,
 }
 
 #[async_std::main]
@@ -64,7 +76,5 @@ async fn main() -> std::io::Result<()> {
     let contract = CAPE::new(opt.cape_address, client);
 
     // Start serving CAPE transaction submissions.
-    let port =
-        std::env::var("CAPE_RELAYER_PORT").unwrap_or_else(|_| DEFAULT_RELAYER_PORT.to_string());
-    init_web_server(contract, port).await
+    init_web_server(contract, opt.port, opt.nonce_count_rule).await
 }

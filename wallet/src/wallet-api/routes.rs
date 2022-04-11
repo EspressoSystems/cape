@@ -1072,6 +1072,7 @@ async fn getaccount(
 }
 
 async fn updateasset(
+    req: &mut Request<WebState>,
     bindings: &HashMap<String, RouteBinding>,
     wallet: &mut Option<Wallet>,
 ) -> Result<AssetInfo, tide::Error> {
@@ -1085,14 +1086,15 @@ async fn updateasset(
         .ok_or_else(|| wallet_error(CapeWalletError::UndefinedAsset { asset: code }))?;
 
     // Update based on request parameters.
-    if let Some(symbol) = bindings.get(":symbol") {
-        asset = asset.with_name(symbol.value.as_string()?);
+    let params: UpdateAsset = request_body(req).await?;
+    if let Some(symbol) = params.symbol {
+        asset = asset.with_name(symbol);
     }
-    if let Some(description) = bindings.get(":description") {
-        asset = asset.with_description(description.value.as_string()?);
+    if let Some(description) = params.description {
+        asset = asset.with_description(description);
     }
-    if let Some(icon) = bindings.get(":icon") {
-        let bytes = icon.value.as_base64()?;
+    if let Some(icon) = params.icon {
+        let bytes = base64::decode(&icon)?;
         let icon = Icon::load_png(Cursor::new(bytes))?;
         asset = asset.with_icon(icon);
     }
@@ -1301,7 +1303,10 @@ pub async fn dispatch_url(
         }
         ApiRouteKey::unfreeze => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::unwrap => response(&req, unwrap(bindings, wallet).await?),
-        ApiRouteKey::updateasset => response(&req, updateasset(bindings, wallet).await?),
+        ApiRouteKey::updateasset => {
+            let res = updateasset(&mut req, bindings, wallet).await?;
+            response(&req, res)
+        }
         ApiRouteKey::view => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::getrecords => response(&req, get_records(wallet).await?),
         ApiRouteKey::lastusedkeystore => response(&req, get_last_keystore(options).await?),

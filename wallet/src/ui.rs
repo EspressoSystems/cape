@@ -297,6 +297,13 @@ impl Display for AssetInfo {
     }
 }
 
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct UpdateAsset {
+    pub symbol: Option<String>,
+    pub description: Option<String>,
+    pub icon: Option<String>,
+}
+
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 /// Public keys for spending, viewing and freezing assets.
 pub enum PubKey {

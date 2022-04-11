@@ -1,11 +1,11 @@
 // Copyright (c) 2022 Espresso Systems (espressosys.com)
 // This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
-
+//
 // This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 // This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::configuration::EQSOptions;
+use crate::configuration::{Confirmations, EQSOptions};
 use crate::query_result_state::{EthEventIndex, QueryResultState};
 use crate::state_persistence::StatePersistence;
 
@@ -20,6 +20,7 @@ use cap_rust_sandbox::{
 use commit::Committable;
 use core::mem;
 use ethers::abi::AbiDecode;
+use ethers::prelude::Middleware;
 use jf_cap::structs::{ReceiverMemo, RecordCommitment};
 use jf_cap::{structs::RecordOpening, MerkleTree, TransactionNote};
 use rand_chacha::rand_core::SeedableRng;
@@ -36,6 +37,7 @@ pub(crate) struct EthPolling {
     pub next_block_to_query: u64,
     pub pending_commit_event: Vec<CapeTransition>,
     pub connection: EthConnection,
+    pub num_confirmations: Confirmations,
 }
 
 impl EthPolling {
@@ -52,6 +54,7 @@ impl EthPolling {
                 last_event_index: None,
                 next_block_to_query: 0,
                 connection: EthConnection::for_test().await,
+                num_confirmations: opt.num_confirmations,
             };
         }
 
@@ -63,6 +66,16 @@ impl EthPolling {
                 panic!(
                     "Persisted state is malformed! Run again with --reset_store_state to repair"
                 );
+            }
+
+            if let Some(persisted_num_confirmations) = state_updater.num_confirmations {
+                if persisted_num_confirmations < opt.num_confirmations {
+                    panic!(
+                        "Cannot increase the number of confirmations: persisted state \
+                     uses {:?} which is smaller than {:?}",
+                        state_updater.num_confirmations, opt.num_confirmations
+                    )
+                }
             }
 
             if let Some(persisted_contract_address) = state_updater.contract_address {
@@ -103,10 +116,28 @@ impl EthPolling {
             next_block_to_query,
             pending_commit_event: Vec::new(),
             connection,
+            num_confirmations: opt.num_confirmations,
         }
     }
 
     pub async fn check(&mut self) -> Result<u64, async_std::io::Error> {
+        let latest_block_number = self
+            .connection
+            .provider
+            .get_block_number()
+            .await
+            .expect("Could not fetch latest block number")
+            .as_u64();
+
+        let fetch_until = match self
+            .num_confirmations
+            .latest_confirmed_block_number(latest_block_number)
+        {
+            Some(n) => n,
+            // There is no confirmed block to fetch yet.
+            None => return Ok(0),
+        };
+
         // do eth poll, unpack updates
         // select cape events starting from the first block for which we do not have confirmed
         // completion of processing
@@ -115,6 +146,7 @@ impl EthPolling {
             .contract
             .events()
             .from_block(self.next_block_to_query)
+            .to_block(fetch_until)
             .query_with_meta()
             .await
             .unwrap();

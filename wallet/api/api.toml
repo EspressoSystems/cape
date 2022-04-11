@@ -1,3 +1,10 @@
+# Copyright (c) 2022 Espresso Systems (espressosys.com)
+# This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
+#
+# This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+# You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 # API and messages
 #
 # TOML specification: https://github.com/kezhuw/toml-spec
@@ -408,20 +415,16 @@ must be the same that were used to build the asset definition.
 [route.updateasset]
 METHOD = "POST"
 PATH = [
-  "updateasset/:asset/symbol/:symbol",
-  "updateasset/:asset/description/:description",
-  "updateasset/:asset/icon/:icon",
-  "updateasset/:asset/symbol/:symbol/description/:description",
-  "updateasset/:asset/symbol/:symbol/icon/:icon",
-  "updateasset/:asset/description/:description/icon/:icon",
-  "updateasset/:asset/symbol/:symbol/description/:description/icon/:icon",
+  "updateasset/:asset",
 ]
 ":asset" = "TaggedBase64"
-":symbol" = "Base64"
-":description" = "Base64"
-":icon" = "Base64"
 DOC = """
 Edit the local metadata associated with the given asset code.
+
+Parameters to update are past as fields of the request body. Available parameters are
+* `symbol`: `Literal`
+* `description`: `Literal`
+* `icon`: `Base64`
 
 Will fail if the asset code does not exist in the wallet. Will have no effect on verified assets.
 """

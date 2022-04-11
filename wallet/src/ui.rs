@@ -1,6 +1,6 @@
 // Copyright (c) 2022 Espresso Systems (espressosys.com)
 // This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
-
+//
 // This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 // This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
@@ -261,7 +261,7 @@ impl AssetInfo {
 
     /// Details about the native asset type.
     pub fn native() -> Self {
-        Self::new(seahorse::AssetInfo::native(), None)
+        Self::new(seahorse::AssetInfo::native::<CapeLedger>(), None)
     }
 }
 
@@ -297,6 +297,13 @@ impl Display for AssetInfo {
     }
 }
 
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct UpdateAsset {
+    pub symbol: Option<String>,
+    pub description: Option<String>,
+    pub icon: Option<String>,
+}
+
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 /// Public keys for spending, viewing and freezing assets.
 pub enum PubKey {
@@ -313,14 +320,14 @@ pub enum PrivateKey {
     Freezing(FreezerKeyPair),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum BalanceInfo {
     /// The balance of a single asset, in a single account.
     Balance(u64),
-    /// All the balances of an account, by asset type.
-    AccountBalances(HashMap<AssetCode, u64>),
+    /// All the balances of an account, by asset type with asset info.
+    AccountBalances(HashMap<AssetCode, (u64, AssetInfo)>),
     /// All the balances of all accounts owned by the wallet.
-    AllBalances(HashMap<UserAddress, HashMap<AssetCode, u64>>),
+    AllBalances(HashMap<UserAddress, HashMap<AssetCode, (u64, AssetInfo)>>),
 }
 
 #[ser_test(ark(false))]
@@ -360,7 +367,7 @@ impl From<RecordInfo> for Record {
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Account {
     pub records: Vec<Record>,
-    pub balance: u64,
+    pub balances: HashMap<AssetCode, u64>,
     pub assets: HashMap<AssetCode, AssetInfo>,
     pub description: String,
     pub used: bool,
@@ -402,7 +409,7 @@ impl Account {
         Self {
             records: info.records.into_iter().map(|rec| rec.into()).collect(),
             assets,
-            balance: info.balance,
+            balances: info.balances,
             description: info.description,
             used: info.used,
             scan_index,
@@ -417,6 +424,8 @@ pub struct TransactionHistoryEntry {
     pub time: String,
     pub asset: AssetCode,
     pub kind: String,
+    // String representation of the TaggedBase64 encoded hash
+    pub hash: Option<String>,
     /// Sending keys used to build this transaction, if available.
     ///
     /// If we sent this transaction, `senders` records the addresses of the spending keys used to
@@ -446,6 +455,21 @@ impl TransactionHistoryEntry {
                 CapeTransactionKind::Burn => "burn".to_string(),
                 CapeTransactionKind::Wrap => "wrap".to_string(),
                 CapeTransactionKind::Faucet => "faucet".to_string(),
+            },
+            hash: {
+                entry
+                    .hash
+                    .map(|hash| {
+                        bincode::serialize(&hash)
+                            .ok()
+                            .map(|bytes| {
+                                TaggedBase64::new("HASH", &bytes)
+                                    .ok()
+                                    .map(|tb| tb.to_string())
+                            })
+                            .flatten()
+                    })
+                    .flatten()
             },
             senders: entry.senders.into_iter().map(UserAddress::from).collect(),
             receivers: entry

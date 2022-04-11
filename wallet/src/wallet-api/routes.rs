@@ -1,6 +1,6 @@
 // Copyright (c) 2022 Espresso Systems (espressosys.com)
 // This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
-
+//
 // This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 // This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
@@ -693,10 +693,10 @@ async fn getbalance(
         wallet.balance_breakdown(&address.into(), &asset).await
     };
     let account_balances = |address: UserAddress| async move {
-        iter(known_assets(wallet).await.into_keys())
-            .then(|asset| {
+        iter(known_assets(wallet).await)
+            .then(|(code, info)| {
                 let address = address.clone();
-                async move { (asset, one_balance(address, asset).await) }
+                async move { (code, (one_balance(address, code).await, info)) }
             })
             .collect()
             .await
@@ -1072,6 +1072,7 @@ async fn getaccount(
 }
 
 async fn updateasset(
+    req: &mut Request<WebState>,
     bindings: &HashMap<String, RouteBinding>,
     wallet: &mut Option<Wallet>,
 ) -> Result<AssetInfo, tide::Error> {
@@ -1085,14 +1086,15 @@ async fn updateasset(
         .ok_or_else(|| wallet_error(CapeWalletError::UndefinedAsset { asset: code }))?;
 
     // Update based on request parameters.
-    if let Some(symbol) = bindings.get(":symbol") {
-        asset = asset.with_name(symbol.value.as_string()?);
+    let params: UpdateAsset = request_body(req).await?;
+    if let Some(symbol) = params.symbol {
+        asset = asset.with_name(symbol);
     }
-    if let Some(description) = bindings.get(":description") {
-        asset = asset.with_description(description.value.as_string()?);
+    if let Some(description) = params.description {
+        asset = asset.with_description(description);
     }
-    if let Some(icon) = bindings.get(":icon") {
-        let bytes = icon.value.as_base64()?;
+    if let Some(icon) = params.icon {
+        let bytes = base64::decode(&icon)?;
         let icon = Icon::load_png(Cursor::new(bytes))?;
         asset = asset.with_icon(icon);
     }
@@ -1301,7 +1303,10 @@ pub async fn dispatch_url(
         }
         ApiRouteKey::unfreeze => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::unwrap => response(&req, unwrap(bindings, wallet).await?),
-        ApiRouteKey::updateasset => response(&req, updateasset(bindings, wallet).await?),
+        ApiRouteKey::updateasset => {
+            let res = updateasset(&mut req, bindings, wallet).await?;
+            response(&req, res)
+        }
         ApiRouteKey::view => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::getrecords => response(&req, get_records(wallet).await?),
         ApiRouteKey::lastusedkeystore => response(&req, get_last_keystore(options).await?),

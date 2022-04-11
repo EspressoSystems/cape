@@ -1,6 +1,6 @@
 // Copyright (c) 2022 Espresso Systems (espressosys.com)
 // This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
-
+//
 // This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 // This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
@@ -99,6 +99,8 @@ mod test {
         Ok(())
     }
 
+    // This test sometimes fails for currently unclear reasons.
+    #[ignore]
     #[tokio::test]
     async fn test_hardhat_deploy() -> Result<()> {
         let output = Command::new("hardhat")
@@ -110,9 +112,12 @@ mod test {
         // Get the address out of
         // deploying "CAPE" (tx: 0x64...211)...: deployed at 0x8A791620dd6260079BF849Dc5567aDC3F2FdC318 with 7413790 gas
         let re = Regex::new(r#""CAPE".*(0x[0-9a-fA-F]{40})"#).unwrap();
-        let address = re.captures_iter(&text).next().unwrap()[1]
+        let address = re
+            .captures_iter(&text)
+            .next()
+            .unwrap_or_else(|| panic!("Address not found in {}", text))[1]
             .parse::<Address>()
-            .unwrap();
+            .unwrap_or_else(|_| panic!("Address not found in {}", text));
 
         let client = get_funded_client().await.unwrap();
         let contract = CAPE::new(address, client.clone());

@@ -261,7 +261,7 @@ impl AssetInfo {
 
     /// Details about the native asset type.
     pub fn native() -> Self {
-        Self::new(seahorse::AssetInfo::native(), None)
+        Self::new(seahorse::AssetInfo::native::<CapeLedger>(), None)
     }
 }
 

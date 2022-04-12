@@ -83,16 +83,16 @@ Once you have an open wallet, you will get the REPL prompt, `>`. Now you can typ
   - `create_asset`: create a new asset
   - `mint`: mint an asset
     - Note: The `asset` argument must be an already-created asset. To create an asset, use the `create` command.
-  - `freeze`: freeze assets owned by another users
+  - `freeze`: freeze assets owned by another
     - Note: The `asset` argument must be a freezable asset.
-  - `unfreeze`: unfreeze previously frozen assets owned by another users
+  - `unfreeze`: unfreeze previously frozen assets owned by another user
   - `wait`: wait for a transaction to complete
   - `sync`: wait until the wallet has processed up to a given event index
 
 - Information listing
 
   - `address`: print all public addresses of this wallet
-  - `pub_key`: print all of the public keys of this wallet
+  - `pub_key`: print all public keys of this wallet
   - `assets`: list assets known to the wallet
   - `asset`: print information about an asset
   - `balance`: print owned balances of asset

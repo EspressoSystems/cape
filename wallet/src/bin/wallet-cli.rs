@@ -7,7 +7,7 @@
 
 //! # The CAPE Wallet CLI
 //!
-//! One of two main entrypoints to the wallet (the other being the web server) this executable
+//! One of two main entrypoints to the wallet (the other being the web server). This executable
 //! provides a command-line read-eval-print loop which allows the user to enter commands for a wallet
 //! interactively.
 //!

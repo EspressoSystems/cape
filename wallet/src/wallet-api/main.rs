@@ -7,7 +7,7 @@
 
 //! # The CAPE Wallet Server
 //!
-//! One of two main entrypoints to the wallet (the other being the CLI) this executable provides a
+//! One of two main entrypoints to the wallet (the other being the CLI). This executable provides a
 //! web server which exposes wallet functionality via an HTTP interface. It is primarily intended
 //! to be run in a Docker container and used as the backend for the CAPE wallet GUI.
 //!

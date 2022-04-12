@@ -23,6 +23,7 @@ lazy_static! {
             .unwrap();
 }
 
+/// Compute the verifier keys for different types and sizes of CAP transactions.
 pub fn verifier_keys() -> VerifierKeySet {
     let univ_setup = &*UNIVERSAL_PARAM;
     let (_, xfr_verif_key_12, _) =

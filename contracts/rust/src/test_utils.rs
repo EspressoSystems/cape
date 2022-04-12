@@ -67,6 +67,7 @@ impl ContractsInfo {
     }
 }
 
+/// Transform a TestCAPE contract object into a CAPE contract object.
 pub fn upcast_test_cape_to_cape(test_cape: TestCAPE<EthMiddleware>) -> CAPE<EthMiddleware> {
     CAPE::new(test_cape.address(), Arc::new(test_cape.client().clone()))
 }
@@ -112,6 +113,7 @@ pub async fn create_faucet(
     (faucet_key_pair, faucet_rec)
 }
 
+/// Compute the path containing the abi information of a contract.
 pub fn contract_abi_path(contract_name: &str) -> PathBuf {
     [
         &PathBuf::from(env!("CONTRACTS_DIR")),
@@ -122,6 +124,7 @@ pub fn contract_abi_path(contract_name: &str) -> PathBuf {
     .collect::<PathBuf>()
 }
 
+/// Check the amount of some erc20 token of an address.
 pub async fn check_erc20_token_balance(
     erc20_token_contract: &SimpleToken<EthMiddleware>,
     user_eth_address: Address,
@@ -135,7 +138,7 @@ pub async fn check_erc20_token_balance(
     assert_eq!(balance, expected_amount);
 }
 
-pub fn compute_extra_proof_bound_data_for_burn_tx(recipient_address: Address) -> Vec<u8> {
+fn compute_extra_proof_bound_data_for_burn_tx(recipient_address: Address) -> Vec<u8> {
     [
         DOM_SEP_CAPE_BURN.to_vec(),
         recipient_address.to_fixed_bytes().to_vec(),
@@ -143,6 +146,7 @@ pub fn compute_extra_proof_bound_data_for_burn_tx(recipient_address: Address) ->
     .concat()
 }
 
+/// Generates a CAP burn transaction.
 pub fn generate_burn_tx(
     faucet_key_pair: &UserKeyPair,
     faucet_ro: RecordOpening,
@@ -214,6 +218,7 @@ pub fn generate_burn_tx(
     BurnNote::generate(note, burn_ro).unwrap()
 }
 
+/// Compare the roots of a local merkle tree and the TestRecordsMerkleTree contract merkle tree.
 pub async fn compare_roots_records_merkle_tree_contract(
     mt: &MerkleTree,
     contract: &TestRecordsMerkleTree<EthMiddleware>,
@@ -228,6 +233,7 @@ pub async fn compare_roots_records_merkle_tree_contract(
     );
 }
 
+/// Compare the roots of a local merkle tree and the CAPE contract merkle tree.
 pub async fn compare_roots_records_test_cape_contract(
     mt: &MerkleTree,
     contract: &CAPE<EthMiddleware>,
@@ -257,6 +263,7 @@ impl PrintGas for Option<TransactionReceipt> {
     }
 }
 
+/// Compute the prover and verifier keys for some fixed size circuits.
 pub fn keysets_for_test(srs: &UniversalParam) -> (ProverKeySet, VerifierKeySet) {
     let (xfr_prove_key, xfr_verif_key, _) =
         jf_cap::proof::transfer::preprocess(srs, 1, 2, CapeLedger::merkle_height()).unwrap();

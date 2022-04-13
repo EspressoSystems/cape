@@ -185,17 +185,18 @@ pub async fn get_transaction_by_hash(
 /// "unavailable"} should be added.
 pub async fn healthcheck(
     query_result_state: &QueryResultState,
-) -> Result<tide::Response, tide::Error> {
+) -> Result<serde_json::value::Value, tide::Error> {
     let status = if query_result_state.catching_up {
         "initializing"
     } else {
         "available"
     };
 
-    Ok(tide::Response::builder(200)
-        .content_type(tide::http::mime::JSON)
-        .body(tide::prelude::json!({ "status": status }))
-        .build())
+    // Ok(tide::Response::builder(200)
+    //     .content_type(tide::http::mime::JSON)
+    //     .body(tide::prelude::json!({ "status": status }))
+    //     .build())
+    Ok(tide::prelude::json!({ "status": status }))
 }
 
 pub async fn dispatch_url(

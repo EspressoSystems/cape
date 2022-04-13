@@ -83,7 +83,7 @@ Once you have an open wallet, you will get the REPL prompt, `>`. Now you can typ
   - `create_asset`: create a new asset
   - `mint`: mint an asset
     - Note: The `asset` argument must be an already-created asset. To create an asset, use the `create` command.
-  - `freeze`: freeze assets owned by another
+  - `freeze`: freeze assets owned by another user.
     - Note: The `asset` argument must be a freezable asset.
   - `unfreeze`: unfreeze previously frozen assets owned by another user
   - `wait`: wait for a transaction to complete

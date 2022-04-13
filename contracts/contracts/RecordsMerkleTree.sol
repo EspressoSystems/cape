@@ -332,7 +332,7 @@ contract RecordsMerkleTree {
         _storeFrontier(nodes, rootIndex);
     }
 
-    // Returns the root value of the Merkle tree
+    /// @notice Returns the root value of the Merkle tree.
     function getRootValue() public view returns (uint256) {
         return _rootValue;
     }

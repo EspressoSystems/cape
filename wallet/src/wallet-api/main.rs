@@ -1503,6 +1503,12 @@ mod tests {
             .get::<Vec<TransactionHistoryEntry>>("transactionhistory")
             .await
             .unwrap();
+        let info = server.get::<WalletSummary>("getinfo").await.unwrap();
+        let native_info = info
+            .assets
+            .iter()
+            .find(|asset| asset.definition == AssetDefinition::native())
+            .unwrap();
 
         // At this point everything should be accepted, even the received transactions.
         for h in &history {
@@ -1513,13 +1519,15 @@ mod tests {
         let history = history[history.len() - 2..].to_vec();
 
         assert_eq!(history[0].kind, "send");
-        assert_eq!(history[0].asset, AssetCode::native());
+        assert_eq!(history[0].asset_code, AssetCode::native());
+        assert_eq!(history[0].asset_info, Some(native_info.clone()));
         assert_eq!(history[0].senders, vec![src_address]);
         assert_eq!(history[0].receivers, vec![(dst_address.clone(), 100)]);
         assert_eq!(history[0].status, "accepted");
 
         assert_eq!(history[1].kind, "send");
-        assert_eq!(history[1].asset, AssetCode::native());
+        assert_eq!(history[1].asset_code, AssetCode::native());
+        assert_eq!(history[1].asset_info, Some(native_info.clone()));
         // We don't necessarily know the senders for the second transaction, since we allowed the
         // wallet to choose.
         assert_eq!(history[1].receivers, vec![(dst_address, 100)]);

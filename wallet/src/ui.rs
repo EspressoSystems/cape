@@ -415,8 +415,7 @@ impl Account {
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct TransactionHistoryEntry {
     pub time: String,
-    pub asset_code: AssetCode,
-    pub asset_info: Option<AssetInfo>,
+    pub asset: AssetCode,
     pub kind: String,
     /// Sending keys used to build this transaction, if available.
     ///
@@ -436,11 +435,7 @@ impl TransactionHistoryEntry {
     ) -> Self {
         Self {
             time: entry.time.to_string(),
-            asset_code: entry.asset,
-            asset_info: match wallet.asset(entry.asset).await {
-                Some(info) => Some(AssetInfo::from_info(wallet, info).await),
-                None => None,
-            },
+            asset: entry.asset,
             kind: match entry.kind {
                 CapeTransactionKind::CAP(cap::TransactionKind::Send) => "send".to_string(),
                 CapeTransactionKind::CAP(cap::TransactionKind::Receive) => "receive".to_string(),

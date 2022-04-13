@@ -1499,10 +1499,19 @@ mod tests {
         .await;
 
         // Check transaction history.
-        let history = server
-            .get::<Vec<TransactionHistoryEntry>>("transactionhistory")
+        let (history, asset_map) = server
+            .get::<(Vec<TransactionHistoryEntry>, HashMap<AssetCode, AssetInfo>)>(
+                "transactionhistory",
+            )
             .await
             .unwrap();
+        let info = server.get::<WalletSummary>("getinfo").await.unwrap();
+        let native_info = info
+            .assets
+            .iter()
+            .find(|asset| asset.definition == AssetDefinition::native())
+            .unwrap();
+        assert_eq!(asset_map[&AssetCode::native()], native_info.clone());
 
         // At this point everything should be accepted, even the received transactions.
         for h in &history {
@@ -1529,14 +1538,18 @@ mod tests {
         assert_eq!(
             history,
             server
-                .get::<Vec<TransactionHistoryEntry>>("transactionhistory/from/2")
+                .get::<(Vec<TransactionHistoryEntry>, HashMap<AssetCode, AssetInfo>)>(
+                    "transactionhistory/from/2"
+                )
                 .await
                 .unwrap()
         );
         assert_eq!(
             &history[0..1],
             server
-                .get::<Vec<TransactionHistoryEntry>>("transactionhistory/from/2/count/1")
+                .get::<(Vec<TransactionHistoryEntry>, HashMap<AssetCode, AssetInfo>)>(
+                    "transactionhistory/from/2/count/1"
+                )
                 .await
                 .unwrap()
         );
@@ -1544,7 +1557,9 @@ mod tests {
         assert_eq!(
             &history[1..],
             server
-                .get::<Vec<TransactionHistoryEntry>>("transactionhistory/from/1/count/10")
+                .get::<(Vec<TransactionHistoryEntry>, HashMap<AssetCode, AssetInfo>)>(
+                    "transactionhistory/from/1/count/10"
+                )
                 .await
                 .unwrap()
         );

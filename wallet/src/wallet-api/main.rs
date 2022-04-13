@@ -1541,34 +1541,28 @@ mod tests {
         assert_eq!(history[1].status, "accepted");
 
         // Check :from and :count.
-        assert_eq!(
-            history,
-            server
-                .get::<(Vec<TransactionHistoryEntry>, HashMap<AssetCode, AssetInfo>)>(
-                    "transactionhistory/from/2"
-                )
-                .await
-                .unwrap()
-        );
-        assert_eq!(
-            &history[0..1],
-            server
-                .get::<(Vec<TransactionHistoryEntry>, HashMap<AssetCode, AssetInfo>)>(
-                    "transactionhistory/from/2/count/1"
-                )
-                .await
-                .unwrap()
-        );
+        let (from_history1, _) = server
+            .get::<(Vec<TransactionHistoryEntry>, HashMap<AssetCode, AssetInfo>)>(
+                "transactionhistory/from/2",
+            )
+            .await
+            .unwrap();
+        assert_eq!(history, from_history1);
+        let (from_history2, _) = server
+            .get::<(Vec<TransactionHistoryEntry>, HashMap<AssetCode, AssetInfo>)>(
+                "transactionhistory/from/2/count/1",
+            )
+            .await
+            .unwrap();
+        assert_eq!(&history[0..1], from_history2);
         // If we ask for more entries than there are, we should just get as many as are available.
-        assert_eq!(
-            &history[1..],
-            server
-                .get::<(Vec<TransactionHistoryEntry>, HashMap<AssetCode, AssetInfo>)>(
-                    "transactionhistory/from/1/count/10"
-                )
-                .await
-                .unwrap()
-        );
+        let (from_history3, _) = server
+            .get::<(Vec<TransactionHistoryEntry>, HashMap<AssetCode, AssetInfo>)>(
+                "transactionhistory/from/1/count/10",
+            )
+            .await
+            .unwrap();
+        assert_eq!(&history[1..], from_history3);
     }
 
     #[async_std::test]

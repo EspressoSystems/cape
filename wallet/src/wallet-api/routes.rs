@@ -1186,9 +1186,16 @@ async fn recordopening(
 async fn transactionhistory(
     bindings: &HashMap<String, RouteBinding>,
     wallet: &mut Option<Wallet>,
-) -> Result<(Vec<TransactionHistoryEntry>, HashMap<AssetCode, AssetInfo>), tide::Error> {
+) -> Result<
+    (
+        Vec<TransactionHistoryEntry>,
+        HashMap<AssetCode, Option<AssetInfo>>,
+    ),
+    tide::Error,
+> {
     let wallet = require_wallet(wallet)?;
     let history = wallet.transaction_history().await.map_err(wallet_error)?;
+    let assets = known_assets(wallet).await;
     let from = match bindings.get(":from") {
         Some(param) => history.len().saturating_sub(param.value.as_usize()?),
         None => 0,
@@ -1201,7 +1208,11 @@ async fn transactionhistory(
         .then(|entry| TransactionHistoryEntry::from_wallet(wallet, entry))
         .collect::<Vec<_>>()
         .await;
-    Ok((selected, known_assets(wallet).await))
+    let asset_map = selected
+        .iter()
+        .map(|entry| (entry.asset, assets.get(&entry.asset).cloned()))
+        .collect::<HashMap<_, _>>();
+    Ok((selected, asset_map))
 }
 
 async fn getprivatekey(

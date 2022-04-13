@@ -155,7 +155,7 @@
 <h1 id="introduction"><a class="header" href="#introduction">Introduction</a></h1>
 <p>The CAPE system is a set of components which purpose is to enable users to</p>
 <ul>
-<li>Create, Transfer and Freeze assets on an CAPE system.</li>
+<li>Create, Transfer and Freeze assets.</li>
 <li>Wrap ERC20 tokens into CAPE asset records.</li>
 <li>Unwrap CAPE asset records back into ERC20 tokens.</li>
 </ul>
@@ -208,7 +208,7 @@ In other words a token that implements the <a href="https://eips.ethereum.org/EI
     address verifierAddr
   ) public
 </code></pre>
-<p>CAPE contract constructor method</p>
+<p>CAPE contract constructor method.</p>
 <h3 id="parameters"><a class="header" href="#parameters">Parameters</a></h3>
 <table><thead><tr><th align="left">Name</th><th align="left">Type</th><th align="left">Description</th></tr></thead><tbody>
 <tr><td align="left"><code>merkleTreeHeight</code></td><td align="left">uint8</td><td align="left">height of the merkle tree that stores the asset record commitments</td></tr>
@@ -222,7 +222,7 @@ In other words a token that implements the <a href="https://eips.ethereum.org/EI
     bytes32 faucetManagerEncKey
   ) public
 </code></pre>
-<p>Allocate native token faucet to a manager for testnet only</p>
+<p>Allocate native token faucet to a manager. For testnet only.</p>
 <h3 id="parameters-1"><a class="header" href="#parameters-1">Parameters</a></h3>
 <table><thead><tr><th align="left">Name</th><th align="left">Type</th><th align="left">Description</th></tr></thead><tbody>
 <tr><td align="left"><code>faucetManagerAddress</code></td><td align="left">struct EdOnBN254.EdOnBN254Point</td><td align="left">address of public key of faucet manager for CAP native token (testnet only!)</td></tr>
@@ -234,8 +234,8 @@ In other words a token that implements the <a href="https://eips.ethereum.org/EI
     uint256[] newNullifiers
   ) internal
 </code></pre>
-<p>Publish an array of nullifiers
-Requires all nullifiers to be unique and unpublished.
+<p>Publish an array of nullifiers.</p>
+<p>Requires all nullifiers to be unique and unpublished.
 A block creator must not submit notes with duplicate nullifiers.</p>
 <h3 id="parameters-2"><a class="header" href="#parameters-2">Parameters</a></h3>
 <table><thead><tr><th align="left">Name</th><th align="left">Type</th><th align="left">Description</th></tr></thead><tbody>
@@ -247,8 +247,8 @@ A block creator must not submit notes with duplicate nullifiers.</p>
     uint256 nullifier
   ) internal
 </code></pre>
-<p>Publish a nullifier if it hasn't been published before
-reverts if the nullifier is already published</p>
+<p>Publish a nullifier if it hasn't been published before.</p>
+<p>Reverts if the nullifier is already published.</p>
 <h3 id="parameters-3"><a class="header" href="#parameters-3">Parameters</a></h3>
 <table><thead><tr><th align="left">Name</th><th align="left">Type</th><th align="left">Description</th></tr></thead><tbody>
 <tr><td align="left"><code>nullifier</code></td><td align="left">uint256</td><td align="left">nullifier to publish</td></tr>
@@ -260,11 +260,11 @@ reverts if the nullifier is already published</p>
     address erc20Address
   ) public
 </code></pre>
-<p>allows to wrap some erc20 tokens into some CAPE asset defined in the record opening</p>
+<p>Allows to wrap some erc20 tokens into some CAPE asset defined in the record opening.</p>
 <h3 id="parameters-4"><a class="header" href="#parameters-4">Parameters</a></h3>
 <table><thead><tr><th align="left">Name</th><th align="left">Type</th><th align="left">Description</th></tr></thead><tbody>
-<tr><td align="left"><code>ro</code></td><td align="left">struct CAPE.RecordOpening</td><td align="left">record opening that will be inserted in the records merkle tree once the deposit is validated.</td></tr>
-<tr><td align="left"><code>erc20Address</code></td><td align="left">address</td><td align="left">address of the ERC20 token corresponding to the deposit.</td></tr>
+<tr><td align="left"><code>ro</code></td><td align="left">struct CAPE.RecordOpening</td><td align="left">record opening that will be inserted in the records merkle tree once the deposit is validated</td></tr>
+<tr><td align="left"><code>erc20Address</code></td><td align="left">address</td><td align="left">address of the ERC20 token corresponding to the deposit</td></tr>
 </tbody></table>
 <hr />
 <h2 id="submitcapeblockwithmemos"><a class="header" href="#submitcapeblockwithmemos">submitCapeBlockWithMemos</a></h2>
@@ -276,8 +276,8 @@ reverts if the nullifier is already published</p>
 <p>Submit a new block with extra data to the CAPE contract.</p>
 <h3 id="parameters-5"><a class="header" href="#parameters-5">Parameters</a></h3>
 <table><thead><tr><th align="left">Name</th><th align="left">Type</th><th align="left">Description</th></tr></thead><tbody>
-<tr><td align="left"><code>newBlock</code></td><td align="left">struct CAPE.CapeBlock</td><td align="left">block to be processed by the CAPE contract.</td></tr>
-<tr><td align="left"><code>extraData</code></td><td align="left">bytes</td><td align="left">extra data to be stored in calldata, this data is ignored by the contract function.</td></tr>
+<tr><td align="left"><code>newBlock</code></td><td align="left">struct CAPE.CapeBlock</td><td align="left">block to be processed by the CAPE contract</td></tr>
+<tr><td align="left"><code>extraData</code></td><td align="left">bytes</td><td align="left">extra data to be stored in calldata, this data is ignored by the contract function</td></tr>
 </tbody></table>
 <hr />
 <h2 id="submitcapeblock"><a class="header" href="#submitcapeblock">submitCapeBlock</a></h2>
@@ -285,7 +285,8 @@ reverts if the nullifier is already published</p>
     struct CAPE.CapeBlock newBlock
   ) public
 </code></pre>
-<p>Submit a new block to the CAPE contract. Transactions are validated and the blockchain state is updated. Moreover <em>BURN</em> transactions trigger the unwrapping of cape asset records into erc20 tokens.</p>
+<p>Submit a new block to the CAPE contract.</p>
+<p>Transactions are validated and the blockchain state is updated. Moreover <em>BURN</em> transactions trigger the unwrapping of cape asset records into erc20 tokens.</p>
 <h3 id="parameters-6"><a class="header" href="#parameters-6">Parameters</a></h3>
 <table><thead><tr><th align="left">Name</th><th align="left">Type</th><th align="left">Description</th></tr></thead><tbody>
 <tr><td align="left"><code>newBlock</code></td><td align="left">struct CAPE.CapeBlock</td><td align="left">block to be processed by the CAPE contract.</td></tr>
@@ -313,7 +314,7 @@ reverts if the nullifier is already published</p>
     struct CAPE.TransferNote note
   ) internal
 </code></pre>
-<p>Verify if a note is of type <em>TRANSFER</em></p>
+<p>Verify if a note is of type <em>TRANSFER</em>.</p>
 <h3 id="parameters-8"><a class="header" href="#parameters-8">Parameters</a></h3>
 <table><thead><tr><th align="left">Name</th><th align="left">Type</th><th align="left">Description</th></tr></thead><tbody>
 <tr><td align="left"><code>note</code></td><td align="left">struct CAPE.TransferNote</td><td align="left">note which could be of type <em>TRANSFER</em> or <em>BURN</em></td></tr>
@@ -324,7 +325,7 @@ reverts if the nullifier is already published</p>
     struct CAPE.TransferNote note
   ) internal returns (bool)
 </code></pre>
-<p>check if a note has expired</p>
+<p>Check if a note has expired.</p>
 <h3 id="parameters-9"><a class="header" href="#parameters-9">Parameters</a></h3>
 <table><thead><tr><th align="left">Name</th><th align="left">Type</th><th align="left">Description</th></tr></thead><tbody>
 <tr><td align="left"><code>note</code></td><td align="left">struct CAPE.TransferNote</td><td align="left">note for which we want to check its timestamp against the current block height</td></tr>
@@ -335,7 +336,7 @@ reverts if the nullifier is already published</p>
     struct CAPE.BurnNote note
   ) internal
 </code></pre>
-<p>check if a burn note is well formed</p>
+<p>Check if a burn note is well formed.</p>
 <h3 id="parameters-10"><a class="header" href="#parameters-10">Parameters</a></h3>
 <table><thead><tr><th align="left">Name</th><th align="left">Type</th><th align="left">Description</th></tr></thead><tbody>
 <tr><td align="left"><code>note</code></td><td align="left">struct CAPE.BurnNote</td><td align="left">note of type <em>BURN</em></td></tr>
@@ -346,7 +347,7 @@ reverts if the nullifier is already published</p>
     bytes byteSeq
   ) internal returns (bool)
 </code></pre>
-<p>helper function to check if a sequence of bytes contains hardcoded prefix</p>
+<p>Helper function to check if a sequence of bytes contains hardcoded prefix.</p>
 <h3 id="parameters-11"><a class="header" href="#parameters-11">Parameters</a></h3>
 <table><thead><tr><th align="left">Name</th><th align="left">Type</th><th align="left">Description</th></tr></thead><tbody>
 <tr><td align="left"><code>byteSeq</code></td><td align="left">bytes</td><td align="left">sequence of bytes</td></tr>
@@ -357,7 +358,7 @@ reverts if the nullifier is already published</p>
     struct CAPE.BurnNote note
   ) internal returns (bool)
 </code></pre>
-<p>check if the burned record opening and the record commitment in position 1 are consistent</p>
+<p>Check if the burned record opening and the record commitment in position 1 are consistent.</p>
 <h3 id="parameters-12"><a class="header" href="#parameters-12">Parameters</a></h3>
 <table><thead><tr><th align="left">Name</th><th align="left">Type</th><th align="left">Description</th></tr></thead><tbody>
 <tr><td align="left"><code>note</code></td><td align="left">struct CAPE.BurnNote</td><td align="left">note of type <em>BURN</em></td></tr>
@@ -368,7 +369,7 @@ reverts if the nullifier is already published</p>
     struct CAPE.RecordOpening ro
   ) internal returns (uint256 rc)
 </code></pre>
-<p>compute the commitment of a record opening</p>
+<p>Compute the commitment of a record opening.</p>
 <h3 id="parameters-13"><a class="header" href="#parameters-13">Parameters</a></h3>
 <table><thead><tr><th align="left">Name</th><th align="left">Type</th><th align="left">Description</th></tr></thead><tbody>
 <tr><td align="left"><code>ro</code></td><td align="left">struct CAPE.RecordOpening</td><td align="left">record opening</td></tr>
@@ -379,7 +380,7 @@ reverts if the nullifier is already published</p>
     struct CAPE.TransferNote note
   ) internal returns (struct IPlonkVerifier.VerifyingKey vk, uint256[] publicInput, struct IPlonkVerifier.PlonkProof proof, bytes transcriptInitMsg)
 </code></pre>
-<p>An overloaded function (one for each note type) to prepare all inputs necessary for batch verification of the plonk proof</p>
+<p>An overloaded function (one for each note type) to prepare all inputs necessary for batch verification of the plonk proof.</p>
 <h3 id="parameters-14"><a class="header" href="#parameters-14">Parameters</a></h3>
 <table><thead><tr><th align="left">Name</th><th align="left">Type</th><th align="left">Description</th></tr></thead><tbody>
 <tr><td align="left"><code>note</code></td><td align="left">struct CAPE.TransferNote</td><td align="left">note of type <em>TRANSFER</em></td></tr>
@@ -390,7 +391,7 @@ reverts if the nullifier is already published</p>
     struct CAPE.BurnNote note
   ) internal returns (struct IPlonkVerifier.VerifyingKey, uint256[], struct IPlonkVerifier.PlonkProof, bytes)
 </code></pre>
-<p>An overloaded function (one for each note type) to prepare all inputs necessary for batch verification of the plonk proof</p>
+<p>An overloaded function (one for each note type) to prepare all inputs necessary for batch verification of the plonk proof.</p>
 <h3 id="parameters-15"><a class="header" href="#parameters-15">Parameters</a></h3>
 <table><thead><tr><th align="left">Name</th><th align="left">Type</th><th align="left">Description</th></tr></thead><tbody>
 <tr><td align="left"><code>note</code></td><td align="left">struct CAPE.BurnNote</td><td align="left">note of type <em>BURN</em></td></tr>
@@ -401,7 +402,7 @@ reverts if the nullifier is already published</p>
     struct CAPE.MintNote note
   ) internal returns (struct IPlonkVerifier.VerifyingKey vk, uint256[] publicInput, struct IPlonkVerifier.PlonkProof proof, bytes transcriptInitMsg)
 </code></pre>
-<p>An overloaded function (one for each note type) to prepare all inputs necessary for batch verification of the plonk proof</p>
+<p>An overloaded function (one for each note type) to prepare all inputs necessary for batch verification of the plonk proof.</p>
 <h3 id="parameters-16"><a class="header" href="#parameters-16">Parameters</a></h3>
 <table><thead><tr><th align="left">Name</th><th align="left">Type</th><th align="left">Description</th></tr></thead><tbody>
 <tr><td align="left"><code>note</code></td><td align="left">struct CAPE.MintNote</td><td align="left">note of type <em>MINT</em></td></tr>
@@ -412,7 +413,7 @@ reverts if the nullifier is already published</p>
     struct CAPE.FreezeNote note
   ) internal returns (struct IPlonkVerifier.VerifyingKey vk, uint256[] publicInput, struct IPlonkVerifier.PlonkProof proof, bytes transcriptInitMsg)
 </code></pre>
-<p>An overloaded function (one for each note type) to prepare all inputs necessary for batch verification of the plonk proof</p>
+<p>An overloaded function (one for each note type) to prepare all inputs necessary for batch verification of the plonk proof.</p>
 <h3 id="parameters-17"><a class="header" href="#parameters-17">Parameters</a></h3>
 <table><thead><tr><th align="left">Name</th><th align="left">Type</th><th align="left">Description</th></tr></thead><tbody>
 <tr><td align="left"><code>note</code></td><td align="left">struct CAPE.FreezeNote</td><td align="left">note of type <em>FREEZE</em></td></tr>
@@ -578,6 +579,7 @@ ERC-20 token and the address of the sponsor.</p>
 <pre><code class="language-solidity">  function getRootValue(
   ) public returns (uint256)
 </code></pre>
+<p>Returns the root value of the Merkle tree.</p>
 <hr />
 <div style="break-before: page; page-break-before: always;"></div><h1 id="functions-3"><a class="header" href="#functions-3">Functions</a></h1>
 <h2 id="constructor-2"><a class="header" href="#constructor-2">constructor</a></h2>

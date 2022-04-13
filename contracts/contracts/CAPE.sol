@@ -208,9 +208,9 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
         nullifiers[nullifier] = true;
     }
 
-    /// @notice Allows to wrap some erc20 tokens into some CAPE asset defined in the record opening.
+    /// @notice Wraps ERC-20 tokens into a CAPE asset defined in the record opening.
     /// @param ro record opening that will be inserted in the records merkle tree once the deposit is validated
-    /// @param erc20Address address of the ERC20 token corresponding to the deposit
+    /// @param erc20Address address of the ERC-20 token corresponding to the deposit
     function depositErc20(RecordOpening memory ro, address erc20Address) public nonReentrant {
         require(isCapeAssetRegistered(ro.assetDef), "Asset definition not registered");
 
@@ -232,7 +232,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
 
     /// @notice Submit a new block with extra data to the CAPE contract.
     /// @param newBlock block to be processed by the CAPE contract
-    /// @param extraData extra data to be stored in calldata, this data is ignored by the contract function
+    /// @param extraData extra data to be stored in calldata; this data is ignored by the contract function
     // solhint-disable-next-line no-unused-vars
     function submitCapeBlockWithMemos(CapeBlock memory newBlock, bytes calldata extraData) public {
         submitCapeBlock(newBlock);
@@ -362,7 +362,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
         delete pendingDeposits;
     }
 
-    /// @dev send the ERC20 tokens equivalent to the asset records being burnt. Recall that the burned record opening is contained inside the note.
+    /// @dev send the ERC-20 tokens equivalent to the asset records being burnt. Recall that the burned record opening is contained inside the note.
     /// @param note note of type *BURN*
     function _handleWithdrawal(BurnNote memory note) internal {
         address ercTokenAddress = lookup(note.recordOpening.assetDef);
@@ -420,7 +420,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
         require(_containsBurnRecord(note), "Bad record commitment");
     }
 
-    /// @dev Helper function to check if a sequence of bytes contains hardcoded prefix.
+    /// @dev Checks if a sequence of bytes contains hardcoded prefix.
     /// @param byteSeq sequence of bytes
     function _containsBurnPrefix(bytes memory byteSeq) internal pure returns (bool) {
         if (byteSeq.length < CAPE_BURN_MAGIC_BYTES_SIZE) {

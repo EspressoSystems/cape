@@ -1,6 +1,6 @@
 // Copyright (c) 2022 Espresso Systems (espressosys.com)
 // This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
-
+//
 // This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 // This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
@@ -107,8 +107,7 @@ pub async fn create_test_network<'a>(
         Url::parse(&format!("http://localhost:{}", address_book_port())).unwrap();
 
     // Set up a network that includes a minimal relayer, connected to a real Ethereum
-    // blockchain, as well as a mock EQS which will track the blockchain in parallel, since we
-    // don't yet have a real EQS.
+    // blockchain, as well as a mock EQS which will track the blockchain in parallel.
     let relayer_port = port().await;
     let (contract, sender_key, sender_rec, records) =
         start_minimal_relayer_for_test(relayer_port, faucet_key_pair).await;
@@ -194,7 +193,7 @@ pub async fn spawn_eqs(cape_address: Address) -> (Url, TempDir, JoinHandle<std::
         .to_string(),
         store_path: dir.path().as_os_str().to_str().unwrap().to_owned(),
         reset_store_state: true,
-        query_frequency: 500,
+        query_interval: 500,
         eqs_port: eqs_port as u16,
         cape_address: Some(cape_address),
         rpc_url: rpc_url_for_test().to_string(),

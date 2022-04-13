@@ -1,6 +1,6 @@
 // Copyright (c) 2022 Espresso Systems (espressosys.com)
 // This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
-
+//
 // This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 // This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
@@ -293,7 +293,7 @@ fn update_balances(
     }
 
     let sender_assets = balances.get_mut(send_addr).unwrap();
-    // Udate with asset code
+    // Update with asset code
     let send_balance = *sender_assets.get(asset).unwrap_or(&0);
     assert!(
         send_balance >= amount,
@@ -405,6 +405,7 @@ async fn main() {
             .await
             .unwrap();
         w.await_transaction(&txn).await.unwrap();
+        wallet.await_transaction(&txn).await.unwrap();
 
         balances.insert(k.address().clone(), HashMap::new());
         balances
@@ -441,7 +442,7 @@ async fn main() {
 
                 let recipient_pk = public_keys.choose(&mut rng).unwrap();
                 // Can't choose weighted and check this because async lambda not allowed.
-                // There is probably a betterw way
+                // TODO Look for a possible better way
                 if sender.pub_keys().await[0] == *recipient_pk {
                     continue;
                 }
@@ -462,6 +463,7 @@ async fn main() {
                         "Wallet has no balance.  Wallet Address: {}",
                         sender_address
                     );
+                    continue;
                 }
                 // Randomly choose an asset type for the transfer.
                 let asset = asset_balances.choose(&mut rng).unwrap();

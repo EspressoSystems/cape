@@ -1,6 +1,6 @@
 // Copyright (c) 2022 Espresso Systems (espressosys.com)
 // This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
-
+//
 // This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 // This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
@@ -27,7 +27,7 @@ use crate::merkle_tree::RecordMerkleTree;
 #[derive(Debug, Clone)]
 pub struct NullifierRepeatedError;
 
-/// a block in CAPE blockchain
+/// A block in CAPE blockchain
 #[derive(Default, Clone)]
 pub struct CapeBlock {
     /// NOTE: separated out list of burn transaction
@@ -59,6 +59,8 @@ impl CapeBlock {
     /// <https://github.com/EspressoSystems/cap/blob/main/tests/examples.rs>
     /// Take a new block and remove the transactions that are not valid and update
     /// the list of record openings corresponding to burn transactions accordingly.
+    /// Note that the validation of a block in the solidity implementation of the CAPE contract is slightly different:
+    /// If a single transaction is invalid, then the whole block is rejected.
     pub fn validate(
         &self,
         recent_merkle_roots: &LinkedList<NodeValue>,
@@ -152,6 +154,7 @@ impl CapeBlock {
     }
 }
 
+/// State and methods of a CAPE contract
 pub struct CapeContract {
     /// set of spent records' nullifiers, stored as mapping in contract
     nullifiers: HashSet<Nullifier>,
@@ -190,13 +193,13 @@ impl CapeContract {
         }
     }
 
-    /// Return the address of the contract
+    /// Return the address of the contract.
     pub(crate) fn address(&self) -> Address {
         // NOTE: in Solidity, use expression: `address(this)`
         Address::from_low_u64_le(666u64)
     }
 
-    /// getter for registrar
+    /// getter for registrar.
     pub fn is_cape_asset_registered(&self, asset_def: &AssetDefinition) -> bool {
         self.wrapped_erc20_registrar.contains_key(asset_def)
     }
@@ -227,7 +230,7 @@ impl CapeContract {
 
     /// Deposit some ERC20 tokens so that these are wrapped into asset records
     /// NOTE: in Solidity, we can
-    /// - avoid passing in `ro.freeze_flag` (to save a little gas?)
+    /// - avoid passing in `ro.freeze_flag` (e.g: to save a bit of gas)
     /// - remove `depositor` from input parameters, and directly replaced with `msg.sender`
     pub fn deposit_erc20(&mut self, ro: RecordOpening, erc20_addr: Address, depositor: Address) {
         let mut erc20_contract = Erc20Contract::at(erc20_addr);

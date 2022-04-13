@@ -1,6 +1,6 @@
 // Copyright (c) 2022 Espresso Systems (espressosys.com)
 // This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
-
+//
 // This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 // This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
@@ -25,7 +25,7 @@ use ethers::{
 
 use std::{convert::TryFrom, env, fs, path::Path, sync::Arc, time::Duration};
 
-/// Utility to interact with CAPE contract on Ethereum blockchain
+/// Utility to interact with the CAPE contract on some Ethereum blockchain
 #[derive(Clone, Debug)]
 pub struct EthConnection {
     pub provider: Provider<Http>,
@@ -79,6 +79,7 @@ impl EthConnection {
     }
 }
 
+/// Obtain the Web3 provider using some default url or an environment variable.
 pub fn get_provider() -> Provider<Http> {
     let rpc_url = match env::var("CAPE_WEB3_PROVIDER_URL") {
         Ok(url) => url,
@@ -87,10 +88,12 @@ pub fn get_provider() -> Provider<Http> {
     get_provider_from_url(&rpc_url)
 }
 
+/// Obtain the Web3 provider from an url.
 pub fn get_provider_from_url(rpc_url: &str) -> Provider<Http> {
     Provider::<Http>::try_from(rpc_url).expect("could not instantiate HTTP Provider")
 }
 
+/// Obtain a client already funded with some 1 ETH.
 pub async fn get_funded_client() -> Result<Arc<EthMiddleware>> {
     let mut provider = get_provider();
     let chain_id = provider.get_chainid().await.unwrap().as_u64();
@@ -197,6 +200,7 @@ async fn link_unlinked_libraries<M: 'static + Middleware>(
 
 // TODO: why do we need 'static ?
 // https://docs.rs/anyhow/1.0.44/anyhow/struct.Error.html ?
+/// Deploy a contract linking it to some (possibly already deployed) libraries.
 #[async_recursion]
 pub async fn deploy<M: 'static + Middleware, T: Send + Tokenize>(
     client: Arc<M>,
@@ -212,7 +216,7 @@ pub async fn deploy<M: 'static + Middleware, T: Send + Tokenize>(
     Ok(contract)
 }
 
-/// Panic if no contract code found at specified address.
+/// Panic if no contract code found at the specified address.
 pub async fn ensure_connected_to_contract(
     provider: &Provider<Http>,
     contract_address: Address,

@@ -1,3 +1,12 @@
+<!--
+ ~ Copyright (c) 2022 Espresso Systems (espressosys.com)
+ ~ This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
+ ~
+ ~ This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+ ~ This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ ~ You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+ -->
+
 # Wallet
 
 User entry point to the CAPE system. This is an instantiation of the
@@ -74,16 +83,16 @@ Once you have an open wallet, you will get the REPL prompt, `>`. Now you can typ
   - `create_asset`: create a new asset
   - `mint`: mint an asset
     - Note: The `asset` argument must be an already-created asset. To create an asset, use the `create` command.
-  - `freeze`: freeze assets owned by another users
+  - `freeze`: freeze assets owned by another
     - Note: The `asset` argument must be a freezable asset.
-  - `unfreeze`: unfreeze previously frozen assets owned by another users
+  - `unfreeze`: unfreeze previously frozen assets owned by another user
   - `wait`: wait for a transaction to complete
   - `sync`: wait until the wallet has processed up to a given event index
 
 - Information listing
 
   - `address`: print all public addresses of this wallet
-  - `pub_key`: print all of the public keys of this wallet
+  - `pub_key`: print all public keys of this wallet
   - `assets`: list assets known to the wallet
   - `asset`: print information about an asset
   - `balance`: print owned balances of asset

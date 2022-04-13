@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-
+//
 // Copyright (c) 2022 Espresso Systems (espressosys.com)
 // This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
-
+//
 // This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 // This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
@@ -36,7 +36,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
     IPlonkVerifier private _verifier;
     uint256[] public pendingDeposits;
 
-    // NOTE: used for faucet in testnet only, removed for mainnet
+    // NOTE: used for faucet in testnet only, will be removed for mainnet
     address public deployer;
     bool public faucetInitialized;
 
@@ -143,7 +143,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
         BurnNote[] burnNotes;
     }
 
-    /// @notice CAPE contract constructor method
+    /// @notice CAPE contract constructor method.
     /// @param merkleTreeHeight height of the merkle tree that stores the asset record commitments
     /// @param nRoots number of the most recent roots of the records merkle tree to be stored
     /// @param verifierAddr address of the Plonk Verifier contract
@@ -154,11 +154,11 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
     ) RecordsMerkleTree(merkleTreeHeight) RootStore(nRoots) {
         _verifier = IPlonkVerifier(verifierAddr);
 
-        // NOTE: used for faucet in testnet only, removed for mainnet
+        // NOTE: used for faucet in testnet only, will be removed for mainnet
         deployer = msg.sender;
     }
 
-    /// @notice Allocate native token faucet to a manager for testnet only
+    /// @notice Allocate native token faucet to a manager. For testnet only.
     /// @param faucetManagerAddress address of public key of faucet manager for CAP native token (testnet only!)
     /// @param faucetManagerEncKey public key of faucet manager for CAP native token (testnet only!)
     function faucetSetupForTestnet(
@@ -190,7 +190,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
         faucetInitialized = true;
     }
 
-    /// @dev Publish an array of nullifiers
+    /// @notice Publish an array of nullifiers.
     /// @dev Requires all nullifiers to be unique and unpublished.
     /// @dev A block creator must not submit notes with duplicate nullifiers.
     /// @param newNullifiers list of nullifiers to publish
@@ -200,17 +200,17 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
         }
     }
 
-    /// @dev Publish a nullifier if it hasn't been published before
-    /// @dev reverts if the nullifier is already published
+    /// @notice Publish a nullifier if it hasn't been published before.
+    /// @dev Reverts if the nullifier is already published.
     /// @param nullifier nullifier to publish
     function _publish(uint256 nullifier) internal {
         require(!nullifiers[nullifier], "Nullifier already published");
         nullifiers[nullifier] = true;
     }
 
-    /// @notice allows to wrap some erc20 tokens into some CAPE asset defined in the record opening
-    /// @param ro record opening that will be inserted in the records merkle tree once the deposit is validated.
-    /// @param erc20Address address of the ERC20 token corresponding to the deposit.
+    /// @notice Allows to wrap some erc20 tokens into some CAPE asset defined in the record opening.
+    /// @param ro record opening that will be inserted in the records merkle tree once the deposit is validated
+    /// @param erc20Address address of the ERC20 token corresponding to the deposit
     function depositErc20(RecordOpening memory ro, address erc20Address) public nonReentrant {
         require(isCapeAssetRegistered(ro.assetDef), "Asset definition not registered");
 
@@ -231,14 +231,15 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
     }
 
     /// @notice Submit a new block with extra data to the CAPE contract.
-    /// @param newBlock block to be processed by the CAPE contract.
-    /// @param extraData extra data to be stored in calldata, this data is ignored by the contract function.
+    /// @param newBlock block to be processed by the CAPE contract
+    /// @param extraData extra data to be stored in calldata, this data is ignored by the contract function
     // solhint-disable-next-line no-unused-vars
     function submitCapeBlockWithMemos(CapeBlock memory newBlock, bytes calldata extraData) public {
         submitCapeBlock(newBlock);
     }
 
-    /// @notice Submit a new block to the CAPE contract. Transactions are validated and the blockchain state is updated. Moreover *BURN* transactions trigger the unwrapping of cape asset records into erc20 tokens.
+    /// @notice Submit a new block to the CAPE contract.
+    /// @dev Transactions are validated and the blockchain state is updated. Moreover *BURN* transactions trigger the unwrapping of cape asset records into erc20 tokens.
     /// @param newBlock block to be processed by the CAPE contract.
     function submitCapeBlock(CapeBlock memory newBlock) public nonReentrant {
         AccumulatingArray.Data memory commitments = AccumulatingArray.create(
@@ -396,7 +397,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
         return numComms;
     }
 
-    /// @dev Verify if a note is of type *TRANSFER*
+    /// @dev Verify if a note is of type *TRANSFER*.
     /// @param note note which could be of type *TRANSFER* or *BURN*
     function _checkTransfer(TransferNote memory note) internal pure {
         require(
@@ -405,13 +406,13 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
         );
     }
 
-    /// @dev check if a note has expired
+    /// @dev Check if a note has expired.
     /// @param note note for which we want to check its timestamp against the current block height
     function _isExpired(TransferNote memory note) internal view returns (bool) {
         return note.auxInfo.validUntil < blockHeight;
     }
 
-    /// @dev check if a burn note is well formed
+    /// @dev Check if a burn note is well formed.
     /// @param note note of type *BURN*
     function _checkBurn(BurnNote memory note) internal view {
         bytes memory extra = note.transferNote.auxInfo.extraProofBoundData;
@@ -419,7 +420,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
         require(_containsBurnRecord(note), "Bad record commitment");
     }
 
-    /// @dev helper function to check if a sequence of bytes contains hardcoded prefix
+    /// @dev Helper function to check if a sequence of bytes contains hardcoded prefix.
     /// @param byteSeq sequence of bytes
     function _containsBurnPrefix(bytes memory byteSeq) internal pure returns (bool) {
         if (byteSeq.length < CAPE_BURN_MAGIC_BYTES_SIZE) {
@@ -432,7 +433,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
             );
     }
 
-    /// @dev check if the burned record opening and the record commitment in position 1 are consistent
+    /// @dev Check if the burned record opening and the record commitment in position 1 are consistent.
     /// @param note note of type *BURN*
     function _containsBurnRecord(BurnNote memory note) internal view returns (bool) {
         if (note.transferNote.outputCommitments.length < 2) {
@@ -442,7 +443,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
         return rc == note.transferNote.outputCommitments[1];
     }
 
-    /// @dev compute the commitment of a record opening
+    /// @dev Compute the commitment of a record opening.
     /// @param ro record opening
     function _deriveRecordCommitment(RecordOpening memory ro) internal view returns (uint256 rc) {
         require(ro.assetDef.policy.revealMap < 2**12, "Reveal map exceeds 12 bits");
@@ -474,7 +475,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
         return RescueLib.commit(inputs);
     }
 
-    /// @dev An overloaded function (one for each note type) to prepare all inputs necessary for batch verification of the plonk proof
+    /// @dev An overloaded function (one for each note type) to prepare all inputs necessary for batch verification of the plonk proof.
     /// @param note note of type *TRANSFER*
     function _prepareForProofVerification(TransferNote memory note)
         internal
@@ -540,7 +541,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
         );
     }
 
-    /// @dev An overloaded function (one for each note type) to prepare all inputs necessary for batch verification of the plonk proof
+    /// @dev An overloaded function (one for each note type) to prepare all inputs necessary for batch verification of the plonk proof.
     /// @param note note of type *BURN*
     function _prepareForProofVerification(BurnNote memory note)
         internal
@@ -555,7 +556,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
         return _prepareForProofVerification(note.transferNote);
     }
 
-    /// @dev An overloaded function (one for each note type) to prepare all inputs necessary for batch verification of the plonk proof
+    /// @dev An overloaded function (one for each note type) to prepare all inputs necessary for batch verification of the plonk proof.
     /// @param note note of type *MINT*
     function _prepareForProofVerification(MintNote memory note)
         internal
@@ -616,7 +617,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
         transcriptInitMsg = EdOnBN254.serialize(note.auxInfo.txnMemoVerKey);
     }
 
-    /// @dev An overloaded function (one for each note type) to prepare all inputs necessary for batch verification of the plonk proof
+    /// @dev An overloaded function (one for each note type) to prepare all inputs necessary for batch verification of the plonk proof.
     /// @param note note of type *FREEZE*
     function _prepareForProofVerification(FreezeNote memory note)
         internal

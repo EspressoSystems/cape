@@ -1,6 +1,6 @@
 // Copyright (c) 2022 Espresso Systems (espressosys.com)
 // This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
-
+//
 // This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 // This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
@@ -227,7 +227,7 @@ pub async fn init_web_server(
     .unwrap();
     let mut wallet = CapeWallet::new(backend).await.unwrap();
 
-    // If a faucet key pair is provided, add it to the wallet. Othereise, if we're initializing
+    // If a faucet key pair is provided, add it to the wallet. Otherwise, if we're initializing
     // for the first time, we need to generate a key. The faucet should be set up so that the
     // first HD sending key is the faucet key.
     if let Some(key) = faucet_key_pair {

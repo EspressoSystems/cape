@@ -1,6 +1,6 @@
 // Copyright (c) 2022 Espresso Systems (espressosys.com)
 // This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
-
+//
 // This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 // This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
@@ -93,6 +93,7 @@ pub struct CapState {
     pub num_events: u64,
 }
 
+/// Return the whole state of the CAPE contract.
 pub async fn get_cap_state(query_result_state: &QueryResultState) -> Result<CapState, tide::Error> {
     Ok(CapState {
         ledger: query_result_state.ledger_state.clone(),
@@ -100,12 +101,14 @@ pub async fn get_cap_state(query_result_state: &QueryResultState) -> Result<CapS
     })
 }
 
+/// Obtain all the nullifiers that have been published in the CAPE contract.
 pub async fn get_all_nullifiers(
     query_result_state: &QueryResultState,
 ) -> Result<HashSet<Nullifier>, tide::Error> {
     Ok(query_result_state.nullifiers.clone())
 }
 
+/// Check if a nullifier has already been published.
 pub async fn check_nullifier(
     bindings: &HashMap<String, RouteBinding>,
     query_result_state: &QueryResultState,
@@ -115,6 +118,7 @@ pub async fn check_nullifier(
         .contains(&bindings[":nullifier"].value.to::<Nullifier>()?))
 }
 
+/// Return a list of consecutive CAPE contract events.
 pub async fn get_events_since(
     bindings: &HashMap<String, RouteBinding>,
     query_result_state: &QueryResultState,
@@ -136,6 +140,7 @@ pub async fn get_events_since(
     Ok(query_result_state.events[first..last].to_vec())
 }
 
+/// Return a CAP transaction identified by its block and transaction identifier.
 pub async fn get_transaction(
     bindings: &HashMap<String, RouteBinding>,
     query_result_state: &QueryResultState,
@@ -149,6 +154,7 @@ pub async fn get_transaction(
         .cloned())
 }
 
+/// Return a CAP transaction identified by its hash.
 pub async fn get_transaction_by_hash(
     bindings: &HashMap<String, RouteBinding>,
     query_result_state: &QueryResultState,

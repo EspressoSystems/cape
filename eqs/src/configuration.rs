@@ -1,6 +1,6 @@
 // Copyright (c) 2022 Espresso Systems (espressosys.com)
 // This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
-
+//
 // This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 // This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
@@ -88,9 +88,9 @@ pub struct EQSOptions {
     #[structopt(long)]
     pub reset_store_state: bool,
 
-    /// Polling frequency, in milliseconds, for commits to the contract.
-    #[structopt(long, default_value = "500")]
-    pub query_frequency: u64,
+    /// Polling interval, in milliseconds, for commits to the contract.
+    #[structopt(long, default_value = "500", env = "CAPE_EQS_POLL_INTERVAL_MS")]
+    pub query_interval: u64,
 
     /// Web service port .
     #[structopt(long, default_value = "50087", env = "CAPE_EQS_PORT")]
@@ -164,8 +164,8 @@ impl EQSOptions {
         self.reset_store_state
     }
 
-    pub(crate) fn query_frequency(&self) -> Duration {
-        Duration::from_millis(self.query_frequency)
+    pub(crate) fn query_interval(&self) -> Duration {
+        Duration::from_millis(self.query_interval)
     }
 
     pub(crate) fn eqs_port(&self) -> u16 {

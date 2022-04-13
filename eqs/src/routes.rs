@@ -174,10 +174,10 @@ pub async fn get_transaction_by_hash(
 
 /// Return a JSON expression with status 200 indicating the server
 /// is up and running. The JSON expression is one of
-/// * {"status": "initializing"}
-/// * {"status": "available"}
+/// * {"status": "Initializing"}
+/// * {"status": "Available"}
 ///
-/// The initializing status simply means that the server has not loaded all
+/// The Initializing status simply means that the server has not loaded all
 /// the latest data yet. It can still process requests.
 ///
 /// When the server is running but unable to process requests
@@ -186,17 +186,7 @@ pub async fn get_transaction_by_hash(
 pub async fn healthcheck(
     query_result_state: &QueryResultState,
 ) -> Result<serde_json::value::Value, tide::Error> {
-    let status = if query_result_state.catching_up {
-        "initializing"
-    } else {
-        "available"
-    };
-
-    // Ok(tide::Response::builder(200)
-    //     .content_type(tide::http::mime::JSON)
-    //     .body(tide::prelude::json!({ "status": status }))
-    //     .build())
-    Ok(tide::prelude::json!({ "status": status }))
+    Ok(tide::prelude::json!({ "status": query_result_state.system_status }))
 }
 
 pub async fn dispatch_url(

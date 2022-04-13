@@ -6,7 +6,7 @@
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::configuration::{Confirmations, EQSOptions};
-use crate::query_result_state::{EthEventIndex, QueryResultState};
+use crate::query_result_state::{EthEventIndex, QueryResultState, SystemStatus};
 use crate::state_persistence::StatePersistence;
 
 use async_std::sync::{Arc, RwLock};
@@ -436,7 +436,7 @@ impl EthPolling {
         }
 
         let mut qrs = self.query_result_state.write().await;
-        qrs.catching_up = false;
+        qrs.system_status = SystemStatus::Available;
 
         Ok(0)
     }

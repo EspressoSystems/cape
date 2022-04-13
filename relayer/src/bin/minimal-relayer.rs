@@ -40,12 +40,19 @@ struct MinimalRelayerOptions {
     #[structopt(long, env = "CAPE_RELAYER_PORT", default_value = DEFAULT_RELAYER_PORT)]
     port: u16,
 
-    /// Describes how transaction nonces should be calculated.
-    /// "mined": only count mined transaction when creating the nonce.
-    /// "pending": include pending transactions when creating the nonce.
-    /// Including "pending" transactions allows the relayer to submit
-    /// the next transaction after the previous one hit the nodes' mempool.
-    #[structopt(long, env = "CAPE_RELAYER_NONCE_COUNT_RULE", default_value = "mined")]
+    /// Determines how transaction nonces should be calculated.
+    ///
+    /// * `"mined"` - only count mined transaction when creating the nonce.
+    /// * `"pending"` - also include pending transactions when creating the nonce.
+    ///
+    /// Including "pending" transactions allows the relayer to submit the next
+    /// transaction as soon as the previous one hit the nodes' mempool.
+    #[structopt(
+        long,
+        env = "CAPE_RELAYER_NONCE_COUNT_RULE",
+        default_value = "mined",
+        verbatim_doc_comment
+    )]
     nonce_count_rule: NonceCountRule,
 }
 

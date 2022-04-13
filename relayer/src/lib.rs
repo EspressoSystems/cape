@@ -6,7 +6,6 @@
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #![doc = include_str!("../README.md")]
-use std::str::FromStr;
 
 #[warn(unused_imports)]
 use async_std::task;
@@ -21,6 +20,7 @@ use jf_cap::{keys::UserPubKey, structs::ReceiverMemo, Signature};
 use net::server::{add_error_body, request_body, response};
 use serde::{Deserialize, Serialize};
 use snafu::Snafu;
+use std::str::FromStr;
 use tide::StatusCode;
 
 pub const DEFAULT_RELAYER_PORT: &str = "50077";
@@ -70,9 +70,12 @@ pub struct SubmitBody {
     pub signature: Signature,
 }
 
+/// Determines how transaction nonces should be calculated.
 #[derive(Clone, Debug, Copy, Serialize, Deserialize)]
 pub enum NonceCountRule {
+    /// Only count mined transaction when creating the nonce.
     Mined,
+    /// Also include pending transactions when creating the nonce.
     Pending,
 }
 

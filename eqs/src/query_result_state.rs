@@ -44,6 +44,8 @@ pub struct QueryResultState {
     // additional indexed data for queries
     pub transaction_by_id: HashMap<(u64, u64), CommittedCapeTransition>,
     pub transaction_id_by_hash: HashMap<Commitment<CapeTransition>, (u64, u64)>,
+
+    pub catching_up: bool,
 }
 
 impl QueryResultState {
@@ -71,6 +73,8 @@ impl QueryResultState {
 
             transaction_by_id: HashMap::new(),
             transaction_id_by_hash: HashMap::new(),
+
+            catching_up: true,
         }
     }
 }

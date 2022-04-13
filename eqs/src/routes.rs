@@ -173,15 +173,28 @@ pub async fn get_transaction_by_hash(
 }
 
 /// Return a JSON expression with status 200 indicating the server
-/// is up and running. The JSON expression is simply,
-///    {"status": "available"}
+/// is up and running. The JSON expression is one of
+/// * {"status": "initializing"}
+/// * {"status": "available"}
+///
+/// The initializing status simply means that the server has not loaded all
+/// the latest data yet. It can still process requests.
+///
 /// When the server is running but unable to process requests
 /// normally, a response with status 503 and payload {"status":
 /// "unavailable"} should be added.
-pub async fn healthcheck() -> Result<tide::Response, tide::Error> {
+pub async fn healthcheck(
+    query_result_state: &QueryResultState,
+) -> Result<tide::Response, tide::Error> {
+    let status = if query_result_state.catching_up {
+        "initializing"
+    } else {
+        "available"
+    };
+
     Ok(tide::Response::builder(200)
         .content_type(tide::http::mime::JSON)
-        .body(tide::prelude::json!({"status": "available"}))
+        .body(tide::prelude::json!({ "status": status }))
         .build())
 }
 
@@ -209,6 +222,10 @@ pub async fn dispatch_url(
         ApiRouteKey::get_transaction_by_hash => {
             response(&req, get_transaction_by_hash(bindings, query_state).await?)
         }
-        ApiRouteKey::healthcheck => Ok(healthcheck().await?),
+        //        ApiRouteKey::healthcheck => Ok(healthcheck().await?),
+        ApiRouteKey::healthcheck => {
+            //            Ok(healthcheck().await?),
+            response(&req, healthcheck(query_state).await?)
+        }
     }
 }

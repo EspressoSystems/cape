@@ -55,6 +55,7 @@ pub async fn run(opt: &EQSOptions) -> std::io::Result<()> {
 
     loop {
         if let Ok(_height) = eth_poll.check().await {}
+        query_result_state.catching_up = false;
         // sleep here
         sleep(opt.query_interval()).await;
     }

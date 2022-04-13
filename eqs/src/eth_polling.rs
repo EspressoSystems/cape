@@ -435,6 +435,9 @@ impl EthPolling {
             self.next_block_to_query = latest_block + 1;
         }
 
+        let mut qrs = self.query_result_state.write().await;
+        qrs.catching_up = false;
+
         Ok(0)
     }
 }

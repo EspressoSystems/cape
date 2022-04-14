@@ -9,23 +9,20 @@ pub const FAUCET_MANAGER_ENCRYPTION_KEY: &str = "USERPUBKEY~muN7VKxj1GbJ4D6rU6gA
 
 #[cfg(test)]
 mod test {
-    use super::FAUCET_MANAGER_ENCRYPTION_KEY;
     use crate::{
         assertion::Matcher,
         deploy::deploy_test_cape_with_deployer,
         ethereum::get_funded_client,
         model::CAPE_MERKLE_HEIGHT,
-        types::{self as sol, field_to_u256, GenericInto, TestCAPE, CAPE},
+        types::{self as sol, field_to_u256, GenericInto, TestCAPE},
     };
     use anyhow::Result;
-    use ethers::{abi::AbiDecode, prelude::Address};
+    use ethers::abi::AbiDecode;
     use jf_cap::{
-        keys::{UserKeyPair, UserPubKey},
+        keys::UserKeyPair,
         structs::{AssetDefinition, BlindFactor, FreezeFlag, RecordCommitment, RecordOpening},
         BaseField, MerkleTree,
     };
-    use regex::Regex;
-    use std::{process::Command, str::FromStr};
 
     #[tokio::test]
     async fn test_faucet() -> Result<()> {
@@ -95,52 +92,6 @@ mod test {
         let root: ark_bn254::Fr = mt.commitment().root_value.to_scalar();
 
         assert!(contract.contains_root(field_to_u256(root)).call().await?);
-
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_hardhat_deploy() -> Result<()> {
-        let output = Command::new("hardhat")
-            .arg("deploy")
-            .arg("--reset")
-            .output()
-            .expect("\"hardhat deploy --reset\" failed to execute");
-
-        if !output.status.success() {
-            panic!(
-                "Command \"hardhat deploy --reset\" exited with error: {}",
-                String::from_utf8(output.stderr)?,
-            )
-        }
-
-        let text = String::from_utf8(output.stdout).unwrap();
-        // Get the address out of
-        // deploying "CAPE" (tx: 0x64...211)...: deployed at 0x8A791620dd6260079BF849Dc5567aDC3F2FdC318 with 7413790 gas
-        let re = Regex::new(r#""CAPE".*(0x[0-9a-fA-F]{40})"#).unwrap();
-        let address = re
-            .captures_iter(&text)
-            .next()
-            .unwrap_or_else(|| panic!("Address not found in {}", text))[1]
-            .parse::<Address>()
-            .unwrap_or_else(|_| panic!("Address not found in {}", text));
-
-        let client = get_funded_client().await.unwrap();
-        let contract = CAPE::new(address, client.clone());
-        let event = contract
-            .faucet_initialized_filter()
-            .from_block(0u64)
-            .query()
-            .await?[0]
-            .clone();
-        let ro_sol: sol::RecordOpening = AbiDecode::decode(event.ro_bytes).unwrap();
-
-        // Check that the faucet record opening in the deployed contract is the
-        // same as the hardcoded one in this crate.
-        assert_eq!(
-            UserPubKey::from_str(FAUCET_MANAGER_ENCRYPTION_KEY).unwrap(),
-            ro_sol.generic_into::<RecordOpening>().pub_key,
-        );
 
         Ok(())
     }

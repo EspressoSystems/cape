@@ -92,13 +92,12 @@ pub trait CapeWalletExt<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> {
 
     /// Construct the information required to sponsor an asset, but do not submit a transaction.
     ///
-    /// A new asset definition is created, added to the asset library, and returned. This asset can
-    /// be passed to the contract's `sponsorCapeAsset` function, along with `erc20_code`, in order
-    /// to sponsor the asset, but this function will not invoke the contract. For a version which
-    /// does, use [CapeWalletExt::sponsor].
+    /// A new asset definition is created and returned. This asset can be passed to the contract's
+    /// `sponsorCapeAsset` function, along with `erc20_code`, in order to sponsor the asset, but
+    /// this function will not invoke the contract. For a version which does, use
+    /// [CapeWalletExt::sponsor].
     async fn build_sponsor(
         &mut self,
-        symbol: String,
         erc20_code: Erc20Code,
         sponsor_addr: EthereumAddr,
         cap_asset_policy: AssetPolicy,
@@ -222,14 +221,13 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
         cap_asset_policy: AssetPolicy,
     ) -> Result<AssetDefinition, CapeWalletError> {
         let asset = self
-            .build_sponsor(
-                symbol,
-                erc20_code.clone(),
-                sponsor_addr.clone(),
-                cap_asset_policy,
-            )
+            .build_sponsor(erc20_code.clone(), sponsor_addr.clone(), cap_asset_policy)
             .await?;
         self.submit_sponsor(erc20_code, sponsor_addr, &asset)
+            .await?;
+
+        // Add the new asset to our asset library.
+        self.import_asset(AssetInfo::from(asset.clone()).with_name(symbol))
             .await?;
 
         Ok(asset)
@@ -237,7 +235,6 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
 
     async fn build_sponsor(
         &mut self,
-        symbol: String,
         erc20_code: Erc20Code,
         sponsor_addr: EthereumAddr,
         cap_asset_policy: AssetPolicy,
@@ -246,11 +243,6 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
         let code = AssetCode::new_foreign(&description);
         let asset = AssetDefinition::new(code, cap_asset_policy)
             .map_err(|source| CapeWalletError::CryptoError { source })?;
-
-        // Add the new asset to our asset library.
-        self.import_asset(AssetInfo::from(asset.clone()).with_name(symbol))
-            .await?;
-
         Ok(asset)
     }
 

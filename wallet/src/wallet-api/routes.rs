@@ -809,9 +809,13 @@ async fn newasset(
 async fn buildsponsor(
     bindings: &HashMap<String, RouteBinding>,
     wallet: &mut Option<Wallet>,
-) -> Result<sol::AssetDefinition, tide::Error> {
+) -> Result<(sol::AssetDefinition, String), tide::Error> {
     let wallet = require_wallet(wallet)?;
     let symbol = match bindings.get(":symbol") {
+        Some(param) => param.value.as_string()?,
+        None => String::new(),
+    };
+    let description = match bindings.get(":description") {
         Some(param) => param.value.as_string()?,
         None => String::new(),
     };
@@ -852,9 +856,19 @@ async fn buildsponsor(
         .as_string()?
         .parse()?;
     let asset = wallet
-        .build_sponsor(symbol, erc20_code.into(), sponsor_address.into(), policy)
+        .build_sponsor(erc20_code.into(), sponsor_address.into(), policy)
         .await?;
-    Ok(asset.into())
+    let info = seahorse::AssetInfo::from(asset.clone())
+        .with_name(symbol)
+        .with_description(description);
+
+    // The `AssetInfo` structure serializes as a JSON blob, but for exporting and transmitting, a
+    // compact, URL-safe string is more convenient. Therefore, we serialize to bytes and then encode
+    // in base64.
+    let bytes = bincode::serialize(&info).unwrap();
+    let info_string = TaggedBase64::new("CAPE-ASSET", &bytes).unwrap().to_string();
+
+    Ok((asset.into(), info_string))
 }
 
 async fn submitsponsor(

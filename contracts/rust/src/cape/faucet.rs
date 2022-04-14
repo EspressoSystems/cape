@@ -99,15 +99,21 @@ mod test {
         Ok(())
     }
 
-    // This test sometimes fails for currently unclear reasons.
-    #[ignore]
     #[tokio::test]
     async fn test_hardhat_deploy() -> Result<()> {
         let output = Command::new("hardhat")
             .arg("deploy")
             .arg("--reset")
             .output()
-            .expect("failed to deploy");
+            .expect("\"hardhat deploy --reset\" failed to execute");
+
+        if !output.status.success() {
+            panic!(
+                "Command \"hardhat deploy --reset\" exited with error: {}",
+                String::from_utf8(output.stderr)?,
+            )
+        }
+
         let text = String::from_utf8(output.stdout).unwrap();
         // Get the address out of
         // deploying "CAPE" (tx: 0x64...211)...: deployed at 0x8A791620dd6260079BF849Dc5567aDC3F2FdC318 with 7413790 gas

@@ -58,16 +58,27 @@ pub async fn submit_cape_block_with_memos(
     //  `contract.submit_cape_block_with_memos(...).send().await`.
     //
     //  We must manually call `fill_transaction` in order pass a `BlockNumber`.
-    //  The value is passed to `eth_getTransactionCount` to calculate the nonce.
+    //  `BlockNumber` can be an integer block number or "latest", "earliest" or
+    //  "pending". The value is passed to `eth_getTransactionCount` and the
+    //  return value of that call is used as the nonce of the Ethereum
+    //  transaction.
     //
-    //  For `BlockNumber::Latest` the nonce is calculated based on the last
-    //  mined block. This is also the default behaviour of `CotractCall.send`.
+    //  See https://eth.wiki/json-rpc/API#eth_gettransactioncount for details
+    //  about the Ethereum RPC endpoint.
     //
-    //  For `BlockNumber::Pending` pending transactions will be included. This
-    //  allow to submit new transactions before the previous one is mined and
-    //  therefore enables the relayer to submit more than a single txn per
-    //  block. Note: this would still create duplicate nonces if called a second time
-    //  before the previous transaction goes into the mempool of the node.
+    //  With `BlockNumber::Latest` the nonce is calculated based on the last
+    //  mined Ethereum block. This is also the default behaviour of
+    //  `ContractCall.send`.
+    //
+    //  With `BlockNumber::Pending` pending Ethereum transactions will be
+    //  included in the transaction count. This enables submitting new Ethereum
+    //  transactions before the previous one is mined and therefore enables the
+    //  relayer to submit more than a single Ethererum transaction per Ethereum
+    //  block.
+    //
+    //  Note: using `BlockNumber::Pending` will still create duplicate nonces if
+    //  called a second time before the previous transaction goes into the
+    //  mempool of the node.
     let mut tx = contract
         .submit_cape_block_with_memos(block.block.clone().into(), memos_bytes.into())
         .tx
@@ -76,7 +87,7 @@ pub async fn submit_cape_block_with_memos(
         .client()
         .fill_transaction(&mut tx, Some(block_number.into()))
         .await?;
-    Ok(contract.client().send_transaction(tx, None).await?)
+    contract.client().send_transaction(tx, None).await
 }
 
 #[cfg(test)]

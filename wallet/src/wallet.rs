@@ -92,10 +92,10 @@ pub trait CapeWalletExt<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> {
 
     /// Construct the information required to sponsor an asset, but do not submit a transaction.
     ///
-    /// A new asset definition is created, added to the asset library, and returned. This asset can
-    /// be passed to the contract's `sponsorCapeAsset` function, along with `erc20_code`, in order
-    /// to sponsor the asset, but this function will not invoke the contract. For a version which
-    /// does, use [CapeWalletExt::sponsor].
+    /// A new asset definition is created and returned. This asset can be passed to the contract's
+    /// `sponsorCapeAsset` function, along with `erc20_code`, in order to sponsor the asset, but
+    /// this function will not invoke the contract. For a version which does, use
+    /// [CapeWalletExt::sponsor].
     async fn build_sponsor(
         &mut self,
         erc20_code: Erc20Code,

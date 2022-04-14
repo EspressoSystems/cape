@@ -387,10 +387,29 @@ PATH = [
   "buildsponsor/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/viewing_threshold/:viewing_threshold",
   "buildsponsor/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key",
   "buildsponsor/symbol/:symbol/erc20/:erc20/sponsor/:sponsor",
+  "buildsponsor/symbol/:symbol/description/:description/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address/viewing_threshold/:viewing_threshold",
+  "buildsponsor/symbol/:symbol/description/:description/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address",
+  "buildsponsor/symbol/:symbol/description/:description/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/viewing_threshold/:viewing_threshold",
+  "buildsponsor/symbol/:symbol/description/:description/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount",
+  "buildsponsor/symbol/:symbol/description/:description/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_address/:view_address/viewing_threshold/:viewing_threshold",
+  "buildsponsor/symbol/:symbol/description/:description/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_address/:view_address",
+  "buildsponsor/symbol/:symbol/description/:description/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/viewing_threshold/:viewing_threshold",
+  "buildsponsor/symbol/:symbol/description/:description/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key",
+  "buildsponsor/symbol/:symbol/description/:description/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key",
+  "buildsponsor/symbol/:symbol/description/:description/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address/viewing_threshold/:viewing_threshold",
+  "buildsponsor/symbol/:symbol/description/:description/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address",
+  "buildsponsor/symbol/:symbol/description/:description/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_amount/:view_amount/viewing_threshold/:viewing_threshold",
+  "buildsponsor/symbol/:symbol/description/:description/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_amount/:view_amount",
+  "buildsponsor/symbol/:symbol/description/:description/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_address/:view_address/viewing_threshold/:viewing_threshold",
+  "buildsponsor/symbol/:symbol/description/:description/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_address/:view_address",
+  "buildsponsor/symbol/:symbol/description/:description/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/viewing_threshold/:viewing_threshold",
+  "buildsponsor/symbol/:symbol/description/:description/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key",
+  "buildsponsor/symbol/:symbol/description/:description/erc20/:erc20/sponsor/:sponsor",
 ]
 ":erc20" = "Literal"
 ":sponsor" = "Literal"
 ":symbol" = "Base64"
+":description" = "Base64"
 ":freezing_key" = "TaggedBase64"
 ":viewing_key" = "TaggedBase64"
 ":view_amount" = "Boolean"

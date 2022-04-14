@@ -11,6 +11,7 @@ use crate::wallet::{CapeWallet, CapeWalletBackend, CapeWalletExt};
 use cap_rust_sandbox::ledger::{CapeLedger, CapeTransactionKind};
 use cap_rust_sandbox::model::Erc20Code;
 use espresso_macros::ser_test;
+use ethers::prelude::Address;
 use futures::stream::{iter, StreamExt};
 use jf_cap::{
     keys::{AuditorKeyPair, AuditorPubKey, FreezerKeyPair, FreezerPubKey, UserKeyPair, UserPubKey},
@@ -230,7 +231,7 @@ pub struct AssetInfo {
     /// Base64-encoded PNG icon.
     pub icon: Option<String>,
     /// The ERC-20 token address that this asset wraps, if this is a wrapped asset.
-    pub wrapped_erc20: Option<Erc20Code>,
+    pub wrapped_erc20: Option<String>,
 }
 
 impl AssetInfo {
@@ -247,7 +248,7 @@ impl AssetInfo {
             symbol: info.name,
             description: info.description,
             icon,
-            wrapped_erc20,
+            wrapped_erc20: wrapped_erc20.map(|code| format!("{:#x}", Address::from(code))),
         }
     }
 

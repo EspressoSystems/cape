@@ -260,11 +260,11 @@ A block creator must not submit notes with duplicate nullifiers.</p>
     address erc20Address
   ) public
 </code></pre>
-<p>Allows to wrap some erc20 tokens into some CAPE asset defined in the record opening.</p>
+<p>Wraps ERC-20 tokens into a CAPE asset defined in the record opening.</p>
 <h3 id="parameters-4"><a class="header" href="#parameters-4">Parameters</a></h3>
 <table><thead><tr><th align="left">Name</th><th align="left">Type</th><th align="left">Description</th></tr></thead><tbody>
 <tr><td align="left"><code>ro</code></td><td align="left">struct CAPE.RecordOpening</td><td align="left">record opening that will be inserted in the records merkle tree once the deposit is validated</td></tr>
-<tr><td align="left"><code>erc20Address</code></td><td align="left">address</td><td align="left">address of the ERC20 token corresponding to the deposit</td></tr>
+<tr><td align="left"><code>erc20Address</code></td><td align="left">address</td><td align="left">address of the ERC-20 token corresponding to the deposit</td></tr>
 </tbody></table>
 <hr />
 <h2 id="submitcapeblockwithmemos"><a class="header" href="#submitcapeblockwithmemos">submitCapeBlockWithMemos</a></h2>
@@ -277,7 +277,7 @@ A block creator must not submit notes with duplicate nullifiers.</p>
 <h3 id="parameters-5"><a class="header" href="#parameters-5">Parameters</a></h3>
 <table><thead><tr><th align="left">Name</th><th align="left">Type</th><th align="left">Description</th></tr></thead><tbody>
 <tr><td align="left"><code>newBlock</code></td><td align="left">struct CAPE.CapeBlock</td><td align="left">block to be processed by the CAPE contract</td></tr>
-<tr><td align="left"><code>extraData</code></td><td align="left">bytes</td><td align="left">extra data to be stored in calldata, this data is ignored by the contract function</td></tr>
+<tr><td align="left"><code>extraData</code></td><td align="left">bytes</td><td align="left">extra data to be stored in calldata; this data is ignored by the contract function</td></tr>
 </tbody></table>
 <hr />
 <h2 id="submitcapeblock"><a class="header" href="#submitcapeblock">submitCapeBlock</a></h2>
@@ -297,7 +297,7 @@ A block creator must not submit notes with duplicate nullifiers.</p>
     struct CAPE.BurnNote note
   ) internal
 </code></pre>
-<p>send the ERC20 tokens equivalent to the asset records being burnt. Recall that the burned record opening is contained inside the note.</p>
+<p>send the ERC-20 tokens equivalent to the asset records being burnt. Recall that the burned record opening is contained inside the note.</p>
 <h3 id="parameters-7"><a class="header" href="#parameters-7">Parameters</a></h3>
 <table><thead><tr><th align="left">Name</th><th align="left">Type</th><th align="left">Description</th></tr></thead><tbody>
 <tr><td align="left"><code>note</code></td><td align="left">struct CAPE.BurnNote</td><td align="left">note of type <em>BURN</em></td></tr>
@@ -347,7 +347,7 @@ A block creator must not submit notes with duplicate nullifiers.</p>
     bytes byteSeq
   ) internal returns (bool)
 </code></pre>
-<p>Helper function to check if a sequence of bytes contains hardcoded prefix.</p>
+<p>Checks if a sequence of bytes contains hardcoded prefix.</p>
 <h3 id="parameters-11"><a class="header" href="#parameters-11">Parameters</a></h3>
 <table><thead><tr><th align="left">Name</th><th align="left">Type</th><th align="left">Description</th></tr></thead><tbody>
 <tr><td align="left"><code>byteSeq</code></td><td align="left">bytes</td><td align="left">sequence of bytes</td></tr>

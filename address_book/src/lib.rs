@@ -11,12 +11,13 @@ use async_std::task::{sleep, spawn, JoinHandle};
 use jf_cap::keys::{UserAddress, UserPubKey};
 use jf_cap::Signature;
 use rand::{distributions::Alphanumeric, Rng};
+use serde::{Deserialize, Serialize};
 use std::env;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::{fs, time::Duration};
 use tempdir::TempDir;
-use tide::{prelude::*, StatusCode};
+use tide::{convert::json, StatusCode};
 
 pub mod signal;
 
@@ -25,7 +26,7 @@ const ADDRESS_BOOK_STARTUP_RETRIES: usize = 8;
 
 pub trait Store: Clone + Send + Sync {
     fn save(&self, address: &UserAddress, pub_key: &UserPubKey) -> Result<(), std::io::Error>;
-    fn load(&self, address: &UserAddress) -> Option<UserPubKey>;
+    fn load(&self, address: &UserAddress) -> Result<Option<UserPubKey>, std::io::Error>;
 }
 
 #[derive(Debug, Clone)]
@@ -65,20 +66,22 @@ impl Store for FileStore {
         )?;
         fs::rename(&tmp_path, self.path(address))
     }
-
-    fn load(&self, address: &UserAddress) -> Option<UserPubKey> {
-        match fs::read(self.path(address)) {
-            Ok(bytes) => {
-                Some(bincode::deserialize(&bytes).expect("Failed to deserialize public key."))
-            }
-            Err(err) => {
-                tracing::error!(
-                    "Attempt to read address {:?} failed. {}",
-                    self.path(address),
-                    err
-                );
-                None
-            }
+    fn load(&self, address: &UserAddress) -> Result<Option<UserPubKey>, std::io::Error> {
+        let path = self.path(address);
+        match fs::read(&path) {
+            Ok(bytes) => Ok(Some(
+                bincode::deserialize(&bytes).expect("Failed to deserialize public key."),
+            )),
+            Err(err) => match err.kind() {
+                std::io::ErrorKind::NotFound => {
+                    tracing::info!("Address {} not found.", address);
+                    Ok(None)
+                }
+                _ => {
+                    tracing::error!("Attempt to read path {:?} failed: {}", path, err);
+                    Err(err)
+                }
+            },
         }
     }
 }
@@ -112,7 +115,7 @@ impl Store for TransientFileStore {
         self.store.save(address, pub_key)
     }
 
-    fn load(&self, address: &UserAddress) -> Option<UserPubKey> {
+    fn load(&self, address: &UserAddress) -> Result<Option<UserPubKey>, std::io::Error> {
         self.store.load(address)
     }
 }
@@ -209,17 +212,19 @@ async fn request_pubkey<T: Store>(
     mut req: tide::Request<ServerState<T>>,
 ) -> Result<tide::Response, tide::Error> {
     let address: UserAddress = net::server::request_body(&mut req).await?;
-    let pub_key = req.state().store.load(&address);
-    match pub_key {
-        Some(value) => {
-            let bytes = bincode::serialize(&value).unwrap();
-            let response = tide::Response::builder(StatusCode::Ok)
-                .body(bytes)
-                .content_type(tide::http::mime::BYTE_STREAM)
-                .build();
-            Ok(response)
-        }
-        _ => Ok(tide::Response::new(StatusCode::NotFound)),
+    match req.state().store.load(&address) {
+        Ok(pub_key) => match pub_key {
+            Some(value) => {
+                let bytes = bincode::serialize(&value).unwrap();
+                let response = tide::Response::builder(StatusCode::Ok)
+                    .body(bytes)
+                    .content_type(tide::http::mime::BYTE_STREAM)
+                    .build();
+                Ok(response)
+            }
+            _ => Ok(tide::Response::new(StatusCode::NotFound)),
+        },
+        Err(_) => Ok(tide::Response::new(StatusCode::InternalServerError)),
     }
 }
 

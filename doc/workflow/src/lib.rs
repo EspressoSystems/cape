@@ -199,7 +199,8 @@ impl CapeContract {
         Address::from_low_u64_le(666u64)
     }
 
-    /// getter for registrar.
+    /// Check if an asset is already registered.
+    /// Assets need to be registered and bound to some ERC-20 before allowing users to wrap/unwrap.
     pub fn is_cape_asset_registered(&self, asset_def: &AssetDefinition) -> bool {
         self.wrapped_erc20_registrar.contains_key(asset_def)
     }

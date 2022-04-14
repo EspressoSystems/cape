@@ -124,7 +124,7 @@ pub fn contract_abi_path(contract_name: &str) -> PathBuf {
     .collect::<PathBuf>()
 }
 
-/// Check the amount of some erc20 token of an address.
+/// Get the number of ERC-20 available at the given address.
 pub async fn check_erc20_token_balance(
     erc20_token_contract: &SimpleToken<EthMiddleware>,
     user_eth_address: Address,
@@ -147,6 +147,8 @@ fn compute_extra_proof_bound_data_for_burn_tx(recipient_address: Address) -> Vec
 }
 
 /// Generates a CAP burn transaction.
+/// A burn transaction is a transfer to some null CAP address that unlocks some ERC20 tokens.
+/// See https://cape.docs.espressosys.com/SmartContracts.html > Sequence Diagram
 pub fn generate_burn_tx(
     faucet_key_pair: &UserKeyPair,
     faucet_ro: RecordOpening,
@@ -219,6 +221,8 @@ pub fn generate_burn_tx(
 }
 
 /// Compare the roots of a local merkle tree and the TestRecordsMerkleTree contract merkle tree.
+/// By calling the CAPE contract `get_root_value` and comparing it to the root of the merkle tree passed as argument,
+/// one can check that the CAPE contract updates the root value correctly after inserting new records commitments.
 pub async fn compare_roots_records_merkle_tree_contract(
     mt: &MerkleTree,
     contract: &TestRecordsMerkleTree<EthMiddleware>,

@@ -93,7 +93,7 @@ pub fn get_provider_from_url(rpc_url: &str) -> Provider<Http> {
     Provider::<Http>::try_from(rpc_url).expect("could not instantiate HTTP Provider")
 }
 
-/// Obtain a client already funded with some 1 ETH.
+/// Obtain a client already funded with 1 ETH.
 pub async fn get_funded_client() -> Result<Arc<EthMiddleware>> {
     let mut provider = get_provider();
     let chain_id = provider.get_chainid().await.unwrap().as_u64();

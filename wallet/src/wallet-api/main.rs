@@ -93,6 +93,7 @@ mod tests {
     use std::io::Cursor;
     use std::iter::once;
     use std::path::{Path, PathBuf};
+    use std::str::FromStr;
     use surf::Url;
     use tempdir::TempDir;
     use tracing_test::traced_test;
@@ -929,7 +930,10 @@ mod tests {
             .body_json()
             .await
             .unwrap();
-        assert_eq!(submitted_info.wrapped_erc20, Some(erc20_code.into()));
+        assert_eq!(
+            Address::from_str(&submitted_info.wrapped_erc20.unwrap()).unwrap(),
+            erc20_code
+        );
         // Other than that, the new info is the same as the old one.
         submitted_info.wrapped_erc20 = None;
         assert_eq!(submitted_info, info);

@@ -12,10 +12,10 @@ use crate::types::{self as sol, CAPE};
 
 use anyhow::{Error, Result};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
-use ethers::{
-    contract::ContractError,
-    prelude::{Bytes, Http, Middleware, PendingTransaction, TxHash},
-};
+use ethers::prelude::signer::SignerMiddlewareError;
+use ethers::prelude::{BlockNumber, Provider, Wallet};
+use ethers::prelude::{Bytes, Http, Middleware, PendingTransaction, TxHash};
+use ethers_core::k256::ecdsa::SigningKey;
 
 use super::{BlockMemos, BlockWithMemos};
 
@@ -48,27 +48,46 @@ pub async fn fetch_cape_block(
 pub async fn submit_cape_block_with_memos(
     contract: &CAPE<EthMiddleware>,
     block: BlockWithMemos,
-) -> Result<PendingTransaction<'_, Http>, ContractError<EthMiddleware>> {
+    block_number: BlockNumber,
+) -> Result<PendingTransaction<'_, Http>, SignerMiddlewareError<Provider<Http>, Wallet<SigningKey>>>
+{
     let mut memos_bytes: Vec<u8> = vec![];
     block.memos.serialize(&mut memos_bytes).unwrap();
 
-    // There is some lifetime subtlety going on here, in what amounts to a simple
-    //  `contract.submit_cape_block_with_memos(...).send().await`
-    // First, we _must_ save the `ContractCall` in a temporary, since it must outlive
-    // `PendingTransaction` created by `send`, which borrows from it.
-    let call =
-        contract.submit_cape_block_with_memos(block.block.clone().into(), memos_bytes.into());
-    // Next, we create, but do not return, a `PendingTransaction`. We cannot return this object
-    // because it borrows from `call`, a local variable.
-    let pending = call.send().await?;
-    // The pending transaction really only borrows the provider from `call`. We can get a reference
-    // to the same provider with a longer lifetime from `contract`, and use it plus the transaction
-    // hash from `pending` to create a `PendingTransaction` that borrows from `contract`, which is
-    // not local.
-    Ok(PendingTransaction::new(
-        *pending,
-        contract.client().provider(),
-    ))
+    // There is some nonce subtlety going on here, in what amounts to a simple
+    //  `contract.submit_cape_block_with_memos(...).send().await`.
+    //
+    //  We must manually call `fill_transaction` in order pass a `BlockNumber`.
+    //  `BlockNumber` can be an integer block number or "latest", "earliest" or
+    //  "pending". The value is passed to `eth_getTransactionCount` and the
+    //  return value of that call is used as the nonce of the Ethereum
+    //  transaction.
+    //
+    //  See https://eth.wiki/json-rpc/API#eth_gettransactioncount for details
+    //  about the Ethereum RPC endpoint.
+    //
+    //  With `BlockNumber::Latest` the nonce is calculated based on the last
+    //  mined Ethereum block. This is also the default behaviour of
+    //  `ContractCall.send`.
+    //
+    //  With `BlockNumber::Pending` pending Ethereum transactions will be
+    //  included in the transaction count. This enables submitting new Ethereum
+    //  transactions before the previous one is mined and therefore enables the
+    //  relayer to submit more than a single Ethererum transaction per Ethereum
+    //  block.
+    //
+    //  Note: using `BlockNumber::Pending` will still create duplicate nonces if
+    //  called a second time before the previous transaction goes into the
+    //  mempool of the node.
+    let mut tx = contract
+        .submit_cape_block_with_memos(block.block.clone().into(), memos_bytes.into())
+        .tx
+        .clone();
+    contract
+        .client()
+        .fill_transaction(&mut tx, Some(block_number.into()))
+        .await?;
+    contract.client().send_transaction(tx, None).await
 }
 
 #[cfg(test)]

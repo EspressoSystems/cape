@@ -17,6 +17,7 @@ mod tests {
         types::{GenericInto, MerkleRootSol},
     };
     use anyhow::Result;
+    use ethers::prelude::BlockNumber;
     use itertools::Itertools;
     use jf_cap::KeyPair;
     use jf_cap::{
@@ -75,9 +76,13 @@ mod tests {
 
         let block_with_memos = BlockWithMemos::new(cape_block.clone(), memos_with_sigs.clone());
 
-        submit_cape_block_with_memos(&connection.contract, block_with_memos.clone())
-            .await?
-            .await?;
+        submit_cape_block_with_memos(
+            &connection.contract,
+            block_with_memos.clone(),
+            BlockNumber::Latest,
+        )
+        .await?
+        .await?;
 
         // A connection with a random wallet (for queries only)
         let query_connection = EthConnection::from_config_for_query(

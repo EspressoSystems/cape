@@ -57,13 +57,13 @@ use tempdir::TempDir;
 use tracing::{event, Level};
 
 lazy_static! {
-    static ref PORT: Arc<Mutex<u64>> = {
+    static ref PORT: Arc<Mutex<u16>> = {
         let port_offset = std::env::var("PORT").unwrap_or_else(|_| String::from("60000"));
         Arc::new(Mutex::new(port_offset.parse().unwrap()))
     };
 }
 
-pub async fn port() -> u64 {
+pub async fn port() -> u16 {
     let mut counter = PORT.lock().await;
     let port = *counter;
     *counter += 1;

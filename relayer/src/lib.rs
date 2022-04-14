@@ -6,6 +6,7 @@
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #![doc = include_str!("../README.md")]
+
 #[warn(unused_imports)]
 use async_std::task;
 use cap_rust_sandbox::{
@@ -14,12 +15,15 @@ use cap_rust_sandbox::{
     model::CapeModelTxn,
     types::CAPE,
 };
-use ethers::prelude::H256;
+use ethers::prelude::{BlockNumber, H256};
 use jf_cap::{keys::UserPubKey, structs::ReceiverMemo, Signature};
 use net::server::{add_error_body, request_body, response};
 use serde::{Deserialize, Serialize};
 use snafu::Snafu;
+use std::str::FromStr;
 use tide::StatusCode;
+
+pub const DEFAULT_RELAYER_PORT: &str = "50077";
 
 #[derive(Clone, Debug, Snafu, Serialize, Deserialize)]
 pub enum Error {
@@ -56,6 +60,7 @@ fn server_error<E: Into<Error>>(err: E) -> tide::Error {
 #[derive(Clone)]
 struct WebState {
     contract: CAPE<EthMiddleware>,
+    nonce_count_rule: NonceCountRule,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -63,6 +68,38 @@ pub struct SubmitBody {
     pub transaction: CapeModelTxn,
     pub memos: Vec<ReceiverMemo>,
     pub signature: Signature,
+}
+
+/// Determines how transaction nonces should be calculated.
+#[derive(Clone, Debug, Copy, Serialize, Deserialize)]
+pub enum NonceCountRule {
+    /// Only count mined transaction when creating the nonce.
+    Mined,
+    /// Also include pending transactions when creating the nonce.
+    Pending,
+}
+
+impl From<NonceCountRule> for BlockNumber {
+    fn from(policy: NonceCountRule) -> Self {
+        match policy {
+            NonceCountRule::Mined => BlockNumber::Latest,
+            NonceCountRule::Pending => BlockNumber::Pending,
+        }
+    }
+}
+
+type ParseNonceCountRuleError = &'static str;
+
+impl FromStr for NonceCountRule {
+    type Err = ParseNonceCountRuleError;
+
+    fn from_str(input: &str) -> Result<NonceCountRule, Self::Err> {
+        match input {
+            "mined" => Ok(NonceCountRule::Mined),
+            "pending" => Ok(NonceCountRule::Pending),
+            _ => Err("Unable to parse, use \"mined\" or \"pending\""),
+        }
+    }
 }
 
 /// Return a JSON expression with status 200 indicating the server
@@ -88,9 +125,15 @@ async fn submit_endpoint(mut req: tide::Request<WebState>) -> Result<tide::Respo
             msg: err.to_string(),
         })
     })?;
-    let ret = relay(&req.state().contract, transaction, memos, signature)
-        .await
-        .map_err(server_error)?;
+    let ret = relay(
+        &req.state().contract,
+        req.state().nonce_count_rule,
+        transaction,
+        memos,
+        signature,
+    )
+    .await
+    .map_err(server_error)?;
     response(&req, ret)
 }
 /// This function implements the core logic of the relayer
@@ -104,6 +147,7 @@ async fn submit_endpoint(mut req: tide::Request<WebState>) -> Result<tide::Respo
 /// transaction to be mined.
 async fn relay(
     contract: &CAPE<EthMiddleware>,
+    nonce_count_rule: NonceCountRule,
     transaction: CapeModelTxn,
     memos: Vec<ReceiverMemo>,
     sig: Signature,
@@ -117,7 +161,7 @@ async fn relay(
         )?,
         memos: vec![(memos, sig)],
     };
-    let pending = submit_cape_block_with_memos(contract, block)
+    let pending = submit_cape_block_with_memos(contract, block, nonce_count_rule.into())
         .await
         .map_err(|err| Error::Submission {
             msg: err.to_string(),
@@ -128,14 +172,16 @@ async fn relay(
     Ok(*pending)
 }
 
-pub const DEFAULT_RELAYER_PORT: u16 = 50077u16;
-
 /// This function starts the web server
 pub fn init_web_server(
     contract: CAPE<EthMiddleware>,
-    port: String,
+    port: u16,
+    nonce_count_rule: NonceCountRule,
 ) -> task::JoinHandle<Result<(), std::io::Error>> {
-    let mut web_server = tide::with_state(WebState { contract });
+    let mut web_server = tide::with_state(WebState {
+        contract,
+        nonce_count_rule,
+    });
     web_server.at("/healthcheck").get(healthcheck);
     web_server
         .with(add_error_body::<_, Error>)
@@ -189,7 +235,7 @@ pub mod testing {
 
     const RELAYER_STARTUP_RETRIES: usize = 8;
 
-    pub async fn wait_for_server(port: u64) {
+    pub async fn wait_for_server(port: u16) {
         // Wait for the server to come up and start serving.
         let mut backoff = Duration::from_millis(100);
         for _ in 0..RELAYER_STARTUP_RETRIES {
@@ -210,7 +256,7 @@ pub mod testing {
     ///    
     /// `faucet_key_pair` - If not provided, a random faucet key pair will be generated.
     pub async fn start_minimal_relayer_for_test(
-        port: u64,
+        port: u16,
         faucet_key_pair: Option<UserKeyPair>,
     ) -> (
         TestCAPE<EthMiddleware>,
@@ -220,7 +266,11 @@ pub mod testing {
     ) {
         let (contract, faucet, faucet_rec, records) =
             deploy_cape_contract_with_faucet(faucet_key_pair).await;
-        init_web_server(upcast_test_cape_to_cape(contract.clone()), port.to_string());
+        init_web_server(
+            upcast_test_cape_to_cape(contract.clone()),
+            port,
+            NonceCountRule::Mined,
+        );
         wait_for_server(port).await;
         (contract, faucet, faucet_rec, records)
     }
@@ -262,14 +312,14 @@ mod test {
     };
 
     lazy_static! {
-        static ref PORT: Arc<Mutex<u64>> = {
+        static ref PORT: Arc<Mutex<u16>> = {
             let port_offset =
                 std::env::var("PORT").unwrap_or_else(|_| DEFAULT_RELAYER_PORT.to_string());
             Arc::new(Mutex::new(port_offset.parse().unwrap()))
         };
     }
 
-    async fn get_port() -> u64 {
+    async fn get_port() -> u16 {
         let mut counter = PORT.lock().await;
         let port = *counter;
         *counter += 1;
@@ -318,7 +368,16 @@ mod test {
     }
 
     #[async_std::test]
-    async fn test_relay() {
+    async fn test_relay_nonce_count_mined() {
+        test_relay(NonceCountRule::Mined).await
+    }
+
+    #[async_std::test]
+    async fn test_relay_nonce_count_pending() {
+        test_relay(NonceCountRule::Pending).await
+    }
+
+    async fn test_relay(nonce_count_rule: NonceCountRule) {
         let mut rng = ChaChaRng::from_seed([42; 32]);
         let user = UserKeyPair::generate(&mut rng);
 
@@ -331,6 +390,7 @@ mod test {
         // records Merkle tree.
         let hash = relay(
             &upcast_test_cape_to_cape(contract.clone()),
+            nonce_count_rule,
             transaction.clone(),
             memos.clone(),
             sig.clone(),
@@ -345,6 +405,7 @@ mod test {
         // records Merkle tree is not modified.
         match relay(
             &upcast_test_cape_to_cape(contract.clone()),
+            nonce_count_rule,
             transaction,
             memos,
             sig,
@@ -357,7 +418,7 @@ mod test {
         assert_eq!(contract.get_num_leaves().call().await.unwrap(), 3.into());
     }
 
-    fn get_client(port: u64) -> surf::Client {
+    fn get_client(port: u16) -> surf::Client {
         let client: surf::Client = surf::Config::new()
             .set_base_url(Url::parse(&format!("http://localhost:{}", port)).unwrap())
             .try_into()
@@ -422,7 +483,7 @@ mod test {
             CAPE::new(address, deployer)
         };
         let port = get_port().await;
-        init_web_server(contract, port.to_string());
+        init_web_server(contract, port, NonceCountRule::Mined);
         wait_for_server(port).await;
         let client = get_client(port);
         match Error::from_client_error(

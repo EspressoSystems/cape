@@ -21,7 +21,11 @@ use net::server::{add_error_body, request_body, response};
 use serde::{Deserialize, Serialize};
 use snafu::Snafu;
 use std::str::FromStr;
-use tide::StatusCode;
+use tide::{
+    http::headers::HeaderValue,
+    security::{CorsMiddleware, Origin},
+    StatusCode,
+};
 
 pub const DEFAULT_RELAYER_PORT: &str = "50077";
 
@@ -182,6 +186,13 @@ pub fn init_web_server(
         contract,
         nonce_count_rule,
     });
+    web_server.with(
+        CorsMiddleware::new()
+            .allow_methods("GET, POST".parse::<HeaderValue>().unwrap())
+            .allow_headers("*".parse::<HeaderValue>().unwrap())
+            .allow_origin(Origin::from("*"))
+            .allow_credentials(true),
+    );
     web_server.at("/healthcheck").get(healthcheck);
     web_server
         .with(add_error_body::<_, Error>)

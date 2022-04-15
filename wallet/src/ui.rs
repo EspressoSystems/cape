@@ -458,19 +458,13 @@ impl TransactionHistoryEntry {
                 CapeTransactionKind::Faucet => "faucet".to_string(),
             },
             hash: {
-                entry
-                    .hash
-                    .map(|hash| {
-                        bincode::serialize(&hash)
+                entry.hash.and_then(|hash| {
+                    bincode::serialize(&hash).ok().and_then(|bytes| {
+                        TaggedBase64::new("HASH", &bytes)
                             .ok()
-                            .map(|bytes| {
-                                TaggedBase64::new("HASH", &bytes)
-                                    .ok()
-                                    .map(|tb| tb.to_string())
-                            })
-                            .flatten()
+                            .map(|tb| tb.to_string())
                     })
-                    .flatten()
+                })
             },
             senders: entry.senders.into_iter().map(UserAddress::from).collect(),
             receivers: entry

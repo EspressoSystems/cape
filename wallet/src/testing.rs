@@ -364,7 +364,7 @@ pub async fn burn_token<'a>(
     let burner_key = burner.pub_keys().await[0].clone();
     burner
         .burn(
-            &burner_key.address(),
+            Some(&burner_key.address()),
             burner.eth_address().await.unwrap().clone(),
             &cape_asset.code,
             amount,

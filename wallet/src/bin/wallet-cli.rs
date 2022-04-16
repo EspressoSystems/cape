@@ -207,15 +207,23 @@ async fn cli_burn<'a, C: CLI<'a, Ledger = CapeLedger>>(
     io: &mut SharedIO,
     wallet: &mut CapeWallet<'a, C::Backend>,
     asset: ListItem<AssetCode>,
-    from: UserAddress,
     to: EthereumAddr,
     amount: u64,
     fee: u64,
+    from: Option<UserAddress>,
     wait: Option<bool>,
 ) where
     C::Backend: CapeWalletBackend<'a> + Sync + 'a,
 {
-    let res = wallet.burn(&from.0, to, &asset.item, amount, fee).await;
+    let res = wallet
+        .burn(
+            from.map(|addr| addr.0).as_ref(),
+            to,
+            &asset.item,
+            amount,
+            fee,
+        )
+        .await;
     cli_writeln!(io, "{}", asset.item);
 
     finish_transaction::<C>(io, wallet, res, wait, "burned").await;
@@ -277,12 +285,12 @@ fn cape_specific_cli_commands<'a>() -> Vec<Command<'a, CapeCli>> {
             |io,
              wallet,
              asset: ListItem<AssetCode>,
-             from: UserAddress,
              to: EthereumAddr,
              amount: u64,
              fee: u64;
+             from: Option<UserAddress>,
              wait: Option<bool>| {
-                cli_burn::<CapeCli>(io, wallet, asset, from, to, amount, fee, wait).await;
+                cli_burn::<CapeCli>(io, wallet, asset, to, amount, fee, from, wait).await;
             }
         ),
     ]
@@ -491,12 +499,12 @@ mod tests {
                     |io,
                      wallet,
                      asset: ListItem<AssetCode>,
-                     from: UserAddress,
                      to: EthereumAddr,
                      amount: u64,
                      fee: u64;
+                     from: Option<UserAddress>,
                      wait: Option<bool>| {
-                        cli_burn::<MockCapeCli>(io, wallet, asset, from, to, amount, fee, wait).await;
+                        cli_burn::<MockCapeCli>(io, wallet, asset, to, amount, fee, from, wait).await;
                     }
                 ),
             ]

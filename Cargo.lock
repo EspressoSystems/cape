@@ -3303,7 +3303,7 @@ checksum = "1aab8fc367588b89dcee83ab0fd66b72b50b72fa1904d7095045ace2b0c81c35"
 [[package]]
 name = "jf-cap"
 version = "0.0.1"
-source = "git+https://github.com/EspressoSystems/cap.git#4c879a53fb46c8dec4a00f87c086fb5d29266c96"
+source = "git+https://github.com/EspressoSystems/cap.git#592af4609e7ec846c30288c512671981adb03638"
 dependencies = [
  "anyhow",
  "ark-bn254",
@@ -4651,7 +4651,7 @@ dependencies = [
 [[package]]
 name = "reef"
 version = "0.2.0"
-source = "git+https://github.com/EspressoSystems/reef.git#34144a56f4317ded58c1092e512d6112bb567df2"
+source = "git+https://github.com/EspressoSystems/reef.git#eb6346a47ef941257dbb432fc1121419b2ad043c"
 dependencies = [
  "arbitrary",
  "arbitrary-wrappers",
@@ -5042,7 +5042,7 @@ dependencies = [
 [[package]]
 name = "seahorse"
 version = "0.2.0"
-source = "git+https://github.com/EspressoSystems/seahorse.git#0bcc4bd0ba42b9ae14099205b98f796c8e382fcb"
+source = "git+https://github.com/EspressoSystems/seahorse.git?branch=jeb-fee-input#8dc6e1863a2da0f10c3990f90c5e404a0e3933aa"
 dependencies = [
  "arbitrary",
  "arbitrary-wrappers",
@@ -5736,7 +5736,7 @@ dependencies = [
 [[package]]
 name = "tagged-base64"
 version = "0.1.0"
-source = "git+https://github.com/EspressoSystems/tagged-base64.git?branch=main#03b74bacf3e99b1b9504d9b9532ee384c26fbae6"
+source = "git+https://github.com/EspressoSystems/tagged-base64.git?branch=main#204224e93ed31345e2e535c5da32072b38018b0c"
 dependencies = [
  "base64 0.13.0",
  "console_error_panic_hook",

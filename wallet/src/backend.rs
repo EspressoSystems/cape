@@ -903,7 +903,7 @@ mod test {
         // Finally, withdraw the wrapped tokens back into the ERC20 token type.
         let receipt = sponsor
             .burn(
-                &sponsor_key.address(),
+                Some(&sponsor_key.address()),
                 sponsor_eth_addr.clone().into(),
                 &cape_asset.code,
                 100,

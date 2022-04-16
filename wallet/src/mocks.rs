@@ -949,7 +949,7 @@ mod cape_wallet_tests {
         match wallets[0]
             .0
             .burn(
-                &owner,
+                Some(&owner),
                 sponsor_addr.clone(),
                 &cap_asset.code.clone(),
                 burn_amount,
@@ -968,34 +968,13 @@ mod cape_wallet_tests {
             }
         }
 
-        // Burning an amount not corresponding to the wrapped asset should fail.
-        burn_amount = wrap_amount - 1;
-        match wallets[0]
-            .0
-            .burn(
-                &owner,
-                sponsor_addr.clone(),
-                &cap_asset.code.clone(),
-                burn_amount,
-                burn_fee,
-            )
-            .await
-        {
-            Err(WalletError::TransactionError {
-                source: TransactionError::InvalidSize { .. },
-            }) => {}
-            e => {
-                panic!("Expected TransactionError::InvalidSize, found {:?}", e);
-            }
-        }
-
         // Burn the wrapped asset.
         now = Instant::now();
         burn_amount = wrap_amount;
         wallets[0]
             .0
             .burn(
-                &owner,
+                Some(&owner),
                 sponsor_addr.clone(),
                 &cap_asset.code.clone(),
                 burn_amount,
@@ -1020,6 +999,311 @@ mod cape_wallet_tests {
                 .balance_breakdown(&owner, &AssetCode::native())
                 .await,
             initial_grant - mint_fee - burn_fee
+        );
+
+        Ok(())
+    }
+
+    // Test a burn where the fee and the wrapped asset come from different accounts.
+    #[cfg(feature = "slow-tests")]
+    #[async_std::test]
+    async fn test_burn_separate_accounts() -> std::io::Result<()> {
+        let mut t = CapeTest::default();
+
+        // Initialize a ledger and wallet, and get the owner address.
+        let mut now = Instant::now();
+        let (ledger, mut wallets) = t.create_test_network(&[(2, 2)], vec![20], &mut now).await;
+
+        // Create an ERC20 code, sponsor address, and asset information.
+        let erc20_addr = EthereumAddr([1u8; 20]);
+        let erc20_code = Erc20Code(erc20_addr);
+        let sponsor_addr = EthereumAddr([2u8; 20]);
+        let cap_asset_policy = AssetPolicy::default();
+
+        // Sponsor the ERC20 token.
+        now = Instant::now();
+        let cap_asset = wallets[0]
+            .0
+            .sponsor(
+                "sponsored_asset".into(),
+                erc20_code,
+                sponsor_addr.clone(),
+                cap_asset_policy,
+            )
+            .await
+            .unwrap();
+        println!("Sponsor completed: {}s", now.elapsed().as_secs_f32());
+
+        // Wrap the sponsored asset, to a fresh account with no native tokens. This will force the
+        // wallet to use different accounts for the burn record and burn fee.
+        now = Instant::now();
+        let wrap_account = wallets[0]
+            .0
+            .generate_user_key("wrap account".into(), None)
+            .await
+            .unwrap()
+            .address();
+        wallets[0]
+            .0
+            .wrap(
+                sponsor_addr.clone(),
+                cap_asset.clone(),
+                wrap_account.clone(),
+                5,
+            )
+            .await
+            .unwrap();
+        println!("Wrap completed: {}s", now.elapsed().as_secs_f32());
+
+        // Submit dummy transactions to finalize the wrap.
+        now = Instant::now();
+        let dummy_coin = wallets[0]
+            .0
+            .define_asset(
+                "defined_asset".into(),
+                "Dummy asset".as_bytes(),
+                Default::default(),
+            )
+            .await
+            .unwrap();
+        let fee_account = wallets[0].1[0].clone();
+        wallets[0]
+            .0
+            .mint(&fee_account, 1, &dummy_coin.code, 5, fee_account.clone())
+            .await
+            .unwrap();
+        t.sync(&ledger, &wallets).await;
+        println!(
+            "Dummy transactions submitted and wrap finalized: {}s",
+            now.elapsed().as_secs_f32()
+        );
+
+        // Check the balance after the wrap.
+        assert_eq!(
+            wallets[0]
+                .0
+                .balance_breakdown(&wrap_account, &cap_asset.code)
+                .await,
+            5
+        );
+        assert_eq!(
+            wallets[0]
+                .0
+                .balance_breakdown(&wrap_account, &AssetCode::native())
+                .await,
+            0
+        );
+
+        // Burn the wrapped asset.
+        now = Instant::now();
+        wallets[0]
+            .0
+            .burn(None, sponsor_addr.clone(), &cap_asset.code.clone(), 5, 1)
+            .await
+            .unwrap();
+        t.sync(&ledger, &wallets).await;
+        println!("Burn completed: {}s", now.elapsed().as_secs_f32());
+
+        // Check the balance of the wrapper account after the burn. We don't know the balance of the
+        // fee account, because the fee could have been paid from either of the preinitialized
+        // native token accounts.
+        assert_eq!(
+            wallets[0]
+                .0
+                .balance_breakdown(&wrap_account, &cap_asset.code)
+                .await,
+            0
+        );
+
+        Ok(())
+    }
+
+    // Test a burn with a change output.
+    #[cfg(feature = "slow-tests")]
+    #[async_std::test]
+    async fn test_burn_change() -> std::io::Result<()> {
+        let mut t = CapeTest::default();
+
+        // Initialize a ledger and wallet, and get the owner address.
+        let mut now = Instant::now();
+        let (ledger, mut wallets) = t.create_test_network(&[(3, 3)], vec![20], &mut now).await;
+
+        // Create an ERC20 code, sponsor address, and asset information.
+        let erc20_addr = EthereumAddr([1u8; 20]);
+        let erc20_code = Erc20Code(erc20_addr);
+        let sponsor_addr = EthereumAddr([2u8; 20]);
+        let cap_asset_policy = AssetPolicy::default();
+
+        // Sponsor the ERC20 token.
+        now = Instant::now();
+        let cap_asset = wallets[0]
+            .0
+            .sponsor(
+                "sponsored_asset".into(),
+                erc20_code,
+                sponsor_addr.clone(),
+                cap_asset_policy,
+            )
+            .await
+            .unwrap();
+        println!("Sponsor completed: {}s", now.elapsed().as_secs_f32());
+
+        // Wrap the sponsored asset.
+        now = Instant::now();
+        let owner = wallets[0].1[0].clone();
+        wallets[0]
+            .0
+            .wrap(sponsor_addr.clone(), cap_asset.clone(), owner.clone(), 5)
+            .await
+            .unwrap();
+        println!("Wrap completed: {}s", now.elapsed().as_secs_f32());
+
+        // Submit dummy transactions to finalize the wrap.
+        now = Instant::now();
+        let dummy_coin = wallets[0]
+            .0
+            .define_asset(
+                "defined_asset".into(),
+                "Dummy asset".as_bytes(),
+                Default::default(),
+            )
+            .await
+            .unwrap();
+        wallets[0]
+            .0
+            .mint(&owner, 1, &dummy_coin.code, 5, owner.clone())
+            .await
+            .unwrap();
+        t.sync(&ledger, &wallets).await;
+        println!(
+            "Dummy transactions submitted and wrap finalized: {}s",
+            now.elapsed().as_secs_f32()
+        );
+
+        // Check the balance after the wrap.
+        assert_eq!(
+            wallets[0]
+                .0
+                .balance_breakdown(&owner, &cap_asset.code)
+                .await,
+            5
+        );
+
+        // Burn the wrapped asset.
+        now = Instant::now();
+        wallets[0]
+            .0
+            .burn(None, sponsor_addr.clone(), &cap_asset.code.clone(), 3, 1)
+            .await
+            .unwrap();
+        t.sync(&ledger, &wallets).await;
+        println!("Burn completed: {}s", now.elapsed().as_secs_f32());
+
+        // Check the balance after the burn.
+        assert_eq!(
+            wallets[0]
+                .0
+                .balance_breakdown(&owner, &cap_asset.code)
+                .await,
+            2
+        );
+
+        Ok(())
+    }
+
+    // Test a burn where the input is aggegated from multiple records.
+    #[cfg(feature = "slow-tests")]
+    #[async_std::test]
+    async fn test_burn_aggregate() -> std::io::Result<()> {
+        let mut t = CapeTest::default();
+
+        // Initialize a ledger and wallet, and get the owner address.
+        let mut now = Instant::now();
+        let (ledger, mut wallets) = t.create_test_network(&[(3, 3)], vec![20], &mut now).await;
+
+        // Create an ERC20 code, sponsor address, and asset information.
+        let erc20_addr = EthereumAddr([1u8; 20]);
+        let erc20_code = Erc20Code(erc20_addr);
+        let sponsor_addr = EthereumAddr([2u8; 20]);
+        let cap_asset_policy = AssetPolicy::default();
+
+        // Sponsor the ERC20 token.
+        now = Instant::now();
+        let cap_asset = wallets[0]
+            .0
+            .sponsor(
+                "sponsored_asset".into(),
+                erc20_code,
+                sponsor_addr.clone(),
+                cap_asset_policy,
+            )
+            .await
+            .unwrap();
+        println!("Sponsor completed: {}s", now.elapsed().as_secs_f32());
+
+        // Wrap two records of the sponsored asset.
+        now = Instant::now();
+        let owner = wallets[0].1[0].clone();
+        wallets[0]
+            .0
+            .wrap(sponsor_addr.clone(), cap_asset.clone(), owner.clone(), 2)
+            .await
+            .unwrap();
+        wallets[0]
+            .0
+            .wrap(sponsor_addr.clone(), cap_asset.clone(), owner.clone(), 3)
+            .await
+            .unwrap();
+        println!("Wraps completed: {}s", now.elapsed().as_secs_f32());
+
+        // Submit dummy transactions to finalize the wrap.
+        now = Instant::now();
+        let dummy_coin = wallets[0]
+            .0
+            .define_asset(
+                "defined_asset".into(),
+                "Dummy asset".as_bytes(),
+                Default::default(),
+            )
+            .await
+            .unwrap();
+        wallets[0]
+            .0
+            .mint(&owner, 1, &dummy_coin.code, 5, owner.clone())
+            .await
+            .unwrap();
+        t.sync(&ledger, &wallets).await;
+        println!(
+            "Dummy transactions submitted and wrap finalized: {}s",
+            now.elapsed().as_secs_f32()
+        );
+
+        // Check the balance after the wrap.
+        assert_eq!(
+            wallets[0]
+                .0
+                .balance_breakdown(&owner, &cap_asset.code)
+                .await,
+            5
+        );
+
+        // Burn the wrapped asset.
+        now = Instant::now();
+        wallets[0]
+            .0
+            .burn(None, sponsor_addr.clone(), &cap_asset.code.clone(), 5, 1)
+            .await
+            .unwrap();
+        t.sync(&ledger, &wallets).await;
+        println!("Burn completed: {}s", now.elapsed().as_secs_f32());
+
+        // Check the balance after the burn.
+        assert_eq!(
+            wallets[0]
+                .0
+                .balance_breakdown(&owner, &cap_asset.code)
+                .await,
+            0
         );
 
         Ok(())

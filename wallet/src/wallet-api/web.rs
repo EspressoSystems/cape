@@ -114,11 +114,19 @@ impl Default for NodeOpt {
             api_path: None,
             storage: None,
             port: 60000,
-            eqs_url: "http://localhost:50087".parse().unwrap(),
-            relayer_url: "http://localhost:50077".parse().unwrap(),
-            address_book_url: "http://localhost:50078".parse().unwrap(),
+            eqs_url: "http://localhost:50087"
+                .parse()
+                .expect("Default eqs url couldn't be parsed"),
+            relayer_url: "http://localhost:50077"
+                .parse()
+                .expect("Default relayer url couldn't be parsed"),
+            address_book_url: "http://localhost:50078"
+                .parse()
+                .expect("Default address book url couldn't be parsed"),
             contract_address: Address::default(),
-            rpc_url: "http://localhost:8545".parse().unwrap(),
+            rpc_url: "http://localhost:8545"
+                .parse()
+                .expect("Default rpc url couldn't be parsed"),
             eth_mnemonic: None,
             min_polling_delay_ms: 500,
         }
@@ -172,7 +180,8 @@ impl NodeOpt {
     pub fn keystore_path(&self, name: &str) -> PathBuf {
         // base64-encode the name to remove characters with special meaning in the file system, like
         // slashes.
-        let enc = TaggedBase64::new("KEYSTORE", name.as_bytes()).unwrap();
+        let enc =
+            TaggedBase64::new("KEYSTORE", name.as_bytes()).expect("failed encoding Keystore path");
         [self.keystores_dir().as_path(), Path::new(&enc.to_string())]
             .iter()
             .collect()
@@ -281,7 +290,9 @@ fn parse_route(
         let mut argument_parse_failed = false;
         arg_doc.push_str(&format!(
             "\n\nRoute: {}\n--------------------\n",
-            &route_pattern.as_str().unwrap()
+            &route_pattern
+                .as_str()
+                .expect("PATH must be an array of strings")
         ));
         // The `path_segments()` succeeded above, so `unwrap()` is safe.
         let mut req_segments = req.url().path_segments().unwrap();
@@ -312,7 +323,11 @@ fn parse_route(
                         value,
                     };
                     bindings
-                        .entry(String::from(route_pattern.as_str().unwrap()))
+                        .entry(String::from(
+                            route_pattern
+                                .as_str()
+                                .expect("PATH must be an array of strings"),
+                        ))
                         .or_default()
                         .insert(pat_segment.to_string(), rb);
                     arg_doc.push_str("(Parse succeeded)\n");
@@ -335,14 +350,18 @@ fn parse_route(
         if !found_literal_mismatch {
             arg_doc.push_str(&format!(
                 "Literals match for {}\n",
-                &route_pattern.as_str().unwrap(),
+                &route_pattern
+                    .as_str()
+                    .expect("PATH must be an array of strings"),
             ));
         }
         let mut length_matches = false;
         if req_segments.next().is_none() {
             arg_doc.push_str(&format!(
                 "Length match for {}\n",
-                &route_pattern.as_str().unwrap(),
+                &route_pattern
+                    .as_str()
+                    .expect("PATH must be an array of strings"),
             ));
             length_matches = true;
         }
@@ -352,7 +371,9 @@ fn parse_route(
             arg_doc.push_str("No argument parsing errors!\n");
         }
         if !argument_parse_failed && length_matches && !found_literal_mismatch {
-            let route_pattern_str = route_pattern.as_str().unwrap();
+            let route_pattern_str = route_pattern
+                .as_str()
+                .expect("PATH must be an array of strings");
             arg_doc.push_str(&format!("Route matches request: {}\n", &route_pattern_str));
             matching_route_count += 1;
             matching_route = String::from(route_pattern_str);
@@ -564,7 +585,11 @@ pub fn init_server(
                 _ => panic!("Expecting a toml::String or toml::Array, but got: {:?}", &v),
             };
             let method = match v.get("METHOD") {
-                Some(m) => m.as_str().unwrap().parse().unwrap(),
+                Some(m) => m
+                    .as_str()
+                    .expect("PATH must be string")
+                    .parse()
+                    .expect("MEHTOD must be GET or POST"),
                 None => Method::Get,
             };
             for path in routes {

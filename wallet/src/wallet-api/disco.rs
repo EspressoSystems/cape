@@ -71,7 +71,9 @@ pub async fn compose_help(req: tide::Request<WebState>) -> Result<tide::Response
                     has_parameters = true;
                     help += &format!(
                         "<tr><td class='parameter'>{}</td><td class='type'>{}</td></tr>\n",
-                        parameter.strip_prefix(':').unwrap(),
+                        parameter
+                            .strip_prefix(':')
+                            .expect("Parameters must begin with ':' in api.toml"),
                         ptype
                             .as_str()
                             .expect("Parameter types must be strings in api.toml")

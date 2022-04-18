@@ -76,9 +76,11 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 [dev-dependencies]
 ark-serialize = "0.3.0"
+reef = { git = "https://github.com/EspressoSystems/reef.git", features = ["testing"] }
+seahorse = { git = "https://github.com/EspressoSystems/seahorse.git", features = ["testing"] }
 tracing-test = "0.2.1"
 
 [features]
 default = ["testing"]
-testing = []
+testing = ["reef/testing", "seahorse/testing"]
 slow-tests = []

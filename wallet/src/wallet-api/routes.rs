@@ -957,14 +957,17 @@ async fn unwrap(
 ) -> Result<TransactionReceipt<CapeLedger>, tide::Error> {
     let wallet = require_wallet(wallet)?;
 
-    let source = bindings[":source"].value.to::<UserAddress>()?;
+    let source = match bindings.get(":source") {
+        Some(param) => Some(param.value.to::<UserAddress>()?.0),
+        None => None,
+    };
     let eth_address: Address = bindings[":eth_address"].value.as_string()?.parse()?;
     let asset = bindings[":asset"].value.to::<AssetCode>()?;
     let amount = bindings[":amount"].value.as_u64()?;
     let fee = bindings[":fee"].value.as_u64()?;
 
     Ok(wallet
-        .burn(&source.into(), eth_address.into(), &asset, amount, fee)
+        .burn(source.as_ref(), eth_address.into(), &asset, amount, fee)
         .await?)
 }
 

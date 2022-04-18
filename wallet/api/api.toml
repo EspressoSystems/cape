@@ -243,14 +243,23 @@ The request body should be the record opening returned by `buildwrap`.
 
 [route.unwrap]
 METHOD = "POST"
-PATH = ["unwrap/source/:source/ethaddress/:eth_address/asset/:asset/amount/:amount/fee/:fee"]
+PATH = [
+  "unwrap/source/:source/ethaddress/:eth_address/asset/:asset/amount/:amount/fee/:fee",
+  "unwrap/ethaddress/:eth_address/asset/:asset/amount/:amount/fee/:fee",
+]
 ":source" = "TaggedBase64"
 ":eth_address" = "Literal"
 ":asset" = "TaggedBase64"
 ":amount" = "Integer"
 ":fee" = "Integer"
 DOC = """
-Unwrap amount units of the given asset from the source to the Ethereum address. Returns a serialized receipt which can be used to track the transaction through the validation process.
+Unwrap amount units of the given asset to the Ethereum address.
+
+Returns a serialized receipt which can be used to track the transaction through the validation process.
+
+If `:source` is given, it will be used as the address of the CAPE account to pay both the CAPE fee and
+the amount of the ERC20 withdrawal. Otherwise, the transaction inputs will be aggregated from all of
+this wallet's accounts.
 """
 
 [route.newasset]

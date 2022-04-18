@@ -16,8 +16,9 @@ use jf_cap::{
     VerKey,
 };
 use seahorse::{
-    events::EventIndex, txn_builder::TransactionReceipt, AssetInfo, Wallet, WalletBackend,
-    WalletError,
+    events::EventIndex,
+    txn_builder::{TransactionError, TransactionReceipt},
+    AssetInfo, Wallet, WalletBackend, WalletError,
 };
 use std::path::Path;
 
@@ -167,7 +168,7 @@ pub trait CapeWalletExt<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> {
     /// future.
     async fn burn(
         &mut self,
-        account: &UserAddress,
+        account: Option<&UserAddress>,
         dst_addr: EthereumAddr,
         cap_asset: &AssetCode,
         amount: u64,
@@ -313,12 +314,27 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
 
     async fn burn(
         &mut self,
-        account: &UserAddress,
+        account: Option<&UserAddress>,
         dst_addr: EthereumAddr,
         cap_asset: &AssetCode,
         amount: u64,
         fee: u64,
     ) -> Result<TransactionReceipt<CapeLedger>, CapeWalletError> {
+        // The owner public key of the new record opening is ignored when processing a burn. All we
+        // need is an address in the address book, so just use one from this wallet. If this wallet
+        // doesn't have any accounts, the burn is going to fail anyways because we don't have a
+        // balance to withdraw from.
+        let burn_address = self
+            .pub_keys()
+            .await
+            .get(0)
+            .ok_or(TransactionError::InsufficientBalance {
+                asset: *cap_asset,
+                required: amount,
+                actual: 0,
+            })?
+            .address();
+
         // A burn note is just a transfer note with a special `proof_bound_data` field consisting of
         // the magic burn bytes followed by the destination address.
         let bound_data = CAPE_BURN_MAGIC_BYTES
@@ -328,21 +344,19 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
             .cloned()
             .collect::<Vec<_>>();
         let (note, mut info) = self
-            // The owner public key of the new record opening is ignored when processing a burn. We
-            // need to put some address in the receiver field though, so just use the one we have
-            // handy.
             .build_transfer(
-                Some(account),
+                account,
                 cap_asset,
-                &[(account.clone(), amount, true)],
+                &[(burn_address.clone(), amount, true)],
                 fee,
                 bound_data,
-                Some((2, 2)),
+                None,
             )
             .await?;
+        assert_eq!(info.outputs[1].asset_def.code, *cap_asset);
+        assert_eq!(info.outputs[1].amount, amount);
+        assert_eq!(info.outputs[1].pub_key.address(), burn_address);
 
-        assert_eq!(note.inputs_nullifiers.len(), 2);
-        assert_eq!(note.output_commitments.len(), 2);
         if let Some(history) = &mut info.history {
             history.kind = CapeTransactionKind::Burn;
         }

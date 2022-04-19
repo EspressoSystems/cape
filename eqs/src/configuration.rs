@@ -92,6 +92,10 @@ pub struct EQSOptions {
     #[structopt(long, default_value = "500", env = "CAPE_EQS_POLL_INTERVAL_MS")]
     pub query_interval: u64,
 
+    /// maximum number of ETH blocks to select on for events.
+    #[structopt(long, default_value = "5000", env = "CAPE_EQS_MAX_ETHER_QUERY_BLOCKS")]
+    pub ethers_block_max: u64,
+
     /// Web service port .
     #[structopt(long, default_value = "50087", env = "CAPE_EQS_PORT")]
     pub eqs_port: u16,
@@ -166,6 +170,10 @@ impl EQSOptions {
 
     pub(crate) fn query_interval(&self) -> Duration {
         Duration::from_millis(self.query_interval)
+    }
+
+    pub(crate) fn max_ether_blocks(&self) -> u64 {
+        self.ethers_block_max
     }
 
     pub(crate) fn eqs_port(&self) -> u16 {

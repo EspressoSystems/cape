@@ -13,6 +13,7 @@ import "../interfaces/IPlonkVerifier.sol";
 import "./Transfer1In2Out24DepthVk.sol";
 import "./Transfer2In2Out24DepthVk.sol";
 import "./Transfer2In3Out24DepthVk.sol";
+import "./Transfer3In3Out24DepthVk.sol";
 import "./Mint1In2Out24DepthVk.sol";
 import "./Freeze2In2Out24DepthVk.sol";
 import "./Freeze3In3Out24DepthVk.sol";
@@ -32,6 +33,9 @@ library VerifyingKeys {
         } else if (encodedId == getEncodedId(0, 2, 3, 24)) {
             // transfer/burn-2-input-3-output-24-depth
             return Transfer2In3Out24DepthVk.getVk();
+        } else if (encodedId == getEncodedId(0, 3, 3, 24)) {
+            // transfer/burn-3-input-3-output-24-depth
+            return Transfer3In3Out24DepthVk.getVk();
         } else if (encodedId == getEncodedId(1, 1, 2, 24)) {
             // mint-1-input-2-output-24-depth
             return Mint1In2Out24DepthVk.getVk();

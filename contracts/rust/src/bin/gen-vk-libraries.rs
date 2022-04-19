@@ -19,10 +19,11 @@ use std::{fs::OpenOptions, io::prelude::*, path::PathBuf};
 // depth of the record merkle tree
 const TREE_DEPTH: u8 = 24;
 // list of supported tranaction types, each would result in a different verifying key
-const SUPPORTED_VKS: [(NoteType, u8, u8, u8); 6] = [
+const SUPPORTED_VKS: [(NoteType, u8, u8, u8); 7] = [
     (NoteType::Transfer, 1, 2, TREE_DEPTH),
     (NoteType::Transfer, 2, 2, TREE_DEPTH),
     (NoteType::Transfer, 2, 3, TREE_DEPTH),
+    (NoteType::Transfer, 3, 3, TREE_DEPTH),
     (NoteType::Mint, 1, 2, TREE_DEPTH),
     (NoteType::Freeze, 2, 2, TREE_DEPTH),
     (NoteType::Freeze, 3, 3, TREE_DEPTH),

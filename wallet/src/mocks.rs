@@ -1012,7 +1012,9 @@ mod cape_wallet_tests {
 
         // Initialize a ledger and wallet, and get the owner address.
         let mut now = Instant::now();
-        let (ledger, mut wallets) = t.create_test_network(&[(2, 2)], vec![20], &mut now).await;
+        let (ledger, mut wallets) = t
+            .create_test_network(&[(1, 2), (2, 2), (2, 3), (3, 3)], vec![20], &mut now)
+            .await;
 
         // Create an ERC20 code, sponsor address, and asset information.
         let erc20_addr = EthereumAddr([1u8; 20]);
@@ -1126,7 +1128,9 @@ mod cape_wallet_tests {
 
         // Initialize a ledger and wallet, and get the owner address.
         let mut now = Instant::now();
-        let (ledger, mut wallets) = t.create_test_network(&[(3, 3)], vec![20], &mut now).await;
+        let (ledger, mut wallets) = t
+            .create_test_network(&[(1, 2), (2, 2), (2, 3), (3, 3)], vec![20], &mut now)
+            .await;
 
         // Create an ERC20 code, sponsor address, and asset information.
         let erc20_addr = EthereumAddr([1u8; 20]);
@@ -1219,7 +1223,9 @@ mod cape_wallet_tests {
 
         // Initialize a ledger and wallet, and get the owner address.
         let mut now = Instant::now();
-        let (ledger, mut wallets) = t.create_test_network(&[(3, 3)], vec![20], &mut now).await;
+        let (ledger, mut wallets) = t
+            .create_test_network(&[(1, 2), (2, 2), (2, 3), (3, 3)], vec![20], &mut now)
+            .await;
 
         // Create an ERC20 code, sponsor address, and asset information.
         let erc20_addr = EthereumAddr([1u8; 20]);

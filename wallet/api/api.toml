@@ -342,7 +342,7 @@ PATH = [
   "newasset/symbol/:symbol/viewing_key/:viewing_key/view_address/:view_address",
   "newasset/symbol/:symbol/viewing_key/:viewing_key/viewing_threshold/:viewing_threshold",
   "newasset/symbol/:symbol/viewing_key/:viewing_key",
-  "newasset/symbol/:symbol/",
+  "newasset/symbol/:symbol",
 ]
 ":erc20" = "TaggedBase64"
 ":symbol" = "Base64"

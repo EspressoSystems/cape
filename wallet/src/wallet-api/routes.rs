@@ -374,11 +374,17 @@ pub fn check_api(api: toml::Value) -> Result<(), String> {
             .as_array()
             .ok_or_else(|| format!("Malformed PATH for [route.{}] (expected array)", key))?;
         for path in paths {
-            for segment in path
-                .as_str()
-                .ok_or_else(|| format!("Malformed pattern for [route.{}] (expected string)", key))?
-                .split('/')
-            {
+            let path = path.as_str().ok_or_else(|| {
+                format!("Malformed pattern for [route.{}] (expected string)", key)
+            })?;
+            if path.ends_with('/') {
+                return Err(format!(
+                    "Malformed pattern for [route.{}] (trailing slash)",
+                    key
+                ));
+            }
+
+            for segment in path.split('/') {
                 if segment.starts_with(':') {
                     let ty = route
                         .get(segment)

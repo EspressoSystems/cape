@@ -42,6 +42,7 @@ describes the project at a high level.
   - [4. direnv (Optional, but recommended for development)](#4-direnv-optional-but-recommended-for-development)
 - [Build](#build)
   - [Docker images](#docker-images)
+  - [Statically Linked](#static-build)
 - [CAPE Demo](#cape-demo)
   - [Local demo](#local-demo)
   - [Docker compose](#docker-compose)
@@ -173,6 +174,16 @@ To build the project run
 
 The `--release` flag is recommended because without it many cryptographic
 computations the project relies one become unbearably slow.
+
+## Static build
+
+To build a statically linked version of the project with musl64 as a libc on a `x86_64-linux-unknown-gnu` host:
+
+```bash
+nix develop .#staticShell -c cargo build --release
+```
+
+The resulting build artifacts end up in `target/x86_64-unknown-linux-musl`, and may be run on any linux computer as they will not depend on glibc or any shared libs (`*.so`).
 
 ## Docker images
 

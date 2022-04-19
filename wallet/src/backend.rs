@@ -20,6 +20,7 @@ use cap_rust_sandbox::{
     ledger::{CapeLedger, CapeNullifierSet, CapeTransition, CapeTruster},
     model::{Erc20Code, EthereumAddr},
     types::{CAPE, ERC20},
+    universal_param::{SUPPORTED_FREEZE_SIZES, SUPPORTED_TRANSFER_SIZES},
 };
 use eqs::routes::CapState;
 use ethers::{
@@ -555,9 +556,6 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
     }
 }
 
-const TRANSFER_KEY_SIZES: &[(usize, usize)] = &[(1, 2), (2, 2), (2, 3)];
-const FREEZE_KEY_SIZES: &[usize] = &[2, 3];
-
 fn gen_proving_keys(srs: &UniversalParam) -> ProverKeySet<key_set::OrderByOutputs> {
     use jf_cap::proof::{freeze, mint, transfer};
 
@@ -565,18 +563,18 @@ fn gen_proving_keys(srs: &UniversalParam) -> ProverKeySet<key_set::OrderByOutput
         mint: mint::preprocess(srs, CapeLedger::merkle_height())
             .unwrap()
             .0,
-        xfr: TRANSFER_KEY_SIZES
+        xfr: SUPPORTED_TRANSFER_SIZES
             .iter()
-            .map(|(inputs, outputs)| {
-                transfer::preprocess(srs, *inputs, *outputs, CapeLedger::merkle_height())
+            .map(|&(inputs, outputs)| {
+                transfer::preprocess(srs, inputs, outputs, CapeLedger::merkle_height())
                     .unwrap()
                     .0
             })
             .collect(),
-        freeze: FREEZE_KEY_SIZES
+        freeze: SUPPORTED_FREEZE_SIZES
             .iter()
-            .map(|inputs| {
-                freeze::preprocess(srs, *inputs, CapeLedger::merkle_height())
+            .map(|&inputs| {
+                freeze::preprocess(srs, inputs, CapeLedger::merkle_height())
                     .unwrap()
                     .0
             })

@@ -867,7 +867,7 @@ async fn buildsponsor(
     let erc20_code: Address = bindings[":erc20"].value.as_string()?.parse()?;
     let sponsor_address: Address = bindings
         .get(":sponsor")
-        .expect("buildsponsor request :sponsor parameter")
+        .expect("buildsponsor must have ':sponsor' parameter")
         .value
         .as_string()?
         .parse()?;
@@ -1170,7 +1170,7 @@ async fn updateasset(
         wallet
             .asset(code)
             .await
-            .expect("Updated asset not in wallets asset storage"),
+            .expect("Updated asset not in the wallet's asset storage"),
     )
     .await)
 }
@@ -1225,7 +1225,7 @@ pub async fn importasset(
     let info = wallet
         .asset(code)
         .await
-        .expect("Imported asset not in wallets asset storage");
+        .expect("Imported asset not in the wallet's asset storage");
     Ok(AssetInfo::from_info(wallet, info).await)
 }
 
@@ -1240,7 +1240,7 @@ async fn recordopening(
     let asset_definition = wallet
         .asset(asset_code)
         .await
-        .expect("Asset code not in wallets asset storage")
+        .expect("Asset code not in the wallet's asset storage")
         .definition;
     let amount = bindings[":amount"].value.as_u64()?;
     let freeze = match bindings.get(":freeze") {

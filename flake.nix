@@ -33,10 +33,63 @@
     }:
     flake-utils.lib.eachDefaultSystem (system:
     let
-      overlays = [ (import rust-overlay) ];
-      pkgs = import nixpkgs {
-        inherit system overlays;
+      # MUSL pkgs
+      muslPkgs = import nixpkgs {
+        localSystem = "x86_64-linux";
+        crossSystem = { config = "x86_64-unknown-linux-musl"; };
       };
+      opensslMusl = muslPkgs.openssl.override { static = true; };
+      muslPythonEnv = muslPkgs.poetry2nix.mkPoetryEnv { projectDir = ./.; };
+      muslRustDeps = with muslPkgs; [
+        pkgconfig
+        curl
+        opensslMusl.dev
+        opensslMusl.out
+      ];
+      stableMuslRustToolchain =
+        pkgs.rust-bin.stable."1.60.0".minimal.override {
+          extensions = [ "rustfmt" "clippy" "llvm-tools-preview" "rust-src" ];
+          targets = [ "x86_64-unknown-linux-musl" ];
+        };
+
+      # glibc pkgs
+      overlays = [ (import rust-overlay) ];
+      pkgs = import nixpkgs { inherit system overlays; };
+      mySolc = pkgs.callPackage ./nix/solc-bin { version = "0.8.10"; };
+      pythonEnv = pkgs.poetry2nix.mkPoetryEnv { projectDir = ./.; };
+      myPython = with pkgs; [ poetry pythonEnv ];
+
+      stableRustToolchain = pkgs.rust-bin.stable."1.60.0".minimal.override {
+        extensions = [ "rustfmt" "clippy" "llvm-tools-preview" "rust-src" ];
+      };
+      rustDeps = with pkgs;
+        [
+          pkgconfig
+          openssl
+
+          curl
+          plantuml
+          stableRustToolchain
+
+          cargo-edit
+          cargo-sort
+        ] ++ lib.optionals stdenv.isDarwin [
+          # required to compile ethers-rs
+          darwin.apple_sdk.frameworks.Security
+          darwin.apple_sdk.frameworks.CoreFoundation
+
+          # https://github.com/NixOS/nixpkgs/issues/126182
+          libiconv
+        ] ++ lib.optionals (stdenv.system != "aarch64-darwin") [
+          cargo-watch # broken: https://github.com/NixOS/nixpkgs/issues/146349
+        ];
+      # nixWithFlakes allows pre v2.4 nix installations to use flake commands (like `nix flake update`)
+      nixWithFlakes = pkgs.writeShellScriptBin "nix" ''
+        exec ${pkgs.nixFlakes}/bin/nix --experimental-features "nix-command flakes" "$@"
+      '';
+      muslNixWithFlakes = pkgs.writeShellScriptBin "nix" ''
+        exec ${muslPkgs.nixFlakes}/bin/nix --experimental-features "nix-command flakes" "$@"
+      '';
     in
     {
       checks = {
@@ -69,8 +122,10 @@
             };
             license-header-c-style = {
               enable = true;
-              description = "Ensure files with c-style comments have license header";
-              entry = "insert_license --license-filepath .license-header  --comment-style \"//\"";
+              description =
+                "Ensure files with c-style comments have license header";
+              entry = ''
+                insert_license --license-filepath .license-header  --comment-style "//"'';
               types_or = [ "rust" "ts" "javascript" ];
               excludes = [
                 "bindings/mod\\.rs" # generated file
@@ -80,24 +135,26 @@
             license-header-solidity = {
               enable = true;
               description = "Ensure solidity files have license header";
-              entry = "insert_license --license-filepath .license-header-solidity  --comment-style \"//\"";
+              entry = ''
+                insert_license --license-filepath .license-header-solidity  --comment-style "//"'';
               types = [ "solidity" ];
               pass_filenames = true;
             };
             license-header-hash = {
               enable = true;
-              description = "Ensure files with hash style comments have license header";
-              entry = "insert_license --license-filepath .license-header --comment-style \"#\"";
+              description =
+                "Ensure files with hash style comments have license header";
+              entry = ''
+                insert_license --license-filepath .license-header --comment-style "#"'';
               types_or = [ "bash" "python" "toml" "nix" ];
-              excludes = [
-                "poetry.lock"
-              ];
+              excludes = [ "poetry.lock" ];
               pass_filenames = true;
             };
             license-header-html = {
               enable = true;
               description = "Ensure markdown files have license header";
-              entry = "insert_license --license-filepath .license-header --comment-style \"<!--| ~| -->\"";
+              entry = ''
+                insert_license --license-filepath .license-header --comment-style "<!--| ~| -->"'';
               types_or = [ "markdown" ];
               pass_filenames = true;
             };
@@ -108,117 +165,121 @@
       packages.docker = pkgs.dockerTools.buildImage {
         name = "nix-base-docker";
         tag = "latest";
-        contents = with pkgs; [
-          curl
-          coreutils
-          bashInteractive
-          cacert
-        ];
-        config = {
-          Env = [
-            "SSL_CERT_FILE=/etc/ssl/certs/ca-bundle.crt"
-          ];
-        };
+        contents = with pkgs; [ curl coreutils bashInteractive cacert ];
+        config = { Env = [ "SSL_CERT_FILE=/etc/ssl/certs/ca-bundle.crt" ]; };
       };
-      devShell =
-        let
-          mySolc = pkgs.callPackage ./nix/solc-bin { version = "0.8.10"; };
-          pythonEnv = pkgs.poetry2nix.mkPoetryEnv {
-            projectDir = ./.;
-          };
-          myPython = with pkgs; [
-            poetry
-            pythonEnv
-          ];
+      devShell = pkgs.mkShell {
+        buildInputs = with pkgs;
+          [
+            nixWithFlakes
+            go-ethereum
+            nodePackages.pnpm
+            mySolc
+            hivemind # process runner
+            nodejs-16_x # nodejs
+            jq
+            entr # watch files for changes, for example: ls contracts/*.sol | entr -c hardhat compile
+            treefmt # multi language formatter
+            nixpkgs-fmt
+            git # required for pre-commit hook installation
+            netcat-gnu # only used to check for open ports
+            cacert
+            mdbook # make-doc, documentation generation
+            moreutils # includes `ts`, used to add timestamps on CI
+          ] ++ myPython ++ rustDeps;
 
-          stableToolchain = pkgs.rust-bin.stable."1.60.0".minimal.override {
-            extensions = [ "rustfmt" "clippy" "llvm-tools-preview" "rust-src" ];
-          };
-          rustDeps = with pkgs; [
-            pkgconfig
-            openssl
+        RUST_SRC_PATH = "${stableRustToolchain}/lib/rustlib/src/rust/library";
+        RUST_BACKTRACE = 1;
+        RUST_LOG = "info";
 
-            curl
-            plantuml
-            stableToolchain
+        SOLCX_BINARY_PATH = "${mySolc}/bin";
+        SOLC_VERSION = mySolc.version;
+        SOLC_PATH = "${mySolc}/bin/solc";
+        # TODO: increase this when contract size limit is not a problem
+        SOLC_OPTIMIZER_RUNS = "20";
 
-            cargo-edit
-            cargo-sort
-          ] ++ lib.optionals stdenv.isDarwin [
-            # required to compile ethers-rs
-            darwin.apple_sdk.frameworks.Security
-            darwin.apple_sdk.frameworks.CoreFoundation
+        shellHook = ''
+          echo "Ensuring node dependencies are installed"
+          pnpm --recursive install
 
-            # https://github.com/NixOS/nixpkgs/issues/126182
-            libiconv
-          ] ++ lib.optionals (stdenv.system != "aarch64-darwin") [
-            cargo-watch # broken: https://github.com/NixOS/nixpkgs/issues/146349
-          ];
-          # nixWithFlakes allows pre v2.4 nix installations to use flake commands (like `nix flake update`)
-          nixWithFlakes = pkgs.writeShellScriptBin "nix" ''
-            exec ${pkgs.nixFlakes}/bin/nix --experimental-features "nix-command flakes" "$@"
-          '';
-        in
-        pkgs.mkShell
-          {
-            buildInputs = with pkgs; [
-              nixWithFlakes
+          if [ ! -f .env ]; then
+            echo "Copying .env.sample to .env"
+            cp .env.sample .env
+          fi
+
+          echo "Exporting all vars in .env file"
+          set -a; source .env; set +a;
+
+          # on mac os `bin/pwd -P` returns the canonical path on case insenstive file-systems
+          my_pwd=$(/bin/pwd -P 2> /dev/null || pwd)
+
+          export CONTRACTS_DIR=''${my_pwd}/contracts
+          export HARDHAT_CONFIG=$CONTRACTS_DIR/hardhat.config.ts
+          export PATH=''${my_pwd}/node_modules/.bin:$PATH
+          export PATH=$CONTRACTS_DIR/node_modules/.bin:$PATH
+          export PATH=''${my_pwd}/bin:$PATH
+          export WALLET=''${my_pwd}/wallet
+
+          git config --local blame.ignoreRevsFile .git-blame-ignore-revs
+        ''
+        # install pre-commit hooks
+        + self.checks.${system}.pre-commit-check.shellHook;
+      };
+
+      devShells = {
+        # shell with all needed tools to build
+        # for a statically linked x86_64-unknown-linux-musl target.
+        # when running cargo build
+        staticShell = muslPkgs.mkShell {
+
+          # build as much as possible with musl
+          nativeBuildInputs = with muslPkgs;
+            [
+              muslNixWithFlakes
               go-ethereum
-              nodePackages.pnpm
               mySolc
               hivemind # process runner
-              nodejs-16_x # nodejs
-              jq
-              entr # watch files for changes, for example: ls contracts/*.sol | entr -c hardhat compile
-              treefmt # multi language formatter
-              nixpkgs-fmt
-              git # required for pre-commit hook installation
-              netcat-gnu # only used to check for open ports
-              cacert
-              mdbook # make-doc, documentation generation
-              moreutils # includes `ts`, used to add timestamps on CI
-            ]
-            ++ myPython
-            ++ rustDeps;
+            ] ++ muslRustDeps;
 
-            RUST_SRC_PATH = "${stableToolchain}/lib/rustlib/src/rust/library";
-            RUST_BACKTRACE = 1;
-            RUST_LOG = "info";
+          SOLCX_BINARY_PATH = "${mySolc}/bin";
+          SOLC_VERSION = mySolc.version;
+          SOLC_PATH = "${mySolc}/bin/solc";
+          # TODO: increase this when contract size limit is not a problem
+          SOLC_OPTIMIZER_RUNS = "20";
+          CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER = "${muslPkgs.llvmPackages_latest.lld}/bin/lld";
+          RUSTFLAGS = "-C target-feature=+crt-static -L${opensslMusl.out}/lib/";
+          OPENSSL_STATIC = "true";
+          OPENSSL_INCLUDE_DIR = "${opensslMusl.dev}/include/";
+          OPENSSL_LIB_DIR = "${opensslMusl.dev}/lib/";
+          CARGO_BUILD_TARGET = "x86_64-unknown-linux-musl";
 
-            SOLCX_BINARY_PATH = "${mySolc}/bin";
-            SOLC_VERSION = mySolc.version;
-            SOLC_PATH = "${mySolc}/bin/solc";
-            # TODO: increase this when contract size limit is not a problem
-            SOLC_OPTIMIZER_RUNS = "20";
+          shellHook = ''
+            echo "Ensuring node dependencies are installed"
+            ${pkgs.nodePackages.pnpm}/bin/pnpm --recursive install
 
-            shellHook = ''
-              echo "Ensuring node dependencies are installed"
-              pnpm --recursive install
+            if [ ! -f .env ]; then
+              echo "Copying .env.sample to .env"
+              cp .env.sample .env
+            fi
 
-              if [ ! -f .env ]; then
-                echo "Copying .env.sample to .env"
-                cp .env.sample .env
-              fi
+            echo "Exporting all vars in .env file"
+            set -a; source .env; set +a;
 
-              echo "Exporting all vars in .env file"
-              set -a; source .env; set +a;
+            # on mac os `bin/pwd -P` returns the canonical path on case insenstive file-systems
+            my_pwd=$(/bin/pwd -P 2> /dev/null || pwd)
 
-              # on mac os `bin/pwd -P` returns the canonical path on case insenstive file-systems
-              my_pwd=$(/bin/pwd -P 2> /dev/null || pwd)
+            export CONTRACTS_DIR=''${my_pwd}/contracts
+            export HARDHAT_CONFIG=$CONTRACTS_DIR/hardhat.config.ts
+            export PATH=''${my_pwd}/node_modules/.bin:$PATH
+            export PATH=$CONTRACTS_DIR/node_modules/.bin:$PATH
+            export PATH=''${my_pwd}/bin:$PATH
+            export WALLET=''${my_pwd}/wallet
 
-              export CONTRACTS_DIR=''${my_pwd}/contracts
-              export HARDHAT_CONFIG=$CONTRACTS_DIR/hardhat.config.ts
-              export PATH=''${my_pwd}/node_modules/.bin:$PATH
-              export PATH=$CONTRACTS_DIR/node_modules/.bin:$PATH
-              export PATH=''${my_pwd}/bin:$PATH
-              export WALLET=''${my_pwd}/wallet
+            export PATH="${pkgs.nodePackages.pnpm}/bin:${pkgs.nodejs-16_x}/bin:${stableMuslRustToolchain}/bin:${pkgs.gcc}/bin/:$PATH"
+          '';
+        };
+      };
+    });
 
-              git config --local blame.ignoreRevsFile .git-blame-ignore-revs
-            ''
-            # install pre-commit hooks
-            + self.checks.${system}.pre-commit-check.shellHook;
-          };
-
-    }
-    );
 }
+

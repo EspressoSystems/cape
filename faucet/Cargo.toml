@@ -41,9 +41,9 @@ ethers = { git = "https://github.com/gakonst/ethers-rs" }
 futures = "0.3.0"
 hex = "0.4.3"
 
-jf-cap = { git = "https://github.com/EspressoSystems/cap.git" }
-key-set = { git = "https://github.com/EspressoSystems/key-set.git" }
-net = { git = "https://github.com/EspressoSystems/net.git" }
+jf-cap = { git = "https://github.com/EspressoSystems/cap.git", tag = "0.0.2" }
+key-set = { git = "https://github.com/EspressoSystems/key-set.git", tag = "0.2.2" }
+net = { git = "https://github.com/EspressoSystems/net.git", tag = "0.2.1" }
 rand = "0.8.5"
 rand_chacha = "0.3.1"
 seahorse = { git = "https://github.com/EspressoSystems/seahorse.git", tag = "0.2.0" }

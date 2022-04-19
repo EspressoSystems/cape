@@ -50,18 +50,18 @@ generic-array = { version = "0.14.4", features = ["serde"] }
 hex = "0.4.3"
 itertools = "0.10.3"
 
-jf-cap = { features = ["test_apis"], git = "https://github.com/EspressoSystems/cap.git" }
-jf-plonk = { features = ["std", "test_apis"], git = "https://github.com/EspressoSystems/jellyfish.git" }
-jf-primitives = { features = ["std"], git = "https://github.com/EspressoSystems/jellyfish.git" }
-jf-rescue = { features = ["std"], git = "https://github.com/EspressoSystems/jellyfish.git" }
-jf-utils = { features = ["std"], git = "https://github.com/EspressoSystems/jellyfish.git" }
-key-set = { git = "https://github.com/EspressoSystems/key-set.git" }
+jf-cap = { features = ["test_apis"], git = "https://github.com/EspressoSystems/cap.git", tag = "0.0.2" }
+jf-plonk = { features = ["std", "test_apis"], git = "https://github.com/EspressoSystems/jellyfish.git", tag = "0.1.0" }
+jf-primitives = { features = ["std"], git = "https://github.com/EspressoSystems/jellyfish.git", tag = "0.1.0" }
+jf-rescue = { features = ["std"], git = "https://github.com/EspressoSystems/jellyfish.git", tag = "0.1.0" }
+jf-utils = { features = ["std"], git = "https://github.com/EspressoSystems/jellyfish.git", tag = "0.1.0" }
+key-set = { git = "https://github.com/EspressoSystems/key-set.git", tag = "0.2.2" }
 lazy_static = "1.4.0"
 num-derive = "0.3.3"
 num-traits = "0.2.14"
 rand = "0.8.4"
 rand_chacha = "0.3.1"
-reef = { git = "https://github.com/EspressoSystems/reef.git" }
+reef = { git = "https://github.com/EspressoSystems/reef.git", tag = "0.2.1" }
 regex = "1.5.5"
 seahorse = { git = "https://github.com/EspressoSystems/seahorse.git", tag = "0.2.0" }
 serde = { version = "1.0.124", features = ["derive"] }
@@ -69,7 +69,7 @@ serde_json = "1.0.67"
 sha3 = "0.9.1"
 snafu = { version = "0.7", features = ["backtraces"] }
 strum_macros = "0.20.1"
-tagged-base64 = { git = "https://github.com/EspressoSystems/tagged-base64.git", branch = "main" }
+tagged-base64 = { git = "https://github.com/EspressoSystems/tagged-base64.git", tag = "0.1.0" }
 tokio = { version = "1.5", features = ["macros", "rt-multi-thread"] }
 
 # copied from jellyfish-apps

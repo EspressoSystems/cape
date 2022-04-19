@@ -26,6 +26,7 @@ use tide::{
     security::{CorsMiddleware, Origin},
     StatusCode,
 };
+use tracing::{event, Level};
 
 pub const DEFAULT_RELAYER_PORT: &str = "50077";
 
@@ -173,6 +174,11 @@ async fn relay(
     // The pending transaction itself doesn't serialize well, but all the relevant information is
     // contained in the transaction hash. The client can reconstruct the pending transaction from
     // the hash using a particular provider.
+    event!(
+        Level::INFO,
+        "Submitted Ethereum transaction hash ETH H256: {:x}",
+        *pending
+    );
     Ok(*pending)
 }
 

@@ -39,18 +39,18 @@ ethers = { git = "https://github.com/gakonst/ethers-rs" }
 futures = "0.3.0"
 futures-util = "0.3.8"
 itertools = "0.10.3"
-jf-cap = { features = ["test_apis"], git = "https://github.com/EspressoSystems/cap.git" }
-jf-plonk = { features = ["std"], git = "https://github.com/EspressoSystems/jellyfish.git" }
-jf-primitives = { features = ["std"], git = "https://github.com/EspressoSystems/jellyfish.git" }
-jf-utils = { features = ["std"], git = "https://github.com/EspressoSystems/jellyfish.git" }
-key-set = { git = "https://github.com/EspressoSystems/key-set.git" }
+jf-cap = { features = ["test_apis"], git = "https://github.com/EspressoSystems/cap.git", tag = "0.0.2" }
+jf-plonk = { features = ["std"], git = "https://github.com/EspressoSystems/jellyfish.git", tag = "0.1.0" }
+jf-primitives = { features = ["std"], git = "https://github.com/EspressoSystems/jellyfish.git", tag = "0.1.0" }
+jf-utils = { features = ["std"], git = "https://github.com/EspressoSystems/jellyfish.git", tag = "0.1.0" }
+key-set = { git = "https://github.com/EspressoSystems/key-set.git", tag = "0.2.2" }
 lazy_static = "1.4.0"
 markdown = "0.3"
-net = { git = "https://github.com/EspressoSystems/net.git" }
+net = { git = "https://github.com/EspressoSystems/net.git", tag = "0.2.1" }
 pipe = { version = "0.4" }
 rand = "0.8.4"
 rand_chacha = "0.3.1"
-reef = { git = "https://github.com/EspressoSystems/reef.git" }
+reef = { git = "https://github.com/EspressoSystems/reef.git", tag = "0.2.1" }
 regex = "1.5.4"
 relayer = { path = "../relayer", features = ["testing"] }
 seahorse = { git = "https://github.com/EspressoSystems/seahorse.git", features = ["testing"] }
@@ -63,7 +63,7 @@ structopt = { version = "0.3", features = ["paw"] }
 strum = "0.20"
 strum_macros = "0.20.1"
 surf = "2.3.2"
-tagged-base64 = { git = "https://github.com/EspressoSystems/tagged-base64.git", branch = "main" }
+tagged-base64 = { git = "https://github.com/EspressoSystems/tagged-base64.git", tag = "0.1.0" }
 tempdir = "0.3.7"
 tide = "0.16.0"
 tide-websockets = "0.4.0"
@@ -76,7 +76,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 [dev-dependencies]
 ark-serialize = "0.3.0"
-reef = { git = "https://github.com/EspressoSystems/reef.git", features = ["testing"] }
+reef = { git = "https://github.com/EspressoSystems/reef.git", tag = "0.2.1", features = ["testing"] }
 seahorse = { git = "https://github.com/EspressoSystems/seahorse.git", features = ["testing"] }
 tracing-test = "0.2.1"
 

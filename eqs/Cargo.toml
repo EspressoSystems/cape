@@ -22,16 +22,16 @@ commit = { git = "https://github.com/EspressoSystems/commit.git", tag = "0.1.0" 
 dirs = "4.0"
 ethers = { git = "https://github.com/gakonst/ethers-rs" }
 
-jf-cap = { features = ["std"], git = "https://github.com/EspressoSystems/cap.git" }
-jf-primitives = { features = ["std"], git = "https://github.com/EspressoSystems/jellyfish.git" }
-key-set = { git = "https://github.com/EspressoSystems/key-set.git" }
+jf-cap = { features = ["std"], git = "https://github.com/EspressoSystems/cap.git", tag = "0.0.2" }
+jf-primitives = { features = ["std"], git = "https://github.com/EspressoSystems/jellyfish.git", tag = "0.1.0" }
+key-set = { git = "https://github.com/EspressoSystems/key-set.git", tag = "0.2.2" }
 
 lazy_static = "1.4.0"
 markdown = "0.3"
-net = { git = "https://github.com/EspressoSystems/net.git" }
+net = { git = "https://github.com/EspressoSystems/net.git", tag = "0.2.1" }
 rand = "0.8.4"
 rand_chacha = { version = "0.3.1", features = ["serde1"] }
-reef = { git = "https://github.com/EspressoSystems/reef.git" }
+reef = { git = "https://github.com/EspressoSystems/reef.git", tag = "0.2.1" }
 seahorse = { git = "https://github.com/EspressoSystems/seahorse.git", features = ["testing"] }
 serde = { version = "1.0.123", features = ["derive", "rc"] }
 serde_derive = "1.0.118"
@@ -41,7 +41,7 @@ structopt = { version = "0.3" }
 strum = "0.20"
 strum_macros = "0.20.1"
 surf = { version = "2.3.2", optional = true }
-tagged-base64 = { git = "https://github.com/EspressoSystems/tagged-base64.git", branch = "main" }
+tagged-base64 = { git = "https://github.com/EspressoSystems/tagged-base64.git", tag = "0.1.0" }
 tide = "0.16.0"
 tide-websockets = "0.4.0"
 toml = "0.5"

@@ -16,6 +16,7 @@ services:
     ports:
       - $CAPE_WALLET_PORT:$CAPE_WALLET_PORT
     environment:
+      - CAPE_ADDRESS_BOOK_URL=http://address-book:$CAPE_ADDRESS_BOOK_PORT
       - CAPE_CONTRACT_ADDRESS=$CAPE_CONTRACT_ADDRESS
       - CAPE_EQS_URL=http://eqs:$CAPE_EQS_PORT
       - CAPE_FAUCET_URL=http://faucet:$CAPE_FAUCET_PORT

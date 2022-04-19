@@ -709,7 +709,7 @@ mod tests {
         let erc20_addr = EthereumAddr([1u8; 20]);
 
         // Should output an error of insufficent balance.
-        t.command(0, format!("burn 0 $default_addr0 {} 10 1", erc20_addr))?
+        t.command(0, format!("burn 0 {} 10 1", erc20_addr))?
             .output(format!("TransactionError: InsufficientBalance"))?;
         Ok(())
     }
@@ -824,8 +824,8 @@ mod tests {
         // Burn the wrapped asset.
         writeln!(
             receiver_input,
-            "burn {} {} {} {} 1",
-            wrapped_asset, receiver_addr, wrapper_eth_addr, wrap_amount
+            "burn {} {} {} 1",
+            wrapped_asset, wrapper_eth_addr, wrap_amount
         )
         .unwrap();
         let txn = match_output(&mut receiver_output, &["(?P<txn>TXN~.*)"]).get("txn");

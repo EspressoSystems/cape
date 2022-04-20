@@ -35,6 +35,7 @@ pub(crate) struct EthPolling {
     pub last_event_index: Option<EthEventIndex>,
     /// The index of the earliest block which we might not have finished processing.
     pub next_block_to_query: u64,
+    pub max_blocks_to_query: u64,
     pub pending_commit_event: Vec<CapeTransition>,
     pub connection: EthConnection,
     pub num_confirmations: Confirmations,
@@ -53,6 +54,7 @@ impl EthPolling {
                 pending_commit_event: Vec::new(),
                 last_event_index: None,
                 next_block_to_query: 0,
+                max_blocks_to_query: opt.max_ether_blocks(),
                 connection: EthConnection::for_test().await,
                 num_confirmations: opt.num_confirmations,
             };
@@ -114,6 +116,7 @@ impl EthPolling {
             state_persistence,
             last_event_index,
             next_block_to_query,
+            max_blocks_to_query: opt.max_ether_blocks(),
             pending_commit_event: Vec::new(),
             connection,
             num_confirmations: opt.num_confirmations,
@@ -121,37 +124,70 @@ impl EthPolling {
     }
 
     pub async fn check(&mut self) -> Result<u64, async_std::io::Error> {
-        let latest_block_number = self
-            .connection
-            .provider
-            .get_block_number()
-            .await
-            .expect("Could not fetch latest block number")
-            .as_u64();
+        loop {
+            let fetch_from = self.next_block_to_query;
+            let latest_block_number = self
+                .connection
+                .provider
+                .get_block_number()
+                .await
+                .map_err(|e| {
+                    tracing::error!("Could not fetch latest block number: {:?}", e);
+                    async_std::io::Error::new(
+                        async_std::io::ErrorKind::Other,
+                        "Could not fetch latest block number",
+                    )
+                })?
+                .as_u64();
 
-        let fetch_until = match self
-            .num_confirmations
-            .latest_confirmed_block_number(latest_block_number)
-        {
-            Some(n) => n,
-            // There is no confirmed block to fetch yet.
-            None => return Ok(0),
-        };
+            let fetch_latest = match self
+                .num_confirmations
+                .latest_confirmed_block_number(latest_block_number)
+            {
+                Some(n) => n,
+                // There is no confirmed block to fetch yet.
+                None => return Ok(0),
+            };
 
+            if fetch_latest < fetch_from {
+                break;
+            }
+
+            let fetch_until = std::cmp::min(fetch_latest, fetch_from + self.max_blocks_to_query);
+
+            self.check_range(fetch_from, fetch_until).await?;
+        }
+        Ok(self.next_block_to_query)
+    }
+
+    async fn check_range(
+        &mut self,
+        from_block: u64,
+        to_block: u64,
+    ) -> Result<(), async_std::io::Error> {
         // do eth poll, unpack updates
         // select cape events starting from the first block for which we do not have confirmed
         // completion of processing
-        let new_event = self
+
+        let new_event_result = self
             .connection
             .contract
             .events()
-            .from_block(self.next_block_to_query)
-            .to_block(fetch_until)
+            .from_block(from_block)
+            .to_block(to_block)
             .query_with_meta()
-            .await
-            .unwrap();
+            .await;
+        let new_event = match new_event_result {
+            Ok(new_event) => new_event,
+            Err(err) => {
+                tracing::error!("events query failure: {:?}", err);
+                return Err(async_std::io::Error::new(
+                    async_std::io::ErrorKind::Other,
+                    "Unconverted error originating in ethers; will allow retry.",
+                ));
+            }
+        };
 
-        let mut latest_block = None;
         for (filter, meta) in new_event {
             let current_block = meta.block_number.as_u64();
             let current_log_index = meta.log_index.as_u64();
@@ -165,7 +201,6 @@ impl EthPolling {
                     continue;
                 }
             }
-            latest_block = Some(current_block);
             match filter {
                 CAPEEvents::BlockCommittedFilter(_) => {
                     let fetched_block_with_memos =
@@ -430,11 +465,9 @@ impl EthPolling {
             }
         }
 
-        // If we finished processing a block, query for the following block next time.
-        if let Some(latest_block) = latest_block {
-            self.next_block_to_query = latest_block + 1;
-        }
-
-        Ok(0)
+        // We won't ever get here if we haven't successfully processed all events up to and including any in `to_block` from the query range.
+        // This means the block we care about isn't the one in `current_index`, it's `to_block`, and if we fail partway, we're going to short circuit to the error return, not here.
+        self.next_block_to_query = to_block + 1;
+        Ok(())
     }
 }

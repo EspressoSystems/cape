@@ -133,7 +133,7 @@ jobs:
         name: Build and Push Docker
         with:
           context: ./wallet-checkout/
-          file: ./wallet.Dockerfile
+          file: ./wallet-checkout/wallet.Dockerfile
           platforms: linux/amd64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
@@ -179,7 +179,7 @@ jobs:
         name: Build and Push Docker
         with:
           context: ./services-checkout/
-          file: ./services.Dockerfile
+          file: ./services-checkout/services.Dockerfile
           platforms: linux/amd64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}

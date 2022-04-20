@@ -213,6 +213,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
     /// @param erc20Address address of the ERC-20 token corresponding to the deposit
     function depositErc20(RecordOpening memory ro, address erc20Address) public nonReentrant {
         require(isCapeAssetRegistered(ro.assetDef), "Asset definition not registered");
+        require(lookup(ro.assetDef) == erc20Address, "Wrong ERC20 address");
 
         // We skip the sanity checks mentioned in the rust specification as they are optional.
         if (pendingDeposits.length >= MAX_NUM_PENDING_DEPOSIT) {

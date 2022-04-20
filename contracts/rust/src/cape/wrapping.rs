@@ -20,6 +20,7 @@ mod errors_when_calling_deposit_erc20 {
     use std::sync::Arc;
 
     use super::*;
+    use crate::assertion::EnsureMined;
     use crate::deploy::{deploy_erc20_token, deploy_test_cape};
     use crate::model::{erc20_asset_description, Erc20Code, EthereumAddr};
     use crate::types as sol;
@@ -29,15 +30,16 @@ mod errors_when_calling_deposit_erc20 {
     use jf_cap::keys::UserPubKey;
     use jf_cap::structs::{AssetCode, AssetDefinition, AssetPolicy, FreezeFlag, RecordOpening};
 
-    enum WrongCallDepositErc20 {
+    enum Scenario {
         AssetTypeNotRegistered,
         SkipApproval,
         PendingDepositsQueueIsFull,
+        WrongERC20Address,
     }
 
     async fn call_deposit_erc20_with_error_helper(
         expected_error_message: &str,
-        wrong_call: WrongCallDepositErc20,
+        scenario: Scenario,
     ) -> Result<()> {
         let cape_contract = deploy_test_cape().await;
 
@@ -54,19 +56,14 @@ mod errors_when_calling_deposit_erc20 {
 
         let amount_u256 = U256::from(deposited_amount);
 
-        match wrong_call {
-            WrongCallDepositErc20::AssetTypeNotRegistered
-            | WrongCallDepositErc20::PendingDepositsQueueIsFull => {
-                erc20_token_contract
-                    .approve(contract_address, amount_u256)
-                    .send()
-                    .await?
-                    .await?;
-            }
-            WrongCallDepositErc20::SkipApproval => {}
+        if !(matches!(scenario, Scenario::SkipApproval)) {
+            erc20_token_contract
+                .approve(contract_address, amount_u256)
+                .send()
+                .await?
+                .await?
+                .ensure_mined();
         };
-
-        // Call CAPE contract function
 
         // Sponsor asset type
         let rng = &mut ark_std::test_rng();
@@ -79,32 +76,26 @@ mod errors_when_calling_deposit_erc20 {
         let asset_def = AssetDefinition::new(asset_code, AssetPolicy::rand_for_test(rng)).unwrap();
         let asset_def_sol = asset_def.clone().generic_into::<sol::AssetDefinition>();
 
-        match wrong_call {
-            WrongCallDepositErc20::SkipApproval
-            | WrongCallDepositErc20::PendingDepositsQueueIsFull => {
-                TestCAPE::new(
-                    cape_contract.address(),
-                    Arc::new(owner_of_erc20_tokens_client.clone()),
-                )
-                .sponsor_cape_asset(erc20_address, asset_def_sol)
-                .send()
-                .await?
-                .await?;
-            }
-            WrongCallDepositErc20::AssetTypeNotRegistered => {}
+        if !(matches!(scenario, Scenario::AssetTypeNotRegistered)) {
+            TestCAPE::new(
+                cape_contract.address(),
+                Arc::new(owner_of_erc20_tokens_client.clone()),
+            )
+            .sponsor_cape_asset(erc20_address, asset_def_sol)
+            .send()
+            .await?
+            .await?
+            .ensure_mined();
         }
 
-        match wrong_call {
-            WrongCallDepositErc20::PendingDepositsQueueIsFull => {
-                cape_contract
-                    .fill_up_pending_deposits_queue()
-                    .send()
-                    .await?
-                    .await?;
-            }
-            WrongCallDepositErc20::AssetTypeNotRegistered | WrongCallDepositErc20::SkipApproval => {
-            }
-        }
+        if matches!(scenario, Scenario::PendingDepositsQueueIsFull) {
+            cape_contract
+                .fill_up_pending_deposits_queue()
+                .send()
+                .await?
+                .await?
+                .ensure_mined();
+        };
 
         // Build record opening
         let ro = RecordOpening::new(
@@ -119,7 +110,11 @@ mod errors_when_calling_deposit_erc20 {
         let call = cape_contract
             .deposit_erc_20(
                 ro.clone().generic_into::<sol::RecordOpening>(),
-                erc20_address,
+                if matches!(scenario, Scenario::WrongERC20Address) {
+                    Address::random()
+                } else {
+                    erc20_address
+                },
             )
             .from(owner_of_erc20_tokens_client_address)
             .call()
@@ -134,7 +129,7 @@ mod errors_when_calling_deposit_erc20 {
     async fn the_asset_type_is_not_registered() -> Result<()> {
         call_deposit_erc20_with_error_helper(
             "Asset definition not registered",
-            WrongCallDepositErc20::AssetTypeNotRegistered,
+            Scenario::AssetTypeNotRegistered,
         )
         .await
     }
@@ -143,7 +138,7 @@ mod errors_when_calling_deposit_erc20 {
     async fn the_erc20_token_were_not_approved_before_calling_deposit_erc20() -> Result<()> {
         call_deposit_erc20_with_error_helper(
             "ERC20: transfer amount exceeds allowance",
-            WrongCallDepositErc20::SkipApproval,
+            Scenario::SkipApproval,
         )
         .await
     }
@@ -152,9 +147,15 @@ mod errors_when_calling_deposit_erc20 {
     async fn the_erc20_tok() -> Result<()> {
         call_deposit_erc20_with_error_helper(
             "Pending deposits queue is full",
-            WrongCallDepositErc20::PendingDepositsQueueIsFull,
+            Scenario::PendingDepositsQueueIsFull,
         )
         .await
+    }
+
+    #[tokio::test]
+    async fn erc20_address_mismatch_asset_definition_fails() -> Result<()> {
+        call_deposit_erc20_with_error_helper("Wrong ERC20 address", Scenario::WrongERC20Address)
+            .await
     }
 }
 

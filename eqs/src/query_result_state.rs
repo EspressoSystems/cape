@@ -15,6 +15,7 @@ use key_set::VerifierKeySet;
 use seahorse::events::LedgerEvent;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet, VecDeque};
+use strum_macros::{AsRefStr, EnumString};
 
 use crate::configuration::Confirmations;
 
@@ -25,6 +26,12 @@ use crate::configuration::Confirmations;
 /// event indices `i1: EthEventIndex` and `i2: EthEventIndex`, the event with index `i1` comes
 /// before the event with index `i2` chronologically if and only if `i1 < i2`.
 pub type EthEventIndex = (u64, u64);
+
+#[derive(AsRefStr, Clone, Debug, Deserialize, EnumString, Serialize)]
+pub enum SystemStatus {
+    Initializing,
+    Available,
+}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct QueryResultState {
@@ -44,6 +51,8 @@ pub struct QueryResultState {
     // additional indexed data for queries
     pub transaction_by_id: HashMap<(u64, u64), CommittedCapeTransition>,
     pub transaction_id_by_hash: HashMap<Commitment<CapeTransition>, (u64, u64)>,
+
+    pub system_status: SystemStatus,
 }
 
 impl QueryResultState {
@@ -71,6 +80,8 @@ impl QueryResultState {
 
             transaction_by_id: HashMap::new(),
             transaction_id_by_hash: HashMap::new(),
+
+            system_status: SystemStatus::Initializing,
         }
     }
 }

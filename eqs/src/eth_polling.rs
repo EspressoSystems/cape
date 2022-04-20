@@ -131,7 +131,13 @@ impl EthPolling {
                 .provider
                 .get_block_number()
                 .await
-                .expect("Could not fetch latest block number")
+                .map_err(|e| {
+                    tracing::error!("Could not fetch latest block number: {:?}", e);
+                    async_std::io::Error::new(
+                        async_std::io::ErrorKind::Other,
+                        "Could not fetch latest block number",
+                    )
+                })?
                 .as_u64();
 
             let fetch_latest = match self

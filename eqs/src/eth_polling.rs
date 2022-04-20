@@ -147,11 +147,7 @@ impl EthPolling {
                 break;
             }
 
-            let fetch_until = if fetch_latest > fetch_from + self.max_blocks_to_query {
-                fetch_from + self.max_blocks_to_query
-            } else {
-                fetch_latest
-            };
+            let fetch_until = std::cmp::min(fetch_latest, fetch_from + self.max_blocks_to_query);
 
             self.check_range(fetch_from, fetch_until).await?;
         }

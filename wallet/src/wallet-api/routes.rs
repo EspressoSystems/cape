@@ -444,14 +444,21 @@ pub fn wallet_error(source: CapeWalletError) -> tide::Error {
 pub async fn write_path(options: &NodeOpt, wallet_path: &Path) -> Result<(), tide::Error> {
     let mut file = File::create(options.last_used_path()).await?;
     Ok(file
-        .write_all(&bincode::serialize(&wallet_path).unwrap())
+        .write_all(
+            &bincode::serialize(&wallet_path).expect("failed serializing wallet's storage path"),
+        )
         .await?)
 }
 
 pub async fn read_last_path(options: &NodeOpt) -> Result<Option<PathBuf>, tide::Error> {
     let file_result = File::open(options.last_used_path()).await;
     if file_result.is_err()
-        && file_result.as_ref().err().unwrap().kind() == std::io::ErrorKind::NotFound
+        && file_result
+            .as_ref()
+            .err()
+            .expect("Opening file is error but has no err")
+            .kind()
+            == std::io::ErrorKind::NotFound
     {
         return Ok(None);
     }
@@ -807,7 +814,10 @@ async fn newasset(
         .code;
 
     // The asset lookup will always succeed after we just created the asset.
-    let info = wallet.asset(code).await.unwrap();
+    let info = wallet
+        .asset(code)
+        .await
+        .expect("Asset lookup failed after creating that asset");
     let asset = AssetInfo::from_info(wallet, info).await;
     Ok(asset)
 }
@@ -857,7 +867,7 @@ async fn buildsponsor(
     let erc20_code: Address = bindings[":erc20"].value.as_string()?.parse()?;
     let sponsor_address: Address = bindings
         .get(":sponsor")
-        .unwrap()
+        .expect("buildsponsor must have ':sponsor' parameter")
         .value
         .as_string()?
         .parse()?;
@@ -910,7 +920,11 @@ async fn buildwrap(
 
     let destination = bindings[":destination"].value.to::<UserAddress>()?;
     let asset_code = bindings[":asset"].value.to::<AssetCode>()?;
-    let asset_definition = wallet.asset(asset_code).await.unwrap().definition;
+    let asset_definition = wallet
+        .asset(asset_code)
+        .await
+        .expect("Asset code not in wallet's assets")
+        .definition;
     let amount = bindings[":amount"].value.as_u64()?;
     let ro: sol::RecordOpening = wallet
         .build_wrap(asset_definition, destination.into(), amount)
@@ -938,18 +952,30 @@ async fn mint(
 ) -> Result<TransactionReceipt<CapeLedger>, tide::Error> {
     let wallet = require_wallet(wallet)?;
 
-    let asset = bindings.get(":asset").unwrap().value.to::<AssetCode>()?;
-    let amount = bindings.get(":amount").unwrap().value.as_u64()?;
-    let fee = bindings.get(":fee").unwrap().value.as_u64()?;
+    let asset = bindings
+        .get(":asset")
+        .expect("mint must have ':asset' parameter")
+        .value
+        .to::<AssetCode>()?;
+    let amount = bindings
+        .get(":amount")
+        .expect("mint must have ':amount' parameter")
+        .value
+        .as_u64()?;
+    let fee = bindings
+        .get(":fee")
+        .expect("mint must have ':fee' parameter")
+        .value
+        .as_u64()?;
     let minter = bindings
         .get(":minter")
-        .unwrap()
+        .expect("mint must have ':minter' parameter")
         .value
         .to::<UserAddress>()?
         .0;
     let recipient = bindings
         .get(":recipient")
-        .unwrap()
+        .expect("mint must have ':recipient' parameter")
         .value
         .to::<UserAddress>()?
         .0;
@@ -1027,12 +1053,24 @@ pub async fn send(
 
     let dst = bindings
         .get(":recipient")
-        .unwrap()
+        .expect("send must have ':recipient' parameter")
         .value
         .to::<UserAddress>()?;
-    let asset = bindings.get(":asset").unwrap().value.to::<AssetCode>()?;
-    let amount = bindings.get(":amount").unwrap().value.as_u64()?;
-    let fee = bindings.get(":fee").unwrap().value.as_u64()?;
+    let asset = bindings
+        .get(":asset")
+        .expect("send must have ':asset' parameter")
+        .value
+        .to::<AssetCode>()?;
+    let amount = bindings
+        .get(":amount")
+        .expect("send must have ':amount' parameter")
+        .value
+        .as_u64()?;
+    let fee = bindings
+        .get(":fee")
+        .expect("send must have ':fee' parameter")
+        .value
+        .as_u64()?;
 
     match bindings.get(":sender") {
         Some(addr) => wallet
@@ -1127,7 +1165,14 @@ async fn updateasset(
 
     // Get the final asset info, which may be different than what we imported if, say, the asset is
     // a verified asset that cannot be overridden.
-    Ok(AssetInfo::from_info(wallet, wallet.asset(code).await.unwrap()).await)
+    Ok(AssetInfo::from_info(
+        wallet,
+        wallet
+            .asset(code)
+            .await
+            .expect("Updated asset not in the wallet's asset storage"),
+    )
+    .await)
 }
 
 pub async fn exportasset(
@@ -1148,8 +1193,10 @@ pub async fn exportasset(
     // The `AssetInfo` structure serializes as a JSON blob, but for exporting and transmitting, a
     // compact, URL-safe string is more convenient. Therefore, we serialize to bytes and then encode
     // in base64.
-    let bytes = bincode::serialize(&asset).unwrap();
-    Ok(TaggedBase64::new("CAPE-ASSET", &bytes).unwrap().to_string())
+    let bytes = bincode::serialize(&asset).expect("Failed to serialize asset");
+    Ok(TaggedBase64::new("CAPE-ASSET", &bytes)
+        .expect("Failed to encode serialized asset")
+        .to_string())
 }
 
 pub async fn importasset(
@@ -1175,7 +1222,10 @@ pub async fn importasset(
 
     // Get the asset info from the wallet, which may be different from what we imported if the
     // wallet already had this asset and merely updated part of it.
-    let info = wallet.asset(code).await.unwrap();
+    let info = wallet
+        .asset(code)
+        .await
+        .expect("Imported asset not in the wallet's asset storage");
     Ok(AssetInfo::from_info(wallet, info).await)
 }
 
@@ -1187,7 +1237,11 @@ async fn recordopening(
 
     let address = bindings[":address"].value.to::<UserAddress>()?;
     let asset_code = bindings[":asset"].value.to::<AssetCode>()?;
-    let asset_definition = wallet.asset(asset_code).await.unwrap().definition;
+    let asset_definition = wallet
+        .asset(asset_code)
+        .await
+        .expect("Asset code not in the wallet's asset storage")
+        .definition;
     let amount = bindings[":amount"].value.as_u64()?;
     let freeze = match bindings.get(":freeze") {
         Some(flag) => {

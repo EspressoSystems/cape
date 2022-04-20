@@ -100,17 +100,17 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send + Clone + PartialEq> CapeBack
         let eqs: surf::Client = surf::Config::default()
             .set_base_url(config.eqs_url)
             .try_into()
-            .unwrap();
+            .expect("Failed to configure EQS client");
         let eqs = eqs.with(parse_error_body::<relayer::Error>);
         let relayer: surf::Client = surf::Config::default()
             .set_base_url(config.relayer_url)
             .try_into()
-            .unwrap();
+            .expect("Failed to configure Relayer client");
         let relayer = relayer.with(parse_error_body::<relayer::Error>);
         let address_book: surf::Client = surf::Config::default()
             .set_base_url(config.address_book_url)
             .try_into()
-            .unwrap();
+            .expect("Failed to configure Address Book client");
 
         // Create an Ethereum wallet to talk to the CAPE contract.
         let provider = get_provider(&config.rpc_url);
@@ -172,10 +172,17 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeBackend<'a, Meta> {
         for _ in 0..8 {
             // We use a direct `surf::connect` instead of `self.eqs.connect` because the client
             // middleware isn't set up to handle connect requests, only API requests.
-            if surf::connect(&self.eqs.config().base_url.as_ref().unwrap())
-                .send()
-                .await
-                .is_ok()
+            if surf::connect(
+                &self
+                    .eqs
+                    .config()
+                    .base_url
+                    .as_ref()
+                    .expect("eqs config has no base url"),
+            )
+            .send()
+            .await
+            .is_ok()
             {
                 return Ok(());
             }
@@ -348,7 +355,7 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
                 // correct/honest.
                 let events = response_body::<Vec<LedgerEvent<CapeLedger>>>(&mut res)
                     .await
-                    .unwrap();
+                    .expect("Failed to deserialize EQS response");
                 if events.is_empty() {
                     // If there were no new events, increase the backoff before retrying.
                     sleep(state.backoff).await;
@@ -371,7 +378,7 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
     }
 
     async fn get_public_key(&self, address: &UserAddress) -> Result<UserPubKey, CapeWalletError> {
-        let address_bytes = bincode::serialize(address).unwrap();
+        let address_bytes = bincode::serialize(address).expect("Failed to serialize user address");
         let mut response = self
             .address_book
             .post("request_pubkey")
@@ -382,8 +389,12 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
                 msg: format!("error requesting public key: {}", err),
             })?;
         if response.status() == StatusCode::Ok {
-            let bytes = response.body_bytes().await.unwrap();
-            let pub_key: UserPubKey = bincode::deserialize(&bytes).unwrap();
+            let bytes = response
+                .body_bytes()
+                .await
+                .expect("failed deserializing response from address book");
+            let pub_key: UserPubKey = bincode::deserialize(&bytes)
+                .expect("failed deserializing UserPubKey from address book.");
             Ok(pub_key)
         } else {
             Err(CapeWalletError::Failed {
@@ -400,7 +411,7 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
         // Merkle frontiers at each event index. To be safe, we provide the original frontier, which
         // is always empty.
         Ok((
-            MerkleTree::new(CapeLedger::merkle_height()).unwrap(),
+            MerkleTree::new(CapeLedger::merkle_height()).expect("failed to create merkle tree"),
             EventIndex::default(),
         ))
     }
@@ -428,7 +439,8 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
     }
 
     async fn register_user_key(&mut self, key_pair: &UserKeyPair) -> Result<(), CapeWalletError> {
-        let pub_key_bytes = bincode::serialize(&key_pair.pub_key()).unwrap();
+        let pub_key_bytes =
+            bincode::serialize(&key_pair.pub_key()).expect("failed to serialize pbu key");
         let sig = key_pair.sign(&pub_key_bytes);
         let json_request = InsertPubKey { pub_key_bytes, sig };
         match self
@@ -436,7 +448,7 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
             .post("insert_pubkey")
             .content_type(surf::http::mime::JSON)
             .body_json(&json_request)
-            .unwrap()
+            .expect("failed to read response from address book")
             .await
         {
             Ok(_) => Ok(()),
@@ -504,17 +516,20 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
     ) -> Result<(), CapeWalletError> {
         // Before the contract can transfer from our account, in accordance with the ERC20 protocol,
         // we have to approve the transfer.
-        ERC20::new(erc20_code.clone(), self.eth_client().unwrap())
-            .approve(self.contract.address(), ro.amount.into())
-            .send()
-            .await
-            .map_err(|err| CapeWalletError::Failed {
-                msg: format!("error building ERC20::approve transaction: {}", err),
-            })?
-            .await
-            .map_err(|err| CapeWalletError::Failed {
-                msg: format!("error submitting ERC20::approve transaction: {}", err),
-            })?;
+        ERC20::new(
+            erc20_code.clone(),
+            self.eth_client().expect("Failed to get ethereum client"),
+        )
+        .approve(self.contract.address(), ro.amount.into())
+        .send()
+        .await
+        .map_err(|err| CapeWalletError::Failed {
+            msg: format!("error building ERC20::approve transaction: {}", err),
+        })?
+        .await
+        .map_err(|err| CapeWalletError::Failed {
+            msg: format!("error submitting ERC20::approve transaction: {}", err),
+        })?;
 
         // Wraps don't go through the relayer, they go directly to the contract.
         self.contract
@@ -544,7 +559,7 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
         // The verification key for the official asset library signing key.
         "VERKEY~8LfUa4wqi7wYzWE4IQ8vOpjgUz8Pp5LQoj5Ue0Rwn6je"
             .parse()
-            .unwrap()
+            .expect("failed to parse verification key")
     }
 
     async fn eqs_time(&self) -> Result<EventIndex, CapeWalletError> {
@@ -561,13 +576,13 @@ fn gen_proving_keys(srs: &UniversalParam) -> ProverKeySet<key_set::OrderByOutput
 
     ProverKeySet {
         mint: mint::preprocess(srs, CapeLedger::merkle_height())
-            .unwrap()
+            .expect("failed preprocess of mint circuit")
             .0,
         xfr: SUPPORTED_TRANSFER_SIZES
             .iter()
             .map(|&(inputs, outputs)| {
                 transfer::preprocess(srs, inputs, outputs, CapeLedger::merkle_height())
-                    .unwrap()
+                    .expect("failed preprocess of transfer circuit")
                     .0
             })
             .collect(),
@@ -575,7 +590,7 @@ fn gen_proving_keys(srs: &UniversalParam) -> ProverKeySet<key_set::OrderByOutput
             .iter()
             .map(|&inputs| {
                 freeze::preprocess(srs, inputs, CapeLedger::merkle_height())
-                    .unwrap()
+                    .expect("failed preprocess of freeze circuit")
                     .0
             })
             .collect(),

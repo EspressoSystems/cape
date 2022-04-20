@@ -102,17 +102,23 @@ impl From<AssetDefinition> for JfAssetDefinition {
         if let Some(viewing_key) = definition.viewing_key {
             policy = policy.set_auditor_pub_key(viewing_key);
             if definition.address_viewable {
-                policy = policy.reveal_user_address().unwrap();
+                policy = policy
+                    .reveal_user_address()
+                    .expect("Failed to set reveal user address on asset policy");
             }
             if definition.amount_viewable {
-                policy = policy.reveal_amount().unwrap();
+                policy = policy
+                    .reveal_amount()
+                    .expect("Failed to set reveal amount on asset policy");
             }
             if definition.blind_viewable {
-                policy = policy.reveal_blinding_factor().unwrap();
+                policy = policy
+                    .reveal_blinding_factor()
+                    .expect("Failed to set reveal amount on asset policy");
             }
             policy = policy.set_reveal_threshold(definition.viewing_threshold);
         }
-        JfAssetDefinition::new(code, policy).unwrap()
+        JfAssetDefinition::new(code, policy).expect("Failed to create Asset Definition")
     }
 }
 
@@ -238,7 +244,8 @@ impl AssetInfo {
     pub fn new(info: seahorse::AssetInfo, wrapped_erc20: Option<Erc20Code>) -> Self {
         let icon = info.icon.map(|icon| {
             let mut bytes = Cursor::new(vec![]);
-            icon.write_png(&mut bytes).unwrap();
+            icon.write_png(&mut bytes)
+                .expect("Failed getting icon bytes");
             base64::encode(&bytes.into_inner())
         });
         Self {
@@ -269,8 +276,8 @@ impl AssetInfo {
 impl From<AssetInfo> for seahorse::AssetInfo {
     fn from(info: AssetInfo) -> Self {
         let icon = info.icon.map(|b64| {
-            let bytes = base64::decode(&b64).unwrap();
-            Icon::load_png(Cursor::new(bytes.as_slice())).unwrap()
+            let bytes = base64::decode(&b64).expect("Failed to decode asset icon");
+            Icon::load_png(Cursor::new(bytes.as_slice())).expect("Failed to load asset icon")
         });
 
         let mut asset = seahorse::AssetInfo::from(JfAssetDefinition::from(info.definition));

@@ -4861,6 +4861,7 @@ dependencies = [
  "bincode",
  "cap-rust-sandbox",
  "ethers",
+ "futures",
  "jf-cap",
  "jf-primitives",
  "key-set",

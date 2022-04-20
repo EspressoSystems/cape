@@ -13,8 +13,8 @@ use cap_rust_sandbox::{
 use ethers::prelude::{
     coins_bip39::English, Address, Middleware, MnemonicBuilder, Signer, SignerMiddleware,
 };
-use relayer::{init_web_server, NonceCountRule, DEFAULT_RELAYER_PORT};
-use std::sync::Arc;
+use relayer::{init_web_server, submit_empty_block_loop, NonceCountRule, DEFAULT_RELAYER_PORT};
+use std::{num::NonZeroU64, sync::Arc, time::Duration};
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -54,6 +54,17 @@ struct MinimalRelayerOptions {
         verbatim_doc_comment
     )]
     nonce_count_rule: NonceCountRule,
+
+    /// Amount of time between submission of empty blocks.
+    ///
+    /// The empty blocks process the pending deposits and prevent the pending
+    /// deposits queue from filling up.
+    #[structopt(
+        long,
+        env = "CAPE_RELAYER_EMPTY_BLOCK_INTERVAL_SECS",
+        default_value = "300"
+    )]
+    empty_block_interval: NonZeroU64,
 }
 
 #[async_std::main]
@@ -61,7 +72,8 @@ async fn main() -> std::io::Result<()> {
     tracing_subscriber::fmt()
         .compact()
         .with_ansi(false)
-        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env());
+        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+        .init();
 
     let opt = MinimalRelayerOptions::from_args();
 
@@ -83,5 +95,12 @@ async fn main() -> std::io::Result<()> {
     let contract = CAPE::new(opt.cape_address, client);
 
     // Start serving CAPE transaction submissions.
-    init_web_server(contract, opt.port, opt.nonce_count_rule).await
+    let periodic_block_submission = async_std::task::spawn(submit_empty_block_loop(
+        contract.clone(),
+        opt.nonce_count_rule,
+        Duration::from_secs(opt.empty_block_interval.into()),
+    ));
+    let web_server = init_web_server(contract, opt.port, opt.nonce_count_rule);
+    let _result = futures::future::join(periodic_block_submission, web_server).await;
+    Ok(())
 }

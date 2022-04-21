@@ -10,18 +10,34 @@
 #
 version: "3.9"
 services:
-  wallet-api:
-    # TODO mount a store path from the host for persistence (?)
+  wallet-api-alice:
     image: ${CAPE_WALLET_IMAGE:-ghcr.io/espressosystems/cape/wallet:main}
     ports:
-      - $CAPE_WALLET_PORT:$CAPE_WALLET_PORT
+      - $CAPE_WALLET_PORT_ALICE:$CAPE_WALLET_PORT_ALICE
     environment:
       - CAPE_ADDRESS_BOOK_URL=http://address-book:$CAPE_ADDRESS_BOOK_PORT
       - CAPE_CONTRACT_ADDRESS=$CAPE_CONTRACT_ADDRESS
       - CAPE_EQS_URL=http://eqs:$CAPE_EQS_PORT
       - CAPE_FAUCET_URL=http://faucet:$CAPE_FAUCET_PORT
       - CAPE_RELAYER_URL=http://relayer:$CAPE_RELAYER_PORT
-      - CAPE_WALLET_PORT=$CAPE_WALLET_PORT
+      - CAPE_WALLET_PORT=$CAPE_WALLET_PORT_ALICE
+      - CAPE_WEB3_PROVIDER_URL=http://geth:8545
+      - RUST_BACKTRACE=1
+      - RUST_LOG=info
+    depends_on:
+      - geth
+
+  wallet-api-bob:
+    image: ${CAPE_WALLET_IMAGE:-ghcr.io/espressosystems/cape/wallet:main}
+    ports:
+      - $CAPE_WALLET_PORT_BOB:$CAPE_WALLET_PORT_BOB
+    environment:
+      - CAPE_ADDRESS_BOOK_URL=http://address-book:$CAPE_ADDRESS_BOOK_PORT
+      - CAPE_CONTRACT_ADDRESS=$CAPE_CONTRACT_ADDRESS
+      - CAPE_EQS_URL=http://eqs:$CAPE_EQS_PORT
+      - CAPE_FAUCET_URL=http://faucet:$CAPE_FAUCET_PORT
+      - CAPE_RELAYER_URL=http://relayer:$CAPE_RELAYER_PORT
+      - CAPE_WALLET_PORT=$CAPE_WALLET_PORT_BOB
       - CAPE_WEB3_PROVIDER_URL=http://geth:8545
       - RUST_BACKTRACE=1
       - RUST_LOG=info

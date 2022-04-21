@@ -14,7 +14,7 @@ ENV CAPE_EQS_URL=https://eqs.goerli.cape.tech
 ENV CAPE_RELAYER_URL=https://relayer.goerli.cape.tech
 ENV CAPE_ADDRESS_BOOK_URL=https://address-book.goerli.cape.tech
 ENV CAPE_WEB3_PROVIDER_URL=https://rpc.goerli.mudit.blog
-ENV CAPE_CONTRACT_ADDRESS=0x73F060d28685aa30bc10363f66491C2e5baEF8D0
+ENV CAPE_CONTRACT_ADDRESS=0x5594f9F32876d89bB50561DE2051f1F85BA1b6dd
 
 WORKDIR /app/
 CMD ./wallet-api

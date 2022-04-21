@@ -6,15 +6,6 @@
 # This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 # You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-set -euo pipefail
+set -eu
 
-# If we are *not* using local docker images, try to pull the latest images.
-if [ -z "${CAPE_SERVICES_IMAGE:-}" ] && [ -z "${CAPE_WALLET_IMAGE:-}" ] && [ -z "${CAPE_GETH_IMAGE:-}" ]; then
-    docker compose --env-file demo/compose.env pull || {
-        RED='\033[0;31m'
-        echo
-        echo -e "${RED}Failed fetch latest docker images. Will try starting anyway."
-        echo
-    }
-fi
-docker compose --env-file demo/compose.env up
+docker build -t cape/geth -f ./demo/geth.Dockerfile .

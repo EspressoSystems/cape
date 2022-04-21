@@ -33,10 +33,6 @@ jobs:
         run: |
           apk add --no-cache tar git
 
-      - name: Potential broken submodules fix
-        run: |
-          git checkout -f $(git -c user.name=x -c user.email=x@x commit-tree $(git hash-object -t tree /dev/null) < /dev/null) || :
-
       - uses: actions/checkout@v2
         name: Checkout Repository
 
@@ -78,6 +74,9 @@ jobs:
       - name: Build all executables
         run: nix-shell --run "cargo build --release"
 
+      - name: Build demo geth data dir
+        run: nix-shell --run "demo/initialize-demo-geth"
+
       - uses: actions/upload-artifact@v2
         with:
           name: wallet-webserver
@@ -92,6 +91,12 @@ jobs:
             target/release/eqs
             target/release/faucet
             target/release/minimal-relayer
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: geth-data-dir
+          path: |
+            scratch/geth-data-dir
 
   docker-wallet:
     runs-on: self-hosted
@@ -180,6 +185,45 @@ jobs:
         with:
           context: ./services-checkout/
           file: ./services-checkout/services.Dockerfile
+          platforms: linux/amd64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  docker-geth:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v2
+        name: Checkout Repository
+
+      - uses: actions/download-artifact@v2
+        with:
+          name: geth-data-dir
+          path: scratch/geth-data-dir/
+
+      - uses: docker/setup-buildx-action@v1
+        name: Setup Docker BuildKit (buildx)
+
+      - uses: docker/login-action@v1
+        name: Login to Github Container Repo
+        if: github.event_name != 'pull_request'
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/metadata-action@v3
+        name: Generate Docker Metadata
+        id: meta
+        with:
+          images: ghcr.io/espressosystems/cape/geth
+
+      - uses: docker/build-push-action@v2
+        name: Build and Push Docker
+        with:
+          context: ./
+          file: ./demo/geth.Dockerfile
           platforms: linux/amd64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}

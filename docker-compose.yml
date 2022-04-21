@@ -52,12 +52,9 @@ services:
     # Panics if it can't connect to geth on startup.
     command: sh -c "sleep 5 && /app/eqs/eqs"
     working_dir: /app/eqs
-    volumes:
-      - $CAPE_EQS_STORE_PATH:/mnt/eqs
     environment:
       - CAPE_CONTRACT_ADDRESS=$CAPE_CONTRACT_ADDRESS
       - CAPE_EQS_PORT=$CAPE_EQS_PORT
-      - CAPE_EQS_STORE_PATH=/mnt/eqs
       - CAPE_WEB3_PROVIDER_URL=http://geth:8545
       - RUST_BACKTRACE=1
       - RUST_LOG=info
@@ -69,15 +66,13 @@ services:
     ports:
       - $CAPE_FAUCET_PORT:$CAPE_FAUCET_PORT
     command: /app/faucet/faucet
-    volumes:
-      - $CAPE_FAUCET_WALLET_PATH:/mnt/faucet
     environment:
       - CAPE_ADDRESS_BOOK_URL=http://address-book:$CAPE_ADDRESS_BOOK_PORT
       - CAPE_CONTRACT_ADDRESS=$CAPE_CONTRACT_ADDRESS
       - CAPE_EQS_URL=http://eqs:$CAPE_EQS_PORT
       - CAPE_FAUCET_PORT=$CAPE_FAUCET_PORT
       - CAPE_FAUCET_WALLET_MNEMONIC=$CAPE_FAUCET_WALLET_MNEMONIC
-      - CAPE_FAUCET_WALLET_PATH=/mnt/faucet
+      - CAPE_FAUCET_WALLET_PATH=/data
       - CAPE_RELAYER_URL=http://relayer:$CAPE_RELAYER_PORT
       - CAPE_WEB3_PROVIDER_URL=http://geth:8545
       - RUST_BACKTRACE=1
@@ -90,32 +85,13 @@ services:
     ports:
       - $CAPE_ADDRESS_BOOK_PORT:$CAPE_ADDRESS_BOOK_PORT
     command: /app/address-book/address-book
-    volumes:
-      - $CAPE_ADDRESS_BOOK_STORE_PATH:/mnt/address-book
     env_file: demo/compose.env
     environment:
       - CAPE_ADDRESS_BOOK_PORT=$CAPE_ADDRESS_BOOK_PORT
-      - CAPE_ADDRESS_BOOK_STORE_PATH=/mnt/address-book
       - RUST_BACKTRACE=1
       - RUST_LOG=info
 
   geth:
-    image: ethereum/client-go:v1.10.15
-    # Going through sh -c "geth ..." to pass an empty password file
-    entrypoint: /bin/sh
+    image: ${CAPE_GETH_IMAGE:-cape/geth}
     ports:
       - 8545:8545
-    command: [
-        "-c",
-        '
-        geth --dev
-        --http --http.addr 0.0.0.0 --http.vhosts "*"
-        --verbosity 1
-        --mine --maxpeers 0 --nodiscover
-        --miner.gaslimit 25000000
-        --allow-insecure-unlock
-        --password <(echo "")
-        --datadir /mnt/geth --unlock $ADDRESS_LIST',
-      ]
-    volumes:
-      - $GETH_DATA_DIR:/mnt/geth

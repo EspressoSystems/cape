@@ -20,7 +20,7 @@ use jf_cap::{keys::UserPubKey, structs::ReceiverMemo, Signature};
 use net::server::{add_error_body, request_body, response};
 use serde::{Deserialize, Serialize};
 use snafu::Snafu;
-use std::str::FromStr;
+use std::{str::FromStr, time::Duration};
 use tide::{
     http::headers::HeaderValue,
     security::{CorsMiddleware, Origin},
@@ -166,6 +166,30 @@ async fn relay(
         )?,
         memos: vec![(memos, sig)],
     };
+    submit_block(contract, nonce_count_rule, block).await
+}
+
+async fn submit_empty_block(
+    contract: &CAPE<EthMiddleware>,
+    nonce_count_rule: NonceCountRule,
+) -> Result<H256, Error> {
+    let miner = UserPubKey::default();
+    let block = BlockWithMemos {
+        block: CapeBlock::from_cape_transactions(vec![], miner.address()).map_err(|err| {
+            Error::BadBlock {
+                msg: err.to_string(),
+            }
+        })?,
+        memos: vec![],
+    };
+    submit_block(contract, nonce_count_rule, block).await
+}
+
+async fn submit_block(
+    contract: &CAPE<EthMiddleware>,
+    nonce_count_rule: NonceCountRule,
+    block: BlockWithMemos,
+) -> Result<H256, Error> {
     let pending = submit_cape_block_with_memos(contract, block, nonce_count_rule.into())
         .await
         .map_err(|err| Error::Submission {
@@ -180,6 +204,20 @@ async fn relay(
         *pending
     );
     Ok(*pending)
+}
+
+pub async fn submit_empty_block_loop(
+    contract: CAPE<EthMiddleware>,
+    nonce_count_rule: NonceCountRule,
+    empty_block_interval: Duration,
+) -> Result<(), std::io::Error> {
+    loop {
+        async_std::task::sleep(empty_block_interval).await;
+        match submit_empty_block(&contract, nonce_count_rule).await {
+            Ok(_) => {}
+            Err(err) => event!(Level::ERROR, "Failed to submit empty block {}", err),
+        };
+    }
 }
 
 /// This function starts the web server

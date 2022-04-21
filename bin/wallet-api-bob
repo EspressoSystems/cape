@@ -7,6 +7,6 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 set -eu
-export CAPE_WALLET_PORT=$CAPE_WALLET_PORT_ALICE
-export CAPE_WALLET_STORAGE=$CAPE_WALLET_STORAGE_ALICE
+export CAPE_WALLET_PORT=$CAPE_WALLET_PORT_BOB
+export CAPE_WALLET_STORAGE=$CAPE_WALLET_STORAGE_BOB
 exec target/release/wallet-api

@@ -92,6 +92,6 @@ services:
       - RUST_LOG=info
 
   geth:
-    image: ${CAPE_GETH_IMAGE:-cape/geth}
+    image: ${CAPE_GETH_IMAGE:-ghcr.io/espressosystems/cape/geth:main}
     ports:
       - 8545:8545

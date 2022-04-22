@@ -30,6 +30,8 @@ cleanup(){
     remove-directory "$CAPE_FAUCET_WALLET_PATH"
     remove-directory "$CAPE_EQS_STORE_PATH"
     remove-directory "$CAPE_ADDRESS_BOOK_STORE_PATH"
+    remove-directory "$CAPE_WALLET_STORAGE_ALICE"
+    remove-directory "$CAPE_WALLET_STORAGE_BOB"
 }
 
 # Build all the rust executables
@@ -55,7 +57,11 @@ export CAPE_FAUCET_URL="http://localhost:$CAPE_FAUCET_PORT"
 export CAPE_FAUCET_WALLET_MNEMONIC="$TEST_MNEMONIC"
 export CAPE_FAUCET_WALLET_PATH="$(mktemp -d -t cape-faucet-wallet-XXXXXXX)"
 
-export CAPE_WALLET_PORT=50040
+
+export CAPE_WALLET_PORT_ALICE=50040
+export CAPE_WALLET_STORAGE_ALICE="$(mktemp -d -t cape-wallet-alice-XXXXXXX)"
+export CAPE_WALLET_PORT_BOB=50041
+export CAPE_WALLET_STORAGE_BOB="$(mktemp -d -t cape-wallet-bob-XXXXXXX)"
 
 # Create a faucet manager wallet and export variables printed to stdout
 export CAPE_FAUCET_MANAGER_MNEMONIC="$TEST_MNEMONIC"
@@ -81,7 +87,8 @@ hivemind demo.Procfile &
 wait-port $CAPE_ADDRESS_BOOK_PORT
 wait-port $CAPE_EQS_PORT
 wait-port $CAPE_RELAYER_PORT
-wait-port $CAPE_WALLET_PORT
+wait-port $CAPE_WALLET_PORT_ALICE
+wait-port $CAPE_WALLET_PORT_BOB
 wait-port $CAPE_FAUCET_PORT
 
 # Show configuration (using `set` to get quotes around values with spaces)

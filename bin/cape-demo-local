@@ -47,6 +47,7 @@ export CAPE_ADDRESS_BOOK_URL="http://localhost:$CAPE_ADDRESS_BOOK_PORT"
 export CAPE_EQS_PORT=50010
 export CAPE_EQS_STORE_PATH="$(mktemp -d -t cape-eqs-store-path-XXXXXXX)"
 export CAPE_EQS_URL="http://localhost:$CAPE_EQS_PORT"
+export CAPE_EQS_NUM_CONFIRMATIONS=1 # More responsive local demo.
 
 export CAPE_RELAYER_PORT=50020
 export CAPE_RELAYER_URL="http://localhost:$CAPE_RELAYER_PORT"

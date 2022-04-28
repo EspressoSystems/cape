@@ -71,6 +71,7 @@ services:
     environment:
       - CAPE_CONTRACT_ADDRESS=$CAPE_CONTRACT_ADDRESS
       - CAPE_EQS_PORT=$CAPE_EQS_PORT
+      - CAPE_EQS_NUM_CONFIRMATIONS=1 # More responsive local demo.
       - CAPE_WEB3_PROVIDER_URL=http://geth:8545
       - RUST_BACKTRACE=1
       - RUST_LOG=info

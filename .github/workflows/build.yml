@@ -36,6 +36,9 @@ jobs:
       - uses: actions/checkout@v2
         name: Checkout Repository
 
+      - name: Configure `git` to allow "unsafe" directories
+        run: git config --global --add safe.directory "*"
+
       - name: Initialize Nix Shell
         run: nix-shell --run "echo Init"
 

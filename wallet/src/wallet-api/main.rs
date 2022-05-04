@@ -2057,10 +2057,10 @@ mod tests {
         let description = "description".to_owned();
 
         // Generate a simple icon in raw bytes: 4 bytes for width, 4 for height, and then
-        // width*height*3 zerox bytes for the pixels. Use 64x64 so seahorse doesn't resize the icon.
+        // width*height*4 bytes for the pixels. Use 64x64 so seahorse doesn't resize the icon.
         let icon_width: u32 = 64;
         let icon_height: u32 = 64;
-        let icon_data = [0; 3 * 64 * 64];
+        let icon_data = [0; 4 * 64 * 64];
         let icon_bytes = icon_width
             .to_le_bytes()
             .iter()

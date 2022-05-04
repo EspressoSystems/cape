@@ -16,7 +16,7 @@ signature using a private signing key known only to Espresso Systems. The wallet
 this signature before loading any asset library file.
 
 For the demo of CAPE on Ethereum, Espresso Systems will maintain the private viewing and freezing
-keys for the assets where they are applicable, but this is not theoretically required.In principle,
+keys for the assets where they are applicable, but this is not theoretically required. In principle,
 we could distribute the official asset library while including assets viewable or freezable only by
 third parties.
 

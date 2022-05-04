@@ -44,14 +44,14 @@ wallet using the `gen-official-asset-library` program.
 ### WGTH ![WGTH](icons/WGTH.png)
 
 - Wraps [WETH on Goerli](https://goerli.etherscan.io/address/0xb4fbf271143f4fbf7b91a5ded31805e42b2208d6)
-- Sponsored by 0x1e59e13E9FC9b2Aa5FE6aE1841B4dBbBD1448AC1
+- Sponsored by 0xb554D84911AFa2d99f8A950cD6C5A7c9eec3c6a2
 - Not viewable
 - Not freezable
 
 ### DAI ![DAI](icons/DAI.png)
 
 - Wraps [DAI](https://goerli.etherscan.io/address/0xd787ec2b6c962f611300175603741db8438674a0)
-- Sponsored by 0x1e59e13E9FC9b2Aa5FE6aE1841B4dBbBD1448AC1
+- Sponsored by 0xb554D84911AFa2d99f8A950cD6C5A7c9eec3c6a2
 - Viewable
   - AUDPUBKEY~z1xFfj2B6dTdUn1tcyexZd8v8foMPDJibT8hrmXXkAhx
   - The viewing key is maintained by Espresso, but would belong to Maker Foundation in a real deployment
@@ -60,7 +60,7 @@ wallet using the `gen-official-asset-library` program.
 ### USDC ![USDC](icons/USDC.png)
 
 - Wraps [USDC](https://goerli.etherscan.io/address/0x0aa78575e17ac357294bb7b5a9ea512ba07669e2)
-- Sponsored by 0x1e59e13E9FC9b2Aa5FE6aE1841B4dBbBD1448AC1
+- Sponsored by 0xb554D84911AFa2d99f8A950cD6C5A7c9eec3c6a2
 - Viewable
   - AUDPUBKEY~A1EVmqt8rZc6ibPolJ0gVI-cUxTOark5L9e9TTEDt6G-
   - The viewing key is maintained by Espresso, but would belong to Circle in a real deployment
@@ -71,7 +71,7 @@ wallet using the `gen-official-asset-library` program.
 ### USDT ![USDT](icons/USDT.png)
 
 - Wraps [USDT](https://goerli.etherscan.io/address/0x77baa6a171e5084a9e7683b1f6658bf330bf0011)
-- Sponsored by 0x1e59e13E9FC9b2Aa5FE6aE1841B4dBbBD1448AC1
+- Sponsored by 0xb554D84911AFa2d99f8A950cD6C5A7c9eec3c6a2
 - Viewable
   - AUDPUBKEY~X9pSGwzBa5nXitbGypHOnsQTA1Ddr61yDxcv4HQ0AIG5
   - The viewing key is maintained by Espresso, but would belong to Tether in a real deployment

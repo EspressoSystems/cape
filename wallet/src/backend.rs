@@ -557,7 +557,7 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
 
     fn asset_verifier(&self) -> VerKey {
         // The verification key for the official asset library signing key.
-        "VERKEY~8LfUa4wqi7wYzWE4IQ8vOpjgUz8Pp5LQoj5Ue0Rwn6je"
+        "VERKEY~b7yvQPPxjPlZ5gjKofFkf8T7CwAZ2xPnkkVRhE48D4ge"
             .parse()
             .expect("failed to parse verification key")
     }

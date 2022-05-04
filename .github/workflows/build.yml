@@ -16,7 +16,7 @@ env:
 
 jobs:
   build:
-    runs-on: self-hosted
+    runs-on: [self-hosted, X64]
     container:
       image: ghcr.io/espressosystems/nix:main
       volumes:
@@ -99,7 +99,7 @@ jobs:
             scratch/geth-data-dir
 
   docker-wallet:
-    runs-on: self-hosted
+    runs-on: [self-hosted, X64]
     needs: build
     steps:
       - uses: actions/checkout@v2
@@ -145,7 +145,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
 
   docker-services:
-    runs-on: self-hosted
+    runs-on: [self-hosted, X64]
     needs: build
     steps:
       - uses: actions/checkout@v2

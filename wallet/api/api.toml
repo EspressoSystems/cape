@@ -474,12 +474,11 @@ Return a serialized representation of the asset with the given code.
 
 [route.importasset]
 METHOD = "POST"
-PATH = ["importasset/:asset"]
-":asset" = "TaggedBase64"
+PATH = ["importasset"]
 DOC = """
 Add an asset to the wallet's asset library.
 
-`:asset` should be a serialized representation of an asset, as returned by `exportasset`. The asset
+The request body should be a JSON string containing a serialized representation of an asset, as returned by `exportasset`. The asset
 may have been created and exported in a different keystore or wallet.
 """
 

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+//
 // Copyright (c) 2022 Espresso Systems (espressosys.com)
 // This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
 //
@@ -5,19 +7,10 @@
 // This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { DeployFunction } from "hardhat-deploy/types";
+pragma solidity ^0.8.0;
 
-const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
-  const { deployments, getNamedAccounts } = hre;
-  const { deploy } = deployments;
-  const { deployer } = await getNamedAccounts();
+import "./WrapToken.sol";
 
-  await deploy("SimpleToken", { from: deployer, log: true });
-  await deploy("WETH", { from: deployer, log: true });
-  await deploy("DAI", { from: deployer, log: true });
-};
-
-export default func;
-func.id = "deploy_token"; // id required to prevent re-execution
-func.tags = ["CAPE"];
+contract DAI is WrapToken {
+    constructor() WrapToken("DAI Token", "DAI") {}
+}

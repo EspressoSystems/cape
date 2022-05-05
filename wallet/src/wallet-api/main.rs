@@ -87,7 +87,7 @@ mod tests {
         txn_builder::{RecordInfo, TransactionReceipt},
     };
     use serde::de::DeserializeOwned;
-    use std::collections::hash_map::HashMap;
+    use std::collections::{HashMap, HashSet};
     use std::convert::TryInto;
     use std::fmt::Debug;
     use std::io::Cursor;
@@ -1704,6 +1704,97 @@ mod tests {
 
     #[async_std::test]
     #[traced_test]
+    async fn test_getaccounts() {
+        let server = TestServer::new().await;
+
+        // Should fail if a wallet is not already open.
+        server
+            .requires_wallet::<Vec<Account>>("getaccounts/sending")
+            .await;
+        server
+            .requires_wallet::<Vec<Account>>("getaccounts/viewing")
+            .await;
+        server
+            .requires_wallet::<Vec<Account>>("getaccounts/freezing")
+            .await;
+        server
+            .requires_wallet::<Vec<Account>>("getaccounts/all")
+            .await;
+
+        // Now open a wallet.
+        server
+            .post::<()>(&format!(
+                "newwallet/{}/{}/path/{}",
+                server.get::<String>("getmnemonic").await.unwrap(),
+                base64("my-password".as_bytes()),
+                server.path()
+            ))
+            .await
+            .unwrap();
+        // Generate some accounts.
+        let sending1 = server
+            .post::<PubKey>(&format!("newkey/sending"))
+            .await
+            .unwrap();
+        let sending2 = server
+            .post::<PubKey>(&format!("newkey/sending"))
+            .await
+            .unwrap();
+        let viewing1 = server
+            .post::<PubKey>(&format!("newkey/viewing"))
+            .await
+            .unwrap();
+        let viewing2 = server
+            .post::<PubKey>(&format!("newkey/viewing"))
+            .await
+            .unwrap();
+        let freezing1 = server
+            .post::<PubKey>(&format!("newkey/freezing"))
+            .await
+            .unwrap();
+        let freezing2 = server
+            .post::<PubKey>(&format!("newkey/freezing"))
+            .await
+            .unwrap();
+
+        // Check that `getaccounts` returns the accounts with the correct keys. The validity of the
+        // rest of the account data is tested in `test_getaccount`.
+        async fn check(server: &TestServer, query: &str, expected: Vec<&PubKey>) {
+            let accounts = server
+                .get::<Vec<Account>>(&format!("getaccounts/{}", query))
+                .await
+                .unwrap();
+            assert_eq!(accounts.len(), expected.len());
+            // Check that we got the expected accounts, modulo order.
+            assert_eq!(
+                accounts
+                    .into_iter()
+                    .map(|account| account.pub_key)
+                    .collect::<HashSet<_>>(),
+                expected
+                    .into_iter()
+                    .map(|k| match k {
+                        PubKey::Sending(k) => UserAddress(k.address()).to_string(),
+                        _ => k.to_string(),
+                    })
+                    .collect::<HashSet<_>>()
+            );
+        }
+        check(
+            &server,
+            "all",
+            vec![
+                &sending1, &sending2, &viewing1, &viewing2, &freezing1, &freezing2,
+            ],
+        )
+        .await;
+        check(&server, "sending", vec![&sending1, &sending2]).await;
+        check(&server, "viewing", vec![&viewing1, &viewing2]).await;
+        check(&server, "freezing", vec![&freezing1, &freezing2]).await;
+    }
+
+    #[async_std::test]
+    #[traced_test]
     async fn test_recoverkey() {
         let server = TestServer::new().await;
 
@@ -2057,10 +2148,10 @@ mod tests {
         let description = "description".to_owned();
 
         // Generate a simple icon in raw bytes: 4 bytes for width, 4 for height, and then
-        // width*height*3 zerox bytes for the pixels. Use 64x64 so seahorse doesn't resize the icon.
+        // width*height*4 bytes for the pixels. Use 64x64 so seahorse doesn't resize the icon.
         let icon_width: u32 = 64;
         let icon_height: u32 = 64;
-        let icon_data = [0; 3 * 64 * 64];
+        let icon_data = [0; 4 * 64 * 64];
         let icon_bytes = icon_width
             .to_le_bytes()
             .iter()

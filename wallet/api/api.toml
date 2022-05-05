@@ -157,6 +157,14 @@ Each record contains the following fields:
 * `"uid"` - integer unique to this record
 """
 
+[route.getaccounts]
+PATH = ["getaccounts/all", "getaccounts/sending", "getaccounts/viewing", "getaccounts/freezing"]
+DOC = """
+Get information about accounts.
+
+Returns an array of account information, as returned by `getaccount`, for each matching account.
+"""
+
 [route.newkey]
 METHOD = "POST"
 PATH = ["newkey/sending", "newkey/sending/description/:description",

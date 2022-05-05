@@ -15,7 +15,7 @@ env:
 
 jobs:
   build:
-    runs-on: self-hosted
+    runs-on: [self-hosted, X64]
     container:
       image: ghcr.io/espressosystems/nix:main
       volumes:

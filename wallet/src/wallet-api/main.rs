@@ -98,6 +98,22 @@ mod tests {
     use tempdir::TempDir;
     use tracing_test::traced_test;
 
+    fn test_icon() -> Icon {
+        // Generate a simple icon in raw bytes: 4 bytes for width, 4 for height, and then
+        // width*height*4 bytes for the pixels. Use 64x64 so seahorse doesn't resize the icon.
+        let icon_width: u32 = 64;
+        let icon_height: u32 = 64;
+        let icon_data = [0; 4 * 64 * 64];
+        let icon_bytes = icon_width
+            .to_le_bytes()
+            .iter()
+            .chain(icon_height.to_le_bytes().iter())
+            .chain(icon_data.iter())
+            .cloned()
+            .collect::<Vec<_>>();
+        <Icon as CanonicalDeserialize>::deserialize(icon_bytes.as_slice()).unwrap()
+    }
+
     fn base64(bytes: &[u8]) -> String {
         base64::encode_config(bytes, base64::URL_SAFE_NO_PAD)
     }
@@ -904,7 +920,11 @@ mod tests {
         assert_eq!(asset.policy.reveal_threshold, viewing_threshold);
         // Add the asset to the library.
         server
-            .post::<AssetInfo>(&format!("importasset/{}", info))
+            .client
+            .post("importasset")
+            .body_json(&info)
+            .unwrap()
+            .send()
             .await
             .unwrap();
         let info = server
@@ -989,7 +1009,11 @@ mod tests {
                 .await
                 .unwrap();
         server
-            .post::<AssetInfo>(&format!("importasset/{}", info))
+            .client
+            .post("importasset")
+            .body_json(&info)
+            .unwrap()
+            .send()
             .await
             .unwrap();
         let info = server
@@ -1036,7 +1060,11 @@ mod tests {
             .await
             .unwrap();
         server
-            .post::<AssetInfo>(&format!("importasset/{}", info))
+            .client
+            .post("importasset")
+            .body_json(&info)
+            .unwrap()
+            .send()
             .await
             .unwrap();
         server
@@ -2099,11 +2127,35 @@ mod tests {
 
         let mut asset = server
             .post::<AssetInfo>(&format!(
-                "newasset/description/{}",
+                "newasset/symbol/{}/description/{}",
+                base64::encode_config("symbol".as_bytes(), base64::URL_SAFE_NO_PAD),
                 base64::encode_config("description".as_bytes(), base64::URL_SAFE_NO_PAD)
             ))
             .await
             .unwrap();
+
+        // Add an icon to the asset so we can check the serialization/deserializtion.
+        let mut icon_bytes = Vec::new();
+        test_icon().write_png(Cursor::new(&mut icon_bytes)).unwrap();
+        asset = server
+            .client
+            .post(&format!("updateasset/{}", asset.definition.code))
+            .body_json(&UpdateAsset {
+                icon: Some(base64::encode(&icon_bytes)),
+                ..Default::default()
+            })
+            .unwrap()
+            .send()
+            .await
+            .unwrap()
+            .body_json()
+            .await
+            .unwrap();
+
+        assert_eq!(asset.symbol.as_ref().unwrap(), "symbol");
+        assert_eq!(asset.description.as_ref().unwrap(), "description");
+        assert_eq!(asset.icon.as_ref().unwrap(), &base64::encode(&icon_bytes));
+
         // We know the mint info since we created the asset. Later we will check that importers
         // can't learn the mint info.
         assert!(asset.mint_info.is_some());
@@ -2129,8 +2181,15 @@ mod tests {
         assert_eq!(info.assets, vec![AssetInfo::native()]);
 
         // Import the asset.
-        let import = server
-            .post::<AssetInfo>(&format!("importasset/{}", export))
+        let import: AssetInfo = server
+            .client
+            .post("importasset")
+            .body_json(&export)
+            .unwrap()
+            .send()
+            .await
+            .unwrap()
+            .body_json()
             .await
             .unwrap();
         // Make sure we didn't export the mint info.
@@ -2147,21 +2206,9 @@ mod tests {
         let symbol = "symbol".to_owned();
         let description = "description".to_owned();
 
-        // Generate a simple icon in raw bytes: 4 bytes for width, 4 for height, and then
-        // width*height*4 bytes for the pixels. Use 64x64 so seahorse doesn't resize the icon.
-        let icon_width: u32 = 64;
-        let icon_height: u32 = 64;
-        let icon_data = [0; 4 * 64 * 64];
-        let icon_bytes = icon_width
-            .to_le_bytes()
-            .iter()
-            .chain(icon_height.to_le_bytes().iter())
-            .chain(icon_data.iter())
-            .cloned()
-            .collect::<Vec<_>>();
-        let icon = <Icon as CanonicalDeserialize>::deserialize(icon_bytes.as_slice()).unwrap();
+        let icon = test_icon();
 
-        // Now write the icon as a PNG and encode it in base64.
+        // Write the icon as a PNG and encode it in base64.
         let mut icon_cursor = Cursor::new(vec![]);
         icon.write_png(&mut icon_cursor).unwrap();
         let icon_bytes = icon_cursor.into_inner();

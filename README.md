@@ -116,6 +116,18 @@ instructions should work in most cases
 
     curl -L https://nixos.org/nix/install | sh
 
+If the install script fails, it may be because the usage of `curl` in
+the script has incorrect arguments. You may need to change
+
+    fetch() { curl -L "$1" > "$2"; }
+
+to
+
+    fetch() { curl -L "$1" -o "$2"; }
+
+Once the install script has failed, it may be necessary to manually
+remove nix before trying again. See [Uninstallation](#uninstallation) below.
+
 Some linux distros (ubuntu, arch, ...) have packaged `nix`. See the section
 [Alternative nix installation methods](#alternative-nix-installation-methods)
 for more information.
@@ -431,15 +443,42 @@ To test the installation, run
 
 #### Uninstallation
 
-To remove `nix` (careful with the `rm` commands)
+##### On linux
+
+To remove `nix` manually,
 
     sudo apt purge --autoremove nix-bin nix-setup-systemd
+    # Be careful with rm.
     rm -r ~/.nix-*
     sudo rm -r /nix
-    # reboot machine (this step my not always be necessary)
+    # Reboot machine. (This step my not always be necessary.)
 
 - Remove any lines added to `.bashrc` (or other files) during installation.
 - If desired remove group `nix-users` and users `nixbld*` added by nix.
+
+To remove `nix` with the aid of a script,
+
+    # In the cape directory (where this README.md is)
+    sudo bin/rmnix
+
+### Nix on Mac OS
+
+#### Installation
+
+Run the following command:
+
+```
+sh <(curl -L https://nixos.org/nix/install)
+```
+
+See https://nixos.org/download.html#nix-install-macos
+
+#### Uninstallation
+
+This can be tricky on Mac OS.
+Following the steps provided by the installation script above should work.
+
+If however you run into https://github.com/NixOS/nix/issues/3900, rebooting the computer should enable you to delete the nix related directories.
 
 ## Git hooks
 

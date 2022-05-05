@@ -64,6 +64,11 @@ export CAPE_WALLET_STORAGE_ALICE="$(mktemp -d -t cape-wallet-alice-XXXXXXX)"
 export CAPE_WALLET_PORT_BOB=50041
 export CAPE_WALLET_STORAGE_BOB="$(mktemp -d -t cape-wallet-bob-XXXXXXX)"
 
+# File that consolidates the logs
+export LOG_FILENAME=/tmp/cape-services-log.txt
+# Empty the logs file
+> $LOG_FILENAME
+
 # Create a faucet manager wallet and export variables printed to stdout
 export CAPE_FAUCET_MANAGER_MNEMONIC="$TEST_MNEMONIC"
 source <(target/release/faucet-wallet-test-setup)
@@ -95,12 +100,17 @@ wait-port $CAPE_WALLET_PORT_BOB
 wait-port $CAPE_FAUCET_PORT
 
 # Show configuration (using `set` to get quotes around values with spaces)
-cat<<EOF
+export CONFIGURATION=$(cat<<EOF
 
     Local CAPE Demo running
 
 $(set | grep "CAPE_.*=" | sort | sed 's|^|    |')
 
 EOF
+)
+
+echo -e $CONFIGURATION
+
+echo -e $CONFIGURATION >> $LOG_FILENAME
 
 wait

@@ -240,7 +240,8 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
         sponsor_addr: EthereumAddr,
         cap_asset_policy: AssetPolicy,
     ) -> Result<AssetDefinition, CapeWalletError> {
-        let description = erc20_asset_description(&erc20_code, &sponsor_addr);
+        let description =
+            erc20_asset_description(&erc20_code, &sponsor_addr, cap_asset_policy.clone());
         let code = AssetCode::new_foreign(&description);
         let asset = AssetDefinition::new(code, cap_asset_policy)
             .map_err(|source| CapeWalletError::CryptoError { source })?;
@@ -256,7 +257,11 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
         // Check that the asset code is properly constructed.
         asset
             .code
-            .verify_foreign(&erc20_asset_description(&erc20_code, &sponsor_addr))
+            .verify_foreign(&erc20_asset_description(
+                &erc20_code,
+                &sponsor_addr,
+                asset.policy_ref().clone(),
+            ))
             .map_err(|source| CapeWalletError::CryptoError { source })?;
 
         self.lock()

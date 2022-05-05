@@ -36,12 +36,13 @@ async fn test_reentrancy_guard() -> Result<()> {
 
     let sponsor = owner_of_erc20_tokens_client.address();
 
-    let description = erc20_asset_description(&erc20_code, &EthereumAddr(sponsor.to_fixed_bytes()));
-    let asset_def = AssetDefinition::new(
-        AssetCode::new_foreign(&description),
-        AssetPolicy::rand_for_test(rng),
-    )
-    .unwrap();
+    let policy = AssetPolicy::rand_for_test(rng);
+    let description = erc20_asset_description(
+        &erc20_code,
+        &EthereumAddr(sponsor.to_fixed_bytes()),
+        policy.clone(),
+    );
+    let asset_def = AssetDefinition::new(AssetCode::new_foreign(&description), policy).unwrap();
 
     // Prepare call to CAPE.deposit
     cape_contract_erc20_owner

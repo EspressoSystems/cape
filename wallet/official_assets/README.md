@@ -23,7 +23,9 @@ third parties.
 The list of asset types to be included in the first version of the official CAPE asset library
 follows below. Also included in this directory are PNG icons for each asset (in `icons/`) and the
 signed asset library binary (`cape_v1_official_assets.lib`). The binary was generated from a CAPE
-wallet using the `gen-official-asset-library` program.
+wallet using the `gen-official-asset-library` program. The binary asset library is also included
+automatically in the `wallet` Docker image, so note that any changes to the library will
+automatically affect the next build of the wallet.
 
 ## Assets
 

@@ -443,6 +443,8 @@ To test the installation, run
 
 #### Uninstallation
 
+##### On linux
+
 To remove `nix` manually,
 
     sudo apt purge --autoremove nix-bin nix-setup-systemd
@@ -458,6 +460,25 @@ To remove `nix` with the aid of a script,
 
     # In the cape directory (where this README.md is)
     sudo bin/rmnix
+
+### Nix on Mac OS
+
+#### Installation
+
+Run the following command:
+
+```
+sh <(curl -L https://nixos.org/nix/install)
+```
+
+See https://nixos.org/download.html#nix-install-macos
+
+#### Uninstallation
+
+This can be tricky on Mac OS.
+Following the steps provided by the installation script above should work.
+
+If however you run into https://github.com/NixOS/nix/issues/3900, rebooting the computer should enable you to delete the nix related directories.
 
 ## Git hooks
 

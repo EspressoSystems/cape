@@ -6,6 +6,7 @@ RUN apt-get update \
 COPY target/release/wallet-api /app/wallet-api
 COPY wallet/api /app/api
 COPY wallet/public /app/public
+COPY wallet/official_assets/cape_v1_official_assets.lib /.espresso/verified_assets
 RUN chmod +x /app/wallet-api
 
 # Point at the Goerli testnet deployment by default; all of these settings can be overridden with

@@ -320,6 +320,36 @@ pub enum PubKey {
     Freezing(FreezerPubKey),
 }
 
+impl Display for PubKey {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        match self {
+            Self::Sending(k) => k.fmt(f),
+            Self::Viewing(k) => k.fmt(f),
+            Self::Freezing(k) => k.fmt(f),
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct ParsePubKeyError;
+
+impl FromStr for PubKey {
+    type Err = ParsePubKeyError;
+
+    fn from_str(s: &str) -> Result<Self, ParsePubKeyError> {
+        if let Ok(k) = UserPubKey::from_str(s) {
+            return Ok(Self::Sending(k));
+        }
+        if let Ok(k) = AuditorPubKey::from_str(s) {
+            return Ok(Self::Viewing(k));
+        }
+        if let Ok(k) = FreezerPubKey::from_str(s) {
+            return Ok(Self::Freezing(k));
+        }
+        Err(ParsePubKeyError)
+    }
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 /// Private keys for spending, viewing and freezing assets.
 pub enum PrivateKey {
@@ -371,9 +401,39 @@ impl From<RecordInfo> for Record {
     }
 }
 
+pub trait Ui {
+    type UiAdaptor: Display;
+    fn ui(self) -> Self::UiAdaptor;
+}
+
+impl Ui for jf_cap::keys::UserAddress {
+    type UiAdaptor = UserAddress;
+
+    fn ui(self) -> UserAddress {
+        self.into()
+    }
+}
+
+impl Ui for AuditorPubKey {
+    type UiAdaptor = Self;
+
+    fn ui(self) -> Self {
+        self
+    }
+}
+
+impl Ui for FreezerPubKey {
+    type UiAdaptor = Self;
+
+    fn ui(self) -> Self {
+        self
+    }
+}
+
 #[ser_test(ark(false))]
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Account {
+    pub pub_key: String,
     pub records: Vec<Record>,
     pub balances: HashMap<AssetCode, u64>,
     pub assets: HashMap<AssetCode, AssetInfo>,
@@ -398,7 +458,10 @@ impl Account {
     pub async fn from_info<'a, Key: KeyPair, Backend: CapeWalletBackend<'a> + Sync + 'a>(
         wallet: &CapeWallet<'a, Backend>,
         info: AccountInfo<Key>,
-    ) -> Self {
+    ) -> Self
+    where
+        Key::PubKey: Ui,
+    {
         let assets = iter(info.assets)
             .then(|asset| async {
                 (
@@ -415,6 +478,7 @@ impl Account {
             None => (None, None),
         };
         Self {
+            pub_key: info.address.ui().to_string(),
             records: info.records.into_iter().map(|rec| rec.into()).collect(),
             assets,
             balances: info.balances,

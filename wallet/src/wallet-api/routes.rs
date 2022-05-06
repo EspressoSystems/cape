@@ -320,6 +320,7 @@ pub enum ApiRouteKey {
     freeze,
     getaddress,
     getaccount,
+    getaccounts,
     getbalance,
     getinfo,
     getmnemonic,
@@ -1132,6 +1133,54 @@ async fn getaccount(
     }
 }
 
+async fn getaccounts(
+    route_params: &[&str],
+    wallet: &mut Option<Wallet>,
+) -> Result<Vec<Account>, tide::Error> {
+    let wallet = require_wallet(wallet)?;
+    let selection = route_params[0];
+    let mut accounts = Vec::new();
+
+    if selection == "sending" || selection == "all" {
+        for key in wallet.pub_keys().await {
+            accounts.push(
+                Account::from_info(
+                    wallet,
+                    wallet
+                        .sending_account(&key.address())
+                        .await
+                        .map_err(wallet_error)?,
+                )
+                .await,
+            );
+        }
+    }
+    if selection == "viewing" || selection == "all" {
+        for key in wallet.auditor_pub_keys().await {
+            accounts.push(
+                Account::from_info(
+                    wallet,
+                    wallet.viewing_account(&key).await.map_err(wallet_error)?,
+                )
+                .await,
+            );
+        }
+    }
+    if selection == "freezing" || selection == "all" {
+        for key in wallet.freezer_pub_keys().await {
+            accounts.push(
+                Account::from_info(
+                    wallet,
+                    wallet.freezing_account(&key).await.map_err(wallet_error)?,
+                )
+                .await,
+            );
+        }
+    }
+
+    Ok(accounts)
+}
+
 async fn updateasset(
     req: &mut Request<WebState>,
     bindings: &HashMap<String, RouteBinding>,
@@ -1200,11 +1249,16 @@ pub async fn exportasset(
 }
 
 pub async fn importasset(
-    bindings: &HashMap<String, RouteBinding>,
+    request: &mut Request<WebState>,
     wallet: &mut Option<Wallet>,
 ) -> Result<AssetInfo, tide::Error> {
     let wallet = require_wallet(wallet)?;
-    let tb64 = bindings[":asset"].value.as_identifier()?;
+    let tb64 =
+        TaggedBase64::parse(&request_body::<String, _>(request).await?).map_err(|source| {
+            server_error(CapeAPIError::Deserialize {
+                msg: source.to_string(),
+            })
+        })?;
     if tb64.tag() != "CAPE-ASSET" {
         return Err(server_error(CapeAPIError::Tag {
             expected: "CAPE-ASSET".into(),
@@ -1349,10 +1403,14 @@ pub async fn dispatch_url(
         ApiRouteKey::freeze => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::getaddress => response(&req, getaddress(wallet).await?),
         ApiRouteKey::getaccount => response(&req, getaccount(bindings, wallet).await?),
+        ApiRouteKey::getaccounts => response(&req, getaccounts(&route_params, wallet).await?),
         ApiRouteKey::getbalance => response(&req, getbalance(bindings, wallet).await?),
         ApiRouteKey::getinfo => response(&req, getinfo(wallet).await?),
         ApiRouteKey::getmnemonic => response(&req, getmnemonic(rng).await?),
-        ApiRouteKey::importasset => response(&req, importasset(bindings, wallet).await?),
+        ApiRouteKey::importasset => {
+            let res = importasset(&mut req, wallet).await?;
+            response(&req, res)
+        }
         ApiRouteKey::getprivatekey => response(&req, getprivatekey(bindings, wallet).await?),
         ApiRouteKey::healthcheck => healthcheck().await,
         ApiRouteKey::importkey => dummy_url_eval(route_pattern, bindings),

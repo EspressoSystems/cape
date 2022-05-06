@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+
+# Copyright (c) 2022 Espresso Systems (espressosys.com)
+# This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
+#
+# This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+# You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+# If Nix fails to install properly, refuses to install on top of a
+# partial install, and refuses to uninstall cleanly, this script may
+# be helpful.
+#
+# Caution: This was only used once on Ubuntu 20.10. It's only useful
+# if you're having trouble installing or uninstalling Nix.
+
+echo "Stopping the daemons..."
+sudo systemctl stop nix-daemon.socket
+sudo systemctl stop nix-daemon.service
+sudo systemctl disable nix-daemon.socket
+sudo systemctl disable nix-daemon.service
+sudo systemctl daemon-reload
+
+echo "Removing the files..."
+sudo rm -rf /nix /etc/nix
+rm -rf $HOME/{.nix-channels,.nix-defexpr,.nix-profile,.config/nixpkgs}
+
+echo "Removing the users"
+for i in $(seq 1 32) ; do sudo deluser nixbld$i; done
+
+# Recommend removing nix directories from the path.
+echo "Checking path..."
+echo -e ${PATH//:/'\n'}|grep nix && echo -e "\nConsider updating PATH."
+
+sudo apt remove nix nix-setup-systemd

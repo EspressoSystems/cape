@@ -47,6 +47,7 @@ export CAPE_ADDRESS_BOOK_URL="http://localhost:$CAPE_ADDRESS_BOOK_PORT"
 export CAPE_EQS_PORT=50010
 export CAPE_EQS_STORE_PATH="$(mktemp -d -t cape-eqs-store-path-XXXXXXX)"
 export CAPE_EQS_URL="http://localhost:$CAPE_EQS_PORT"
+export CAPE_EQS_NUM_CONFIRMATIONS=1 # More responsive local demo.
 
 export CAPE_RELAYER_PORT=50020
 export CAPE_RELAYER_URL="http://localhost:$CAPE_RELAYER_PORT"
@@ -63,6 +64,11 @@ export CAPE_WALLET_STORAGE_ALICE="$(mktemp -d -t cape-wallet-alice-XXXXXXX)"
 export CAPE_WALLET_PORT_BOB=50041
 export CAPE_WALLET_STORAGE_BOB="$(mktemp -d -t cape-wallet-bob-XXXXXXX)"
 
+# File that consolidates the logs
+export LOG_FILENAME=/tmp/cape-services-log.txt
+# Empty the logs file
+> $LOG_FILENAME
+
 # Create a faucet manager wallet and export variables printed to stdout
 export CAPE_FAUCET_MANAGER_MNEMONIC="$TEST_MNEMONIC"
 source <(target/release/faucet-wallet-test-setup)
@@ -74,14 +80,16 @@ env GETH_PERIOD=1 run-geth --verbosity 1 &
 wait-port $GETH_PORT
 
 # Deploy contracts
-hardhat deploy --reset
+hardhat deploy --reset 2>&1 | tee -a $LOG_FILENAME
 
 # Configure environment
-export CAPE_TOKEN_ADDRESS="$(cat contracts/deployments/localhost/SimpleToken.json | jq -r .address)"
+export CAPE_TOKEN_ADDRESS_SIT="$(cat contracts/deployments/localhost/SimpleToken.json | jq -r .address)"
+export CAPE_TOKEN_ADDRESS_WETH="$(cat contracts/deployments/localhost/WETH.json | jq -r .address)"
+export CAPE_TOKEN_ADDRESS_DAI="$(cat contracts/deployments/localhost/DAI.json | jq -r .address)"
 export CAPE_CONTRACT_ADDRESS="$(cat contracts/deployments/localhost//CAPE.json | jq -r .address)"
 
 # Start demo services
-hivemind demo.Procfile &
+hivemind demo.Procfile 2>&1 | tee -a $LOG_FILENAME &
 
 # Wait for demo services to be available
 wait-port $CAPE_ADDRESS_BOOK_PORT
@@ -92,12 +100,17 @@ wait-port $CAPE_WALLET_PORT_BOB
 wait-port $CAPE_FAUCET_PORT
 
 # Show configuration (using `set` to get quotes around values with spaces)
-cat<<EOF
+export CONFIGURATION=$(cat<<EOF
 
     Local CAPE Demo running
 
 $(set | grep "CAPE_.*=" | sort | sed 's|^|    |')
 
 EOF
+)
+
+echo -e "$CONFIGURATION"
+
+echo -e "$CONFIGURATION" >> $LOG_FILENAME
 
 wait

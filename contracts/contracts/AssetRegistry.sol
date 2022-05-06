@@ -83,6 +83,7 @@ contract AssetRegistry {
     /// @param assetDefinitionCode The code of an asset definition
     /// @param erc20Address The ERC-20 address bound to the asset definition
     /// @param sponsor The sponsor address of this wrapped asset
+    /// @param policy asset policy
     function _checkForeignAssetCode(
         uint256 assetDefinitionCode,
         address erc20Address,
@@ -126,6 +127,7 @@ contract AssetRegistry {
     /// ERC-20 token and the address of the sponsor.
     /// @param erc20Address address of the erc20 token
     /// @param sponsor address of the sponsor
+    /// @param policy asset policy
     /// @return The asset description
     function _computeAssetDescription(
         address erc20Address,

@@ -63,7 +63,7 @@ rand = "0.8.4"
 rand_chacha = "0.3.1"
 reef = { git = "https://github.com/EspressoSystems/reef.git", tag = "0.2.1" }
 regex = "1.5.5"
-seahorse = { git = "https://github.com/EspressoSystems/seahorse.git", tag = "0.2.1" }
+seahorse = { git = "https://github.com/EspressoSystems/seahorse.git", tag = "0.2.2" }
 serde = { version = "1.0.124", features = ["derive"] }
 serde_json = "1.0.67"
 sha3 = "0.9.1"

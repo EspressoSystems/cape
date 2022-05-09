@@ -31,11 +31,15 @@ automatically affect the next build of the wallet.
 
 ### CAPEDAO ![CAPEDAO](icons/CAPEDAO.png)
 
+_Private CAPE DAO token_
+
 - Domestic
 - Not viewable
 - Not freezable
 
 ### WGMI ![WGMI](icons/WGMI.png)
+
+_WGMI DAO token_
 
 - Domestic
 - Viewable
@@ -45,12 +49,16 @@ automatically affect the next build of the wallet.
 
 ### WGTH ![WGTH](icons/WGTH.png)
 
+_Wrapped WETH on Goerli_
+
 - Wraps [WETH on Goerli](https://goerli.etherscan.io/address/0xb4fbf271143f4fbf7b91a5ded31805e42b2208d6)
 - Sponsored by 0xb554D84911AFa2d99f8A950cD6C5A7c9eec3c6a2
 - Not viewable
 - Not freezable
 
 ### DAI ![DAI](icons/DAI.png)
+
+_Wrapped DAI_
 
 - Wraps [DAI](https://goerli.etherscan.io/address/0xd787ec2b6c962f611300175603741db8438674a0)
 - Sponsored by 0xb554D84911AFa2d99f8A950cD6C5A7c9eec3c6a2
@@ -60,6 +68,8 @@ automatically affect the next build of the wallet.
 - Not freezable
 
 ### USDC ![USDC](icons/USDC.png)
+
+_Wrapped USDC_
 
 - Wraps [USDC](https://goerli.etherscan.io/address/0x0aa78575e17ac357294bb7b5a9ea512ba07669e2)
 - Sponsored by 0xb554D84911AFa2d99f8A950cD6C5A7c9eec3c6a2

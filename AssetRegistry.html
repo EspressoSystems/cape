@@ -191,7 +191,8 @@ registered or the ERC-20 token address is zero.</p>
 <pre><code class="language-solidity">  function _checkForeignAssetCode(
     uint256 assetDefinitionCode,
     address erc20Address,
-    address sponsor
+    address sponsor,
+    struct AssetRegistry.AssetPolicy policy
   ) internal
 </code></pre>
 <p>Throws an exception if the asset definition code is
@@ -203,6 +204,7 @@ the address of the sponsor.</p>
 <tr><td style="text-align: left"><code>assetDefinitionCode</code></td><td style="text-align: left">uint256</td><td style="text-align: left">The code of an asset definition</td></tr>
 <tr><td style="text-align: left"><code>erc20Address</code></td><td style="text-align: left">address</td><td style="text-align: left">The ERC-20 address bound to the asset definition</td></tr>
 <tr><td style="text-align: left"><code>sponsor</code></td><td style="text-align: left">address</td><td style="text-align: left">The sponsor address of this wrapped asset</td></tr>
+<tr><td style="text-align: left"><code>policy</code></td><td style="text-align: left">struct AssetRegistry.AssetPolicy</td><td style="text-align: left">asset policy</td></tr>
 </tbody></table>
 <hr />
 <h2 id="_checkdomesticassetcode"><a class="header" href="#_checkdomesticassetcode">_checkDomesticAssetCode</a></h2>
@@ -221,7 +223,8 @@ the address of the sponsor.</p>
 <h2 id="_computeassetdescription"><a class="header" href="#_computeassetdescription">_computeAssetDescription</a></h2>
 <pre><code class="language-solidity">  function _computeAssetDescription(
     address erc20Address,
-    address sponsor
+    address sponsor,
+    struct AssetRegistry.AssetPolicy policy
   ) internal returns (bytes)
 </code></pre>
 <p>Compute the asset description from the address of the
@@ -230,6 +233,7 @@ ERC-20 token and the address of the sponsor.</p>
 <table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>erc20Address</code></td><td style="text-align: left">address</td><td style="text-align: left">address of the erc20 token</td></tr>
 <tr><td style="text-align: left"><code>sponsor</code></td><td style="text-align: left">address</td><td style="text-align: left">address of the sponsor</td></tr>
+<tr><td style="text-align: left"><code>policy</code></td><td style="text-align: left">struct AssetRegistry.AssetPolicy</td><td style="text-align: left">asset policy</td></tr>
 </tbody></table>
 <h3 id="return-values-2"><a class="header" href="#return-values-2">Return Values</a></h3>
 <table><thead><tr><th style="text-align: left">Returns</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>

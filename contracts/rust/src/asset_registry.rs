@@ -38,6 +38,7 @@ async fn test_asset_registry() -> Result<()> {
     let description = erc20_asset_description(
         &erc20_code,
         &EthereumAddr(sponsor.address().to_fixed_bytes()),
+        AssetPolicy::default(),
     );
     let asset_code = AssetCode::new_foreign(&description);
     let asset_def = AssetDefinition::new(asset_code, AssetPolicy::default())?;

@@ -71,9 +71,10 @@ contract TestCAPE is CAPE {
     function checkForeignAssetCode(
         uint256 assetDefinitionCode,
         address erc20Address,
-        address sponsor
+        address sponsor,
+        AssetPolicy memory policy
     ) public pure {
-        _checkForeignAssetCode(assetDefinitionCode, erc20Address, sponsor);
+        _checkForeignAssetCode(assetDefinitionCode, erc20Address, sponsor, policy);
     }
 
     function checkDomesticAssetCode(uint256 assetDefinitionCode, uint256 internalAssetCode)
@@ -83,12 +84,12 @@ contract TestCAPE is CAPE {
         _checkDomesticAssetCode(assetDefinitionCode, internalAssetCode);
     }
 
-    function computeAssetDescription(address erc20Address, address sponsor)
-        public
-        pure
-        returns (bytes memory)
-    {
-        return _computeAssetDescription(erc20Address, sponsor);
+    function computeAssetDescription(
+        address erc20Address,
+        address sponsor,
+        AssetPolicy memory policy
+    ) public pure returns (bytes memory) {
+        return _computeAssetDescription(erc20Address, sponsor, policy);
     }
 
     function pendingDepositsLength() public view returns (uint256) {

@@ -51,13 +51,16 @@ async fn integration_test_unwrapping() -> Result<()> {
         contracts_info.erc20_token_address.to_fixed_bytes(),
     ));
 
-    let sponsor = contracts_info.owner_of_erc20_tokens_client_address;
-    let description = erc20_asset_description(&erc20_code, &EthereumAddr(sponsor.to_fixed_bytes()));
-    let asset_code = AssetCode::new_foreign(&description);
-
     // We use an asset policy that does not track the user's credential.
     let asset_policy =
         AssetPolicy::rand_for_test(rng).set_cred_issuer_pub_key(CredIssuerPubKey::default());
+    let sponsor = contracts_info.owner_of_erc20_tokens_client_address;
+    let description = erc20_asset_description(
+        &erc20_code,
+        &EthereumAddr(sponsor.to_fixed_bytes()),
+        asset_policy.clone(),
+    );
+    let asset_code = AssetCode::new_foreign(&description);
 
     let asset_def = AssetDefinition::new(asset_code, asset_policy).unwrap();
     let asset_def_sol = asset_def.clone().generic_into::<sol::AssetDefinition>();

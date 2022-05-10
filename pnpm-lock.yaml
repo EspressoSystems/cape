@@ -1,4 +1,4 @@
-lockfileVersion: 5.3
+lockfileVersion: 5.4
 
 importers:
 
@@ -60,9 +60,9 @@ importers:
       '@ethersproject/providers': 5.5.0
       '@nomiclabs/hardhat-ethers': 2.0.2_ethers@5.5.1+hardhat@2.6.8
       '@nomiclabs/hardhat-etherscan': 3.0.3_hardhat@2.6.8
-      '@nomiclabs/hardhat-waffle': 2.0.1_5dc35a07d139ac43dfb51e22a8b7b927
-      '@typechain/ethers-v5': 8.0.2_dbd108f998cd1572b379a052f77ad4f8
-      '@typechain/hardhat': 3.0.0_9f4ec8259c1eeef8af7c3f7c7f028f96
+      '@nomiclabs/hardhat-waffle': 2.0.1_lxbvub6rhgwehx5vdyrkrn5ze4
+      '@typechain/ethers-v5': 8.0.2_3piqr6myzukxfm3zubjpo6wu7a
+      '@typechain/hardhat': 3.0.0_t5hmqjm4d3xprl34h56h6aupsy
       '@types/chai': 4.2.22
       '@types/mocha': 9.0.0
       '@types/node': 16.11.7
@@ -71,7 +71,7 @@ importers:
       ethers: 5.5.1
       hardhat: 2.6.8
       hardhat-deploy: 0.9.14_hardhat@2.6.8
-      hardhat-gas-reporter: 1.0.4_87bb44b05626a2d879bb5b9564432f10
+      hardhat-gas-reporter: 1.0.4_q65ujmcwe2rnq6n3lokwiqzpca
       hardhat-shorthand: 1.0.0
       lodash: 4.17.21
       prettier: 2.4.1
@@ -81,7 +81,7 @@ importers:
       solidity-bytes-utils: 0.8.0
       solidity-docgen: 0.5.16
       sort-package-json: 1.53.1
-      ts-node: 10.4.0_ee928ac548ac44c173bf0d4654ae2c29
+      ts-node: 10.4.0_52jivrkivrcmc457bvdfjlrmfe
       typechain: 6.0.2_typescript@4.4.4
       typescript: 4.4.4
 
@@ -801,6 +801,14 @@ packages:
     resolution: {integrity: sha512-kZbZMEvXiosdAWTdfMUBRK8Gbk9jz6b7Psv1ciGfdxZ8yG9tMef+jgyCpdT/FdgI4e+e7KnE5QtrfjZmeIZA6Q==}
     dev: false
 
+  /@noble/hashes/1.0.0:
+    resolution: {integrity: sha512-DZVbtY62kc3kkBtMHqwCOfXrT/hnoORy5BJ4+HU1IR59X0KWAOqsfzQPcUl/lQLlG7qXbe/fZ3r/emxtAl+sqg==}
+    dev: true
+
+  /@noble/secp256k1/1.5.5:
+    resolution: {integrity: sha512-sZ1W6gQzYnu45wPrWx8D3kwI2/U29VYTx9OjbDAd7jwRItJ0cSTMPRL/C8AWZFn9kWFLQGqEXVEE86w4Z8LpIQ==}
+    dev: true
+
   /@nodelib/fs.scandir/2.1.5:
     resolution: {integrity: sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g==}
     engines: {node: '>= 8'}
@@ -849,7 +857,7 @@ packages:
       - supports-color
     dev: true
 
-  /@nomiclabs/hardhat-waffle/2.0.1_5dc35a07d139ac43dfb51e22a8b7b927:
+  /@nomiclabs/hardhat-waffle/2.0.1_lxbvub6rhgwehx5vdyrkrn5ze4:
     resolution: {integrity: sha512-2YR2V5zTiztSH9n8BYWgtv3Q+EL0N5Ltm1PAr5z20uAY4SkkfylJ98CIqt18XFvxTD5x4K2wKBzddjV9ViDAZQ==}
     peerDependencies:
       '@nomiclabs/hardhat-ethers': ^2.0.0
@@ -977,6 +985,25 @@ packages:
       url: 0.11.0
     dev: true
 
+  /@scure/base/1.0.0:
+    resolution: {integrity: sha512-gIVaYhUsy+9s58m/ETjSJVKHhKTBMmcRb9cEV5/5dwvfDlfORjKrFsDeDHWRrm6RjcPvCLZFwGJjAjLj1gg4HA==}
+    dev: true
+
+  /@scure/bip32/1.0.1:
+    resolution: {integrity: sha512-AU88KKTpQ+YpTLoicZ/qhFhRRIo96/tlb+8YmDDHR9yiKVjSsFZiefJO4wjS2PMTkz5/oIcw84uAq/8pleQURA==}
+    dependencies:
+      '@noble/hashes': 1.0.0
+      '@noble/secp256k1': 1.5.5
+      '@scure/base': 1.0.0
+    dev: true
+
+  /@scure/bip39/1.0.0:
+    resolution: {integrity: sha512-HrtcikLbd58PWOkl02k9V6nXWQyoa7A0+Ek9VF7z17DDk9XZAFUcIdqfh0jJXLypmizc5/8P6OxoUeKliiWv4w==}
+    dependencies:
+      '@noble/hashes': 1.0.0
+      '@scure/base': 1.0.0
+    dev: true
+
   /@sentry/core/5.30.0:
     resolution: {integrity: sha512-TmfrII8w1PQZSZgPpUESqjB+jC6MvZJZdLtE/0hZ+SrnKhW3x5WlYLvTXZpcWePYBku7rl2wn1RZu6uT0qCTeg==}
     engines: {node: '>=6'}
@@ -1093,13 +1120,13 @@ packages:
     dev: true
     optional: true
 
-  /@truffle/hdwallet-provider/2.0.4:
-    resolution: {integrity: sha512-eXy1N/BZXVadsDRME+yaWM/Gav/G4JXPeppfO4pgiLkv7pJRmH9I8kwtD6VfNUhn3iQVlOMfH1wSAFIpiTt8fA==}
+  /@truffle/hdwallet-provider/2.0.8:
+    resolution: {integrity: sha512-K58AdmEqfHg3o/EERX3YJHDfNcFYOKBpmxi3l/mn8NVXJUXlIkM3eYYKdLilArHcqvp+BYWu7l2tQF8Tt5ozdg==}
     dependencies:
       '@ethereumjs/common': 2.6.0
       '@ethereumjs/tx': 3.4.0
       eth-sig-util: 3.0.1
-      ethereum-cryptography: 0.1.3
+      ethereum-cryptography: 1.0.3
       ethereum-protocol: 1.0.1
       ethereumjs-util: 6.2.1
       ethereumjs-wallet: 1.0.2
@@ -1137,7 +1164,7 @@ packages:
       - utf-8-validate
     dev: true
 
-  /@typechain/ethers-v5/8.0.2_dbd108f998cd1572b379a052f77ad4f8:
+  /@typechain/ethers-v5/8.0.2_3piqr6myzukxfm3zubjpo6wu7a:
     resolution: {integrity: sha512-oRMA3X5UWrsUiNb/lFTusa8xBpw6CckOHAk7sZBHeDQh4tAp+ZU24wdwdURcOtPnagzdCv5Dvl1qlD038brf1A==}
     peerDependencies:
       '@ethersproject/abi': ^5.0.0
@@ -1157,7 +1184,7 @@ packages:
       typescript: 4.4.4
     dev: true
 
-  /@typechain/hardhat/3.0.0_9f4ec8259c1eeef8af7c3f7c7f028f96:
+  /@typechain/hardhat/3.0.0_t5hmqjm4d3xprl34h56h6aupsy:
     resolution: {integrity: sha512-FpnIIXkDXm54XCHI/Z2iOet7h1MrFSvZfuljX9Uzc6FEjEfb01Tuzu8ywe2iquD3g5JXqovgdv+M54L/2Z6jkg==}
     peerDependencies:
       hardhat: ^2.0.10
@@ -3854,6 +3881,15 @@ packages:
       setimmediate: 1.0.5
     dev: true
 
+  /ethereum-cryptography/1.0.3:
+    resolution: {integrity: sha512-NQLTW0x0CosoVb/n79x/TRHtfvS3hgNUPTUSCu0vM+9k6IIhHFFrAOJReneexjZsoZxMjJHnJn4lrE8EbnSyqQ==}
+    dependencies:
+      '@noble/hashes': 1.0.0
+      '@noble/secp256k1': 1.5.5
+      '@scure/bip32': 1.0.1
+      '@scure/bip39': 1.0.0
+    dev: true
+
   /ethereum-protocol/1.0.1:
     resolution: {integrity: sha512-3KLX1mHuEsBW0dKG+c6EOJS1NBNqdCICvZW9sInmZTt5aY0oxmHVggYRE0lJu1tcnMD1K+AKHdLi6U43Awm1Vg==}
     dev: true
@@ -4961,7 +4997,7 @@ packages:
       - utf-8-validate
     dev: true
 
-  /hardhat-gas-reporter/1.0.4_87bb44b05626a2d879bb5b9564432f10:
+  /hardhat-gas-reporter/1.0.4_q65ujmcwe2rnq6n3lokwiqzpca:
     resolution: {integrity: sha512-G376zKh81G3K9WtDA+SoTLWsoygikH++tD1E7llx+X7J+GbIqfwhDKKgvJjcnEesMrtR9UqQHK02lJuXY1RTxw==}
     peerDependencies:
       hardhat: ^2.0.2
@@ -8233,7 +8269,7 @@ packages:
   /solidity-bytes-utils/0.8.0:
     resolution: {integrity: sha512-r109ZHEf7zTMm1ENW6/IJFDWilFR/v0BZnGuFgDHJUV80ByobnV2k3txvwQaJ9ApL+6XAfwqsw5VFzjALbQPCw==}
     dependencies:
-      '@truffle/hdwallet-provider': 2.0.4
+      '@truffle/hdwallet-provider': 2.0.8
     transitivePeerDependencies:
       - '@babel/core'
       - supports-color
@@ -8818,7 +8854,7 @@ packages:
       ts-essentials: 1.0.4
     dev: true
 
-  /ts-node/10.4.0_ee928ac548ac44c173bf0d4654ae2c29:
+  /ts-node/10.4.0_52jivrkivrcmc457bvdfjlrmfe:
     resolution: {integrity: sha512-g0FlPvvCXSIO1JDF6S232P5jPYqBkRL9qly81ZgAOSU7rwI0stphCgd2kLiCrU9DjQCrJMWEqcNSjQL02s6d8A==}
     hasBin: true
     peerDependencies:

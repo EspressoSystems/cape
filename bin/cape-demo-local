@@ -87,7 +87,7 @@ export CAPE_TOKEN_ADDRESS_SIT="$(cat contracts/deployments/localhost/SimpleToken
 export CAPE_TOKEN_ADDRESS_WETH="$(cat contracts/deployments/localhost/WETH.json | jq -r .address)"
 export CAPE_TOKEN_ADDRESS_DAI="$(cat contracts/deployments/localhost/DAI.json | jq -r .address)"
 export CAPE_CONTRACT_ADDRESS="$(cat contracts/deployments/localhost//CAPE.json | jq -r .address)"
-export CAPE_RELAYER_EMPTY_BLOCK_INTERVAL_SECS="10"
+export CAPE_RELAYER_EMPTY_BLOCK_INTERVAL_SECS="30"
 
 # Start demo services
 hivemind demo.Procfile 2>&1 | tee -a $LOG_FILENAME &

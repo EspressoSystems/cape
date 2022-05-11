@@ -15,14 +15,18 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 /// @notice This token is only intended to be used for testing.
 contract WrapToken is ERC20 {
-    /// @notice The caller of this method receives 1000*10**18 units.
+    /// @notice The caller of this method receives 1000*10**6 units.
     constructor(string memory name, string memory symbol) ERC20(name, symbol) {
-        _mint(msg.sender, 1000 * 10**18);
+        _mint(msg.sender, 1000 * 10**6);
     }
 
     /// @notice Allows minting tokens by sending Ether to it.
     receive() external payable {
         _mint(msg.sender, 10**6 * msg.value);
+    }
+
+    function decimals() public view virtual override returns (uint8) {
+        return 6;
     }
 
     function withdraw() external payable {

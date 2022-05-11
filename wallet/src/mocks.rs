@@ -837,7 +837,7 @@ mod cape_wallet_tests {
                 .0
                 .balance_breakdown(&owner, &AssetCode::native())
                 .await,
-            initial_grant
+            initial_grant.into()
         );
 
         // Create an ERC20 code, sponsor address, and asset information.
@@ -901,7 +901,7 @@ mod cape_wallet_tests {
                 .0
                 .balance_breakdown(&owner, &cap_asset.code)
                 .await,
-            0
+            0u64.into()
         );
 
         // Submit dummy transactions to finalize the wrap.
@@ -933,14 +933,14 @@ mod cape_wallet_tests {
                 .0
                 .balance_breakdown(&owner, &AssetCode::native())
                 .await,
-            initial_grant - mint_fee
+            (initial_grant - mint_fee).into()
         );
         assert_eq!(
             wallets[0]
                 .0
                 .balance_breakdown(&owner, &cap_asset.code)
                 .await,
-            wrap_amount
+            wrap_amount.into()
         );
 
         // Burning an amount more than the wrapped asset should fail.
@@ -991,14 +991,14 @@ mod cape_wallet_tests {
                 .0
                 .balance_breakdown(&owner, &cap_asset.code)
                 .await,
-            0
+            0u64.into()
         );
         assert_eq!(
             wallets[0]
                 .0
                 .balance_breakdown(&owner, &AssetCode::native())
                 .await,
-            initial_grant - mint_fee - burn_fee
+            (initial_grant - mint_fee - burn_fee).into()
         );
 
         Ok(())
@@ -1086,14 +1086,14 @@ mod cape_wallet_tests {
                 .0
                 .balance_breakdown(&wrap_account, &cap_asset.code)
                 .await,
-            5
+            5u64.into()
         );
         assert_eq!(
             wallets[0]
                 .0
                 .balance_breakdown(&wrap_account, &AssetCode::native())
                 .await,
-            0
+            0u64.into()
         );
 
         // Burn the wrapped asset.
@@ -1114,7 +1114,7 @@ mod cape_wallet_tests {
                 .0
                 .balance_breakdown(&wrap_account, &cap_asset.code)
                 .await,
-            0
+            0u64.into()
         );
 
         Ok(())
@@ -1190,7 +1190,7 @@ mod cape_wallet_tests {
                 .0
                 .balance_breakdown(&owner, &cap_asset.code)
                 .await,
-            5
+            5u64.into()
         );
 
         // Burn the wrapped asset.
@@ -1209,7 +1209,7 @@ mod cape_wallet_tests {
                 .0
                 .balance_breakdown(&owner, &cap_asset.code)
                 .await,
-            2
+            2u64.into()
         );
 
         Ok(())
@@ -1290,7 +1290,7 @@ mod cape_wallet_tests {
                 .0
                 .balance_breakdown(&owner, &cap_asset.code)
                 .await,
-            5
+            5u64.into()
         );
 
         // Burn the wrapped asset.
@@ -1309,7 +1309,7 @@ mod cape_wallet_tests {
                 .0
                 .balance_breakdown(&owner, &cap_asset.code)
                 .await,
-            0
+            0u64.into()
         );
 
         Ok(())

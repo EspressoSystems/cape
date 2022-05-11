@@ -590,7 +590,7 @@ mod tests {
             // let mut native_info = AssetInfo::default;
             // native_info.mint_info = Some("native")
             BalanceInfo::AccountBalances(
-                once((AssetCode::native(), (0, assets[0].clone()))).collect()
+                once((AssetCode::native(), (0u64.into(), assets[0].clone()))).collect()
             )
         );
         assert_eq!(
@@ -598,7 +598,7 @@ mod tests {
                 .get::<BalanceInfo>(&format!("getbalance/address/{}/asset/{}", addr, asset))
                 .await
                 .unwrap(),
-            BalanceInfo::Balance(0),
+            BalanceInfo::Balance(0u64.into()),
         );
         // If we query for a specific asset code, we should get a balance of 0 even if the wallet
         // doesn't know about this asset yet.
@@ -611,7 +611,7 @@ mod tests {
                 ))
                 .await
                 .unwrap(),
-            BalanceInfo::Balance(0),
+            BalanceInfo::Balance(0u64.into()),
         );
 
         // Should fail with an invalid address (we'll get an invalid address by serializing an asset
@@ -1229,7 +1229,7 @@ mod tests {
                 .get::<BalanceInfo>(&format!("getbalance/address/{}/asset/{}", recipient, asset))
                 .await
                 .unwrap()
-                == BalanceInfo::Balance(amount)
+                == BalanceInfo::Balance(amount.into())
         })
         .await;
         retry(|| async {
@@ -1241,7 +1241,7 @@ mod tests {
                 ))
                 .await
                 .unwrap()
-                == BalanceInfo::Balance(DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR - fee)
+                == BalanceInfo::Balance((DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR - fee).into())
         })
         .await;
     }
@@ -1280,10 +1280,11 @@ mod tests {
         // Get the source address with the wrapped asset.
         let mut source_addr: Option<UserAddress> = None;
         for address in info.addresses {
-            if let BalanceInfo::Balance(DEFAULT_WRAPPED_AMT) = server
-                .get::<BalanceInfo>(&format!("getbalance/address/{}/asset/{}", address, asset))
-                .await
-                .unwrap()
+            if BalanceInfo::Balance(DEFAULT_WRAPPED_AMT.into())
+                == server
+                    .get::<BalanceInfo>(&format!("getbalance/address/{}/asset/{}", address, asset))
+                    .await
+                    .unwrap()
             {
                 source_addr = Some(address);
                 break;
@@ -1333,7 +1334,7 @@ mod tests {
                 .get::<BalanceInfo>(&format!("getbalance/address/{}/asset/{}", source, asset))
                 .await
                 .unwrap()
-                == BalanceInfo::Balance(0)
+                == BalanceInfo::Balance(0u64.into())
         })
         .await;
         retry(|| async {
@@ -1345,7 +1346,7 @@ mod tests {
                 ))
                 .await
                 .unwrap()
-                == BalanceInfo::Balance(DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR - fee)
+                == BalanceInfo::Balance((DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR - fee).into())
         })
         .await;
     }
@@ -1378,14 +1379,15 @@ mod tests {
         // One of the addresses should have a non-zero balance of the native asset type.
         let mut found_native = false;
         for address in &info.addresses {
-            if let BalanceInfo::Balance(DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR) = server
-                .get::<BalanceInfo>(&format!(
-                    "getbalance/address/{}/asset/{}",
-                    address,
-                    AssetCode::native()
-                ))
-                .await
-                .unwrap()
+            if BalanceInfo::Balance(DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR.into())
+                == server
+                    .get::<BalanceInfo>(&format!(
+                        "getbalance/address/{}/asset/{}",
+                        address,
+                        AssetCode::native()
+                    ))
+                    .await
+                    .unwrap()
             {
                 found_native = true;
                 break;
@@ -1406,13 +1408,14 @@ mod tests {
         // One of the addresses should have the expected balance of the wrapped asset type.
         let mut found_wrapped = false;
         for address in &info.addresses {
-            if let BalanceInfo::Balance(DEFAULT_WRAPPED_AMT) = server
-                .get::<BalanceInfo>(&format!(
-                    "getbalance/address/{}/asset/{}",
-                    address, wrapped_asset
-                ))
-                .await
-                .unwrap()
+            if BalanceInfo::Balance(DEFAULT_WRAPPED_AMT.into())
+                == server
+                    .get::<BalanceInfo>(&format!(
+                        "getbalance/address/{}/asset/{}",
+                        address, wrapped_asset
+                    ))
+                    .await
+                    .unwrap()
             {
                 found_wrapped = true;
                 break;
@@ -1469,14 +1472,15 @@ mod tests {
         // of the server uses its own ledger. So we settle for an intra-wallet transfer.
         let mut unfunded_account = None;
         for address in info.addresses {
-            if let BalanceInfo::Balance(0) = server
-                .get::<BalanceInfo>(&format!(
-                    "getbalance/address/{}/asset/{}",
-                    address,
-                    AssetCode::native()
-                ))
-                .await
-                .unwrap()
+            if BalanceInfo::Balance(0u64.into())
+                == server
+                    .get::<BalanceInfo>(&format!(
+                        "getbalance/address/{}/asset/{}",
+                        address,
+                        AssetCode::native()
+                    ))
+                    .await
+                    .unwrap()
             {
                 unfunded_account = Some(address);
                 break;
@@ -1508,7 +1512,7 @@ mod tests {
                 ))
                 .await
                 .unwrap()
-                == BalanceInfo::Balance(100)
+                == BalanceInfo::Balance(100u64.into())
         })
         .await;
 
@@ -1522,7 +1526,7 @@ mod tests {
                 ))
                 .await
                 .unwrap()
-                == BalanceInfo::Balance(DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR - 101)
+                == BalanceInfo::Balance((DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR - 101).into())
         })
         .await;
 
@@ -1548,7 +1552,7 @@ mod tests {
                 ))
                 .await
                 .unwrap()
-                == BalanceInfo::Balance(200)
+                == BalanceInfo::Balance(200u64.into())
         })
         .await;
 
@@ -1685,14 +1689,15 @@ mod tests {
                     .await
                     .unwrap()
             );
-            if let BalanceInfo::Balance(DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR) = server
-                .get::<BalanceInfo>(&format!(
-                    "getbalance/address/{}/asset/{}",
-                    address,
-                    AssetCode::native()
-                ))
-                .await
-                .unwrap()
+            if BalanceInfo::Balance(DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR.into())
+                == server
+                    .get::<BalanceInfo>(&format!(
+                        "getbalance/address/{}/asset/{}",
+                        address,
+                        AssetCode::native()
+                    ))
+                    .await
+                    .unwrap()
             {
                 break address;
             }
@@ -2506,5 +2511,105 @@ mod tests {
         assert_eq!(ro.amount, 10);
         assert_eq!(ro.asset_def.code, asset.into());
         assert!(!ro.freeze_flag);
+    }
+
+    #[async_std::test]
+    async fn test_large_balance() {
+        // Set parameters for sponsor and wrap.
+        let erc20_code = Address::from([1u8; 20]);
+        let sponsor_addr = Address::from([2u8; 20]);
+
+        // Open a wallet.
+        let server = TestServer::new().await;
+        server
+            .post::<()>(&format!(
+                "newwallet/{}/{}/path/{}",
+                server.get::<String>("getmnemonic").await.unwrap(),
+                base64("my-password".as_bytes()),
+                server.path()
+            ))
+            .await
+            .unwrap();
+
+        // Sponsor an asset.
+        let (asset, info) = server
+            .post::<(sol::AssetDefinition, String)>(&format!(
+                "buildsponsor/erc20/{:#x}/sponsor/{:#x}",
+                erc20_code, sponsor_addr
+            ))
+            .await
+            .unwrap();
+        server
+            .client
+            .post("importasset")
+            .body_json(&info)
+            .unwrap()
+            .send()
+            .await
+            .unwrap();
+        server
+            .client
+            .post(&format!(
+                "submitsponsor/erc20/{:#x}/sponsor/{:#x}",
+                erc20_code, sponsor_addr
+            ))
+            .body_json(&asset)
+            .unwrap()
+            .send()
+            .await
+            .unwrap();
+        let asset: JfAssetDefinition = asset.into();
+
+        // Create an address to receive the wrapped asset.
+        server.post::<PubKey>("newkey/sending").await.unwrap();
+        let info = server.get::<WalletSummary>("getinfo").await.unwrap();
+        let sending_key = &info.sending_keys[0];
+        let destination: UserAddress = sending_key.address().into();
+
+        // Wrap the maximum single-record amount, thrice, so that our total balance exceeds both the
+        // max single record amount and the max of a u64.
+        let max_record = 2u64.pow(63) - 1;
+        for _ in 0..3 {
+            let ro = server
+                .post::<sol::RecordOpening>(&format!(
+                    "buildwrap/destination/{}/asset/{}/amount/{}",
+                    destination, asset.code, max_record
+                ))
+                .await
+                .unwrap();
+            server
+                .client
+                .post(&format!("submitwrap/ethaddress/{:#x}", sponsor_addr))
+                .body_json(&ro)
+                .unwrap()
+                .send()
+                .await
+                .unwrap();
+        }
+
+        // Wait for the wraps to be finalized.
+        retry(|| async {
+            server
+                .get::<BalanceInfo>(&format!(
+                    "getbalance/address/{}/asset/{}",
+                    destination, asset.code
+                ))
+                .await
+                .unwrap()
+                != BalanceInfo::Balance(0u64.into())
+        })
+        .await;
+
+        // Make sure the balances are correct.
+        assert_eq!(
+            server
+                .get::<BalanceInfo>(&format!(
+                    "getbalance/address/{}/asset/{}",
+                    destination, asset.code
+                ))
+                .await
+                .unwrap(),
+            BalanceInfo::Balance("27670116110564327421".parse().unwrap())
+        )
     }
 }

@@ -655,7 +655,7 @@ mod test {
             sender
                 .balance_breakdown(&sender_key.address(), &AssetCode::native())
                 .await
-                > 0
+                > 0u64.into()
         })
         .await;
         let total_balance = sender
@@ -710,7 +710,7 @@ mod test {
             receiver
                 .balance_breakdown(&receiver_key.address(), &AssetCode::native())
                 .await,
-            2
+            2u64.into()
         );
 
         // Transfer back, just to make sure the receiver is actually able to spend the records it
@@ -735,7 +735,7 @@ mod test {
             receiver
                 .balance_breakdown(&receiver_key.address(), &AssetCode::native())
                 .await,
-            0
+            0u64.into()
         );
     }
 
@@ -809,7 +809,7 @@ mod test {
             wrapper
                 .balance_breakdown(&wrapper_key.address(), &AssetCode::native())
                 .await
-                > 0
+                > 0u64.into()
         })
         .await;
         let total_native_balance = wrapper
@@ -875,14 +875,14 @@ mod test {
             sponsor
                 .balance_breakdown(&sponsor_key.address(), &AssetCode::native())
                 .await,
-            1
+            1u64.into()
         );
         // The transfer transaction caused the wrap record to be created.
         assert_eq!(
             wrapper
                 .balance_breakdown(&wrapper_key.address(), &cape_asset.code)
                 .await,
-            100
+            100u64.into()
         );
 
         assert!(wrapper.is_wrapped_asset(cape_asset.code).await);
@@ -904,13 +904,13 @@ mod test {
             wrapper
                 .balance_breakdown(&wrapper_key.address(), &cape_asset.code)
                 .await,
-            0
+            0u64.into()
         );
         assert_eq!(
             sponsor
                 .balance_breakdown(&sponsor_key.address(), &cape_asset.code)
                 .await,
-            100
+            100u64.into()
         );
 
         // Finally, withdraw the wrapped tokens back into the ERC20 token type.
@@ -929,7 +929,7 @@ mod test {
             sponsor
                 .balance_breakdown(&sponsor_key.address(), &cape_asset.code)
                 .await,
-            0
+            0u64.into()
         );
         assert_eq!(
             erc20_contract

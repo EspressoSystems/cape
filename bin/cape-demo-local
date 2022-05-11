@@ -86,6 +86,7 @@ hardhat deploy --reset 2>&1 | tee -a $LOG_FILENAME
 export CAPE_TOKEN_ADDRESS_SIT="$(cat contracts/deployments/localhost/SimpleToken.json | jq -r .address)"
 export CAPE_TOKEN_ADDRESS_WETH="$(cat contracts/deployments/localhost/WETH.json | jq -r .address)"
 export CAPE_TOKEN_ADDRESS_DAI="$(cat contracts/deployments/localhost/DAI.json | jq -r .address)"
+export CAPE_TOKEN_ADDRESS_USDC="$(cat contracts/deployments/localhost/USDC.json | jq -r .address)"
 export CAPE_CONTRACT_ADDRESS="$(cat contracts/deployments/localhost//CAPE.json | jq -r .address)"
 export CAPE_RELAYER_EMPTY_BLOCK_INTERVAL_SECS="10"
 

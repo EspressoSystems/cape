@@ -11,11 +11,11 @@ import { DeployFunction } from "hardhat-deploy/types";
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
-  const { deployer } = await getNamedAccounts();
+  const { tokenOwner } = await getNamedAccounts();
 
-  await deploy("SimpleToken", { from: deployer, log: true });
-  await deploy("WETH", { from: deployer, log: true });
-  await deploy("DAI", { from: deployer, log: true });
+  await deploy("SimpleToken", { from: tokenOwner, log: true });
+  await deploy("WETH", { from: tokenOwner, log: true });
+  await deploy("DAI", { from: tokenOwner, log: true });
 };
 
 export default func;

@@ -7,11 +7,7 @@
 
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
-import { utils, BigNumber } from "ethers";
-
-function fromEnv(env_var: string, fallback: string): string {
-  return process.env[env_var] || fallback;
-}
+import { BigNumber } from "ethers";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;

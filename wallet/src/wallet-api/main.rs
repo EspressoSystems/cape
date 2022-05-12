@@ -75,7 +75,7 @@ mod tests {
         testing::{port, retry},
         ui::*,
     };
-    use ethers::prelude::Address;
+    use ethers::prelude::{Address, U256};
     use jf_cap::{
         keys::{AuditorKeyPair, AuditorPubKey, FreezerKeyPair, FreezerPubKey, UserKeyPair},
         structs::{AssetCode, AssetDefinition as JfAssetDefinition, AssetPolicy},
@@ -2530,6 +2530,10 @@ mod tests {
             ))
             .await
             .unwrap();
+        server
+            .get::<TransactionReceipt<CapeLedger>>("populatefortest")
+            .await
+            .unwrap();
 
         // Sponsor an asset.
         let (asset, info) = server
@@ -2587,6 +2591,16 @@ mod tests {
                 .unwrap();
         }
 
+        // Submit a dummy transaction to finalize the wraps.
+        server
+            .post::<TransactionReceipt<CapeLedger>>(&format!(
+                "send/asset/{}/recipient/{}/amount/1/fee/1",
+                AssetCode::native(),
+                destination,
+            ))
+            .await
+            .unwrap();
+
         // Wait for the wraps to be finalized.
         retry(|| async {
             server
@@ -2601,6 +2615,7 @@ mod tests {
         .await;
 
         // Make sure the balances are correct.
+        let expected_balance = U256::from_dec_str("27670116110564327421").unwrap();
         assert_eq!(
             server
                 .get::<BalanceInfo>(&format!(
@@ -2609,7 +2624,15 @@ mod tests {
                 ))
                 .await
                 .unwrap(),
-            BalanceInfo::Balance("27670116110564327421".parse().unwrap())
-        )
+            BalanceInfo::Balance(expected_balance)
+        );
+        assert_eq!(
+            server
+                .get::<Account>(&format!("getaccount/{}", destination))
+                .await
+                .unwrap()
+                .balances[&asset.code],
+            expected_balance
+        );
     }
 }

@@ -15,7 +15,7 @@ use cap_rust_sandbox::{
     model::CapeModelTxn,
     types::CAPE,
 };
-use ethers::prelude::{BlockNumber, H256};
+use ethers::prelude::{BlockNumber, H256, U256};
 use jf_cap::{keys::UserPubKey, structs::ReceiverMemo, Signature};
 use net::server::{add_error_body, request_body, response};
 use serde::{Deserialize, Serialize};
@@ -43,6 +43,9 @@ pub enum Error {
 
     #[snafu(display("internal server error: {}", msg))]
     Internal { msg: String },
+
+    #[snafu(display("error fetching info from the CAPE contract: {}", msg))]
+    CallContract { msg: String },
 }
 
 impl net::Error for Error {
@@ -53,7 +56,9 @@ impl net::Error for Error {
     fn status(&self) -> StatusCode {
         match self {
             Self::Deserialize { .. } | Self::BadBlock { .. } => StatusCode::BadRequest,
-            Self::Submission { .. } | Self::Internal { .. } => StatusCode::InternalServerError,
+            Self::Submission { .. } | Self::CallContract { .. } | Self::Internal { .. } => {
+                StatusCode::InternalServerError
+            }
         }
     }
 }
@@ -210,13 +215,27 @@ pub async fn submit_empty_block_loop(
     contract: CAPE<EthMiddleware>,
     nonce_count_rule: NonceCountRule,
     empty_block_interval: Duration,
-) -> Result<(), std::io::Error> {
+) -> Result<(), Error> {
     loop {
         async_std::task::sleep(empty_block_interval).await;
-        match submit_empty_block(&contract, nonce_count_rule).await {
-            Ok(_) => {}
-            Err(err) => event!(Level::ERROR, "Failed to submit empty block {}", err),
-        };
+
+        // If the pending deposits queue is NOT empty, submit an empty block
+
+        // The queue is empty if we cannot access the first element.
+        let queue_is_empty = contract
+            .pending_deposits(U256::from(0u64))
+            .call()
+            .await
+            .is_err();
+
+        if !queue_is_empty {
+            match submit_empty_block(&contract, nonce_count_rule).await {
+                Ok(_) => {
+                    event!(Level::INFO, "Empty block submitted.");
+                }
+                Err(err) => event!(Level::ERROR, "Failed to submit empty block {}", err),
+            };
+        }
     }
 }
 

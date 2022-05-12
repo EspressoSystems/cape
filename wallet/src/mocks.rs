@@ -1380,7 +1380,7 @@ mod cape_wallet_tests {
             "Dummy transactions submitted and wrap finalized: {}s",
             now.elapsed().as_secs_f32()
         );
-        assert_eq!(wallets[0].0.balance(&cap_asset.code).await, 3);
+        assert_eq!(wallets[0].0.balance(&cap_asset.code).await, 3u64.into());
 
         // Unwrap with change.
         wallets[0]
@@ -1389,7 +1389,7 @@ mod cape_wallet_tests {
             .await
             .unwrap();
         t.sync(&ledger, &wallets).await;
-        assert_eq!(wallets[0].0.balance(&cap_asset.code).await, 1);
+        assert_eq!(wallets[0].0.balance(&cap_asset.code).await, 1u64.into());
 
         // We should be able to view the change record from the unwrap, but _not_ the burned record.
         let records = wallets[0]
@@ -1408,6 +1408,6 @@ mod cape_wallet_tests {
             .await
             .unwrap();
         t.sync(&ledger, &wallets).await;
-        assert_eq!(wallets[0].0.balance(&cap_asset.code).await, 0);
+        assert_eq!(wallets[0].0.balance(&cap_asset.code).await, 0u64.into());
     }
 }

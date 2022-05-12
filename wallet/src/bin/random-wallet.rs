@@ -210,7 +210,7 @@ async fn main() {
     while wallet
         .balance_breakdown(&address, &AssetCode::native())
         .await
-        == 0
+        == 0u64.into()
     {
         event!(Level::INFO, "waiting for initial balance");
         retry_delay().await;
@@ -250,7 +250,7 @@ async fn main() {
         }
     };
     // If we don't yet have a balance of our asset type, mint some.
-    if wallet.balance_breakdown(&address, &my_asset.code).await == 0 {
+    if wallet.balance_breakdown(&address, &my_asset.code).await == 0u64.into() {
         event!(Level::INFO, "minting my asset type {}", my_asset.code);
         loop {
             let txn = wallet
@@ -309,7 +309,7 @@ async fn main() {
                     if wallet
                         .balance_breakdown(&address, &asset.definition.code)
                         .await
-                        > 0
+                        > 0u64.into()
                     {
                         asset_balances.push(asset.definition.code);
                     }

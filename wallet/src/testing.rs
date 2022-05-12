@@ -296,7 +296,7 @@ pub async fn freeze_token<'a>(
 ) -> Result<TransactionReceipt<CapeLedger>, CapeWalletError> {
     let freeze_address = freezer.pub_keys().await[0].address();
     freezer
-        .freeze(&freeze_address, 1, asset, amount, owner_address)
+        .freeze(&freeze_address, 1, asset, amount.into(), owner_address)
         .await
 }
 
@@ -308,7 +308,7 @@ pub async fn unfreeze_token<'a>(
 ) -> Result<TransactionReceipt<CapeLedger>, CapeWalletError> {
     let unfreeze_address = freezer.pub_keys().await[0].address();
     freezer
-        .unfreeze(&unfreeze_address, 1, asset, amount, owner_address)
+        .unfreeze(&unfreeze_address, 1, asset, amount.into(), owner_address)
         .await
 }
 

@@ -11,7 +11,7 @@ use crate::wallet::{CapeWallet, CapeWalletBackend, CapeWalletExt};
 use cap_rust_sandbox::ledger::{CapeLedger, CapeTransactionKind};
 use cap_rust_sandbox::model::Erc20Code;
 use espresso_macros::ser_test;
-use ethers::prelude::Address;
+use ethers::prelude::{Address, U256};
 use futures::stream::{iter, StreamExt};
 use jf_cap::{
     keys::{AuditorKeyPair, AuditorPubKey, FreezerKeyPair, FreezerPubKey, UserKeyPair, UserPubKey},
@@ -361,11 +361,11 @@ pub enum PrivateKey {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum BalanceInfo {
     /// The balance of a single asset, in a single account.
-    Balance(u64),
+    Balance(U256),
     /// All the balances of an account, by asset type with asset info.
-    AccountBalances(HashMap<AssetCode, (u64, AssetInfo)>),
+    AccountBalances(HashMap<AssetCode, (U256, AssetInfo)>),
     /// All the balances of all accounts owned by the wallet.
-    AllBalances(HashMap<UserAddress, HashMap<AssetCode, (u64, AssetInfo)>>),
+    AllBalances(HashMap<UserAddress, HashMap<AssetCode, (U256, AssetInfo)>>),
 }
 
 #[ser_test(ark(false))]
@@ -435,7 +435,7 @@ impl Ui for FreezerPubKey {
 pub struct Account {
     pub pub_key: String,
     pub records: Vec<Record>,
-    pub balances: HashMap<AssetCode, u64>,
+    pub balances: HashMap<AssetCode, U256>,
     pub assets: HashMap<AssetCode, AssetInfo>,
     pub description: String,
     pub used: bool,

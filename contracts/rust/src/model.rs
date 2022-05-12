@@ -551,10 +551,13 @@ impl CapeContractState {
                                         num_outputs,
                                     })?;
 
+                                // Don't include the burned record in the output commitments.
+                                let mut output_commitments = xfr.output_commitments.clone();
+                                output_commitments.remove(1);
                                 (
                                     verif_key,
                                     xfr.aux_info.merkle_root,
-                                    vec![xfr.output_commitments[0]],
+                                    output_commitments,
                                     TransactionNote::Transfer(xfr.clone()),
                                 )
                             }

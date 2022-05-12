@@ -15,7 +15,7 @@ use cape_wallet::{
     backend::{CapeBackend, CapeBackendConfig},
     wallet::{CapeWallet, CapeWalletError},
 };
-use ethers::prelude::{Address, U256};
+use ethers::prelude::Address;
 use futures::stream::{iter, StreamExt};
 use jf_cap::structs::AssetCode;
 use rand_chacha::{
@@ -166,8 +166,7 @@ async fn main() {
     // can discover a record to transfer from.
     parent.await_key_scan(&parent_key.address()).await.unwrap();
     let balance = parent.balance(&AssetCode::native()).await;
-    let total_per_wallet = U256::from(opt.record_size) * opt.num_records;
-    if balance < total_per_wallet * opt.num_wallets {
+    if balance < opt.record_size * (opt.num_records as u64) * (opt.num_wallets as u64) {
         eprintln!(
             "Insufficient balance for transferring {} units to {} wallets: {}",
             opt.record_size * opt.num_records,
@@ -182,7 +181,7 @@ async fn main() {
     // already reported all of the mnemonics needed to recover the funds.
     println!(
         "Transferring {} units each to the following wallets:",
-        total_per_wallet
+        opt.record_size * opt.num_records
     );
     for (_, mnemonic, key) in &children {
         println!("{} {}", mnemonic, key);
@@ -217,8 +216,12 @@ async fn main() {
 
     // Wait for the children to report the new balances.
     for (wallet, _, key) in &children {
-        while wallet.balance(&AssetCode::native()).await < total_per_wallet {
-            eprintln!("Waiting for {} to receive {} tokens", key, total_per_wallet);
+        while wallet.balance(&AssetCode::native()).await < opt.record_size * opt.num_records {
+            eprintln!(
+                "Waiting for {} to receive {} tokens",
+                key,
+                opt.record_size * opt.num_records
+            );
             async_std::task::sleep(Duration::from_secs(1)).await;
         }
     }

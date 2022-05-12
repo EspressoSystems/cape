@@ -511,14 +511,14 @@ async fn populatefortest(req: tide::Request<WebState>) -> Result<tide::Response,
         wallet
             .balance_breakdown(&wrapped_asset_addr, &AssetCode::native())
             .await
-            != 0u64.into()
+            != 0
     })
     .await;
     retry(|| async {
         wallet
             .balance_breakdown(&wrapped_asset_addr, &asset_def.code)
             .await
-            != 0u64.into()
+            != 0
     })
     .await;
 

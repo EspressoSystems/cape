@@ -78,7 +78,7 @@ export CAPE_FAUCET_MANAGER_MNEMONIC="$CAPE_FAUCET_WALLET_MNEMONIC"
 source <(target/release/faucet-wallet-test-setup)
 
 # Start a go-ethereum/geth node
-env GETH_PERIOD=1 run-geth --verbosity 1 &
+env GETH_PERIOD=1 run-geth --verbosity 1 --http.corsdomain "*" &
 
 # Wait for geth to be listening
 wait-port $GETH_PORT

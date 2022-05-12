@@ -51,11 +51,12 @@ export CAPE_EQS_NUM_CONFIRMATIONS=1 # More responsive local demo.
 
 export CAPE_RELAYER_PORT=50020
 export CAPE_RELAYER_URL="http://localhost:$CAPE_RELAYER_PORT"
-export CAPE_RELAYER_WALLET_MNEMONIC="$TEST_MNEMONIC"
+export CAPE_RELAYER_WALLET_MNEMONIC="organ task tattoo favorite salon effort matrix main original guitar drastic elder"
+export CAPE_RELAYER_NONCE_COUNT_RULE="pending"
 
 export CAPE_FAUCET_PORT=50030
 export CAPE_FAUCET_URL="http://localhost:$CAPE_FAUCET_PORT"
-export CAPE_FAUCET_WALLET_MNEMONIC="$TEST_MNEMONIC"
+export CAPE_FAUCET_WALLET_MNEMONIC="broom mesh guilt material void romance sample choice indicate urban diamond theme"
 export CAPE_FAUCET_WALLET_PATH="$(mktemp -d -t cape-faucet-wallet-XXXXXXX)"
 
 
@@ -69,8 +70,11 @@ export LOG_FILENAME=/tmp/cape-services-log.txt
 # Empty the logs file
 > $LOG_FILENAME
 
-# Create a faucet manager wallet and export variables printed to stdout
-export CAPE_FAUCET_MANAGER_MNEMONIC="$TEST_MNEMONIC"
+# Create a faucet manager wallet and export variables printed to stdout.
+#
+# For the demo this is be the same mnemonic as the faucet mnemonic because we do
+# not run the faucet shower script to distribute the initial native asset grant.
+export CAPE_FAUCET_MANAGER_MNEMONIC="$CAPE_FAUCET_WALLET_MNEMONIC"
 source <(target/release/faucet-wallet-test-setup)
 
 # Start a go-ethereum/geth node
@@ -82,10 +86,15 @@ wait-port $GETH_PORT
 # Deploy contracts
 hardhat deploy --reset 2>&1 | tee -a $LOG_FILENAME
 
+# Fund the first account of the services wallets with 1M Ether.
+fund-wallet "$(hdwallet-derive -n 1 --mnemonic "$CAPE_RELAYER_WALLET_MNEMONIC")" 1e24
+fund-wallet "$(hdwallet-derive -n 1 --mnemonic "$CAPE_FAUCET_WALLET_MNEMONIC")" 1e24
+
 # Configure environment
 export CAPE_TOKEN_ADDRESS_SIT="$(cat contracts/deployments/localhost/SimpleToken.json | jq -r .address)"
 export CAPE_TOKEN_ADDRESS_WETH="$(cat contracts/deployments/localhost/WETH.json | jq -r .address)"
 export CAPE_TOKEN_ADDRESS_DAI="$(cat contracts/deployments/localhost/DAI.json | jq -r .address)"
+export CAPE_TOKEN_ADDRESS_USDC="$(cat contracts/deployments/localhost/USDC.json | jq -r .address)"
 export CAPE_CONTRACT_ADDRESS="$(cat contracts/deployments/localhost//CAPE.json | jq -r .address)"
 export CAPE_RELAYER_EMPTY_BLOCK_INTERVAL_SECS="10"
 

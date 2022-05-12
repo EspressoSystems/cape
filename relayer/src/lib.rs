@@ -221,15 +221,12 @@ pub async fn submit_empty_block_loop(
 
         // If the pending deposits queue is NOT empty, submit an empty block
 
-        // first_element == 0 means the queue is empty
-        let first_element = contract
+        // The queue is empty if we cannot access the first element.
+        let queue_is_empty = contract
             .pending_deposits(U256::from(0u64))
             .call()
             .await
-            .map_err(|err| Error::BadBlock {
-                msg: err.to_string(),
-            })?;
-        let queue_is_empty = first_element == U256::from(0u64);
+            .is_err();
 
         if !queue_is_empty {
             match submit_empty_block(&contract, nonce_count_rule).await {

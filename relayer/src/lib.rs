@@ -233,9 +233,13 @@ pub async fn submit_empty_block_loop(
 
         if !queue_is_empty {
             match submit_empty_block(&contract, nonce_count_rule).await {
-                Ok(_) => {}
-                Err(err) => event!(Level::ERROR, "Failed to submit empty block {}", err),
+                Ok(_) => {
+                    tracing::info!("Empty block submitted.");
+                }
+                Err(err) => tracing::error!("Failed to submit empty block {}", err),
             };
+        } else {
+            tracing::info!("No pending deposits. No block submitted");
         }
     }
 }

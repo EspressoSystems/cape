@@ -589,7 +589,7 @@ pub fn init_server(
                     .as_str()
                     .expect("PATH must be string")
                     .parse()
-                    .expect("MEHTOD must be GET or POST"),
+                    .expect("METHOD must be GET or POST"),
                 None => Method::Get,
             };
             for path in routes {

@@ -53,7 +53,7 @@ rand_chacha = "0.3.1"
 reef = { git = "https://github.com/EspressoSystems/reef.git", tag = "0.2.1" }
 regex = "1.5.4"
 relayer = { path = "../relayer", features = ["testing"] }
-seahorse = { git = "https://github.com/EspressoSystems/seahorse.git", tag = "0.2.3", features = ["testing"] }
+seahorse = { git = "https://github.com/EspressoSystems/seahorse.git", tag = "0.2.2", features = ["testing"] }
 serde = { version = "1.0.123", features = ["derive", "rc"] }
 serde_derive = "1.0.118"
 serde_json = "1.0.61"
@@ -77,7 +77,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 [dev-dependencies]
 ark-serialize = "0.3.0"
 reef = { git = "https://github.com/EspressoSystems/reef.git", tag = "0.2.1", features = ["testing"] }
-seahorse = { git = "https://github.com/EspressoSystems/seahorse.git", tag = "0.2.3", features = ["testing"] }
+seahorse = { git = "https://github.com/EspressoSystems/seahorse.git", tag = "0.2.2", features = ["testing"] }
 tracing-test = "0.2.1"
 
 [features]

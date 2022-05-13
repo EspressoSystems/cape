@@ -368,6 +368,6 @@ mod test {
         println!("Asset transferred.");
 
         // Check the balance.
-        retry(|| async { receiver.balance(&AssetCode::native()).await == grant_size.into() }).await;
+        retry(|| async { receiver.balance(&AssetCode::native()).await == grant_size }).await;
     }
 }

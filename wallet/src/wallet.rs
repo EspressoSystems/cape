@@ -335,8 +335,8 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
             .get(0)
             .ok_or(TransactionError::InsufficientBalance {
                 asset: *cap_asset,
-                required: amount.into(),
-                actual: 0u64.into(),
+                required: amount,
+                actual: 0,
             })?
             .address();
 

@@ -190,7 +190,7 @@ async fn create_backend_and_sender_wallet<'a>(
     while wallet
         .balance_breakdown(&address, &AssetCode::native())
         .await
-        == 0u64.into()
+        == 0
     {
         event!(Level::INFO, "waiting for initial balance");
         retry_delay().await;
@@ -349,7 +349,7 @@ async fn main() {
         while wallet
             .balance_breakdown(&pk.address(), &AssetCode::native())
             .await
-            == 0u64.into()
+            == 0
         {
             event!(Level::INFO, "waiting for initial balance");
             retry_delay().await;
@@ -452,7 +452,7 @@ async fn main() {
                     if sender
                         .balance_breakdown(&sender_address, &asset.definition.code)
                         .await
-                        > 0u64.into()
+                        > 0
                     {
                         asset_balances.push(asset.definition.code);
                     }

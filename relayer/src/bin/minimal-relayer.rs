@@ -50,7 +50,7 @@ struct MinimalRelayerOptions {
     #[structopt(
         long,
         env = "CAPE_RELAYER_NONCE_COUNT_RULE",
-        default_value = "mined",
+        default_value = "pending",
         verbatim_doc_comment
     )]
     nonce_count_rule: NonceCountRule,

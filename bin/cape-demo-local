@@ -52,7 +52,6 @@ export CAPE_EQS_NUM_CONFIRMATIONS=1 # More responsive local demo.
 export CAPE_RELAYER_PORT=50020
 export CAPE_RELAYER_URL="http://localhost:$CAPE_RELAYER_PORT"
 export CAPE_RELAYER_WALLET_MNEMONIC="organ task tattoo favorite salon effort matrix main original guitar drastic elder"
-export CAPE_RELAYER_NONCE_COUNT_RULE="pending"
 
 export CAPE_FAUCET_PORT=50030
 export CAPE_FAUCET_URL="http://localhost:$CAPE_FAUCET_PORT"

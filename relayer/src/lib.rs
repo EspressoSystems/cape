@@ -171,6 +171,14 @@ async fn relay(
         )?,
         memos: vec![(memos, sig)],
     };
+    // These log statements show what's being submitted to Ethereum blockchain,
+    // except for the memos.
+    event!(Level::INFO, "Submitting CAPE block: {:?}", block);
+    event!(
+        Level::INFO,
+        "Submitting CAPE block: {:?}",
+        cap_rust_sandbox::types::CapeBlock::from(block.block.clone())
+    );
     submit_block(contract, nonce_count_rule, block).await
 }
 

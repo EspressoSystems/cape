@@ -55,7 +55,7 @@
       # glibc pkgs
       overlays = [ (import rust-overlay) ];
       pkgs = import nixpkgs { inherit system overlays; };
-      mySolc = pkgs.callPackage ./nix/solc-bin { version = "0.8.10"; };
+      mySolc = pkgs.solc;
       pythonEnv = pkgs.poetry2nix.mkPoetryEnv { projectDir = ./.; };
       myPython = with pkgs; [ poetry pythonEnv ];
 

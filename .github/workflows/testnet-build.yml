@@ -22,6 +22,11 @@ jobs:
           all_but_latest: true
           access_token: ${{ github.token }}
 
+      - uses: cachix/cachix-action@v10
+        with:
+          name: espresso-systems-private
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+
       - uses: actions/checkout@v2
         name: Checkout Repository
 

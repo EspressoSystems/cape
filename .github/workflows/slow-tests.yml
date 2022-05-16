@@ -26,12 +26,6 @@ jobs:
         with:
           access_token: ${{ github.token }}
 
-      - name: Install Tools
-        # git not installed by default
-        # alpine default tar is not compatible: https://stackoverflow.com/a/64187955
-        run: |
-          apk add --no-cache tar git
-
       - name: Potential broken submodules fix
         run: |
           git checkout -f $(git -c user.name=x -c user.email=x@x commit-tree $(git hash-object -t tree /dev/null) < /dev/null) || :

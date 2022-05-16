@@ -22,12 +22,6 @@ jobs:
           all_but_latest: true
           access_token: ${{ github.token }}
 
-      - name: Install Tools
-        # git not installed by default
-        # alpine default tar is not compatible: https://stackoverflow.com/a/64187955
-        run: |
-          apk add --no-cache tar git
-
       - uses: actions/checkout@v2
         name: Checkout Repository
 

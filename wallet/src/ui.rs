@@ -371,7 +371,7 @@ pub enum PrivateKey {
 pub enum Balances {
     /// The balance of a single asset, in a single account.
     One(u64),
-    /// All the balances of an account, by asset type with asset info.
+    /// All the balances of an account, by asset type.
     Account(HashMap<AssetCode, u64>),
     /// All the balances of all accounts owned by the wallet.
     All {
@@ -385,15 +385,11 @@ impl Balances {
         match self {
             Self::One(_) => Box::new(empty()),
             Self::Account(by_asset) => Box::new(by_asset.keys()),
-            Self::All {
-                by_account,
-                aggregate,
-            } => Box::new(
-                by_account
-                    .values()
-                    .flat_map(|by_asset| by_asset.keys())
-                    .chain(aggregate.keys()),
-            ),
+            Self::All { by_account, .. } => {
+                // Each asset that appears in `aggregate` is guaranteed to appear at least once in
+                // `by_account`, so we only need to collect the asset types from each account.
+                Box::new(by_account.values().flat_map(|by_asset| by_asset.keys()))
+            }
         }
     }
 }

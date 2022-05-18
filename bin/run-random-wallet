@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Copyright (c) 2022 Espresso Systems (espressosys.com)
+# This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
+#
+# This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+# You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+#
+# usage:
+#
+#   run-random-wallet $name $seed
+#
+# usage examples:
+#
+#   run-random-wallet alice 0
+#   run-random-wallet bob 1
+set -euo pipefail
+
+mkdir -vp ~/temp
+
+env TEMPDIR=~/temp/$1 target/release/random-wallet-in-mem 5 \
+    --seed $2 \
+    --demo-connection=true \
+    --eqs-url http://localhost:50010 \
+    --address-book-url http://localhost:50000 \
+    --relayer-url http://localhost:50020 \
+    --faucet-url http://localhost:50030 \
+    --contract-address 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9 2>&1 | tee ~/temp/$1.log

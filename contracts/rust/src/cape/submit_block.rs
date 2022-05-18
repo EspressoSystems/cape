@@ -49,6 +49,7 @@ pub async fn submit_cape_block_with_memos(
     contract: &CAPE<EthMiddleware>,
     block: BlockWithMemos,
     block_number: BlockNumber,
+    gas_limit: u64,
 ) -> Result<PendingTransaction<'_, Http>, SignerMiddlewareError<Provider<Http>, Wallet<SigningKey>>>
 {
     let mut memos_bytes: Vec<u8> = vec![];
@@ -83,10 +84,22 @@ pub async fn submit_cape_block_with_memos(
         .submit_cape_block_with_memos(block.block.clone().into(), memos_bytes.into())
         .tx
         .clone();
+
     contract
         .client()
         .fill_transaction(&mut tx, Some(block_number.into()))
         .await?;
+
+    // The estimated gas cost can be too low. For example, if a deposit is made
+    // in an earlier transation in the same block the estimate would not include
+    // the cost for crediting the deposit.
+    //
+    // Note that the CAPE contract calls out to ERC20 contracts which means the
+    // gas usage of processing a burn note is potentially unbounded. Using
+    // tokens whose transfer function far exceeds normal gas consumption is
+    // currently not supported.
+    tx.set_gas(gas_limit);
+
     contract.client().send_transaction(tx, None).await
 }
 

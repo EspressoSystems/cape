@@ -29,6 +29,7 @@ use tide::{
 use tracing::{event, Level};
 
 pub const DEFAULT_RELAYER_PORT: &str = "50077";
+pub const DEFAULT_RELAYER_GAS_LIMIT: &str = "10000000"; // 10M
 
 #[derive(Clone, Debug, Snafu, Serialize, Deserialize)]
 pub enum Error {
@@ -71,6 +72,7 @@ fn server_error<E: Into<Error>>(err: E) -> tide::Error {
 struct WebState {
     contract: CAPE<EthMiddleware>,
     nonce_count_rule: NonceCountRule,
+    gas_limit: u64,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -138,6 +140,7 @@ async fn submit_endpoint(mut req: tide::Request<WebState>) -> Result<tide::Respo
     let ret = relay(
         &req.state().contract,
         req.state().nonce_count_rule,
+        req.state().gas_limit,
         transaction,
         memos,
         signature,
@@ -158,6 +161,7 @@ async fn submit_endpoint(mut req: tide::Request<WebState>) -> Result<tide::Respo
 async fn relay(
     contract: &CAPE<EthMiddleware>,
     nonce_count_rule: NonceCountRule,
+    gas_limit: u64,
     transaction: CapeModelTxn,
     memos: Vec<ReceiverMemo>,
     sig: Signature,
@@ -179,12 +183,13 @@ async fn relay(
         "Submitting CAPE block: {:?}",
         cap_rust_sandbox::types::CapeBlock::from(block.block.clone())
     );
-    submit_block(contract, nonce_count_rule, block).await
+    submit_block(contract, nonce_count_rule, gas_limit, block).await
 }
 
 async fn submit_empty_block(
     contract: &CAPE<EthMiddleware>,
     nonce_count_rule: NonceCountRule,
+    gas_limit: u64,
 ) -> Result<H256, Error> {
     let miner = UserPubKey::default();
     let block = BlockWithMemos {
@@ -195,15 +200,16 @@ async fn submit_empty_block(
         })?,
         memos: vec![],
     };
-    submit_block(contract, nonce_count_rule, block).await
+    submit_block(contract, nonce_count_rule, gas_limit, block).await
 }
 
 async fn submit_block(
     contract: &CAPE<EthMiddleware>,
     nonce_count_rule: NonceCountRule,
+    gas_limit: u64,
     block: BlockWithMemos,
 ) -> Result<H256, Error> {
-    let pending = submit_cape_block_with_memos(contract, block, nonce_count_rule.into())
+    let pending = submit_cape_block_with_memos(contract, block, nonce_count_rule.into(), gas_limit)
         .await
         .map_err(|err| Error::Submission {
             msg: err.to_string(),
@@ -222,6 +228,7 @@ async fn submit_block(
 pub async fn submit_empty_block_loop(
     contract: CAPE<EthMiddleware>,
     nonce_count_rule: NonceCountRule,
+    gas_limit: u64,
     empty_block_interval: Duration,
 ) -> Result<(), Error> {
     loop {
@@ -237,7 +244,7 @@ pub async fn submit_empty_block_loop(
             .is_err();
 
         if !queue_is_empty {
-            match submit_empty_block(&contract, nonce_count_rule).await {
+            match submit_empty_block(&contract, nonce_count_rule, gas_limit).await {
                 Ok(_) => {
                     event!(Level::INFO, "Empty block submitted.");
                 }
@@ -252,10 +259,12 @@ pub fn init_web_server(
     contract: CAPE<EthMiddleware>,
     port: u16,
     nonce_count_rule: NonceCountRule,
+    gas_limit: u64,
 ) -> task::JoinHandle<Result<(), std::io::Error>> {
     let mut web_server = tide::with_state(WebState {
         contract,
         nonce_count_rule,
+        gas_limit,
     });
     web_server.with(
         CorsMiddleware::new()
@@ -352,6 +361,7 @@ pub mod testing {
             upcast_test_cape_to_cape(contract.clone()),
             port,
             NonceCountRule::Mined,
+            DEFAULT_RELAYER_GAS_LIMIT.parse().unwrap(),
         );
         wait_for_server(port).await;
         (contract, faucet, faucet_rec, records)
@@ -362,6 +372,7 @@ pub mod testing {
 mod test {
     use super::*;
     use async_std::sync::{Arc, Mutex};
+    use cap_rust_sandbox::assertion::{EnsureMined, EnsureRejected};
     use cap_rust_sandbox::test_utils::upcast_test_cape_to_cape;
     use cap_rust_sandbox::{
         cape::CAPEConstructorArgs,
@@ -422,8 +433,8 @@ mod test {
                 .0;
         let valid_until = 2u64.pow(jf_cap::constants::MAX_TIMESTAMP_LEN as u32) - 1;
         let inputs = vec![TransferNoteInput {
-            ro: faucet_rec.clone(),
-            acc_member_witness: AccMemberWitness::lookup_from_tree(&records, 0)
+            ro: faucet_rec,
+            acc_member_witness: AccMemberWitness::lookup_from_tree(records, 0)
                 .expect_ok()
                 .unwrap()
                 .1,
@@ -473,6 +484,7 @@ mod test {
         let hash = relay(
             &upcast_test_cape_to_cape(contract.clone()),
             nonce_count_rule,
+            DEFAULT_RELAYER_GAS_LIMIT.parse().unwrap(),
             transaction.clone(),
             memos.clone(),
             sig.clone(),
@@ -480,7 +492,7 @@ mod test {
         .await
         .unwrap();
         let receipt = PendingTransaction::new(hash, &provider);
-        receipt.await.unwrap();
+        receipt.await.unwrap().ensure_mined();
         assert_eq!(contract.get_num_leaves().call().await.unwrap(), 3.into());
 
         // Submit an invalid transaction (e.g.the same one again) and check that the contract's
@@ -488,6 +500,7 @@ mod test {
         match relay(
             &upcast_test_cape_to_cape(contract.clone()),
             nonce_count_rule,
+            DEFAULT_RELAYER_GAS_LIMIT.parse().unwrap(),
             transaction,
             memos,
             sig,
@@ -498,6 +511,51 @@ mod test {
             res => panic!("expected submission error, got {:?}", res),
         }
         assert_eq!(contract.get_num_leaves().call().await.unwrap(), 3.into());
+    }
+
+    #[async_std::test]
+    async fn test_gas_limit_setting_has_effect() {
+        let mut rng = ChaChaRng::from_seed([42; 32]);
+        let user = UserKeyPair::generate(&mut rng);
+
+        let (contract, faucet, faucet_rec, records) = deploy_cape_contract_with_faucet(None).await;
+        let (transaction, memos, sig) =
+            generate_transfer(&mut rng, &faucet, faucet_rec, user.pub_key(), &records);
+        let provider = contract.client().provider().clone();
+
+        // Submit transaction with insufficient gas limit.
+        let hash = relay(
+            &upcast_test_cape_to_cape(contract.clone()),
+            NonceCountRule::Pending,
+            1_000_000,
+            transaction.clone(),
+            memos.clone(),
+            sig.clone(),
+        )
+        .await
+        .unwrap();
+
+        PendingTransaction::new(hash, &provider)
+            .await
+            .unwrap()
+            .ensure_rejected();
+
+        // Submit transaction with sufficient gas limit.
+        let hash = relay(
+            &upcast_test_cape_to_cape(contract.clone()),
+            NonceCountRule::Pending,
+            10_000_000,
+            transaction.clone(),
+            memos.clone(),
+            sig.clone(),
+        )
+        .await
+        .unwrap();
+
+        PendingTransaction::new(hash, &provider)
+            .await
+            .unwrap()
+            .ensure_mined();
     }
 
     fn get_client(port: u16) -> surf::Client {
@@ -533,7 +591,7 @@ mod test {
             .unwrap();
         let hash = response_body::<H256>(&mut res).await.unwrap();
         let receipt = PendingTransaction::new(hash, &provider);
-        receipt.await.unwrap();
+        receipt.await.unwrap().ensure_mined();
         assert_eq!(contract.get_num_leaves().call().await.unwrap(), 3.into());
 
         // Test with the non-mock CAPE contract. We can't generate any valid transactions for this
@@ -565,7 +623,12 @@ mod test {
             CAPE::new(address, deployer)
         };
         let port = get_port().await;
-        init_web_server(contract, port, NonceCountRule::Mined);
+        init_web_server(
+            contract,
+            port,
+            NonceCountRule::Mined,
+            DEFAULT_RELAYER_GAS_LIMIT.parse().unwrap(),
+        );
         wait_for_server(port).await;
         let client = get_client(port);
         match Error::from_client_error(

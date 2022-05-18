@@ -14,7 +14,7 @@ use ethers::prelude::{
     coins_bip39::English, Address, Middleware, MnemonicBuilder, Signer, SignerMiddleware,
 };
 use relayer::{
-    init_web_server, submit_empty_block_loop, NonceCountRule, DEFAULT_RELAYER_GAS_LIMIT,
+    init_web_server, submit_empty_block_loop, NonceCountRule, WebState, DEFAULT_RELAYER_GAS_LIMIT,
     DEFAULT_RELAYER_PORT,
 };
 use std::{num::NonZeroU64, sync::Arc, time::Duration};
@@ -104,19 +104,13 @@ async fn main() -> std::io::Result<()> {
     // Connect to CAPE smart contract.
     let contract = CAPE::new(opt.cape_address, client);
 
+    let web_state = WebState::new(contract, opt.nonce_count_rule, opt.gas_limit.into());
     // Start serving CAPE transaction submissions.
     let periodic_block_submission = async_std::task::spawn(submit_empty_block_loop(
-        contract.clone(),
-        opt.nonce_count_rule,
-        opt.gas_limit.into(),
+        web_state.clone(),
         Duration::from_secs(opt.empty_block_interval.into()),
     ));
-    let web_server = init_web_server(
-        contract,
-        opt.port,
-        opt.nonce_count_rule,
-        opt.gas_limit.into(),
-    );
+    let web_server = init_web_server(web_state, opt.port);
     let _result = futures::future::join(periodic_block_submission, web_server).await;
     Ok(())
 }

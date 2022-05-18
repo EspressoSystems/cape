@@ -70,15 +70,15 @@ fn server_error<E: Into<Error>>(err: E) -> tide::Error {
 }
 
 #[derive(Clone)]
-struct WebState {
+pub struct WebState {
     contract: CAPE<EthMiddleware>,
     nonce_count_rule: NonceCountRule,
     gas_limit: u64,
-    block_submission_mutex: Arc<Mutex<u64>>,
+    block_submission_mutex: Arc<Mutex<()>>,
 }
 
 impl WebState {
-    fn new(
+    pub fn new(
         contract: CAPE<EthMiddleware>,
         nonce_count_rule: NonceCountRule,
         gas_limit: u64,
@@ -87,7 +87,7 @@ impl WebState {
             contract,
             nonce_count_rule,
             gas_limit,
-            block_submission_mutex: Arc::new(Mutex::new(0)),
+            block_submission_mutex: Arc::new(Mutex::new(())),
         }
     }
 }
@@ -232,12 +232,9 @@ async fn submit_block(web_state: &WebState, block: BlockWithMemos) -> Result<H25
 }
 
 pub async fn submit_empty_block_loop(
-    contract: CAPE<EthMiddleware>,
-    nonce_count_rule: NonceCountRule,
-    gas_limit: u64,
+    web_state: WebState,
     empty_block_interval: Duration,
 ) -> Result<(), Error> {
-    let web_state = WebState::new(contract, nonce_count_rule, gas_limit);
     loop {
         async_std::task::sleep(empty_block_interval).await;
 
@@ -264,12 +261,10 @@ pub async fn submit_empty_block_loop(
 
 /// This function starts the web server
 pub fn init_web_server(
-    contract: CAPE<EthMiddleware>,
+    web_state: WebState,
     port: u16,
-    nonce_count_rule: NonceCountRule,
-    gas_limit: u64,
 ) -> task::JoinHandle<Result<(), std::io::Error>> {
-    let mut web_server = tide::with_state(WebState::new(contract, nonce_count_rule, gas_limit));
+    let mut web_server = tide::with_state(web_state);
     web_server.with(
         CorsMiddleware::new()
             .allow_methods("GET, POST".parse::<HeaderValue>().unwrap())
@@ -372,12 +367,8 @@ pub mod testing {
     ) {
         let (contract, faucet, faucet_rec, records) =
             deploy_cape_contract_with_faucet(faucet_key_pair).await;
-        init_web_server(
-            upcast_test_cape_to_cape(contract.clone()),
-            port,
-            NonceCountRule::Mined,
-            DEFAULT_RELAYER_GAS_LIMIT.parse().unwrap(),
-        );
+        let web_state = WebState::for_test(&contract);
+        init_web_server(web_state, port);
         wait_for_server(port).await;
         (contract, faucet, faucet_rec, records)
     }
@@ -624,12 +615,12 @@ mod test {
             CAPE::new(address, deployer)
         };
         let port = get_port().await;
-        init_web_server(
+        let web_state = WebState::new(
             contract,
-            port,
-            NonceCountRule::Mined,
+            NonceCountRule::Pending,
             DEFAULT_RELAYER_GAS_LIMIT.parse().unwrap(),
         );
+        init_web_server(web_state, port);
         wait_for_server(port).await;
         let client = get_client(port);
         match Error::from_client_error(

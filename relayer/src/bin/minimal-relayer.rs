@@ -13,7 +13,10 @@ use cap_rust_sandbox::{
 use ethers::prelude::{
     coins_bip39::English, Address, Middleware, MnemonicBuilder, Signer, SignerMiddleware,
 };
-use relayer::{init_web_server, submit_empty_block_loop, NonceCountRule, DEFAULT_RELAYER_PORT};
+use relayer::{
+    init_web_server, submit_empty_block_loop, NonceCountRule, DEFAULT_RELAYER_GAS_LIMIT,
+    DEFAULT_RELAYER_PORT,
+};
 use std::{num::NonZeroU64, sync::Arc, time::Duration};
 use structopt::StructOpt;
 
@@ -65,6 +68,13 @@ struct MinimalRelayerOptions {
         default_value = "300"
     )]
     empty_block_interval: NonZeroU64,
+
+    /// Ethereum gas limit for the relayer's Ethereum transactions.
+    ///
+    /// The default of 10M is enough to cover the gas cost of submitting one note
+    /// and crediting up to 10 pending deposits in the smart contract.
+    #[structopt(long, env = "CAPE_RELAYER_GAS_LIMIT", default_value = DEFAULT_RELAYER_GAS_LIMIT)]
+    gas_limit: NonZeroU64,
 }
 
 #[async_std::main]
@@ -98,9 +108,15 @@ async fn main() -> std::io::Result<()> {
     let periodic_block_submission = async_std::task::spawn(submit_empty_block_loop(
         contract.clone(),
         opt.nonce_count_rule,
+        opt.gas_limit.into(),
         Duration::from_secs(opt.empty_block_interval.into()),
     ));
-    let web_server = init_web_server(contract, opt.port, opt.nonce_count_rule);
+    let web_server = init_web_server(
+        contract,
+        opt.port,
+        opt.nonce_count_rule,
+        opt.gas_limit.into(),
+    );
     let _result = futures::future::join(periodic_block_submission, web_server).await;
     Ok(())
 }

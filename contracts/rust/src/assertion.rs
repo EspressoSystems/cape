@@ -68,3 +68,16 @@ impl EnsureMined for Option<TransactionReceipt> {
         self
     }
 }
+
+pub trait EnsureRejected {
+    fn ensure_rejected(self) -> Self;
+}
+
+impl EnsureRejected for Option<TransactionReceipt> {
+    fn ensure_rejected(self) -> Self {
+        if self.as_ref().unwrap().status.unwrap() != U64::from(0) {
+            panic!("Transaction not rejected");
+        }
+        self
+    }
+}

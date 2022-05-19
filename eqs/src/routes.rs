@@ -11,7 +11,8 @@ use crate::route_parsing::*;
 
 use cap_rust_sandbox::ledger::{CapeLedger, CommitmentToCapeTransition, CommittedCapeTransition};
 use cap_rust_sandbox::model::CapeLedgerState;
-use jf_cap::structs::Nullifier;
+use ethers::prelude::Address;
+use jf_cap::structs::{AssetDefinition, Nullifier};
 use net::server::response;
 use seahorse::events::LedgerEvent;
 use serde::{Deserialize, Serialize};
@@ -31,6 +32,7 @@ pub enum ApiRouteKey {
     get_transaction,
     get_transaction_by_hash,
     healthcheck,
+    get_wrapped_erc20_address,
 }
 
 /// Verify that every variant of enum ApiRouteKey is defined in api.toml
@@ -178,6 +180,17 @@ pub async fn get_transaction_by_hash(
     }
 }
 
+///Return an AssetDefinition, making JSON-RPC connection optional
+pub async fn get_wrapped_erc20_address(
+    bindings: &HashMap<String, RouteBinding>,
+    query_result_state: &QueryResultState,
+) -> Result<Option<Address>, tide::Error> {
+    Ok(query_result_state
+        .address_from_assetdef
+        .get(&bindings[":assetdef"].value.to::<AssetDefinition>()?)
+        .cloned())
+}
+
 /// Return a JSON expression with status 200 indicating the server
 /// is up and running. The JSON expression is simply,
 ///    {"status": "available"}
@@ -216,5 +229,9 @@ pub async fn dispatch_url(
             response(&req, get_transaction_by_hash(bindings, query_state).await?)
         }
         ApiRouteKey::healthcheck => Ok(healthcheck().await?),
+        ApiRouteKey::get_wrapped_erc20_address => response(
+            &req,
+            get_wrapped_erc20_address(bindings, query_state).await?,
+        ),
     }
 }

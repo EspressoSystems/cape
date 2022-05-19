@@ -9,7 +9,7 @@ use cap_rust_sandbox::ledger::{CapeLedger, CapeTransition, CommittedCapeTransiti
 use cap_rust_sandbox::model::{CapeLedgerState, CapeRecordMerkleHistory, CAPE_MERKLE_HEIGHT};
 use commit::Commitment;
 use ethers::prelude::Address;
-use jf_cap::structs::Nullifier;
+use jf_cap::structs::{AssetDefinition, Nullifier};
 use jf_cap::MerkleTree;
 use key_set::VerifierKeySet;
 use seahorse::events::LedgerEvent;
@@ -44,6 +44,7 @@ pub struct QueryResultState {
     // additional indexed data for queries
     pub transaction_by_id: HashMap<(u64, u64), CommittedCapeTransition>,
     pub transaction_id_by_hash: HashMap<Commitment<CapeTransition>, (u64, u64)>,
+    pub address_from_assetdef: HashMap<AssetDefinition, Address>,
 }
 
 impl QueryResultState {
@@ -71,6 +72,7 @@ impl QueryResultState {
 
             transaction_by_id: HashMap::new(),
             transaction_id_by_hash: HashMap::new(),
+            address_from_assetdef: HashMap::new(),
         }
     }
 }

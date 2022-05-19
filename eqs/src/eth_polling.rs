@@ -402,11 +402,6 @@ impl EthPolling {
                         src_addr: EthereumAddr(filter_data.from.to_fixed_bytes()),
                     };
 
-                    //*Need map between AssetDefinition and Option<ERC20 contract address, None>
-                    //if asset is <wrapped asset, domestic asset>
-                    //*Should be HashMap<AssetDefinition, EthAddr>
-                    //AssetDef is in ro
-
                     self.pending_commit_event.push(new_transition_wrap);
                     self.last_event_index = Some(current_index);
                 }

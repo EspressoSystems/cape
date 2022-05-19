@@ -57,7 +57,13 @@ export CAPE_FAUCET_PORT=50030
 export CAPE_FAUCET_URL="http://localhost:$CAPE_FAUCET_PORT"
 export CAPE_FAUCET_WALLET_MNEMONIC="broom mesh guilt material void romance sample choice indicate urban diamond theme"
 export CAPE_FAUCET_WALLET_PATH="$(mktemp -d -t cape-faucet-wallet-XXXXXXX)"
-
+# By default, the cape faucet maintains 25 records at any given time, based on 5 records per grant
+# and a target of servicing 5 simultaneous grants successfully. For the local demo, creating these
+# records causes a long delay at startup, and it's not really necessary, since we only have two
+# wallets. In the interest of faster startup, we use 2 records per grant and target 2 simultaneous
+# grants, for a total of only 4 records at a time (plus 1 for a little buffer).
+export CAPE_FAUCET_NUM_GRANTS=2
+export CAPE_FAUCET_NUM_RECORDS=5
 
 export CAPE_WALLET_PORT_ALICE=50040
 export CAPE_WALLET_STORAGE_ALICE="$(mktemp -d -t cape-wallet-alice-XXXXXXX)"

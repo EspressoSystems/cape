@@ -2580,11 +2580,13 @@ dependencies = [
  "ethers",
  "futures",
  "hex",
+ "itertools 0.10.3",
  "jf-cap",
  "key-set",
  "net",
  "rand 0.8.5",
  "rand_chacha 0.3.1",
+ "reef",
  "seahorse",
  "serde",
  "serde_json",
@@ -2597,6 +2599,7 @@ dependencies = [
  "tracing-futures",
  "tracing-log",
  "tracing-subscriber",
+ "tracing-test",
 ]
 
 [[package]]

@@ -26,11 +26,10 @@ jobs:
         with:
           access_token: ${{ github.token }}
 
-      - name: Install Tools
-        # git not installed by default
-        # alpine default tar is not compatible: https://stackoverflow.com/a/64187955
-        run: |
-          apk add --no-cache tar git
+      - uses: cachix/cachix-action@v10
+        with:
+          name: espresso-systems-private
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
 
       - name: Potential broken submodules fix
         run: |

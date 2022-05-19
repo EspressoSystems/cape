@@ -202,8 +202,8 @@ async fn integration_test_wrapping_erc20_tokens() -> Result<()> {
     let ro1 = call_and_check_deposit_erc20(
         true,
         1000u64,
-        "1000000000000000000000",
-        "999999999999999999000",
+        "1000000000",
+        "999999000",
         1000u64,
         contracts_info.clone(),
     )
@@ -212,8 +212,8 @@ async fn integration_test_wrapping_erc20_tokens() -> Result<()> {
     let ro2 = call_and_check_deposit_erc20(
         false,
         2000u64,
-        "999999999999999999000",
-        "999999999999999997000",
+        "999999000",
+        "999997000",
         3000u64,
         contracts_info.clone(),
     )

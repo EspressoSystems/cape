@@ -678,9 +678,15 @@ async fn getaddress(wallet: &mut Option<Wallet>) -> Result<Vec<UserAddress>, tid
 // a given address and asset type.
 //
 // Returns:
-//  * BalanceInfo::Balance, if address and asset code both given
-//  * BalanceInfo::AccountBalances, if address given
-//  * BalanceInfo::AllBalances, if neither given
+//  {
+//      "balances": Balances
+//      "assets": { AssetCode -> AssetInfo }
+//  }
+//
+// Where Balances is one of
+//  * Balances::One, if address and asset code both given
+//  * Balances::Account, if address given
+//  * Balances::All, if neither given
 async fn getbalance(
     bindings: &HashMap<String, RouteBinding>,
     wallet: &mut Option<Wallet>,
@@ -707,12 +713,13 @@ async fn getbalance(
         wallet.balance_breakdown(&address.into(), &asset).await
     };
     let account_balances = |address: UserAddress| async move {
-        iter(known_assets(wallet).await)
-            .then(|(code, info)| {
+        iter(wallet.assets().await)
+            .then(|asset| {
                 let address = address.clone();
-                async move { (code, (one_balance(address, code).await, info)) }
+                let code = asset.definition.code;
+                async move { (code, one_balance(address, code).await) }
             })
-            .collect()
+            .collect::<HashMap<_, _>>()
             .await
     };
     let all_balances = || async {
@@ -721,22 +728,36 @@ async fn getbalance(
                 let address = UserAddress::from(key.address());
                 (address.clone(), account_balances(address).await)
             })
-            .collect()
+            .collect::<HashMap<_, _>>()
             .await
     };
 
-    match (address, asset) {
-        (Some(address), Some(asset)) => Ok(BalanceInfo::Balance(one_balance(address, asset).await)),
-        (Some(address), None) => Ok(BalanceInfo::AccountBalances(
-            account_balances(address).await,
-        )),
-        (None, None) => Ok(BalanceInfo::AllBalances(all_balances().await)),
+    let balances = match (address, asset) {
+        (Some(address), Some(asset)) => Balances::One(one_balance(address, asset).await),
+        (Some(address), None) => Balances::Account(account_balances(address).await),
+        (None, None) => {
+            let by_account = all_balances().await;
+            let mut aggregate = HashMap::new();
+            for (asset, balance) in by_account.values().flat_map(|by_asset| by_asset.iter()) {
+                *aggregate.entry(*asset).or_default() += *balance;
+            }
+            Balances::All {
+                by_account,
+                aggregate,
+            }
+        }
         (None, Some(_)) => {
             // There is no endpoint that includes asset but not address, so the request parsing code
             // should not allow us to reach here.
             unreachable!()
         }
-    }
+    };
+
+    let assets = iter(balances.assets())
+        .then(|asset| async { (*asset, AssetInfo::from_code(wallet, *asset).await.unwrap()) })
+        .collect()
+        .await;
+    Ok(BalanceInfo { balances, assets })
 }
 
 async fn newkey(

@@ -30,6 +30,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::{self, Display, Formatter};
 use std::io::Cursor;
+use std::iter::empty;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use tagged_base64::TaggedBase64;
@@ -259,6 +260,14 @@ impl AssetInfo {
         }
     }
 
+    pub async fn from_code<'a, Backend: CapeWalletBackend<'a> + Sync + 'a>(
+        wallet: &CapeWallet<'a, Backend>,
+        code: AssetCode,
+    ) -> Option<Self> {
+        let asset = wallet.asset(code).await?;
+        Some(Self::from_info(wallet, asset).await)
+    }
+
     pub async fn from_info<'a, Backend: CapeWalletBackend<'a> + Sync + 'a>(
         wallet: &CapeWallet<'a, Backend>,
         info: seahorse::AssetInfo,
@@ -359,13 +368,36 @@ pub enum PrivateKey {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub enum BalanceInfo {
+pub enum Balances {
     /// The balance of a single asset, in a single account.
-    Balance(u64),
-    /// All the balances of an account, by asset type with asset info.
-    AccountBalances(HashMap<AssetCode, (u64, AssetInfo)>),
+    One(u64),
+    /// All the balances of an account, by asset type.
+    Account(HashMap<AssetCode, u64>),
     /// All the balances of all accounts owned by the wallet.
-    AllBalances(HashMap<UserAddress, HashMap<AssetCode, (u64, AssetInfo)>>),
+    All {
+        by_account: HashMap<UserAddress, HashMap<AssetCode, u64>>,
+        aggregate: HashMap<AssetCode, u64>,
+    },
+}
+
+impl Balances {
+    pub fn assets(&self) -> Box<dyn Iterator<Item = &AssetCode> + Send + '_> {
+        match self {
+            Self::One(_) => Box::new(empty()),
+            Self::Account(by_asset) => Box::new(by_asset.keys()),
+            Self::All { by_account, .. } => {
+                // Each asset that appears in `aggregate` is guaranteed to appear at least once in
+                // `by_account`, so we only need to collect the asset types from each account.
+                Box::new(by_account.values().flat_map(|by_asset| by_asset.keys()))
+            }
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct BalanceInfo {
+    pub balances: Balances,
+    pub assets: HashMap<AssetCode, AssetInfo>,
 }
 
 #[ser_test(ark(false))]

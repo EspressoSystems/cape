@@ -989,12 +989,10 @@ async fn mint(
         .expect("mint must have ':fee' parameter")
         .value
         .as_u64()?;
-    let minter = bindings
-        .get(":minter")
-        .expect("mint must have ':minter' parameter")
-        .value
-        .to::<UserAddress>()?
-        .0;
+    let minter = match bindings.get(":minter") {
+        Some(param) => Some(param.value.to::<UserAddress>()?.0),
+        None => None,
+    };
     let recipient = bindings
         .get(":recipient")
         .expect("mint must have ':recipient' parameter")
@@ -1003,7 +1001,7 @@ async fn mint(
         .0;
 
     Ok(wallet
-        .mint(Some(&minter), fee, &asset, amount, recipient)
+        .mint(minter.as_ref(), fee, &asset, amount, recipient)
         .await?)
 }
 

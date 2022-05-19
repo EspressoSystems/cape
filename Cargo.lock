@@ -5202,8 +5202,8 @@ dependencies = [
 
 [[package]]
 name = "seahorse"
-version = "0.2.2"
-source = "git+https://github.com/EspressoSystems/seahorse.git?tag=0.2.2#8e78fd84a65f5422e1f69faea2f39b6425fd4eb8"
+version = "0.2.3"
+source = "git+https://github.com/EspressoSystems/seahorse.git?branch=release-0.2#29e04bd72e60677ece9904165dfec049e4aaeba4"
 dependencies = [
  "arbitrary",
  "arbitrary-wrappers 0.2.1 (git+https://github.com/EspressoSystems/arbitrary-wrappers.git?tag=0.2.1)",
@@ -5232,7 +5232,10 @@ dependencies = [
  "key-set",
  "lazy_static",
  "net",
+ "num-bigint 0.4.3",
+ "num-traits",
  "pipe",
+ "primitive-types",
  "proptest",
  "rand_chacha 0.3.1",
  "reef",

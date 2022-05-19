@@ -1,0 +1,106 @@
+@startuml
+autonumber
+participant "Cape Contract" as C
+participant "Ethereum Query Service" as EQS
+participant "Bob's Wallet" as W_A
+participant "Alice's Wallet" as W_B
+participant "Relayer" as R
+participant "Freezer" as F
+participant "AddressBook" as AB
+participant "Ethereum Wallet Eve" as ETH_WX
+
+group mint
+    W_A -> W_A: build mint_tx
+    W_A -> R: mint_tx
+    R -> R: b:= new_block_from(mint_tx)
+    R -> C: b
+    C -> EQS: new_block_event(b)
+    EQS -> W_A: new_block_event(b)
+    EQS -> W_B: new_block_event(b)
+    note left W_A: Alice's wallet knows the mint \n transaction was successfully processed
+    W_A -> W_A: adds minted record for further spending
+end group
+
+
+group transfer
+
+    W_A -> AB: get_enc_pk(alice_address)
+    AB -> W_A: alice_enc_pk
+    W_A -> W_A: transfer_tx:=build_transfer_tx(...,alice_enc_pk)
+    W_A -> R: transfer_tx
+    R -> R: b:= new_block_from(transfer_tx)
+    R -> C: b
+    C -> C: process(b)
+    C -> EQS: new_block_event(b)
+    EQS -> W_A: new_block_event(b)
+    EQS -> W_B: new_block_event(b)
+    note left W_A: The list of memos is empty for Bob
+    W_A -> W_A: memos := fetch_memos_from(b)
+
+    note left W_B: Bob has received an asset record of type ... and amount 10
+    W_B -> W_B: memos := fetch_memos_from(b)
+
+    note left W_B: Bob's wallet stores the new asset record for further spending
+    W_B -> W_B: update_local_state_from(memos)
+
+end group
+
+group freeze
+
+   note left F: The Freezer freezes Bob's asset record.
+   F -> F: freeze_tx:=build_freeze_tx(ar_b,....)
+   F -> R: freeze_tx
+   R -> R: b:= new_block_from(freeze_tx)
+   R -> C: b
+   C -> C: process(b)
+   C -> EQS: new_block_event(b)
+   EQS -> W_A: new_block_event(b)
+   EQS -> W_B: new_block_event(b)
+   EQS -> F: new_block_event(b)
+   note left W_B: Bob tries to spend his frozen asset record
+   W_B -> W_B: transfer_tx_invalid := build_transfer_tx(fr,...)
+   W_B -> R: transfer_tx_invalid
+   R -> R: b := new_block_from_tx(transfer_tx_invalid)
+   R -> C: b
+   C -> C: process(b)
+   note right C: the block is rejected because Bob's transaction is invalid
+   C -> C: Error
+
+end group
+
+group Conversion between ERC20 and CAP assets
+
+    group sponsor
+
+        W_A -> C: C.sponsorErc20(USCC,at)
+        C -> C: update list of registered assets
+
+    end group
+
+    group Wrap
+
+        W_B -> C: C.depositErc20(at,100)
+        W_A -> R: transfer_tx
+        R -> R: b:=new_block(transfer_tx)
+        R -> C: b
+        C -> C: process(b)
+        C -> EQS: new_erc_deposit(d)
+        EQS -> W_A: new_erc_deposit(d)
+        EQS -> W_B: new_erc_deposit(d)
+        W_A -> W_A: update_local_state_from_erc_20_deposit(d)
+
+    end group
+
+    group Unwrap
+
+        W_A -> R: burn_tx
+        R -> R: b:=new_block_from(burn_tx)
+        R -> C: b
+        C -> C: process(b)
+        C -> ETH_WX: (USDC,10)
+
+    end group
+
+end group
+
+@enduml

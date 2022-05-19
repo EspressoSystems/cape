@@ -1002,7 +1002,9 @@ async fn mint(
         .to::<UserAddress>()?
         .0;
 
-    Ok(wallet.mint(&minter, fee, &asset, amount, recipient).await?)
+    Ok(wallet
+        .mint(Some(&minter), fee, &asset, amount, recipient)
+        .await?)
 }
 
 async fn unwrap(

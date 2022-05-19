@@ -20,6 +20,7 @@ use cap_rust_sandbox::{
 use commit::Committable;
 use core::mem;
 use ethers::abi::AbiDecode;
+use ethers::prelude::Address;
 use ethers::prelude::Middleware;
 use jf_cap::structs::{ReceiverMemo, RecordCommitment};
 use jf_cap::{structs::RecordOpening, MerkleTree, TransactionNote};
@@ -111,6 +112,7 @@ impl EthPolling {
                 0
             }
         };
+
         EthPolling {
             query_result_state,
             state_persistence,
@@ -234,8 +236,11 @@ impl EthPolling {
                     for tx in model_txns.clone() {
                         transitions.push(CapeTransition::Transaction(tx.clone()));
                     }
-                    let pending_commit =
-                        transitions.iter().cloned().chain(wraps).collect::<Vec<_>>();
+                    let pending_commit = transitions
+                        .iter()
+                        .cloned()
+                        .chain(wraps.clone())
+                        .collect::<Vec<_>>();
                     let output_record_commitments = pending_commit
                         .iter()
                         .flat_map(|txn| txn.output_commitments())
@@ -365,6 +370,19 @@ impl EthPolling {
                     updated_state.last_reported_index = Some(current_index);
                     self.last_event_index = Some(current_index);
 
+                    //add assets to local map
+                    for wrap in wraps {
+                        match wrap {
+                            CapeTransition::Wrap { ro, src_addr, .. } => {
+                                updated_state
+                                    .address_from_assetdef
+                                    .insert(ro.asset_def, Address::from(src_addr));
+                            }
+                            CapeTransition::Faucet { .. } => {}
+                            CapeTransition::Transaction { .. } => {}
+                        }
+                    }
+
                     // persist the state block updates (will be more fine grained in r3)
                     self.state_persistence.store_latest_state(&*updated_state);
                 }
@@ -383,6 +401,11 @@ impl EthPolling {
                         erc20_code,
                         src_addr: EthereumAddr(filter_data.from.to_fixed_bytes()),
                     };
+
+                    //*Need map between AssetDefinition and Option<ERC20 contract address, None>
+                    //if asset is <wrapped asset, domestic asset>
+                    //*Should be HashMap<AssetDefinition, EthAddr>
+                    //AssetDef is in ro
 
                     self.pending_commit_event.push(new_transition_wrap);
                     self.last_event_index = Some(current_index);

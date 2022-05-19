@@ -68,3 +68,8 @@ ERROR_hash = "A valid commitment hash is required. Commitment begin with CMTMNT_
 [route.healthcheck]
 PATH = [ "healthcheck" ]
 DOC = "Responds with JSON {\"status\": \"available\"}."
+
+[route.get_contract_address]
+PATH = [ "get_address/:assetdef" ]
+":assetdef" = "AssetDefinition"
+DOC = "Returns contract address for wrapped asset, or None for domestic asset."

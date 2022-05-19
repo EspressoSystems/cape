@@ -32,7 +32,7 @@ pub enum ApiRouteKey {
     get_transaction,
     get_transaction_by_hash,
     healthcheck,
-    get_contract_address,
+    get_wrapped_erc20_address,
 }
 
 /// Verify that every variant of enum ApiRouteKey is defined in api.toml
@@ -181,19 +181,14 @@ pub async fn get_transaction_by_hash(
 }
 
 ///Return an AssetDefinition, making JSON-RPC connection optional
-pub async fn get_contract_address(
+pub async fn get_wrapped_erc20_address(
     bindings: &HashMap<String, RouteBinding>,
     query_result_state: &QueryResultState,
 ) -> Result<Option<Address>, tide::Error> {
-    if let Some(addr) = query_result_state
+    Ok(query_result_state
         .address_from_assetdef
         .get(&bindings[":assetdef"].value.to::<AssetDefinition>()?)
-        .cloned()
-    {
-        Ok(Some(addr))
-    } else {
-        Ok(None)
-    }
+        .cloned())
 }
 
 /// Return a JSON expression with status 200 indicating the server
@@ -234,8 +229,9 @@ pub async fn dispatch_url(
             response(&req, get_transaction_by_hash(bindings, query_state).await?)
         }
         ApiRouteKey::healthcheck => Ok(healthcheck().await?),
-        ApiRouteKey::get_contract_address => {
-            response(&req, get_contract_address(bindings, query_state).await?)
-        }
+        ApiRouteKey::get_wrapped_erc20_address => response(
+            &req,
+            get_wrapped_erc20_address(bindings, query_state).await?,
+        ),
     }
 }

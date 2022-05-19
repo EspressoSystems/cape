@@ -69,7 +69,7 @@ ERROR_hash = "A valid commitment hash is required. Commitment begin with CMTMNT_
 PATH = [ "healthcheck" ]
 DOC = "Responds with JSON {\"status\": \"available\"}."
 
-[route.get_contract_address]
-PATH = [ "get_address/:assetdef" ]
-":assetdef" = "AssetDefinition"
+[route.get_wrapped_erc20_address]
+PATH = [ "get_wrapped_erc20_address/:assetdef" ]
+":assetdef" = "TaggedBase64"
 DOC = "Returns contract address for wrapped asset, or None for domestic asset."

@@ -373,13 +373,12 @@ impl EthPolling {
                     //add assets to local map
                     for wrap in wraps {
                         match wrap {
-                            CapeTransition::Wrap { ro, src_addr, .. } => {
+                            CapeTransition::Wrap { ro, erc20_code, .. } => {
                                 updated_state
                                     .address_from_assetdef
-                                    .insert(ro.asset_def, Address::from(src_addr));
+                                    .insert(ro.asset_def, Address::from(erc20_code));
                             }
-                            CapeTransition::Faucet { .. } => {}
-                            CapeTransition::Transaction { .. } => {}
+                            _ => panic!("Non-wrap transition found in wraps"),
                         }
                     }
 

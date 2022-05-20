@@ -156,11 +156,10 @@ mod backend {
         CapeBackend::new(
             &*UNIVERSAL_PARAM,
             CapeBackendConfig {
-                rpc_url: options.rpc_url(),
+                cape_contract: options.cape_contract(),
                 eqs_url: options.eqs_url(),
                 relayer_url: options.relayer_url(),
                 address_book_url: options.address_book_url(),
-                contract_address: options.contract_address(),
                 eth_mnemonic: options.eth_mnemonic(),
                 min_polling_delay: options.min_polling_delay(),
             },

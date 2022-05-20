@@ -19,7 +19,6 @@ use cape_wallet::{
     backend::{CapeBackend, CapeBackendConfig},
     wallet::{CapeWallet, CapeWalletError},
 };
-use ethers::prelude::Address;
 use jf_cap::{
     keys::{UserKeyPair, UserPubKey},
     structs::AssetCode,
@@ -94,18 +93,6 @@ pub struct FaucetOptions {
         default_value = "http://localhost:50078"
     )]
     pub address_book_url: Url,
-
-    /// Address of the CAPE smart contract.
-    #[structopt(long, env = "CAPE_CONTRACT_ADDRESS")]
-    pub contract_address: Address,
-
-    /// URL for Ethers HTTP Provider
-    #[structopt(
-        long,
-        env = "CAPE_WEB3_PROVIDER_URL",
-        default_value = "http://localhost:8545"
-    )]
-    pub rpc_url: Url,
 
     /// Minimum amount of time to wait between polling requests to EQS.
     #[structopt(long, env = "CAPE_WALLET_MIN_POLLING_DELAY", default_value = "500")]
@@ -210,15 +197,14 @@ pub async fn init_web_server(
     let backend = CapeBackend::new(
         &*UNIVERSAL_PARAM,
         CapeBackendConfig {
-            rpc_url: opt.rpc_url.clone(),
+            // We're not going to do any direct-to-contract operations that would require a
+            // connection to the CAPE contract or an ETH wallet. Everything we do will go through
+            // the relayer.
+            cape_contract: None,
+            eth_mnemonic: None,
             eqs_url: opt.eqs_url.clone(),
             relayer_url: opt.relayer_url.clone(),
             address_book_url: opt.address_book_url.clone(),
-            contract_address: opt.contract_address,
-            // We don't use an Ethereum wallet. The faucet only has to do transfers. It should not
-            // have to do any operations that go directly to the contract and thus require an ETH
-            // fee.
-            eth_mnemonic: None,
             min_polling_delay: Duration::from_millis(opt.min_polling_delay_ms),
         },
         &mut loader,
@@ -319,8 +305,6 @@ mod test {
             eqs_url: eqs_url.clone(),
             relayer_url: relayer_url.clone(),
             address_book_url: address_book_url.clone(),
-            contract_address,
-            rpc_url: rpc_url_for_test(),
             min_polling_delay_ms: 500,
         };
         init_web_server(&opt, Some(faucet_key_pair)).await.unwrap();
@@ -336,11 +320,10 @@ mod test {
         let receiver_backend = CapeBackend::new(
             universal_param,
             CapeBackendConfig {
-                rpc_url: rpc_url_for_test(),
+                cape_contract: Some((rpc_url_for_test(), contract_address)),
                 eqs_url,
                 relayer_url,
                 address_book_url,
-                contract_address,
                 eth_mnemonic: None,
                 min_polling_delay: Duration::from_millis(500),
             },

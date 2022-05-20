@@ -87,16 +87,12 @@ pub struct NodeOpt {
     pub address_book_url: Url,
 
     /// Address of the CAPE smart contract.
-    #[structopt(long, env = "CAPE_CONTRACT_ADDRESS")]
-    pub contract_address: Address,
+    #[structopt(long, env = "CAPE_CONTRACT_ADDRESS", requires = "rpc_url")]
+    pub contract_address: Option<Address>,
 
     /// URL for Ethers HTTP Provider
-    #[structopt(
-        long,
-        env = "CAPE_WEB3_PROVIDER_URL",
-        default_value = "http://localhost:8545"
-    )]
-    pub rpc_url: Url,
+    #[structopt(long, env = "CAPE_WEB3_PROVIDER_URL", requires = "contract_address")]
+    pub rpc_url: Option<Url>,
 
     /// Mnemonic for a local Ethereum wallet for direct contract calls.
     #[structopt(long, env = "ETH_MNEMONIC")]
@@ -123,10 +119,8 @@ impl Default for NodeOpt {
             address_book_url: "http://localhost:50078"
                 .parse()
                 .expect("Default address book url couldn't be parsed"),
-            contract_address: Address::default(),
-            rpc_url: "http://localhost:8545"
-                .parse()
-                .expect("Default rpc url couldn't be parsed"),
+            contract_address: None,
+            rpc_url: None,
             eth_mnemonic: None,
             min_polling_delay_ms: 500,
         }
@@ -193,8 +187,11 @@ impl NodeOpt {
             .collect()
     }
 
-    pub fn rpc_url(&self) -> Url {
-        self.rpc_url.clone()
+    pub fn cape_contract(&self) -> Option<(Url, Address)> {
+        match (self.rpc_url.clone(), self.contract_address) {
+            (Some(url), Some(address)) => Some((url, address)),
+            _ => None,
+        }
     }
 
     pub fn eqs_url(&self) -> Url {
@@ -207,10 +204,6 @@ impl NodeOpt {
 
     pub fn address_book_url(&self) -> Url {
         self.address_book_url.clone()
-    }
-
-    pub fn contract_address(&self) -> Address {
-        self.contract_address
     }
 
     pub fn eth_mnemonic(&self) -> Option<String> {

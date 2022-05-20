@@ -15,12 +15,11 @@ use cap_rust_sandbox::{
     ethereum::EthConnection,
     ledger::{CapeTransactionKind, CapeTransition},
     model::{CapeModelTxn, Erc20Code, EthereumAddr},
-    types::{CAPEEvents, RecordOpening as RecordOpeningSol},
+    types::{AssetCodeSol, CAPEEvents, RecordOpening as RecordOpeningSol},
 };
 use commit::Committable;
 use core::mem;
 use ethers::abi::AbiDecode;
-use ethers::prelude::Address;
 use ethers::prelude::Middleware;
 use jf_cap::structs::{ReceiverMemo, RecordCommitment};
 use jf_cap::{structs::RecordOpening, MerkleTree, TransactionNote};
@@ -370,18 +369,6 @@ impl EthPolling {
                     updated_state.last_reported_index = Some(current_index);
                     self.last_event_index = Some(current_index);
 
-                    //add assets to local map
-                    for wrap in wraps {
-                        match wrap {
-                            CapeTransition::Wrap { ro, erc20_code, .. } => {
-                                updated_state
-                                    .address_from_assetdef
-                                    .insert(ro.asset_def, Address::from(erc20_code));
-                            }
-                            _ => panic!("Non-wrap transition found in wraps"),
-                        }
-                    }
-
                     // persist the state block updates (will be more fine grained in r3)
                     self.state_persistence.store_latest_state(&*updated_state);
                 }
@@ -478,7 +465,20 @@ impl EthPolling {
                     // persist the state block updates (will be more fine grained in r3)
                     self.state_persistence.store_latest_state(&updated_state);
                 }
-                CAPEEvents::AssetSponsoredFilter(_filter_data) => {}
+                CAPEEvents::AssetSponsoredFilter(filter_data) => {
+                    // Extract a new entry for the map from asset codes to ERC20 contract addresses.
+                    let code = AssetCodeSol::from(filter_data.asset_definition_code).into();
+                    let address = filter_data.erc_20_address;
+
+                    let mut updated_state = self.query_result_state.write().await;
+                    updated_state.address_from_asset.insert(code, address);
+
+                    updated_state.last_reported_index = Some(current_index);
+                    self.last_event_index = Some(current_index);
+
+                    // persist the state block updates (will be more fine grained in r3)
+                    self.state_persistence.store_latest_state(&updated_state);
+                }
             }
         }
 

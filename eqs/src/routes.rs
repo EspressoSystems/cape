@@ -12,7 +12,7 @@ use crate::route_parsing::*;
 use cap_rust_sandbox::ledger::{CapeLedger, CommitmentToCapeTransition, CommittedCapeTransition};
 use cap_rust_sandbox::model::CapeLedgerState;
 use ethers::prelude::Address;
-use jf_cap::structs::{AssetDefinition, Nullifier};
+use jf_cap::structs::{AssetCode, Nullifier};
 use net::server::response;
 use seahorse::events::LedgerEvent;
 use serde::{Deserialize, Serialize};
@@ -180,14 +180,15 @@ pub async fn get_transaction_by_hash(
     }
 }
 
-///Return an AssetDefinition, making JSON-RPC connection optional
+///Return an ERC20 contract address, making JSON-RPC connection optional
+/// in the wallet.
 pub async fn get_wrapped_erc20_address(
     bindings: &HashMap<String, RouteBinding>,
     query_result_state: &QueryResultState,
 ) -> Result<Option<Address>, tide::Error> {
     Ok(query_result_state
-        .address_from_assetdef
-        .get(&bindings[":assetdef"].value.to::<AssetDefinition>()?)
+        .address_from_asset
+        .get(&bindings[":asset"].value.to::<AssetCode>()?)
         .cloned())
 }
 

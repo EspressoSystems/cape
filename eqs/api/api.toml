@@ -70,6 +70,6 @@ PATH = [ "healthcheck" ]
 DOC = "Responds with JSON {\"status\": \"available\"}."
 
 [route.get_wrapped_erc20_address]
-PATH = [ "get_wrapped_erc20_address/:assetdef" ]
-":assetdef" = "TaggedBase64"
+PATH = [ "get_wrapped_erc20_address/:asset" ]
+":asset" = "TaggedBase64"
 DOC = "Returns contract address for wrapped asset, or None for domestic asset."

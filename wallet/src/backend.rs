@@ -516,7 +516,16 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
                 ),
             })
             // Ignore the status code.
-            .map(|_| ())
+            .map(|_| ())?;
+
+        // Don't report success until the EQS reflects the results of the sponsor.
+        let mut backoff = self.min_polling_delay;
+        while self.get_wrapped_erc20_code(asset).await?.is_none() {
+            sleep(backoff).await;
+            backoff = min(backoff * 2, Duration::from_secs(60));
+        }
+
+        Ok(())
     }
 
     async fn get_wrapped_erc20_code(
@@ -524,7 +533,7 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
         asset: &AssetDefinition,
     ) -> Result<Option<Erc20Code>, CapeWalletError> {
         let address: Option<Address> = self
-            .get_eqs(format!("get_wrapped_erc20_address/{}", asset))
+            .get_eqs(format!("get_wrapped_erc20_address/{}", asset.code))
             .await?;
         Ok(address.map(Erc20Code::from))
     }
@@ -882,6 +891,10 @@ mod test {
             .unwrap(),
             erc20_contract.address()
         );
+        wrapper
+            .import_asset(cape_asset.clone().into())
+            .await
+            .unwrap();
         assert_eq!(
             Address::from_str(
                 &AssetInfo::from_code(&wrapper, cape_asset.code)

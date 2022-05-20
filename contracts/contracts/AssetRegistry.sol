@@ -17,6 +17,8 @@ contract AssetRegistry {
     bytes14 public constant DOM_SEP_DOMESTIC_ASSET = "DOMESTIC_ASSET";
     uint256 public constant CAP_NATIVE_ASSET_CODE = 1;
 
+    event AssetSponsored(address erc20Address, uint256 assetDefinitionCode);
+
     mapping(bytes32 => address) public assets;
 
     struct AssetDefinition {
@@ -74,6 +76,8 @@ contract AssetRegistry {
 
         bytes32 key = keccak256(abi.encode(newAsset));
         assets[key] = erc20Address;
+
+        emit AssetSponsored(erc20Address, newAsset.code);
     }
 
     /// @notice Throws an exception if the asset definition code is

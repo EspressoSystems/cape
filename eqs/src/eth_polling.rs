@@ -385,7 +385,6 @@ impl EthPolling {
                     // persist the state block updates (will be more fine grained in r3)
                     self.state_persistence.store_latest_state(&*updated_state);
                 }
-
                 CAPEEvents::Erc20TokensDepositedFilter(filter_data) => {
                     let ro_bytes = filter_data.ro_bytes.clone();
                     let ro_sol: RecordOpeningSol = AbiDecode::decode(ro_bytes).unwrap();
@@ -479,6 +478,7 @@ impl EthPolling {
                     // persist the state block updates (will be more fine grained in r3)
                     self.state_persistence.store_latest_state(&updated_state);
                 }
+                CAPEEvents::AssetSponsoredFilter(_filter_data) => {}
             }
         }
 

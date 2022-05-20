@@ -59,36 +59,73 @@ use std::pin::Pin;
 use std::time::Duration;
 use surf::{StatusCode, Url};
 
-pub fn default_erc20_code() -> Erc20Code {
-    let zeros: [u8; 20] = [0; 20];
-    Erc20Code(EthereumAddr(zeros))
-}
-
-fn get_provider(rpc_url: &Url) -> Provider<Http> {
-    Provider::<Http>::try_from(rpc_url.to_string()).expect("could not instantiate HTTP Provider")
-}
-
 pub struct CapeBackendConfig {
-    pub rpc_url: Url,
     pub eqs_url: Url,
     pub relayer_url: Url,
     pub address_book_url: Url,
-    pub contract_address: Address,
+    /// JSON-RPC endpoint and address of the CAPE contract.
+    pub cape_contract: Option<(Url, Address)>,
     pub eth_mnemonic: Option<String>,
     pub min_polling_delay: Duration,
 }
 
+struct EthRpc {
+    url: Url,
+    contract: CAPE<EthMiddleware>,
+    wallet: EthWallet<SigningKey>,
+}
+
+impl EthRpc {
+    fn provider(url: &Url) -> Provider<Http> {
+        Provider::<Http>::try_from(url.to_string()).expect("could not instantiate HTTP Provider")
+    }
+
+    async fn new(
+        url: Url,
+        contract_address: Address,
+        mnemonic: Option<String>,
+    ) -> Result<Self, CapeWalletError> {
+        // Create an Ethereum wallet to talk to the CAPE contract.
+        let provider = Self::provider(&url);
+        let chain_id = provider.get_chainid().await.unwrap().as_u64();
+        // If mnemonic is set, try to use it to create a wallet, otherwise create a random wallet.
+        let wallet = match mnemonic {
+            Some(mnemonic) => MnemonicBuilder::<English>::default()
+                .phrase(mnemonic.as_str())
+                .build()
+                .map_err(|err| CapeWalletError::Failed {
+                    msg: format!("failed to open ETH wallet: {}", err),
+                })?,
+            None => LocalEthWallet::new(&mut ChaChaRng::from_entropy()),
+        }
+        .with_chain_id(chain_id);
+        let client = Arc::new(SignerMiddleware::new(provider, wallet.clone()));
+        let contract = CAPE::new(contract_address, client);
+
+        Ok(Self {
+            url,
+            wallet,
+            contract,
+        })
+    }
+
+    fn client(&self) -> Arc<EthMiddleware> {
+        Arc::new(SignerMiddleware::new(
+            Self::provider(&self.url),
+            self.wallet.clone(),
+        ))
+    }
+}
+
 pub struct CapeBackend<'a, Meta: Serialize + DeserializeOwned> {
     universal_param: &'a UniversalParam,
-    rpc_url: Url,
     eqs: surf::Client,
     relayer: surf::Client,
     address_book: surf::Client,
-    contract: CAPE<EthMiddleware>,
     storage: Arc<Mutex<AtomicWalletStorage<'a, CapeLedger, Meta>>>,
     key_stream: hd::KeyTree,
-    eth_wallet: EthWallet<SigningKey>,
     min_polling_delay: Duration,
+    eth: Option<EthRpc>,
 }
 
 impl<'a, Meta: Serialize + DeserializeOwned + Send + Clone + PartialEq> CapeBackend<'a, Meta> {
@@ -112,37 +149,23 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send + Clone + PartialEq> CapeBack
             .try_into()
             .expect("Failed to configure Address Book client");
 
-        // Create an Ethereum wallet to talk to the CAPE contract.
-        let provider = get_provider(&config.rpc_url);
-        let chain_id = provider.get_chainid().await.unwrap().as_u64();
-        // If mnemonic is set, try to use it to create a wallet, otherwise create a random wallet.
-        let eth_wallet = match config.eth_mnemonic {
-            Some(mnemonic) => MnemonicBuilder::<English>::default()
-                .phrase(mnemonic.as_str())
-                .build()
-                .map_err(|err| CapeWalletError::Failed {
-                    msg: format!("failed to open ETH wallet: {}", err),
-                })?,
-            None => LocalEthWallet::new(&mut ChaChaRng::from_entropy()),
-        }
-        .with_chain_id(chain_id);
-        let client = Arc::new(SignerMiddleware::new(provider, eth_wallet.clone()));
-        let contract = CAPE::new(config.contract_address, client);
-
         let storage = AtomicWalletStorage::new(loader, 1024)?;
         let key_stream = storage.key_stream();
 
+        let eth = match config.cape_contract {
+            Some((url, address)) => Some(EthRpc::new(url, address, config.eth_mnemonic).await?),
+            None => None,
+        };
+
         Ok(Self {
             universal_param,
-            rpc_url: config.rpc_url,
             eqs,
             relayer,
-            contract,
             address_book,
             storage: Arc::new(Mutex::new(storage)),
             key_stream,
-            eth_wallet,
             min_polling_delay: config.min_polling_delay,
+            eth,
         })
     }
 }
@@ -469,7 +492,15 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
         erc20_code: Erc20Code,
         sponsor: EthereumAddr,
     ) -> Result<(), CapeWalletError> {
-        self.contract
+        let contract = match &self.eth {
+            Some(eth) => &eth.contract,
+            None => {
+                return Err(CapeWalletError::Failed {
+                    msg: "cannot sponsor without JSON-RPC connection".into(),
+                })
+            }
+        };
+        contract
             .sponsor_cape_asset(erc20_code.clone().into(), asset.clone().into())
             .from(Address::from(sponsor.clone()))
             .send()
@@ -485,27 +516,26 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
                 ),
             })
             // Ignore the status code.
-            .map(|_| ())
+            .map(|_| ())?;
+
+        // Don't report success until the EQS reflects the results of the sponsor.
+        let mut backoff = self.min_polling_delay;
+        while self.get_wrapped_erc20_code(asset).await?.is_none() {
+            sleep(backoff).await;
+            backoff = min(backoff * 2, Duration::from_secs(60));
+        }
+
+        Ok(())
     }
 
     async fn get_wrapped_erc20_code(
         &self,
         asset: &AssetDefinition,
     ) -> Result<Option<Erc20Code>, CapeWalletError> {
-        let code = self
-            .contract
-            .lookup(asset.clone().into())
-            .call()
-            .await
-            .map_err(|err| CapeWalletError::Failed {
-                msg: format!("error calling CAPE::lookup: {}", err),
-            })?
-            .into();
-        Ok(if code == default_erc20_code() {
-            None
-        } else {
-            Some(code)
-        })
+        let address: Option<Address> = self
+            .get_eqs(format!("get_wrapped_erc20_address/{}", asset.code))
+            .await?;
+        Ok(address.map(Erc20Code::from))
     }
 
     async fn wrap_erc20(
@@ -514,25 +544,31 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
         src_addr: EthereumAddr,
         ro: RecordOpening,
     ) -> Result<(), CapeWalletError> {
+        let eth = match &self.eth {
+            Some(eth) => eth,
+            None => {
+                return Err(CapeWalletError::Failed {
+                    msg: "cannot wrap without JSON-RPC connection".into(),
+                })
+            }
+        };
+
         // Before the contract can transfer from our account, in accordance with the ERC20 protocol,
         // we have to approve the transfer.
-        ERC20::new(
-            erc20_code.clone(),
-            self.eth_client().expect("Failed to get ethereum client"),
-        )
-        .approve(self.contract.address(), ro.amount.into())
-        .send()
-        .await
-        .map_err(|err| CapeWalletError::Failed {
-            msg: format!("error building ERC20::approve transaction: {}", err),
-        })?
-        .await
-        .map_err(|err| CapeWalletError::Failed {
-            msg: format!("error submitting ERC20::approve transaction: {}", err),
-        })?;
+        ERC20::new(erc20_code.clone(), eth.client())
+            .approve(eth.contract.address(), ro.amount.into())
+            .send()
+            .await
+            .map_err(|err| CapeWalletError::Failed {
+                msg: format!("error building ERC20::approve transaction: {}", err),
+            })?
+            .await
+            .map_err(|err| CapeWalletError::Failed {
+                msg: format!("error submitting ERC20::approve transaction: {}", err),
+            })?;
 
         // Wraps don't go through the relayer, they go directly to the contract.
-        self.contract
+        eth.contract
             .deposit_erc_20(ro.clone().into(), erc20_code.clone().into())
             .from(Address::from(src_addr.clone()))
             .send()
@@ -549,10 +585,13 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
     }
 
     fn eth_client(&self) -> Result<Arc<EthMiddleware>, CapeWalletError> {
-        Ok(Arc::new(SignerMiddleware::new(
-            get_provider(&self.rpc_url),
-            self.eth_wallet.clone(),
-        )))
+        if let Some(eth) = &self.eth {
+            Ok(eth.client())
+        } else {
+            Err(CapeWalletError::Failed {
+                msg: "eth_client is unsupported without JSON-RPC connection".into(),
+            })
+        }
     }
 
     fn asset_verifier(&self) -> VerKey {
@@ -600,17 +639,21 @@ fn gen_proving_keys(srs: &UniversalParam) -> ProverKeySet<key_set::OrderByOutput
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::testing::{
-        create_test_network, retry, rpc_url_for_test, spawn_eqs, sponsor_simple_token,
-        transfer_token, wrap_simple_token,
-    };
     use crate::{mocks::MockCapeWalletLoader, CapeWallet, CapeWalletExt};
+    use crate::{
+        testing::{
+            create_test_network, retry, rpc_url_for_test, spawn_eqs, sponsor_simple_token,
+            transfer_token, wrap_simple_token,
+        },
+        ui::AssetInfo,
+    };
     use cap_rust_sandbox::{deploy::deploy_erc20_token, universal_param::UNIVERSAL_PARAM};
     use ethers::types::{TransactionRequest, U256};
     use jf_cap::structs::AssetCode;
     use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
     use seahorse::testing::await_transaction;
     use std::path::PathBuf;
+    use std::str::FromStr;
     use std::time::Duration;
     use tempdir::TempDir;
 
@@ -631,11 +674,10 @@ mod test {
         let sender_backend = CapeBackend::new(
             universal_param,
             CapeBackendConfig {
-                rpc_url: rpc_url_for_test(),
+                cape_contract: None,
                 eqs_url: eqs_url.clone(),
                 relayer_url: relayer_url.clone(),
                 address_book_url: address_book_url.clone(),
-                contract_address,
                 eth_mnemonic: None,
                 min_polling_delay: Duration::from_millis(500),
             },
@@ -671,11 +713,10 @@ mod test {
         let receiver_backend = CapeBackend::new(
             universal_param,
             CapeBackendConfig {
-                rpc_url: rpc_url_for_test(),
+                cape_contract: None,
                 eqs_url: eqs_url.clone(),
                 relayer_url: relayer_url.clone(),
                 address_book_url: address_book_url.clone(),
-                contract_address,
                 eth_mnemonic: None,
                 min_polling_delay: Duration::from_millis(500),
             },
@@ -757,11 +798,10 @@ mod test {
         let sponsor_backend = CapeBackend::new(
             universal_param,
             CapeBackendConfig {
-                rpc_url: rpc_url_for_test(),
+                cape_contract: Some((rpc_url_for_test(), contract_address)),
                 eqs_url: eqs_url.clone(),
                 relayer_url: relayer_url.clone(),
                 address_book_url: address_book_url.clone(),
-                contract_address,
                 eth_mnemonic: None,
                 min_polling_delay: Duration::from_millis(500),
             },
@@ -784,11 +824,10 @@ mod test {
         let wrapper_backend = CapeBackend::new(
             universal_param,
             CapeBackendConfig {
-                rpc_url: rpc_url_for_test(),
+                cape_contract: Some((rpc_url_for_test(), contract_address)),
                 eqs_url: eqs_url.clone(),
                 relayer_url: relayer_url.clone(),
                 address_book_url: address_book_url.clone(),
-                contract_address,
                 eth_mnemonic: None,
                 min_polling_delay: Duration::from_millis(500),
             },
@@ -817,7 +856,8 @@ mod test {
             .await;
 
         // Fund the Ethereum wallets for contract calls.
-        let provider = get_provider(&rpc_url_for_test()).interval(Duration::from_millis(100u64));
+        let provider =
+            EthRpc::provider(&rpc_url_for_test()).interval(Duration::from_millis(100u64));
         let accounts = provider.get_accounts().await.unwrap();
         assert!(!accounts.is_empty());
         for wallet in [&sponsor, &wrapper] {
@@ -839,6 +879,33 @@ mod test {
         let cape_asset = sponsor_simple_token(&mut sponsor, &erc20_contract)
             .await
             .unwrap();
+        // Check that the asset is correctly reported as a wrapped asset in both wallets.
+        assert_eq!(
+            Address::from_str(
+                &AssetInfo::from_code(&sponsor, cape_asset.code)
+                    .await
+                    .unwrap()
+                    .wrapped_erc20
+                    .unwrap()
+            )
+            .unwrap(),
+            erc20_contract.address()
+        );
+        wrapper
+            .import_asset(cape_asset.clone().into())
+            .await
+            .unwrap();
+        assert_eq!(
+            Address::from_str(
+                &AssetInfo::from_code(&wrapper, cape_asset.code)
+                    .await
+                    .unwrap()
+                    .wrapped_erc20
+                    .unwrap()
+            )
+            .unwrap(),
+            erc20_contract.address()
+        );
 
         wrap_simple_token(
             &mut wrapper,

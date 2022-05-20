@@ -126,11 +126,10 @@ async fn main() {
     let backend = CapeBackend::new(
         universal_param,
         CapeBackendConfig {
-            rpc_url: rpc_url_for_test(),
+            cape_contract: Some((rpc_url_for_test(), contract_address)),
             eqs_url,
             relayer_url: relayer_url.clone(),
             address_book_url,
-            contract_address,
             eth_mnemonic: None,
             min_polling_delay: Duration::from_millis(500),
         },

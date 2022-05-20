@@ -72,14 +72,17 @@ impl<'a> CLI<'a> for CapeCli {
         args: Self::Args,
         loader: &mut impl WalletLoader<CapeLedger, Meta = LoaderMetadata>,
     ) -> Result<Self::Backend, WalletError<CapeLedger>> {
+        let cape_contract = match (args.rpc_url, args.contract_address) {
+            (Some(url), Some(address)) => Some((url, address)),
+            _ => None,
+        };
         block_on(CapeBackend::new(
             univ_param,
             CapeBackendConfig {
-                rpc_url: args.rpc_url,
+                cape_contract,
                 eqs_url: args.eqs_url,
                 relayer_url: args.relayer_url,
                 address_book_url: args.address_book_url,
-                contract_address: args.contract_address,
                 eth_mnemonic: args.eth_mnemonic,
                 min_polling_delay: Duration::from_millis(args.min_polling_delay_ms),
             },
@@ -348,16 +351,12 @@ pub struct CapeArgs {
     pub address_book_url: Url,
 
     /// Address of the CAPE smart contract.
-    #[structopt(long, env = "CAPE_CONTRACT_ADDRESS")]
-    pub contract_address: Address,
+    #[structopt(long, env = "CAPE_CONTRACT_ADDRESS", requires = "rpc_url")]
+    pub contract_address: Option<Address>,
 
     /// URL for Ethers HTTP Provider
-    #[structopt(
-        long,
-        env = "CAPE_WEB3_PROVIDER_URL",
-        default_value = "http://localhost:8545"
-    )]
-    pub rpc_url: Url,
+    #[structopt(long, env = "CAPE_WEB3_PROVIDER_URL", requires = "contract_address")]
+    pub rpc_url: Option<Url>,
 
     /// Mnemonic for a local Ethereum wallet for direct contract calls.
     #[structopt(long, env = "ETH_MNEMONIC")]

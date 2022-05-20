@@ -74,7 +74,8 @@ impl<'a> CLI<'a> for CapeCli {
     ) -> Result<Self::Backend, WalletError<CapeLedger>> {
         let cape_contract = match (args.rpc_url, args.contract_address) {
             (Some(url), Some(address)) => Some((url, address)),
-            _ => None,
+            (None, None) => None,
+            _ => panic!("--rpc-url and --contract-address must be given together or not at all"),
         };
         block_on(CapeBackend::new(
             univ_param,
@@ -351,11 +352,11 @@ pub struct CapeArgs {
     pub address_book_url: Url,
 
     /// Address of the CAPE smart contract.
-    #[structopt(long, env = "CAPE_CONTRACT_ADDRESS", requires = "rpc_url")]
+    #[structopt(long, env = "CAPE_CONTRACT_ADDRESS")]
     pub contract_address: Option<Address>,
 
     /// URL for Ethers HTTP Provider
-    #[structopt(long, env = "CAPE_WEB3_PROVIDER_URL", requires = "contract_address")]
+    #[structopt(long, env = "CAPE_WEB3_PROVIDER_URL")]
     pub rpc_url: Option<Url>,
 
     /// Mnemonic for a local Ethereum wallet for direct contract calls.

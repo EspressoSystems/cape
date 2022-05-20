@@ -87,11 +87,11 @@ pub struct NodeOpt {
     pub address_book_url: Url,
 
     /// Address of the CAPE smart contract.
-    #[structopt(long, env = "CAPE_CONTRACT_ADDRESS", requires = "rpc_url")]
+    #[structopt(long, env = "CAPE_CONTRACT_ADDRESS")]
     pub contract_address: Option<Address>,
 
     /// URL for Ethers HTTP Provider
-    #[structopt(long, env = "CAPE_WEB3_PROVIDER_URL", requires = "contract_address")]
+    #[structopt(long, env = "CAPE_WEB3_PROVIDER_URL")]
     pub rpc_url: Option<Url>,
 
     /// Mnemonic for a local Ethereum wallet for direct contract calls.
@@ -190,7 +190,8 @@ impl NodeOpt {
     pub fn cape_contract(&self) -> Option<(Url, Address)> {
         match (self.rpc_url.clone(), self.contract_address) {
             (Some(url), Some(address)) => Some((url, address)),
-            _ => None,
+            (None, None) => None,
+            _ => panic!("--rpc-url and --contract-address must be given together or not at all"),
         }
     }
 

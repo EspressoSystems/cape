@@ -801,12 +801,7 @@ mod tests {
         writeln!(receiver_input, "create_asset my_asset").unwrap();
         wait_for_prompt(&mut receiver_output);
         let mint_amount = 20;
-        writeln!(
-            receiver_input,
-            "mint 1 {} {} {} 1",
-            receiver_addr, receiver_addr, mint_amount
-        )
-        .unwrap();
+        writeln!(receiver_input, "mint 1 {} {} 1", receiver_addr, mint_amount).unwrap();
         let txn = match_output(&mut receiver_output, &["(?P<txn>TXN~.*)"]).get("txn");
         await_transaction(
             &txn,

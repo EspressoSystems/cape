@@ -465,7 +465,7 @@ impl EthPolling {
                     // persist the state block updates (will be more fine grained in r3)
                     self.state_persistence.store_latest_state(&updated_state);
                 }
-              
+
                 CAPEEvents::AssetSponsoredFilter(filter_data) => {
                     // Extract a new entry for the map from asset codes to ERC20 contract addresses.
                     let code = AssetCodeSol::from(filter_data.asset_definition_code).into();

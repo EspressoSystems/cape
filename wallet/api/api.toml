@@ -448,6 +448,18 @@ The request body should be the asset definition returned by `buildsponsor`. `:er
 must be the same that were used to build the asset definition.
 """
 
+[route.waitforsponsor]
+METHOD = "POST"
+PATH = [
+  "waitforsponsor/:asset",
+  "waitforsponsor/:asset/:timeout"
+]
+":asset" = "TaggedBase64"
+":timeout" = "Integer"
+DOC = """
+Wait until the sponsor is reflected in the EQS.
+"""
+
 [route.updateasset]
 METHOD = "POST"
 PATH = [

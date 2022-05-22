@@ -304,8 +304,9 @@ async fn main() -> io::Result<()> {
 
     // Read the config file specifying the library to create.
     let bytes = fs::read(&opt.assets)?;
-    let toml = str::from_utf8(&bytes).expect(&format!("{} is not UTF-8", opt.assets.display()));
-    let spec: AssetLibrarySpec = toml::from_str(&toml)?;
+    let toml =
+        str::from_utf8(&bytes).unwrap_or_else(|_| panic!("{} is not UTF-8", opt.assets.display()));
+    let spec: AssetLibrarySpec = toml::from_str(toml)?;
 
     // Create a new wallet which we will use to create the assets. This is a one-off wallet, so we
     // use a random password and storage location.

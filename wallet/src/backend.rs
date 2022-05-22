@@ -595,8 +595,18 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
     }
 
     fn asset_verifier(&self) -> VerKey {
-        // The verification key for the official asset library signing key.
-        "VERKEY~b7yvQPPxjPlZ5gjKofFkf8T7CwAZ2xPnkkVRhE48D4ge"
+        // Read the verification key from the environment if it is set, otherwise default to the
+        // official verification key for the CAPE Goerli deployment.
+        //
+        // Reading the key from the environment allows us to set a different key for testing. While
+        // this does allow user to set a different verification key and display unofficial assets as
+        // "verified" in their UI, it does not violate the core property of the signed official
+        // asset library, which is that _in the default configuration_, the UI will not display a
+        // maliciously or fraudulently crafted asset library as official. It does not protect users
+        // from themselves; after all, we can't stop a user from forking the wallet code and
+        // commenting out the signature check altogether.
+        std::env::var("CAPE_WALLET_ASSET_LIBRARY_VERIFIER_KEY")
+            .unwrap_or_else(|_| "VERKEY~b7yvQPPxjPlZ5gjKofFkf8T7CwAZ2xPnkkVRhE48D4ge".into())
             .parse()
             .expect("failed to parse verification key")
     }

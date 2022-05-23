@@ -1,86 +1,107 @@
 @startuml
 autonumber
+
+skinparam roundcorner 20
+skinparam backgroundColor Snow
+
+
 participant "Cape Contract" as C
 participant "Ethereum Query Service" as EQS
-participant "Bob's Wallet" as W_A
-participant "Alice's Wallet" as W_B
+participant "Alice's Wallet" as W_A
+participant "Bob's Wallet" as W_B
 participant "Relayer" as R
 participant "Freezer" as F
+participant "Auditor" as A
 participant "AddressBook" as AB
 participant "Ethereum Wallet Eve" as ETH_WX
 
-group mint
-    W_A -> W_A: mint_tx := build_mint_tx(bob_address,fee,asset_code,amount,bob_address)
-    W_A -> R: mint_tx
-    R -> R: b:= new_block_from(mint_tx)
+group Mint
+    note left W_A: Alice mints some asset records, and she is the recipient
+    W_A -> W_A: (mint_tx,[alice_memo]) := **build_mint_tx**(alice_address,fee, \n asset_code,50000, alice_address)
+    W_A -> R: (mint_tx,[alice_memo])
+    R -> R: b:= **create_new_block**(mint_tx,[alice_memo])
     R -> C: b
-    C -> EQS: new_block_event(b,[])
-    EQS -> W_A: new_block_event(b,[])
-    EQS -> W_B: new_block_event(b,[])
-    note left W_A: Bob's knows the mint \n transaction was successfully processed
-    W_A -> W_A: adds minted record for further spending
+    C -> EQS: **new_block_event**(b,[alice_memo])
+    EQS -> W_A: **new_block_event**(b,[alice_memo])
+    EQS -> W_B: **new_block_event**(b,[alice_memo])
+    EQS -> A: **new_block_event**(b,[alice_memo])
+    EQS -> F: **new_block_event**(b,[alice_memo])
+    note left W_B: Bob receives no memo
+    W_B -> W_B: [] := **fetch_memos_from**([alice_memo])
+    note left W_A: Alice's wallet decrypts and stores the new asset record for further spending
+    W_A -> W_A: [alice_memo] := **fetch_memos_from**([alice_memo])
+    W_A -> W_A: **update_local_state_from**(alice_memo)
 end group
 
+group Transfer
 
-group transfer
-
-    W_A -> AB: get_enc_pk(alice_address)
+    W_A -> AB: **get_enc_pk**(alice_address)
     AB -> W_A: alice_enc_pk
-    W_A -> W_A: transfer_tx:=build_transfer_tx(...,alice_enc_pk)
-    W_A -> R: transfer_tx
-    R -> R: b:= new_block_from(transfer_tx)
-    R -> C: CAPEContract.submitCapeBlockWithMemos(b)
-    C -> C: process(b)
-    C -> EQS: new_block_event(b,[])
-    EQS -> W_A: new_block_event(b,[])
-    EQS -> W_B: new_block_event(b,[])
-    note left W_A: The list of memos is empty for Bob
-    W_A -> W_A: memos := fetch_memos_from(b)
+    note left W_A: the first memo <i>alice_memo</i> is for the change, \n the second one corresponds \n to the actual transfer of 1000 units of <i>asset_code</i> to Bob
+    W_A -> W_A: (transfer_tx,[alice_memo, bob_memo]):=**build_transfer_tx**(alice_address,asset_code,\n bob_address,1000)
+    W_A -> R: (transfer_tx,[alice_memo, bob_memo])
+    R -> R: b:= **create_new_block**(transfer_tx,[alice_memo, bob_memo])
+    R -> C: b
+    C -> EQS: **new_block_event**(b,[alice_memo,bob_memo])
+    EQS -> W_A: **new_block_event**(b,[alice_memo, bob_memo])
+    EQS -> W_B: **new_block_event**(b,[alice_memo, bob_memo])
+    EQS -> A: **new_block_event**(b,[alice_memo, bob_memo])
+    EQS -> F: **new_block_event**(b,[alice_memo, bob_memo])
 
-    note left W_B: Bob has received an asset record of type ... and amount 10
-    W_B -> W_B: memos := fetch_memos_from(b)
+    note left W_B: Alice receives an asset record identified by <i>asset_code</i> and amount <i>49000</i>
+    W_A -> W_A: [alice_memo] := **fetch_memos_from**(b)
+    W_A -> W_A: **update_local_state_from**(alice_memo)
 
-    note left W_B: Bob's wallet stores the new asset record for further spending
-    W_B -> W_B: update_local_state_from(memos)
+    note left W_B: Bob receives an asset record of identified by <i>asset_code</i> and amount <i>1000</i>
+    W_B -> W_B: [bob_memo] := **fetch_memos_from**(b)
+    W_B -> W_B: **update_local_state_from**(bob_memo)
+
+    note left W_A: Alice's wallet decrypts and stores the new asset record for further spending
+    W_A -> W_A: **update_local_state_from**(alice_memo)
+
+    note left W_B: Bob's wallet decrypts and stores the new asset record for further spending
+    W_B -> W_B: **update_local_state_from**(bob_memo)
+
+    note left A: The Auditor processes the audit memos. \n Due to the viewing policy the auditor obtains both asset records from Alice and Bob
+    A -> A: **get_and_store_asset_records_from_block**(b)
 
 end group
 
-group freeze
+group Freeze
 
-   note left F: The Freezer freezes Bob's asset record.
-   F -> F: freeze_tx:=build_freeze_tx(ar_b,....)
+   note left F: We assume the Auditor shares Bob's asset record with the Freezer who freezes this record.
+
+   F -> F: freeze_tx:=**build_freeze_tx**(bob_asset_record)
    F -> R: freeze_tx
-   R -> R: b:= new_block_from(freeze_tx)
+   R -> R: b:= **create_new_block**(freeze_tx,[])
    R -> C: b
-   C -> C: process(b)
-   C -> EQS: new_block_event(b)
-   EQS -> W_A: new_block_event(b)
-   EQS -> W_B: new_block_event(b)
-   EQS -> F: new_block_event(b)
+   C -> EQS: new_block_event(b,[])
+   EQS -> W_A: new_block_event(b,[])
+   EQS -> W_B: new_block_event(b,[])
+   EQS -> F: new_block_event(b,[])
+   EQS -> A: new_block_event(b,[])
    note left W_B: Bob tries to spend his frozen asset record
-   W_B -> W_B: transfer_tx_invalid := build_transfer_tx(fr,...)
+   W_B -> W_B: transfer_tx_invalid := **build_transfer_tx**(...)
    W_B -> R: transfer_tx_invalid
-   R -> R: b := new_block_from_tx(transfer_tx_invalid)
+   R -> R: b := **new_block**(transfer_tx_invalid,[...])
    R -> C: b
-   C -> C: process(b)
-   note right C: the block is rejected because Bob's transaction is invalid
-   C -> C: Error
+   note right C: The block is rejected because Bob's transaction is invalid
+   C -> C: <color:red>**Error**</color>
 
 end group
 
 group Conversion between ERC20 and CAP assets
 
-    group sponsor
-        W_A -> C: CAPEContract.sponsorCapeAsset(USDC, asset_def)
-        C -> C: update list of registered assets
-
+    group Sponsor
+        W_A -> C: **sponsorCapeAsset**(USDC, asset_def)
+        C -> C: **update_list_registered_assets**(USDC, asset_def)
     end group
 
     group Wrap
 
-        W_B -> C: C.depositErc20(at,100)
-        W_A -> R: transfer_tx
-        R -> R: b:=new_block(transfer_tx)
+        W_B -> C: **depositErc20**(at,100)
+        W_A -> R: transfer_tx: **build_transfer_tx**(...)
+        R -> R: b:=**new_block**(transfer_tx,[])
         R -> C: b
         C -> C: process(b)
         C -> EQS: new_erc_deposit(d)

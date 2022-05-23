@@ -225,7 +225,7 @@ async fn submit_block(web_state: &WebState, block: BlockWithMemos) -> Result<H25
     // the hash using a particular provider.
     event!(
         Level::INFO,
-        "Submitted Ethereum transaction hash ETH H256: {:x}",
+        "Submitted Ethereum transaction hash ETH H256: {:#x}",
         *pending
     );
     Ok(*pending)

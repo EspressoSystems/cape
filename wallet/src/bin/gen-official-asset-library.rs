@@ -95,9 +95,6 @@ use tracing::info;
 #[derive(StructOpt)]
 struct Options {
     /// The signing key pair to use to authenticate the generated asset library.
-    ///
-    /// If not provided, the library will be signed with a random key pair, and the generated key
-    /// pair will be printed out on stderr.
     #[structopt(short, long, name = "KEY", env = "CAPE_ASSET_LIBRARY_SIGNING_KEY")]
     key_pair: KeyPair,
 

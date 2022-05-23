@@ -37,7 +37,7 @@ group Transfer
 
     W_A -> AB: **get_enc_pk**(alice_address)
     AB -> W_A: alice_enc_pk
-    note left W_A: the first memo <i>alice_memo</i> is for the change, \n the second one corresponds \n to the actual transfer of 1000 units of <i>asset_code</i> to Bob
+    note left W_A: The first memo <i>alice_memo</i> is for the change, \n the second one corresponds \n to the actual transfer of 1000 units of <i>asset_code</i> to Bob
     W_A -> W_A: (transfer_tx,[alice_memo, bob_memo]):=**build_transfer_tx**(alice_address,asset_code,\n bob_address,1000)
     W_A -> R: (transfer_tx,[alice_memo, bob_memo])
     R -> R: b:= **create_new_block**(transfer_tx,[alice_memo, bob_memo])
@@ -98,27 +98,27 @@ group Conversion between ERC20 and CAP assets
     end group
 
     group Wrap
-
-        W_B -> C: **depositErc20**(at,100)
-        C -> EQS: new_erc_deposit(d)
-        EQS -> W_A: new_erc_deposit(d)
-        EQS -> W_B: new_erc_deposit(d)
-        W_A -> R: transfer_tx: **build_transfer_tx**(...)
+        W_B -> C: **depositErc20**(record_opening,USDC)
+        C -> EQS: new_erc_deposit(record_opening, USDC, bob_eth_address)
+        EQS -> W_A: new_erc_deposit(record_opening, USDC, bob_eth_address)
+        EQS -> W_B: new_erc_deposit(record_opening, USDC, bob_eth_address)
+        W_A -> R: transfer_tx:= **build_transfer_tx**(...)
         R -> R: b:=**new_block**(transfer_tx,[])
         R -> C: b
-        C -> C: process(b)
-        W_A -> W_A: update_local_state_from_erc_20_deposit(d)
+        C -> EQS: new_block_event(b,[record_opening])
+        EQS -> W_A: new_block_event(b,[record_opening])
+        EQS -> W_B: new_block_event(b,[record_opening])
+        EQS -> A: new_block_event(b,[record_opening])
+        EQS -> F: new_block_event(b,[record_opening])
+        W_A -> W_A: **update_local_state_from_erc_20_deposit**(record_opening)
 
     end group
 
     group Unwrap
-
-        W_A -> R: burn_tx
-        R -> R: b:=new_block_from(burn_tx)
+        W_A -> R: burn_tx:= **build_burn_tx**(record_opening,eve_eth_address,...)
+        R -> R: b:= **new_block_from**(burn_tx)
         R -> C: b
-        C -> C: process(b)
         C -> ETH_WX: (USDC,10)
-
     end group
 
 end group

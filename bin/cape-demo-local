@@ -115,11 +115,12 @@ wait-port $CAPE_WALLET_PORT_BOB
 wait-port $CAPE_FAUCET_PORT
 
 # Deploy the official asset library.
-mkdir -p $CAPE_WALLET_STORAGE_ALICE
-mkdir -p $CAPE_WALLET_STORAGE_BOB
+mkdir -p "$CAPE_WALLET_STORAGE_ALICE"
+mkdir -p "$CAPE_WALLET_STORAGE_BOB"
 echo "Deploying official asset library"
-target/release/gen-official-asset-library --assets wallet/official_assets/cape_demo_local_official_assets.toml -o $CAPE_WALLET_STORAGE_ALICE/verified_assets
-cp $CAPE_WALLET_STORAGE_ALICE/verified_assets $CAPE_WALLET_STORAGE_BOB/verified_assets
+target/release/gen-official-asset-library --assets wallet/official_assets/cape_demo_local_official_assets.toml \
+    -o "$CAPE_WALLET_STORAGE_ALICE/verified_assets" 
+cp "$CAPE_WALLET_STORAGE_ALICE/verified_assets" "$CAPE_WALLET_STORAGE_BOB/verified_assets"
 
 # Show configuration (using `set` to get quotes around values with spaces)
 export CONFIGURATION=$(cat<<EOF

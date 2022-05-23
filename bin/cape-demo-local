@@ -58,11 +58,15 @@ export CAPE_FAUCET_URL="http://localhost:$CAPE_FAUCET_PORT"
 export CAPE_FAUCET_WALLET_MNEMONIC="broom mesh guilt material void romance sample choice indicate urban diamond theme"
 export CAPE_FAUCET_WALLET_PATH="$(mktemp -d -t cape-faucet-wallet-XXXXXXX)"
 
-
 export CAPE_WALLET_PORT_ALICE=50040
 export CAPE_WALLET_STORAGE_ALICE="$(mktemp -d -t cape-wallet-alice-XXXXXXX)"
 export CAPE_WALLET_PORT_BOB=50041
 export CAPE_WALLET_STORAGE_BOB="$(mktemp -d -t cape-wallet-bob-XXXXXXX)"
+
+export CAPE_ASSET_LIBRARY_ETH_MNEMONIC="ketchup disorder wing wine island brave business season strike mango mammal purchase"
+export CAPE_ASSET_LIBRARY_CAPE_MNEMONIC="gift snow sheriff fresh abstract flag peanut right dress scissors elevator price"
+export CAPE_ASSET_LIBRARY_SIGNING_KEY="SIGNKEYPAIR~RxKAN5JSZoYmVU3usjmU2CyIVlf2jqjr7AtMJS6_WAD3cogIQYGZSoOPhHdBLkhkgmDzdNmBQD4d3WTZEghekx0"
+export CAPE_WALLET_ASSET_LIBRARY_VERIFIER_KEY="VERKEY~93KICEGBmUqDj4R3QS5IZIJg83TZgUA-Hd1k2RIIXpNS"
 
 # File that consolidates the logs
 export LOG_FILENAME=/tmp/cape-services-log.txt
@@ -88,6 +92,8 @@ hardhat deploy --reset 2>&1 | tee -a $LOG_FILENAME
 # Fund the first account of the services wallets with 1M Ether.
 fund-wallet "$(hdwallet-derive -n 1 --mnemonic "$CAPE_RELAYER_WALLET_MNEMONIC")" 1e24
 fund-wallet "$(hdwallet-derive -n 1 --mnemonic "$CAPE_FAUCET_WALLET_MNEMONIC")" 1e24
+# Fund the account we will use to create the official asset library.
+fund-wallet "$(hdwallet-derive -n 1 --mnemonic "$CAPE_ASSET_LIBRARY_ETH_MNEMONIC")" 1e18
 
 # Configure environment
 export CAPE_TOKEN_ADDRESS_SIT="$(cat contracts/deployments/localhost/SimpleToken.json | jq -r .address)"
@@ -107,6 +113,14 @@ wait-port $CAPE_RELAYER_PORT
 wait-port $CAPE_WALLET_PORT_ALICE
 wait-port $CAPE_WALLET_PORT_BOB
 wait-port $CAPE_FAUCET_PORT
+
+# Deploy the official asset library.
+mkdir -p "$CAPE_WALLET_STORAGE_ALICE"
+mkdir -p "$CAPE_WALLET_STORAGE_BOB"
+echo "Deploying official asset library"
+target/release/gen-official-asset-library --assets wallet/official_assets/cape_demo_local_official_assets.toml \
+    -o "$CAPE_WALLET_STORAGE_ALICE/verified_assets" 
+cp "$CAPE_WALLET_STORAGE_ALICE/verified_assets" "$CAPE_WALLET_STORAGE_BOB/verified_assets"
 
 # Show configuration (using `set` to get quotes around values with spaces)
 export CONFIGURATION=$(cat<<EOF

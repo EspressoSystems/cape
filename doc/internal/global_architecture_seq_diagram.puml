@@ -21,11 +21,11 @@ group Mint
     W_A -> R: (mint_tx,[alice_memo])
     R -> R: b:= **create_new_block**(mint_tx,[alice_memo])
     R -> C: b
-    C -> EQS: **new_block_event**(b,[alice_memo])
-    EQS -> W_A: **new_block_event**(b,[alice_memo])
-    EQS -> W_B: **new_block_event**(b,[alice_memo])
-    EQS -> A: **new_block_event**(b,[alice_memo])
-    EQS -> F: **new_block_event**(b,[alice_memo])
+    C -> EQS: **new_block_event**(b,[])
+    EQS -> W_A: **new_block_event**(b,[])
+    EQS -> W_B: **new_block_event**(b,[])
+    EQS -> A: **new_block_event**(b,[])
+    EQS -> F: **new_block_event**(b,[])
     note left W_B: Bob receives no memo
     W_B -> W_B: [] := **fetch_memos_from**([alice_memo])
     note left W_A: Alice's wallet decrypts and stores the new asset record for further spending
@@ -42,11 +42,11 @@ group Transfer
     W_A -> R: (transfer_tx,[alice_memo, bob_memo])
     R -> R: b:= **create_new_block**(transfer_tx,[alice_memo, bob_memo])
     R -> C: b
-    C -> EQS: **new_block_event**(b,[alice_memo,bob_memo])
-    EQS -> W_A: **new_block_event**(b,[alice_memo, bob_memo])
-    EQS -> W_B: **new_block_event**(b,[alice_memo, bob_memo])
-    EQS -> A: **new_block_event**(b,[alice_memo, bob_memo])
-    EQS -> F: **new_block_event**(b,[alice_memo, bob_memo])
+    C -> EQS: **new_block_event**(b,[])
+    EQS -> W_A: **new_block_event**(b,[])
+    EQS -> W_B: **new_block_event**(b,[])
+    EQS -> A: **new_block_event**(b,[])
+    EQS -> F: **new_block_event**(b,[])
 
     note left W_B: Alice receives an asset record identified by <i>asset_code</i> and amount <i>49000</i>
     W_A -> W_A: [alice_memo] := **fetch_memos_from**(b)
@@ -100,13 +100,13 @@ group Conversion between ERC20 and CAP assets
     group Wrap
 
         W_B -> C: **depositErc20**(at,100)
+        C -> EQS: new_erc_deposit(d)
+        EQS -> W_A: new_erc_deposit(d)
+        EQS -> W_B: new_erc_deposit(d)
         W_A -> R: transfer_tx: **build_transfer_tx**(...)
         R -> R: b:=**new_block**(transfer_tx,[])
         R -> C: b
         C -> C: process(b)
-        C -> EQS: new_erc_deposit(d)
-        EQS -> W_A: new_erc_deposit(d)
-        EQS -> W_B: new_erc_deposit(d)
         W_A -> W_A: update_local_state_from_erc_20_deposit(d)
 
     end group

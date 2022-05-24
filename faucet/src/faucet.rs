@@ -229,8 +229,15 @@ async fn request_fee_assets(
             net::UserAddress(faucet_addr.clone()),
             net::UserAddress(pub_key.address())
         );
-        let bal = wallet.balance(&AssetCode::native()).await;
-        tracing::info!("Wallet balance before transfer: {}", bal);
+        let balance = wallet.balance(&AssetCode::native()).await;
+        let records = spendable_records(&wallet, req.state().grant_size)
+            .await
+            .count();
+        tracing::info!(
+            "Wallet balance before transfer: {} across {} records",
+            balance,
+            records
+        );
         match wallet
             .transfer(
                 Some(&faucet_addr),
@@ -281,10 +288,12 @@ async fn request_fee_assets(
 
 async fn spendable_records(
     wallet: &CapeWallet<'static, CapeBackend<'static, LoaderMetadata>>,
+    grant_size: u64,
 ) -> impl Iterator<Item = RecordInfo> {
     let now = wallet.lock().await.state().txn_state.validator.now();
     wallet.records().await.filter(move |record| {
         record.ro.asset_def.code == AssetCode::native()
+            && record.ro.amount >= grant_size
             && record.ro.freeze_flag == FreezeFlag::Unfrozen
             && !record.on_hold(now)
     })
@@ -296,24 +305,37 @@ async fn spendable_records(
 /// `state.grant_size`, until there are at least `state.num_records` distinct records in the wallet.
 async fn break_up_records(state: FaucetState, mut wakeup: mpsc::Receiver<()>) {
     loop {
-        // Wait until we have few enough records that we need to break them up.
+        // Wait until we have few enough records that we need to break them up, and we have a big
+        // enough record to break up.
         //
         // This is a simulation of a condvar loop, since async condvar is unstable, hence the manual
         // drop and reacquisition of the wallet mutex guard.
         loop {
             let wallet = state.wallet.lock().await;
-            let num_records = spendable_records(&*wallet).await.count();
-            if num_records < state.num_records {
+            let records = spendable_records(&*wallet, state.grant_size)
+                .await
+                .collect::<Vec<_>>();
+            if records.len() >= state.num_records {
+                // We have enough records for now, wait for a signal that the number of records has
+                // changed.
+                tracing::info!(
+                    "got {}/{} records, waiting for a change",
+                    records.len(),
+                    state.num_records
+                );
+            } else if !records
+                .into_iter()
+                .any(|record| record.ro.amount > 2 * state.grant_size)
+            {
+                // There are no big records to break up, so there's nothing for us to do. Exit
+                // the inner loop and wait for a notification that the record distribution has
+                // changed.
+                tracing::warn!("not enough records, but no large records to break up");
+                break;
+            } else {
                 break;
             }
 
-            // We have enough records for now, wait for a signal that the number of records has
-            // changed.
-            tracing::info!(
-                "got {}/{} records, waiting for a change",
-                num_records,
-                state.num_records
-            );
             drop(wallet);
             wakeup.next().await;
         }
@@ -324,7 +346,9 @@ async fn break_up_records(state: FaucetState, mut wakeup: mpsc::Receiver<()>) {
             // Holding the lock for too long can unneccessarily slow down faucet requests.
             let mut wallet = state.wallet.lock().await;
             let address = wallet.pub_keys().await[0].address();
-            let records = spendable_records(&*wallet).await.collect::<Vec<_>>();
+            let records = spendable_records(&*wallet, state.grant_size)
+                .await
+                .collect::<Vec<_>>();
             if records.len() >= state.num_records {
                 // We have enough records again.
                 break;
@@ -340,7 +364,6 @@ async fn break_up_records(state: FaucetState, mut wakeup: mpsc::Receiver<()>) {
                     // There are no big records to break up, so there's nothing for us to do. Exit
                     // the inner loop and wait for a notification that the record distribution has
                     // changed.
-                    tracing::warn!("not enough records, but no large records to break up");
                     break;
                 }
             };
@@ -399,9 +422,9 @@ async fn wait_for_records(state: &FaucetState) -> usize {
         let wallet = state.wallet.lock().await;
 
         // Break if we already have enough records, or if there are no big records to break up.
-        let num_records = spendable_records(&*wallet).await.count();
+        let num_records = spendable_records(&*wallet, state.grant_size).await.count();
         if num_records >= state.num_records
-            || !spendable_records(&*wallet)
+            || !spendable_records(&*wallet, state.grant_size)
                 .await
                 .any(|record| record.ro.amount > 2 * state.grant_size)
         {

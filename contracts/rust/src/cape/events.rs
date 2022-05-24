@@ -59,7 +59,7 @@ mod tests {
                 let amount = rng.next_u64();
                 let ro = RecordOpening::new(
                     &mut rng,
-                    amount,
+                    amount.into(),
                     AssetDefinition::native(),
                     key_pair.pub_key(),
                     FreezeFlag::Unfrozen,

@@ -71,7 +71,7 @@ mod test {
 
         // check the native token record is properly allocated
         let ro = RecordOpening {
-            amount: u64::MAX / 2,
+            amount: (u128::MAX / 2).into(),
             asset_def: AssetDefinition::native(),
             pub_key: faucet_manager.pub_key(),
             freeze_flag: FreezeFlag::Unfrozen,

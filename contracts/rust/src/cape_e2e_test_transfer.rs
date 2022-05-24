@@ -75,7 +75,7 @@ async fn test_2user_maybe_submit(should_submit: bool) -> Result<()> {
 
     let alice_rec1 = RecordOpening::new(
         &mut prng,
-        2,
+        2u128.into(),
         coin.clone(),
         alice_key.pub_key(),
         FreezeFlag::Unfrozen,
@@ -94,7 +94,7 @@ async fn test_2user_maybe_submit(should_submit: bool) -> Result<()> {
     if let Some(contract) = contract.as_ref() {
         assert_eq!(
             contract.get_root_value().call().await.unwrap(),
-            U256::from(0)
+            U256::from(0u128)
         );
 
         contract
@@ -109,7 +109,7 @@ async fn test_2user_maybe_submit(should_submit: bool) -> Result<()> {
 
         assert_eq!(
             contract.get_num_leaves().call().await.unwrap(),
-            U256::from(1)
+            U256::from(1u128)
         );
 
         assert_eq!(
@@ -159,7 +159,7 @@ async fn test_2user_maybe_submit(should_submit: bool) -> Result<()> {
     let ((txn1, _, _), bob_rec) = {
         let bob_rec = RecordOpening::new(
             &mut prng,
-            1, /* 1 less, for the transaction fee */
+            1u128.into(), /* 1 less, for the transaction fee */
             coin,
             bob_key.pub_key(),
             FreezeFlag::Unfrozen,
@@ -169,7 +169,7 @@ async fn test_2user_maybe_submit(should_submit: bool) -> Result<()> {
             &mut prng,
             /* inputs:         */ vec![alice_rec_final],
             /* outputs:        */ &[bob_rec.clone()],
-            /* fee:            */ 1,
+            /* fee:            */ 1u64.into(),
             /* valid_until:    */ 2,
             /* proving_key:    */ prove_keys.xfr.key_for_size(1, 2).unwrap(),
         )

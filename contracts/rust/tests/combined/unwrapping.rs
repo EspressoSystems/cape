@@ -87,7 +87,7 @@ async fn integration_test_unwrapping() -> Result<()> {
 
     let wrapped_ro = RecordOpening::new(
         rng,
-        deposited_amount,
+        deposited_amount.into(),
         asset_def,
         faucet_key_pair.pub_key(),
         FreezeFlag::Unfrozen,
@@ -147,7 +147,7 @@ async fn integration_test_unwrapping() -> Result<()> {
 
     // Alter the burn record opening to trigger an error in the CAPE contract
     // when checking that the record opening and its commitment inside the burn transaction match.
-    cape_block.burn_notes[0].burned_ro.amount = 2222;
+    cape_block.burn_notes[0].burned_ro.amount = 2222u64.into();
 
     cape_contract
         .submit_cape_block(cape_block.clone().into())
@@ -156,7 +156,7 @@ async fn integration_test_unwrapping() -> Result<()> {
         .should_revert_with_message("Bad record commitment");
 
     // Use the right burned amount and check the transaction goes through
-    cape_block.burn_notes[0].burned_ro.amount = deposited_amount;
+    cape_block.burn_notes[0].burned_ro.amount = deposited_amount.into();
 
     cape_contract
         .submit_cape_block(cape_block.clone().into())

@@ -8,7 +8,7 @@
 {
   description = "A devShell example";
 
-  inputs.nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+  inputs.nixpkgs.url = "github:nixos/nixpkgs";
 
   inputs.flake-utils.url = "github:numtide/flake-utils";
 
@@ -282,4 +282,3 @@
     });
 
 }
-

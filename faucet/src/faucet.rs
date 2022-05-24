@@ -539,6 +539,7 @@ mod test {
     use super::*;
     use cap_rust_sandbox::{ledger::CapeLedger, universal_param::UNIVERSAL_PARAM};
     use cape_wallet::testing::{create_test_network, retry, rpc_url_for_test, spawn_eqs};
+    use ethers::prelude::U256;
     use jf_cap::structs::AssetDefinition;
     use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
     use seahorse::{hd::KeyTree, txn_builder::TransactionReceipt};
@@ -629,7 +630,7 @@ mod test {
 
         // Check the balance.
         retry(|| async {
-            receiver.balance(&AssetCode::native()).await == grant_size.into() * num_grants
+            receiver.balance(&AssetCode::native()).await == U256::from(grant_size) * num_grants
         })
         .await;
 

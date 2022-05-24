@@ -9,6 +9,7 @@
 
 use crate::web::{NodeOpt, WebState};
 use async_std::fs::{read_dir, File};
+use async_std::task::sleep;
 use cap_rust_sandbox::ledger::CapeLedger;
 use cape_wallet::{
     ui::*,
@@ -44,6 +45,7 @@ use std::io::Cursor;
 use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
+use std::time::{Duration, Instant};
 use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, EnumIter, EnumString};
 use tagged_base64::TaggedBase64;
@@ -323,9 +325,12 @@ pub enum ApiRouteKey {
     getbalance,
     getinfo,
     getmnemonic,
+    getprivatekey,
+    getrecords,
     importasset,
     healthcheck,
     importkey,
+    lastusedkeystore,
     listkeystores,
     mint,
     newasset,
@@ -344,9 +349,7 @@ pub enum ApiRouteKey {
     unwrap,
     updateasset,
     view,
-    getrecords,
-    lastusedkeystore,
-    getprivatekey,
+    waitforsponsor,
 }
 
 /// Check consistency of `api.toml`
@@ -844,9 +847,16 @@ async fn newasset(
 }
 
 async fn buildsponsor(
+    options: &NodeOpt,
     bindings: &HashMap<String, RouteBinding>,
     wallet: &mut Option<Wallet>,
 ) -> Result<(sol::AssetDefinition, String), tide::Error> {
+    // Make sure the EQS is running.
+    surf::connect(options.eqs_url())
+        .send()
+        .await
+        .expect("Cannot build the sponsor transaction since EQS is down");
+
     let wallet = require_wallet(wallet)?;
     let symbol = match bindings.get(":symbol") {
         Some(param) => param.value.as_string()?,
@@ -931,6 +941,42 @@ async fn submitsponsor(
         .map_err(wallet_error)?;
 
     Ok(AssetInfo::from_info(wallet, info).await)
+}
+
+async fn waitforsponsor(
+    req: &mut Request<WebState>,
+    options: &NodeOpt,
+    bindings: &HashMap<String, RouteBinding>,
+) -> Result<(), tide::Error> {
+    let asset_code =
+        JfAssetDefinition::from(request_body::<sol::AssetDefinition, _>(req).await?).code;
+    let timeout = match bindings.get(":timeout") {
+        Some(time) => time.value.as_u64()?,
+        None => 60,
+    };
+    let mut backoff = Duration::from_secs(1);
+    let now = Instant::now();
+    while now.elapsed().as_secs() < timeout {
+        if surf::get(&format!(
+            "{}/get_wrapped_erc20_address/asset/{}",
+            options.eqs_url(),
+            asset_code
+        ))
+        .send()
+        .await?
+        .body_json::<Option<Address>>()
+        .await?
+        .is_some()
+        {
+            break;
+        }
+        sleep(backoff).await;
+        backoff *= 2;
+    }
+    panic!(
+        "Sponsored asset not reflected in the EQS in {} seconds",
+        timeout
+    )
 }
 
 async fn buildwrap(
@@ -1416,7 +1462,7 @@ pub async fn dispatch_url(
     let wallet = &mut *state.wallet.lock().await;
     let key = ApiRouteKey::from_str(segments.0).expect("Unknown route");
     match key {
-        ApiRouteKey::buildsponsor => response(&req, buildsponsor(bindings, wallet).await?),
+        ApiRouteKey::buildsponsor => response(&req, buildsponsor(options, bindings, wallet).await?),
         ApiRouteKey::buildwrap => response(&req, buildwrap(bindings, wallet).await?),
         ApiRouteKey::closewallet => response(&req, closewallet(wallet).await?),
         ApiRouteKey::exportasset => response(&req, exportasset(bindings, wallet).await?),
@@ -1432,8 +1478,10 @@ pub async fn dispatch_url(
             response(&req, res)
         }
         ApiRouteKey::getprivatekey => response(&req, getprivatekey(bindings, wallet).await?),
+        ApiRouteKey::getrecords => response(&req, get_records(wallet).await?),
         ApiRouteKey::healthcheck => healthcheck().await,
         ApiRouteKey::importkey => dummy_url_eval(route_pattern, bindings),
+        ApiRouteKey::lastusedkeystore => response(&req, get_last_keystore(options).await?),
         ApiRouteKey::listkeystores => response(&req, listkeystores(options).await?),
         ApiRouteKey::mint => response(&req, mint(bindings, wallet).await?),
         ApiRouteKey::newasset => response(&req, newasset(bindings, wallet).await?),
@@ -1474,7 +1522,9 @@ pub async fn dispatch_url(
             response(&req, res)
         }
         ApiRouteKey::view => dummy_url_eval(route_pattern, bindings),
-        ApiRouteKey::getrecords => response(&req, get_records(wallet).await?),
-        ApiRouteKey::lastusedkeystore => response(&req, get_last_keystore(options).await?),
+        ApiRouteKey::waitforsponsor => {
+            let res = waitforsponsor(&mut req, options, bindings).await?;
+            response(&req, res)
+        }
     }
 }

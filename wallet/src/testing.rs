@@ -256,7 +256,13 @@ pub async fn mint_token<'a>(
     // Mint some custom asset
     event!(Level::INFO, "minting my asset type {}", my_asset.code);
     let txn = wallet
-        .mint(&address, 1, &my_asset.code, 1u64 << 32, address.clone())
+        .mint(
+            Some(&address),
+            1,
+            &my_asset.code,
+            1u64 << 32,
+            address.clone(),
+        )
         .await
         .ok();
     Ok((my_asset, txn))
@@ -296,7 +302,13 @@ pub async fn freeze_token<'a>(
 ) -> Result<TransactionReceipt<CapeLedger>, CapeWalletError> {
     let freeze_address = freezer.pub_keys().await[0].address();
     freezer
-        .freeze(&freeze_address, 1, asset, amount, owner_address)
+        .freeze(
+            Some(&freeze_address),
+            1,
+            asset,
+            amount.into(),
+            owner_address,
+        )
         .await
 }
 
@@ -308,7 +320,13 @@ pub async fn unfreeze_token<'a>(
 ) -> Result<TransactionReceipt<CapeLedger>, CapeWalletError> {
     let unfreeze_address = freezer.pub_keys().await[0].address();
     freezer
-        .unfreeze(&unfreeze_address, 1, asset, amount, owner_address)
+        .unfreeze(
+            Some(&unfreeze_address),
+            1,
+            asset,
+            amount.into(),
+            owner_address,
+        )
         .await
 }
 

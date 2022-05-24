@@ -17,6 +17,8 @@ contract AssetRegistry {
     bytes14 public constant DOM_SEP_DOMESTIC_ASSET = "DOMESTIC_ASSET";
     uint256 public constant CAP_NATIVE_ASSET_CODE = 1;
 
+    event AssetSponsored(address erc20Address, uint256 assetDefinitionCode);
+
     mapping(bytes32 => address) public assets;
 
     struct AssetDefinition {
@@ -70,10 +72,12 @@ contract AssetRegistry {
         require(erc20Address != address(0), "Bad asset address");
         require(!isCapeAssetRegistered(newAsset), "Asset already registered");
 
-        _checkForeignAssetCode(newAsset.code, erc20Address, msg.sender);
+        _checkForeignAssetCode(newAsset.code, erc20Address, msg.sender, newAsset.policy);
 
         bytes32 key = keccak256(abi.encode(newAsset));
         assets[key] = erc20Address;
+
+        emit AssetSponsored(erc20Address, newAsset.code);
     }
 
     /// @notice Throws an exception if the asset definition code is
@@ -83,12 +87,14 @@ contract AssetRegistry {
     /// @param assetDefinitionCode The code of an asset definition
     /// @param erc20Address The ERC-20 address bound to the asset definition
     /// @param sponsor The sponsor address of this wrapped asset
+    /// @param policy asset policy
     function _checkForeignAssetCode(
         uint256 assetDefinitionCode,
         address erc20Address,
-        address sponsor
+        address sponsor,
+        AssetPolicy memory policy
     ) internal pure {
-        bytes memory description = _computeAssetDescription(erc20Address, sponsor);
+        bytes memory description = _computeAssetDescription(erc20Address, sponsor, policy);
         require(
             assetDefinitionCode ==
                 BN254.fromLeBytesModOrder(
@@ -125,13 +131,21 @@ contract AssetRegistry {
     /// ERC-20 token and the address of the sponsor.
     /// @param erc20Address address of the erc20 token
     /// @param sponsor address of the sponsor
+    /// @param policy asset policy
     /// @return The asset description
-    function _computeAssetDescription(address erc20Address, address sponsor)
-        internal
-        pure
-        returns (bytes memory)
-    {
+    function _computeAssetDescription(
+        address erc20Address,
+        address sponsor,
+        AssetPolicy memory policy
+    ) internal pure returns (bytes memory) {
         return
-            bytes.concat("EsSCAPE ERC20", bytes20(erc20Address), "sponsored by", bytes20(sponsor));
+            bytes.concat(
+                "EsSCAPE ERC20",
+                bytes20(erc20Address),
+                "sponsored by",
+                bytes20(sponsor),
+                "policy",
+                abi.encode(policy)
+            );
     }
 }

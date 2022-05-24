@@ -80,6 +80,7 @@ mod tests {
             &connection.contract,
             block_with_memos.clone(),
             BlockNumber::Latest,
+            10_000_000, // gas limit
         )
         .await?
         .await?;

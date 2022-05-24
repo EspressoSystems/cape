@@ -14,8 +14,9 @@ RUN chmod +x /app/wallet-api
 ENV CAPE_EQS_URL=https://eqs.goerli.cape.tech
 ENV CAPE_RELAYER_URL=https://relayer.goerli.cape.tech
 ENV CAPE_ADDRESS_BOOK_URL=https://address-book.goerli.cape.tech
-ENV CAPE_WEB3_PROVIDER_URL=https://rpc.goerli.mudit.blog
-ENV CAPE_CONTRACT_ADDRESS=0x5594f9F32876d89bB50561DE2051f1F85BA1b6dd
+
+# Set the storage directory to allow the wallet to access the official assets library.
+ENV CAPE_WALLET_STORAGE=/.espresso
 
 WORKDIR /app/
 CMD ./wallet-api

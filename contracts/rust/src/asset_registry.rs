@@ -14,7 +14,7 @@ use crate::assertion::Matcher;
 use crate::deploy::deploy_test_asset_registry_contract;
 use crate::ethereum::get_funded_client;
 use crate::model::{erc20_asset_description, Erc20Code, EthereumAddr};
-use crate::types::AssetRegistry;
+use crate::types::{AssetCodeSol, AssetRegistry, GenericInto};
 
 #[tokio::test]
 async fn test_native_domestic_asset() -> Result<()> {
@@ -38,6 +38,7 @@ async fn test_asset_registry() -> Result<()> {
     let description = erc20_asset_description(
         &erc20_code,
         &EthereumAddr(sponsor.address().to_fixed_bytes()),
+        AssetPolicy::default(),
     );
     let asset_code = AssetCode::new_foreign(&description);
     let asset_def = AssetDefinition::new(asset_code, AssetPolicy::default())?;
@@ -82,6 +83,20 @@ async fn test_asset_registry() -> Result<()> {
         .unwrap();
 
     assert!(registered);
+
+    // Check the record commitments for the deposits were emitted
+    let logs = contract
+        .asset_sponsored_filter()
+        .from_block(0u64)
+        .query()
+        .await?;
+
+    assert_eq!(logs[0].erc_20_address, erc20_address);
+
+    assert_eq!(
+        logs[0].asset_definition_code,
+        asset_code.generic_into::<AssetCodeSol>().0
+    );
 
     // Lookup the address given the asset definition
     let address = contract

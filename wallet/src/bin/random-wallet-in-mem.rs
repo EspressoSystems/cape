@@ -108,11 +108,10 @@ async fn connect_to_demo_backend<'a>(
     let backend = CapeBackend::new(
         universal_param,
         CapeBackendConfig {
-            rpc_url: rpc_url_for_test(),
+            cape_contract: Some((rpc_url_for_test(), network.contract_address)),
             eqs_url: network.eqs_url.clone(),
             relayer_url: network.relayer_url.clone(),
             address_book_url: network.address_book_url.clone(),
-            contract_address: network.contract_address,
             eth_mnemonic: None,
             min_polling_delay: Duration::from_millis(500),
         },
@@ -149,11 +148,10 @@ async fn create_backend_and_sender_wallet<'a>(
     let backend = CapeBackend::new(
         universal_param,
         CapeBackendConfig {
-            rpc_url: rpc_url_for_test(),
+            cape_contract: Some((rpc_url_for_test(), network.contract_address)),
             eqs_url: network.eqs_url.clone(),
             relayer_url: network.relayer_url.clone(),
             address_book_url: network.address_book_url.clone(),
-            contract_address: network.contract_address,
             eth_mnemonic: None,
             min_polling_delay: Duration::from_millis(500),
         },
@@ -190,7 +188,7 @@ async fn create_backend_and_sender_wallet<'a>(
     while wallet
         .balance_breakdown(&address, &AssetCode::native())
         .await
-        == 0
+        == 0u64.into()
     {
         event!(Level::INFO, "waiting for initial balance");
         retry_delay().await;
@@ -213,11 +211,10 @@ async fn create_wallet<'a>(
     let backend = CapeBackend::new(
         universal_param,
         CapeBackendConfig {
-            rpc_url: rpc_url_for_test(),
+            cape_contract: Some((rpc_url_for_test(), network.contract_address)),
             eqs_url: network.eqs_url.clone(),
             relayer_url: network.relayer_url.clone(),
             address_book_url: network.address_book_url.clone(),
-            contract_address: network.contract_address,
             eth_mnemonic: None,
             min_polling_delay: Duration::from_millis(500),
         },
@@ -349,7 +346,7 @@ async fn main() {
         while wallet
             .balance_breakdown(&pk.address(), &AssetCode::native())
             .await
-            == 0
+            == 0u64.into()
         {
             event!(Level::INFO, "waiting for initial balance");
             retry_delay().await;
@@ -452,7 +449,7 @@ async fn main() {
                     if sender
                         .balance_breakdown(&sender_address, &asset.definition.code)
                         .await
-                        > 0
+                        > 0u64.into()
                     {
                         asset_balances.push(asset.definition.code);
                     }

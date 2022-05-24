@@ -138,7 +138,19 @@ impl Transaction for CapeTransition {
         match self {
             Self::Transaction(CapeModelTxn::CAP(note)) => note.open_audit_memo(assets, keys),
             Self::Transaction(CapeModelTxn::Burn { xfr, .. }) => {
-                cap::open_xfr_audit_memo(assets, keys, xfr)
+                let mut opening = cap::open_xfr_audit_memo(assets, keys, xfr)?;
+                // The burned output has a viewing memo, but this memo must not be included in the
+                // results, since the burned output is not actually added to the ledger, and so
+                // attempting to audit/freeze that record would not be meaningful.
+                //
+                // There is no viewing memo for the fee change output, and the burned output is
+                // always the first output after the fee change, so if the burned asset type has a
+                // viewing policy, the first viewing memo will be for the burned output (otherwise
+                // there will be no viewing memos).
+                if !opening.outputs.is_empty() {
+                    opening.outputs.remove(0);
+                }
+                Ok(opening)
             }
             _ => Err(AuditError::NoAuditMemos),
         }

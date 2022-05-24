@@ -1,0 +1,49 @@
+# Copyright (c) 2022 Espresso Systems (espressosys.com)
+# This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
+#
+# This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+# You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+[[assets]]
+symbol = 'CAPEDAO'
+description = 'Private CAPE DAO token'
+icon = 'icons/CAPEDAO.png'
+type = 'domestic'
+amount = 1000000
+
+[[assets]]
+symbol = 'WGMI'
+description = 'WGMI DAO token'
+icon = 'icons/WGMI.png'
+type = 'domestic'
+amount = 1000000
+# The viewing key represents a hypothetical DAO admin.
+viewing_key = 'AUDPUBKEY~pqwRF_LGHH6obb4iX72qo6PWy2Fo3D9wmfqgRnYjmakB'
+
+[[assets]]
+symbol = 'WGTH'
+description = 'Wrapped WETH on Goerli'
+icon = 'icons/WGTH.png'
+type = 'wrapped'
+contract = '0x71C95911E9a5D330f4D621842EC243EE1343292e'
+
+[[assets]]
+symbol = 'DAI'
+description = 'Wrapped DAI'
+icon = 'icons/DAI.png'
+type = 'wrapped'
+contract = '0x948B3c65b89DF0B4894ABE91E6D02FE579834F8F'
+# The viewing key is maintained by Espresso, but would belong to Maker Foundation in a real deployment
+viewing_key = 'AUDPUBKEY~z1xFfj2B6dTdUn1tcyexZd8v8foMPDJibT8hrmXXkAhx'
+
+[[assets]]
+symbol = 'USDC'
+description = 'Wrapped USDC'
+icon = 'icons/USDC.png'
+type = 'wrapped'
+contract = '0x712516e61C8B383dF4A63CFe83d7701Bce54B03e'
+# The viewing key is maintained by Espresso, but would belong to Circle in a real deployment
+viewing_key = 'AUDPUBKEY~A1EVmqt8rZc6ibPolJ0gVI-cUxTOark5L9e9TTEDt6G-'
+# The freezing key is maintained by Espresso, but would belong to Circle in a real deployment
+freezing_key = 'FREEZEPUBKEY~iCR07O3hlKc25lFd467Eqs3ZAF1ME1wT5aW9VqHa14e2'

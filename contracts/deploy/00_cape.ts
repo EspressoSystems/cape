@@ -7,11 +7,7 @@
 
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
-import { utils, BigNumber } from "ethers";
-
-function fromEnv(env_var: string, fallback: string): string {
-  return process.env[env_var] || fallback;
-}
+import { BigNumber } from "ethers";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
@@ -36,7 +32,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   });
 
   const treeDepth = 24;
-  const nRoots = 1000;
+
+  // Enough so that a wallet CAP transaction can make it to the CAPE contract,
+  // but not too much in order to free the records of a rejected/lost transaction after a reasonable amount of time.
+  const nRoots = 40;
 
   // To change, update change FAUCET_MANAGER_ENCRYPTION_KEY in rust/src/cape/faucet.rs
   //

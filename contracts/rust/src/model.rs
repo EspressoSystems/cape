@@ -7,12 +7,14 @@
 
 #![deny(warnings)]
 
+use crate::types;
 use ark_serialize::*;
 use core::convert::TryFrom;
 use core::fmt::Debug;
+use ethers::abi::AbiEncode;
 use jf_cap::{
     errors::TxnApiError,
-    structs::{AssetDefinition, Nullifier, RecordCommitment, RecordOpening},
+    structs::{AssetDefinition, AssetPolicy, Nullifier, RecordCommitment, RecordOpening},
     transfer::TransferNote,
     txn_batch_verify, MerkleCommitment, MerkleFrontier, MerkleTree, NodeValue, TransactionNote,
 };
@@ -285,12 +287,19 @@ pub struct CapeContractState {
     pub erc20_deposits: Vec<RecordCommitment>,
 }
 
-pub fn erc20_asset_description(erc20_code: &Erc20Code, sponsor: &EthereumAddr) -> Vec<u8> {
+pub fn erc20_asset_description(
+    erc20_code: &Erc20Code,
+    sponsor: &EthereumAddr,
+    policy: AssetPolicy,
+) -> Vec<u8> {
+    let policy_bytes = AbiEncode::encode(types::AssetPolicy::from(policy));
     [
         "EsSCAPE ERC20".as_bytes(),
         (erc20_code.0).0.as_ref(),
         "sponsored by".as_bytes(),
         sponsor.0.as_ref(),
+        "policy".as_bytes(),
+        &policy_bytes,
     ]
     .concat()
 }
@@ -300,7 +309,7 @@ pub fn is_erc20_asset_def_valid(
     erc20_code: &Erc20Code,
     sponsor: &EthereumAddr,
 ) -> bool {
-    let description = erc20_asset_description(erc20_code, sponsor);
+    let description = erc20_asset_description(erc20_code, sponsor, def.policy_ref().clone());
     def.code.verify_foreign(&description).is_ok()
 }
 
@@ -542,10 +551,13 @@ impl CapeContractState {
                                         num_outputs,
                                     })?;
 
+                                // Don't include the burned record in the output commitments.
+                                let mut output_commitments = xfr.output_commitments.clone();
+                                output_commitments.remove(1);
                                 (
                                     verif_key,
                                     xfr.aux_info.merkle_root,
-                                    vec![xfr.output_commitments[0]],
+                                    output_commitments,
                                     TransactionNote::Transfer(xfr.clone()),
                                 )
                             }

@@ -15,7 +15,7 @@ use cape_wallet::{
     backend::{CapeBackend, CapeBackendConfig},
     wallet::{CapeWallet, CapeWalletError},
 };
-use ethers::prelude::Address;
+use ethers::prelude::U256;
 use futures::stream::{iter, StreamExt};
 use jf_cap::structs::AssetCode;
 use rand_chacha::{
@@ -72,18 +72,6 @@ pub struct Options {
     )]
     pub address_book_url: Url,
 
-    /// Address of the CAPE smart contract.
-    #[structopt(long, env = "CAPE_CONTRACT_ADDRESS")]
-    pub contract_address: Address,
-
-    /// URL for Ethers HTTP Provider
-    #[structopt(
-        long,
-        env = "CAPE_WEB3_PROVIDER_URL",
-        default_value = "http://localhost:8545"
-    )]
-    pub rpc_url: Url,
-
     /// Minimum amount of time to wait between polling requests to EQS.
     #[structopt(long, env = "CAPE_WALLET_MIN_POLLING_DELAY", default_value = "500")]
     pub min_polling_delay_ms: u64,
@@ -103,14 +91,14 @@ async fn create_wallet(
     let backend = CapeBackend::new(
         &*UNIVERSAL_PARAM,
         CapeBackendConfig {
-            rpc_url: opt.rpc_url.clone(),
+            // We're not going to do any direct-to-contract operations that
+            // would require a connection to the CAPE contract or an ETH
+            // wallet. Everything we do will go through the relayer.
+            cape_contract: None,
+            eth_mnemonic: None,
             eqs_url: opt.eqs_url.clone(),
             relayer_url: opt.relayer_url.clone(),
             address_book_url: opt.address_book_url.clone(),
-            contract_address: opt.contract_address,
-            // We're not going to do any direct-to-contract operations that would require an ETH
-            // wallet. Everything we do will go through the relayer.
-            eth_mnemonic: None,
             min_polling_delay: Duration::from_millis(opt.min_polling_delay_ms),
         },
         &mut loader,
@@ -166,7 +154,8 @@ async fn main() {
     // can discover a record to transfer from.
     parent.await_key_scan(&parent_key.address()).await.unwrap();
     let balance = parent.balance(&AssetCode::native()).await;
-    if balance < opt.record_size * (opt.num_records as u64) * (opt.num_wallets as u64) {
+    let total_per_wallet = U256::from(opt.record_size) * opt.num_records;
+    if balance < total_per_wallet * opt.num_wallets {
         eprintln!(
             "Insufficient balance for transferring {} units to {} wallets: {}",
             opt.record_size * opt.num_records,
@@ -181,7 +170,7 @@ async fn main() {
     // already reported all of the mnemonics needed to recover the funds.
     println!(
         "Transferring {} units each to the following wallets:",
-        opt.record_size * opt.num_records
+        total_per_wallet
     );
     for (_, mnemonic, key) in &children {
         println!("{} {}", mnemonic, key);
@@ -216,12 +205,8 @@ async fn main() {
 
     // Wait for the children to report the new balances.
     for (wallet, _, key) in &children {
-        while wallet.balance(&AssetCode::native()).await < opt.record_size * opt.num_records {
-            eprintln!(
-                "Waiting for {} to receive {} tokens",
-                key,
-                opt.record_size * opt.num_records
-            );
+        while wallet.balance(&AssetCode::native()).await < total_per_wallet {
+            eprintln!("Waiting for {} to receive {} tokens", key, total_per_wallet);
             async_std::task::sleep(Duration::from_secs(1)).await;
         }
     }

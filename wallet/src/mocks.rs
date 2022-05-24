@@ -837,7 +837,7 @@ mod cape_wallet_tests {
                 .0
                 .balance_breakdown(&owner, &AssetCode::native())
                 .await,
-            initial_grant
+            initial_grant.into()
         );
 
         // Create an ERC20 code, sponsor address, and asset information.
@@ -901,7 +901,7 @@ mod cape_wallet_tests {
                 .0
                 .balance_breakdown(&owner, &cap_asset.code)
                 .await,
-            0
+            0u64.into()
         );
 
         // Submit dummy transactions to finalize the wrap.
@@ -918,7 +918,7 @@ mod cape_wallet_tests {
         let mint_fee = 1;
         wallets[0]
             .0
-            .mint(&owner, mint_fee, &dummy_coin.code, 5, owner.clone())
+            .mint(Some(&owner), mint_fee, &dummy_coin.code, 5, owner.clone())
             .await
             .unwrap();
         t.sync(&ledger, &wallets).await;
@@ -933,14 +933,14 @@ mod cape_wallet_tests {
                 .0
                 .balance_breakdown(&owner, &AssetCode::native())
                 .await,
-            initial_grant - mint_fee
+            (initial_grant - mint_fee).into()
         );
         assert_eq!(
             wallets[0]
                 .0
                 .balance_breakdown(&owner, &cap_asset.code)
                 .await,
-            wrap_amount
+            wrap_amount.into()
         );
 
         // Burning an amount more than the wrapped asset should fail.
@@ -991,14 +991,14 @@ mod cape_wallet_tests {
                 .0
                 .balance_breakdown(&owner, &cap_asset.code)
                 .await,
-            0
+            0u64.into()
         );
         assert_eq!(
             wallets[0]
                 .0
                 .balance_breakdown(&owner, &AssetCode::native())
                 .await,
-            initial_grant - mint_fee - burn_fee
+            (initial_grant - mint_fee - burn_fee).into()
         );
 
         Ok(())
@@ -1071,7 +1071,13 @@ mod cape_wallet_tests {
         let fee_account = wallets[0].1[0].clone();
         wallets[0]
             .0
-            .mint(&fee_account, 1, &dummy_coin.code, 5, fee_account.clone())
+            .mint(
+                Some(&fee_account),
+                1,
+                &dummy_coin.code,
+                5,
+                fee_account.clone(),
+            )
             .await
             .unwrap();
         t.sync(&ledger, &wallets).await;
@@ -1086,14 +1092,14 @@ mod cape_wallet_tests {
                 .0
                 .balance_breakdown(&wrap_account, &cap_asset.code)
                 .await,
-            5
+            5u64.into()
         );
         assert_eq!(
             wallets[0]
                 .0
                 .balance_breakdown(&wrap_account, &AssetCode::native())
                 .await,
-            0
+            0u64.into()
         );
 
         // Burn the wrapped asset.
@@ -1114,7 +1120,7 @@ mod cape_wallet_tests {
                 .0
                 .balance_breakdown(&wrap_account, &cap_asset.code)
                 .await,
-            0
+            0u64.into()
         );
 
         Ok(())
@@ -1175,7 +1181,7 @@ mod cape_wallet_tests {
             .unwrap();
         wallets[0]
             .0
-            .mint(&owner, 1, &dummy_coin.code, 5, owner.clone())
+            .mint(Some(&owner), 1, &dummy_coin.code, 5, owner.clone())
             .await
             .unwrap();
         t.sync(&ledger, &wallets).await;
@@ -1190,7 +1196,7 @@ mod cape_wallet_tests {
                 .0
                 .balance_breakdown(&owner, &cap_asset.code)
                 .await,
-            5
+            5u64.into()
         );
 
         // Burn the wrapped asset.
@@ -1209,7 +1215,7 @@ mod cape_wallet_tests {
                 .0
                 .balance_breakdown(&owner, &cap_asset.code)
                 .await,
-            2
+            2u64.into()
         );
 
         Ok(())
@@ -1275,7 +1281,7 @@ mod cape_wallet_tests {
             .unwrap();
         wallets[0]
             .0
-            .mint(&owner, 1, &dummy_coin.code, 5, owner.clone())
+            .mint(Some(&owner), 1, &dummy_coin.code, 5, owner.clone())
             .await
             .unwrap();
         t.sync(&ledger, &wallets).await;
@@ -1290,7 +1296,7 @@ mod cape_wallet_tests {
                 .0
                 .balance_breakdown(&owner, &cap_asset.code)
                 .await,
-            5
+            5u64.into()
         );
 
         // Burn the wrapped asset.
@@ -1309,9 +1315,105 @@ mod cape_wallet_tests {
                 .0
                 .balance_breakdown(&owner, &cap_asset.code)
                 .await,
-            0
+            0u64.into()
         );
 
         Ok(())
+    }
+
+    #[cfg(feature = "slow-tests")]
+    #[async_std::test]
+    async fn test_unwrap_viewing() {
+        let mut t = CapeTest::default();
+
+        // Initialize a ledger and wallet, and get the owner address.
+        let mut now = Instant::now();
+        let (ledger, mut wallets) = t
+            .create_test_network(&[(1, 2), (2, 2), (2, 3), (3, 3)], vec![20], &mut now)
+            .await;
+
+        // Create an ERC20 code, sponsor address, and asset information.
+        let erc20_addr = EthereumAddr([1u8; 20]);
+        let erc20_code = Erc20Code(erc20_addr);
+        let sponsor_addr = EthereumAddr([2u8; 20]);
+        let viewing_key = wallets[0]
+            .0
+            .generate_audit_key("viewing".into())
+            .await
+            .unwrap();
+        let freezing_key = wallets[0]
+            .0
+            .generate_freeze_key("freezing".into())
+            .await
+            .unwrap();
+        let cap_asset_policy = AssetPolicy::default()
+            .set_auditor_pub_key(viewing_key)
+            .reveal_record_opening()
+            .unwrap()
+            .set_freezer_pub_key(freezing_key);
+
+        // Sponsor the ERC20 token.
+        now = Instant::now();
+        let cap_asset = wallets[0]
+            .0
+            .sponsor(
+                "sponsored_asset".into(),
+                erc20_code,
+                sponsor_addr.clone(),
+                cap_asset_policy,
+            )
+            .await
+            .unwrap();
+        println!("Sponsor completed: {}s", now.elapsed().as_secs_f32());
+
+        // Wrap the sponsored asset.
+        let owner = wallets[0].1[0].clone();
+        wallets[0]
+            .0
+            .wrap(sponsor_addr.clone(), cap_asset.clone(), owner.clone(), 3)
+            .await
+            .unwrap();
+
+        // Submit dummy transactions to finalize the wrap.
+        now = Instant::now();
+        wallets[0]
+            .0
+            .transfer(None, &AssetCode::native(), &[(owner.clone(), 1)], 1)
+            .await
+            .unwrap();
+        t.sync(&ledger, &wallets).await;
+        println!(
+            "Dummy transactions submitted and wrap finalized: {}s",
+            now.elapsed().as_secs_f32()
+        );
+        assert_eq!(wallets[0].0.balance(&cap_asset.code).await, 3u64.into());
+
+        // Unwrap with change.
+        wallets[0]
+            .0
+            .burn(None, sponsor_addr.clone(), &cap_asset.code, 2, 0)
+            .await
+            .unwrap();
+        t.sync(&ledger, &wallets).await;
+        assert_eq!(wallets[0].0.balance(&cap_asset.code).await, 1u64.into());
+
+        // We should be able to view the change record from the unwrap, but _not_ the burned record.
+        let records = wallets[0]
+            .0
+            .records()
+            .await
+            .filter(|rec| rec.ro.asset_def.code == cap_asset.code)
+            .collect::<Vec<_>>();
+        assert_eq!(records.len(), 1);
+        assert_eq!(records[0].ro.amount, 1);
+
+        // Unwrap again just to make sure things still work.
+        wallets[0]
+            .0
+            .burn(None, sponsor_addr, &cap_asset.code, 1, 0)
+            .await
+            .unwrap();
+        t.sync(&ledger, &wallets).await;
+        assert_eq!(wallets[0].0.balance(&cap_asset.code).await, 0u64.into());
     }
 }

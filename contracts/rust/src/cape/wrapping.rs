@@ -14,7 +14,7 @@ use crate::types as sol;
 use crate::types::{AssetCodeSol, GenericInto};
 use anyhow::Result;
 use ethers::prelude::Address;
-use jf_cap::structs::{AssetCode, AssetCodeSeed, RecordOpening};
+use jf_cap::structs::{AssetCode, AssetCodeSeed, AssetPolicy, RecordOpening};
 
 mod errors_when_calling_deposit_erc20 {
     use std::sync::Arc;
@@ -28,7 +28,7 @@ mod errors_when_calling_deposit_erc20 {
     use anyhow::Result;
     use ethers::prelude::U256;
     use jf_cap::keys::UserPubKey;
-    use jf_cap::structs::{AssetCode, AssetDefinition, AssetPolicy, FreezeFlag, RecordOpening};
+    use jf_cap::structs::{AssetCode, AssetDefinition, FreezeFlag, RecordOpening};
 
     enum Scenario {
         AssetTypeNotRegistered,
@@ -70,10 +70,14 @@ mod errors_when_calling_deposit_erc20 {
         let erc20_code = Erc20Code(EthereumAddr(erc20_address.to_fixed_bytes()));
         let sponsor = owner_of_erc20_tokens_client_address;
 
-        let description =
-            erc20_asset_description(&erc20_code, &EthereumAddr(sponsor.to_fixed_bytes()));
+        let policy = AssetPolicy::rand_for_test(rng);
+        let description = erc20_asset_description(
+            &erc20_code,
+            &EthereumAddr(sponsor.to_fixed_bytes()),
+            policy.clone(),
+        );
         let asset_code = AssetCode::new_foreign(&description);
-        let asset_def = AssetDefinition::new(asset_code, AssetPolicy::rand_for_test(rng)).unwrap();
+        let asset_def = AssetDefinition::new(asset_code, policy).unwrap();
         let asset_def_sol = asset_def.clone().generic_into::<sol::AssetDefinition>();
 
         if !(matches!(scenario, Scenario::AssetTypeNotRegistered)) {
@@ -161,13 +165,19 @@ mod errors_when_calling_deposit_erc20 {
 
 #[tokio::test]
 async fn test_erc20_description() -> Result<()> {
+    let rng = &mut ark_std::test_rng();
     let contract = deploy_test_cape().await;
     let sponsor = Address::random();
     let asset_address = Address::random();
     let asset_code = Erc20Code(EthereumAddr(asset_address.to_fixed_bytes()));
-    let description = erc20_asset_description(&asset_code, &EthereumAddr(sponsor.to_fixed_bytes()));
+    let policy = AssetPolicy::rand_for_test(rng);
+    let description = erc20_asset_description(
+        &asset_code,
+        &EthereumAddr(sponsor.to_fixed_bytes()),
+        policy.clone(),
+    );
     let ret = contract
-        .compute_asset_description(asset_address, sponsor)
+        .compute_asset_description(asset_address, sponsor, policy.into())
         .call()
         .await?;
     assert_eq!(ret.to_vec(), description);
@@ -186,6 +196,7 @@ async fn test_check_foreign_asset_code() -> Result<()> {
             ro.asset_def.code.generic_into::<sol::AssetCodeSol>().0,
             Address::random(),
             Address::random(),
+            ro.asset_def.policy_ref().clone().into(),
         )
         .call()
         .await
@@ -204,15 +215,18 @@ async fn test_check_foreign_asset_code() -> Result<()> {
             domestic_asset_code.generic_into::<AssetCodeSol>().0,
             erc20_address,
             sponsor,
+            AssetPolicy::rand_for_test(rng).into(),
         )
         .call()
         .await
         .should_revert_with_message("Wrong foreign asset code");
 
     // Fails if txn sender address does not match sponsor in asset code.
+    let policy_wrong_sponsor = AssetPolicy::rand_for_test(rng);
     let description_wrong_sponsor = erc20_asset_description(
         &erc20_code,
         &EthereumAddr(Address::random().to_fixed_bytes()),
+        policy_wrong_sponsor.clone(),
     );
     let asset_code_wrong_sponsor = AssetCode::new_foreign(&description_wrong_sponsor);
     contract
@@ -220,12 +234,18 @@ async fn test_check_foreign_asset_code() -> Result<()> {
             asset_code_wrong_sponsor.generic_into::<AssetCodeSol>().0,
             sponsor,
             sponsor,
+            policy_wrong_sponsor.into(),
         )
         .call()
         .await
         .should_revert_with_message("Wrong foreign asset code");
 
-    let description = erc20_asset_description(&erc20_code, &EthereumAddr(sponsor.to_fixed_bytes()));
+    let policy = AssetPolicy::rand_for_test(rng);
+    let description = erc20_asset_description(
+        &erc20_code,
+        &EthereumAddr(sponsor.to_fixed_bytes()),
+        policy.clone(),
+    );
     let asset_code = AssetCode::new_foreign(&description);
 
     // Fails for random erc20 address.
@@ -234,6 +254,19 @@ async fn test_check_foreign_asset_code() -> Result<()> {
             asset_code.generic_into::<sol::AssetCodeSol>().0,
             Address::random(),
             sponsor,
+            policy.clone().into(),
+        )
+        .call()
+        .await
+        .should_revert_with_message("Wrong foreign asset code");
+
+    // Fails for random policy.
+    contract
+        .check_foreign_asset_code(
+            asset_code.generic_into::<sol::AssetCodeSol>().0,
+            erc20_address,
+            sponsor,
+            AssetPolicy::rand_for_test(rng).into(),
         )
         .call()
         .await
@@ -245,6 +278,7 @@ async fn test_check_foreign_asset_code() -> Result<()> {
             asset_code.generic_into::<sol::AssetCodeSol>().0,
             erc20_address,
             sponsor,
+            policy.into(),
         )
         .call()
         .await

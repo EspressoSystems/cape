@@ -107,9 +107,14 @@ async fn call_and_check_deposit_erc20(
 
     let sponsor = contracts_info.owner_of_erc20_tokens_client_address;
 
-    let description = erc20_asset_description(&erc20_code, &EthereumAddr(sponsor.to_fixed_bytes()));
+    let policy = AssetPolicy::rand_for_test(rng);
+    let description = erc20_asset_description(
+        &erc20_code,
+        &EthereumAddr(sponsor.to_fixed_bytes()),
+        policy.clone(),
+    );
     let asset_code = AssetCode::new_foreign(&description);
-    let asset_def = AssetDefinition::new(asset_code, AssetPolicy::rand_for_test(rng)).unwrap();
+    let asset_def = AssetDefinition::new(asset_code, policy).unwrap();
     let asset_def_sol = asset_def.clone().generic_into::<sol::AssetDefinition>();
 
     if register_asset {
@@ -197,8 +202,8 @@ async fn integration_test_wrapping_erc20_tokens() -> Result<()> {
     let ro1 = call_and_check_deposit_erc20(
         true,
         1000u64,
-        "1000000000000000000000",
-        "999999999999999999000",
+        "1000000000",
+        "999999000",
         1000u64,
         contracts_info.clone(),
     )
@@ -207,8 +212,8 @@ async fn integration_test_wrapping_erc20_tokens() -> Result<()> {
     let ro2 = call_and_check_deposit_erc20(
         false,
         2000u64,
-        "999999999999999999000",
-        "999999999999999997000",
+        "999999000",
+        "999997000",
         3000u64,
         contracts_info.clone(),
     )

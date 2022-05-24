@@ -126,11 +126,10 @@ async fn main() {
     let backend = CapeBackend::new(
         universal_param,
         CapeBackendConfig {
-            rpc_url: rpc_url_for_test(),
+            cape_contract: Some((rpc_url_for_test(), contract_address)),
             eqs_url,
             relayer_url: relayer_url.clone(),
             address_book_url,
-            contract_address,
             eth_mnemonic: None,
             min_polling_delay: Duration::from_millis(500),
         },
@@ -210,7 +209,7 @@ async fn main() {
     while wallet
         .balance_breakdown(&address, &AssetCode::native())
         .await
-        == 0
+        == 0u64.into()
     {
         event!(Level::INFO, "waiting for initial balance");
         retry_delay().await;
@@ -250,11 +249,17 @@ async fn main() {
         }
     };
     // If we don't yet have a balance of our asset type, mint some.
-    if wallet.balance_breakdown(&address, &my_asset.code).await == 0 {
+    if wallet.balance_breakdown(&address, &my_asset.code).await == 0u64.into() {
         event!(Level::INFO, "minting my asset type {}", my_asset.code);
         loop {
             let txn = wallet
-                .mint(&address, 1, &my_asset.code, 1u64 << 32, address.clone())
+                .mint(
+                    Some(&address),
+                    1,
+                    &my_asset.code,
+                    1u64 << 32,
+                    address.clone(),
+                )
                 .await
                 .expect("failed to generate mint transaction");
             let status = wallet
@@ -309,7 +314,7 @@ async fn main() {
                     if wallet
                         .balance_breakdown(&address, &asset.definition.code)
                         .await
-                        > 0
+                        > 0u64.into()
                     {
                         asset_balances.push(asset.definition.code);
                     }

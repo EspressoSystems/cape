@@ -16,6 +16,7 @@
 //! entrypoints to the wallet, we provide a CLI and a web server as separate executables.
 
 pub mod backend;
+pub mod disco;
 pub mod ui;
 pub mod wallet;
 

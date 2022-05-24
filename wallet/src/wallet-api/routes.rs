@@ -11,6 +11,7 @@ use crate::web::{NodeOpt, WebState};
 use async_std::fs::{read_dir, File};
 use cap_rust_sandbox::ledger::CapeLedger;
 use cape_wallet::{
+    disco::{ApiRouteKey, UrlSegmentType},
     ui::*,
     wallet::{CapeWalletError, CapeWalletExt},
 };
@@ -44,10 +45,8 @@ use std::io::Cursor;
 use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
-use strum::IntoEnumIterator;
-use strum_macros::{AsRefStr, EnumIter, EnumString};
 use tagged_base64::TaggedBase64;
-use tide::{http::Method, Request, StatusCode};
+use tide::{Request, StatusCode};
 
 #[derive(Debug, Snafu, Serialize, Deserialize)]
 #[snafu(module(error))]
@@ -171,16 +170,6 @@ mod backend {
 
 pub use backend::Backend;
 pub type Wallet = seahorse::Wallet<'static, Backend, CapeLedger>;
-
-#[derive(Clone, Copy, Debug, EnumString)]
-pub enum UrlSegmentType {
-    Boolean,
-    Hexadecimal,
-    Integer,
-    TaggedBase64,
-    Base64,
-    Literal,
-}
 
 #[allow(dead_code)]
 #[derive(Clone, Debug, strum_macros::Display)]
@@ -306,106 +295,6 @@ pub struct RouteBinding {
 
     /// Value
     pub value: UrlSegmentValue,
-}
-
-/// Index entries for documentation fragments
-#[allow(non_camel_case_types)]
-#[derive(AsRefStr, Copy, Clone, Debug, EnumIter, EnumString, strum_macros::Display)]
-pub enum ApiRouteKey {
-    buildsponsor,
-    buildwrap,
-    closewallet,
-    exportasset,
-    freeze,
-    getaddress,
-    getaccount,
-    getaccounts,
-    getbalance,
-    getinfo,
-    getmnemonic,
-    importasset,
-    healthcheck,
-    importkey,
-    listkeystores,
-    mint,
-    newasset,
-    newkey,
-    newwallet,
-    openwallet,
-    recordopening,
-    recoverkey,
-    resetpassword,
-    send,
-    submitsponsor,
-    submitwrap,
-    transaction,
-    transactionhistory,
-    unfreeze,
-    unwrap,
-    updateasset,
-    view,
-    getrecords,
-    lastusedkeystore,
-    getprivatekey,
-}
-
-/// Check consistency of `api.toml`
-///
-/// * Verify that every variant of [ApiRouteKey] is defined
-/// * Check that every URL parameter has a valid type
-pub fn check_api(api: toml::Value) -> Result<(), String> {
-    for key in ApiRouteKey::iter() {
-        let route = api["route"]
-            .get(key.as_ref())
-            .ok_or_else(|| format!("Missing API definition for [route.{}]", key))?;
-        if let Some(method) = route.get("METHOD") {
-            // If specified, METHOD must be an HTTP method.
-            let method = method
-                .as_str()
-                .ok_or_else(|| format!("Malformed METHOD for [route.{}] (expected string)", key))?;
-            Method::from_str(method).map_err(|_| {
-                format!(
-                    "METHOD {} for [route.{}] is not an HTTP method",
-                    method, key
-                )
-            })?;
-        }
-        let paths = route["PATH"]
-            .as_array()
-            .ok_or_else(|| format!("Malformed PATH for [route.{}] (expected array)", key))?;
-        for path in paths {
-            let path = path.as_str().ok_or_else(|| {
-                format!("Malformed pattern for [route.{}] (expected string)", key)
-            })?;
-            if path.ends_with('/') {
-                return Err(format!(
-                    "Malformed pattern for [route.{}] (trailing slash)",
-                    key
-                ));
-            }
-
-            for segment in path.split('/') {
-                if segment.starts_with(':') {
-                    let ty = route
-                        .get(segment)
-                        .ok_or_else(|| {
-                            format!("Missing parameter type for {} in [route.{}]", segment, key)
-                        })?
-                        .as_str()
-                        .ok_or_else(|| {
-                            format!(
-                                "Malformed parameter type for {} in [route.{}] (expected string)",
-                                segment, key
-                            )
-                        })?;
-                    UrlSegmentType::from_str(ty).map_err(|err| {
-                        format!("Invalid type for {} in [route.{}] ({})", segment, key, err)
-                    })?;
-                }
-            }
-        }
-    }
-    Ok(())
 }
 
 pub fn dummy_url_eval(

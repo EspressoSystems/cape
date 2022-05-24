@@ -39,7 +39,6 @@
 //! the web server. Most of the functionality, such as API interpretation, request parsing, and
 //! route handling, is defined in the [cape_wallet] crate.
 
-mod disco;
 mod routes;
 mod web;
 

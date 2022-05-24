@@ -7,9 +7,12 @@
 
 //! Configurable API loading.
 
-use crate::{routes::check_api, web::WebState};
 use std::fs::read_to_string;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::str::FromStr;
+use strum::IntoEnumIterator;
+use strum_macros::{AsRefStr, EnumIter, EnumString};
+use tide::http::Method;
 
 /// Loads the message catalog or panics
 pub fn load_messages(path: &Path) -> toml::Value {
@@ -22,14 +25,113 @@ pub fn load_messages(path: &Path) -> toml::Value {
     api
 }
 
+/// Index entries for documentation fragments
+#[allow(non_camel_case_types)]
+#[derive(AsRefStr, Copy, Clone, Debug, EnumIter, EnumString, strum_macros::Display)]
+pub enum ApiRouteKey {
+    buildsponsor,
+    buildwrap,
+    closewallet,
+    exportasset,
+    freeze,
+    getaddress,
+    getaccount,
+    getaccounts,
+    getbalance,
+    getinfo,
+    getmnemonic,
+    importasset,
+    healthcheck,
+    importkey,
+    listkeystores,
+    mint,
+    newasset,
+    newkey,
+    newwallet,
+    openwallet,
+    recordopening,
+    recoverkey,
+    resetpassword,
+    send,
+    submitsponsor,
+    submitwrap,
+    transaction,
+    transactionhistory,
+    unfreeze,
+    unwrap,
+    updateasset,
+    view,
+    getrecords,
+    lastusedkeystore,
+    getprivatekey,
+}
+
+/// Check consistency of `api.toml`
+///
+/// * Verify that every variant of [ApiRouteKey] is defined
+/// * Check that every URL parameter has a valid type
+pub fn check_api(api: toml::Value) -> Result<(), String> {
+    for key in ApiRouteKey::iter() {
+        let route = api["route"]
+            .get(key.as_ref())
+            .ok_or_else(|| format!("Missing API definition for [route.{}]", key))?;
+        if let Some(method) = route.get("METHOD") {
+            // If specified, METHOD must be an HTTP method.
+            let method = method
+                .as_str()
+                .ok_or_else(|| format!("Malformed METHOD for [route.{}] (expected string)", key))?;
+            Method::from_str(method).map_err(|_| {
+                format!(
+                    "METHOD {} for [route.{}] is not an HTTP method",
+                    method, key
+                )
+            })?;
+        }
+        let paths = route["PATH"]
+            .as_array()
+            .ok_or_else(|| format!("Malformed PATH for [route.{}] (expected array)", key))?;
+        for path in paths {
+            let path = path.as_str().ok_or_else(|| {
+                format!("Malformed pattern for [route.{}] (expected string)", key)
+            })?;
+            if path.ends_with('/') {
+                return Err(format!(
+                    "Malformed pattern for [route.{}] (trailing slash)",
+                    key
+                ));
+            }
+
+            for segment in path.split('/') {
+                if segment.starts_with(':') {
+                    let ty = route
+                        .get(segment)
+                        .ok_or_else(|| {
+                            format!("Missing parameter type for {} in [route.{}]", segment, key)
+                        })?
+                        .as_str()
+                        .ok_or_else(|| {
+                            format!(
+                                "Malformed parameter type for {} in [route.{}] (expected string)",
+                                segment, key
+                            )
+                        })?;
+                    UrlSegmentType::from_str(ty).map_err(|err| {
+                        format!("Invalid type for {} in [route.{}] ({})", segment, key, err)
+                    })?;
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
 /// Compose `api.toml` into HTML.
 ///
 /// This function iterates over the routes, adding headers and HTML class attributes to make
 /// a documentation page for the web API.
 ///
 /// The results of this could be precomputed and cached.
-pub async fn compose_help(req: tide::Request<WebState>) -> Result<tide::Response, tide::Error> {
-    let api = &req.state().api;
+pub fn compose_help(api: &toml::Value) -> String {
     let meta = &api["meta"];
     let mut help = meta["HTML_TOP"]
         .as_str()
@@ -103,8 +205,42 @@ pub async fn compose_help(req: tide::Request<WebState>) -> Result<tide::Response
             .as_str()
             .expect("HTML_BOTTOM must be a string in api.toml")
     );
-    Ok(tide::Response::builder(200)
-        .content_type(tide::http::mime::HTML)
-        .body(help)
-        .build())
+    help
+}
+
+/// Returns the default path to the API file.
+pub fn default_api_path() -> PathBuf {
+    const API_FILE: &str = "api/api.toml";
+    let dir = project_path();
+    [&dir, Path::new(API_FILE)].iter().collect()
+}
+
+/// Returns the default path to the web directory.
+pub fn default_web_path() -> PathBuf {
+    const ASSET_DIR: &str = "public";
+    let dir = project_path();
+    [&dir, Path::new(ASSET_DIR)].iter().collect()
+}
+
+/// Returns the project directory.
+pub fn project_path() -> PathBuf {
+    let dir = std::env::var("WALLET").unwrap_or_else(|_| {
+        println!(
+            "WALLET directory is not set. Using the default paths, ./public and ./api for asset \
+            and API paths, respectively. To use different paths, set the WALLET environment \
+            variable, or specify :assets and :api arguments."
+        );
+        String::from(".")
+    });
+    PathBuf::from(dir)
+}
+
+#[derive(Clone, Copy, Debug, EnumString)]
+pub enum UrlSegmentType {
+    Boolean,
+    Hexadecimal,
+    Integer,
+    TaggedBase64,
+    Base64,
+    Literal,
 }

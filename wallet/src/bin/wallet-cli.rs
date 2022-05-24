@@ -72,14 +72,18 @@ impl<'a> CLI<'a> for CapeCli {
         args: Self::Args,
         loader: &mut impl WalletLoader<CapeLedger, Meta = LoaderMetadata>,
     ) -> Result<Self::Backend, WalletError<CapeLedger>> {
+        let cape_contract = match (args.rpc_url, args.contract_address) {
+            (Some(url), Some(address)) => Some((url, address)),
+            (None, None) => None,
+            _ => panic!("--rpc-url and --contract-address must be given together or not at all"),
+        };
         block_on(CapeBackend::new(
             univ_param,
             CapeBackendConfig {
-                rpc_url: args.rpc_url,
+                cape_contract,
                 eqs_url: args.eqs_url,
                 relayer_url: args.relayer_url,
                 address_book_url: args.address_book_url,
-                contract_address: args.contract_address,
                 eth_mnemonic: args.eth_mnemonic,
                 min_polling_delay: Duration::from_millis(args.min_polling_delay_ms),
             },
@@ -349,15 +353,11 @@ pub struct CapeArgs {
 
     /// Address of the CAPE smart contract.
     #[structopt(long, env = "CAPE_CONTRACT_ADDRESS")]
-    pub contract_address: Address,
+    pub contract_address: Option<Address>,
 
     /// URL for Ethers HTTP Provider
-    #[structopt(
-        long,
-        env = "CAPE_WEB3_PROVIDER_URL",
-        default_value = "http://localhost:8545"
-    )]
-    pub rpc_url: Url,
+    #[structopt(long, env = "CAPE_WEB3_PROVIDER_URL")]
+    pub rpc_url: Option<Url>,
 
     /// Mnemonic for a local Ethereum wallet for direct contract calls.
     #[structopt(long, env = "ETH_MNEMONIC")]
@@ -801,12 +801,7 @@ mod tests {
         writeln!(receiver_input, "create_asset my_asset").unwrap();
         wait_for_prompt(&mut receiver_output);
         let mint_amount = 20;
-        writeln!(
-            receiver_input,
-            "mint 1 {} {} {} 1",
-            receiver_addr, receiver_addr, mint_amount
-        )
-        .unwrap();
+        writeln!(receiver_input, "mint 1 {} {} 1", receiver_addr, mint_amount).unwrap();
         let txn = match_output(&mut receiver_output, &["(?P<txn>TXN~.*)"]).get("txn");
         await_transaction(
             &txn,

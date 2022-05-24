@@ -156,11 +156,10 @@ mod backend {
         CapeBackend::new(
             &*UNIVERSAL_PARAM,
             CapeBackendConfig {
-                rpc_url: options.rpc_url(),
+                cape_contract: options.cape_contract(),
                 eqs_url: options.eqs_url(),
                 relayer_url: options.relayer_url(),
                 address_book_url: options.address_book_url(),
-                contract_address: options.contract_address(),
                 eth_mnemonic: options.eth_mnemonic(),
                 min_polling_delay: options.min_polling_delay(),
             },
@@ -989,12 +988,10 @@ async fn mint(
         .expect("mint must have ':fee' parameter")
         .value
         .as_u64()?;
-    let minter = bindings
-        .get(":minter")
-        .expect("mint must have ':minter' parameter")
-        .value
-        .to::<UserAddress>()?
-        .0;
+    let minter = match bindings.get(":minter") {
+        Some(param) => Some(param.value.to::<UserAddress>()?.0),
+        None => None,
+    };
     let recipient = bindings
         .get(":recipient")
         .expect("mint must have ':recipient' parameter")
@@ -1002,7 +999,9 @@ async fn mint(
         .to::<UserAddress>()?
         .0;
 
-    Ok(wallet.mint(&minter, fee, &asset, amount, recipient).await?)
+    Ok(wallet
+        .mint(minter.as_ref(), fee, &asset, amount, recipient)
+        .await?)
 }
 
 async fn unwrap(

@@ -484,19 +484,27 @@ may have been created and exported in a different keystore or wallet.
 
 [route.mint]
 METHOD = "POST"
-PATH = ["mint/asset/:asset/amount/:amount/fee/:fee/minter/:minter/recipient/:recipient"]
+PATH = [
+  "mint/asset/:asset/amount/:amount/fee/:fee/minter/:minter/recipient/:recipient",
+  "mint/asset/:asset/amount/:amount/fee/:fee/recipient/:recipient",
+]
 ":asset" = "TaggedBase64"
 ":amount" = "Integer"
 ":fee" = "Integer"
 ":minter" = "TaggedBase64"
 ":recipient" = "TaggedBase64"
 DOC = """
-Mint amount units of a given asset code controlled by the current wallet to the recipient. Returns a serialized receipt which can be used to track the transaction through the validation process.
+Mint amount units of a given asset code controlled by the current wallet to the recipient.
+
+Returns a serialized receipt which can be used to track the transaction through the validation process.
 """
 
 [route.freeze]
 METHOD = "POST"
-PATH = ["freeze/:address/:asset/fee/:fee_address/:fee_amount"]
+PATH = [
+  "freeze/:address/:asset/fee/:fee_address/:fee_amount",
+  "freeze/:address/:asset/fee/:fee_amount",
+]
 ":address" = "TaggedBase64"
 ":asset" = "TaggedBase64"
 ":fee_address" = "TaggedBase64"
@@ -507,7 +515,10 @@ Freeze the asset associated with the given address and asset type. Assumes the a
 
 [route.unfreeze]
 METHOD = "POST"
-PATH = ["unfreeze/:address/:asset/fee/:fee_address/:fee_amount"]
+PATH = [
+  "unfreeze/:address/:asset/fee/:fee_address/:fee_amount",
+  "unfreeze/:address/:asset/fee/:fee_amount",
+]
 ":address" = "TaggedBase64"
 ":asset" = "TaggedBase64"
 ":fee_address" = "TaggedBase64"

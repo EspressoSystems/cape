@@ -17,7 +17,7 @@ participant "Ethereum Wallet Eve" as ETH_WX
 
 group Mint
     note left W_A: Alice mints some asset records, and she is the recipient
-    W_A -> W_A: (mint_tx,[alice_memo]) := **build_mint_tx**(alice_address,fee, \n asset_code,50000, alice_address)
+    W_A -> W_A: (mint_tx,[alice_memo]) := **build_mint_tx**(alice_address,fee, \n asset_definition4,50000, alice_address)
     W_A -> R: (mint_tx,[alice_memo])
     R -> R: b:= **create_new_block**(mint_tx,[alice_memo])
     R -> C: b
@@ -56,14 +56,8 @@ group Transfer
     W_B -> W_B: [bob_memo] := **fetch_memos_from**(b)
     W_B -> W_B: **update_local_state_from**(bob_memo)
 
-    note left W_A: Alice's wallet decrypts and stores the new asset record for further spending
-    W_A -> W_A: **update_local_state_from**(alice_memo)
-
-    note left W_B: Bob's wallet decrypts and stores the new asset record for further spending
-    W_B -> W_B: **update_local_state_from**(bob_memo)
-
     note left A: The Auditor processes the audit memos. \n Due to the viewing policy the auditor obtains both asset records from Alice and Bob
-    A -> A: **get_and_store_asset_records_from_block**(b)
+    A -> A: **get_and_store_info_from_txs**(b)
 
 end group
 
@@ -99,9 +93,9 @@ group Conversion between ERC20 and CAP assets
 
     group Wrap
         W_B -> C: **depositErc20**(record_opening,USDC)
-        C -> EQS: new_erc_deposit(record_opening, USDC, bob_eth_address)
-        EQS -> W_A: new_erc_deposit(record_opening, USDC, bob_eth_address)
-        EQS -> W_B: new_erc_deposit(record_opening, USDC, bob_eth_address)
+        C -> EQS: new_erc_deposit_event(record_opening, USDC, bob_eth_address)
+        EQS -> W_A: new_erc_deposit_event(record_opening, USDC, bob_eth_address)
+        EQS -> W_B: new_erc_deposit_event(record_opening, USDC, bob_eth_address)
         W_A -> R: transfer_tx:= **build_transfer_tx**(...)
         R -> R: b:=**new_block**(transfer_tx,[])
         R -> C: b
@@ -110,13 +104,13 @@ group Conversion between ERC20 and CAP assets
         EQS -> W_B: new_block_event(b,[record_opening])
         EQS -> A: new_block_event(b,[record_opening])
         EQS -> F: new_block_event(b,[record_opening])
-        W_A -> W_A: **update_local_state_from_erc_20_deposit**(record_opening)
+        W_B -> W_B: **update_local_state_from_erc_20_deposit**(record_opening)
 
     end group
 
     group Unwrap
         W_A -> R: burn_tx:= **build_burn_tx**(record_opening,eve_eth_address,...)
-        R -> R: b:= **new_block_from**(burn_tx)
+        R -> R: b:= **new_block_from**(burn_tx,[])
         R -> C: b
         C -> ETH_WX: (USDC,10)
     end group

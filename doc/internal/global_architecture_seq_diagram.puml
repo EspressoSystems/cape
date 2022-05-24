@@ -2,8 +2,6 @@
 autonumber
 
 skinparam roundcorner 20
-skinparam backgroundColor Snow
-
 
 participant "Cape Contract" as C
 participant "Ethereum Query Service" as EQS

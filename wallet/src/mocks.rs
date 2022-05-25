@@ -492,7 +492,12 @@ impl<'a> MockNetwork<'a, CapeLedger> for MockCapeNetwork {
         txn.memos = Some((memos.clone(), sig));
         let event = LedgerEvent::Memos {
             outputs: memos,
-            transaction: Some((block_id as u64, txn_id as u64, txn.txn.kind())),
+            transaction: Some((
+                block_id as u64,
+                txn_id as u64,
+                txn.txn.hash(),
+                txn.txn.kind(),
+            )),
         };
         self.generate_event(event);
 

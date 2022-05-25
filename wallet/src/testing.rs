@@ -176,9 +176,16 @@ pub fn rpc_url_for_test() -> Url {
     }
 }
 
-pub async fn spawn_eqs(cape_address: Address) -> (Url, TempDir, JoinHandle<std::io::Result<()>>) {
+/// `eqs_port` - If not provided, will use `port()` to find a port starting from `60000`.
+pub async fn spawn_eqs(
+    cape_address: Address,
+    eqs_port: Option<u16>,
+) -> (Url, TempDir, JoinHandle<std::io::Result<()>>) {
     let dir = TempDir::new("wallet_testing_eqs").unwrap();
-    let eqs_port = port().await;
+    let eqs_port = match eqs_port {
+        Some(port) => port,
+        None => port().await,
+    };
     let opt = EQSOptions {
         web_path: String::new(),
         api_path: [
@@ -195,7 +202,7 @@ pub async fn spawn_eqs(cape_address: Address) -> (Url, TempDir, JoinHandle<std::
         reset_store_state: true,
         query_interval: 500,
         ethers_block_max: 5000,
-        eqs_port: eqs_port as u16,
+        eqs_port,
         cape_address: Some(cape_address),
         rpc_url: rpc_url_for_test().to_string(),
         temp_test_run: false,

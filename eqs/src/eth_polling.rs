@@ -202,6 +202,7 @@ impl EthPolling {
                     continue;
                 }
             }
+            println!("event: {:?}", filter);
             match filter {
                 CAPEEvents::BlockCommittedFilter(_) => {
                     let fetched_block_with_memos =

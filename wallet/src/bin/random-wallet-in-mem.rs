@@ -130,7 +130,7 @@ async fn create_backend_and_sender_wallet<'a>(
     storage: &Path,
 ) -> (NetworkInfo, CapeWallet<'a, CapeBackend<'a, ()>>) {
     let network_tuple = create_test_network(rng, universal_param, None).await;
-    let (eqs_url, eqs_dir, _join_eqs) = spawn_eqs(network_tuple.3).await;
+    let (eqs_url, eqs_dir, _join_eqs) = spawn_eqs(network_tuple.3, None).await;
     let network = NetworkInfo {
         sender_key: Some(network_tuple.0),
         eqs_url,

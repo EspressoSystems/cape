@@ -289,7 +289,7 @@ mod test {
             .derive_user_key_pair(&0u64.to_le_bytes());
         let (_, relayer_url, address_book_url, contract_address, _) =
             create_test_network(&mut rng, universal_param, Some(faucet_key_pair.clone())).await;
-        let (eqs_url, _eqs_dir, _join_eqs) = spawn_eqs(contract_address).await;
+        let (eqs_url, _eqs_dir, _join_eqs) = spawn_eqs(contract_address, None).await;
 
         // Initiate a faucet server with the mnemonic associated with the faucet key pair.
         let faucet_dir = TempDir::new("cape_wallet_faucet").unwrap();

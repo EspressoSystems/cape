@@ -69,13 +69,14 @@ mod tests {
     };
     use ark_serialize::CanonicalDeserialize;
     use async_std::fs;
-    use cap_rust_sandbox::{ledger::CapeLedger, model::EthereumAddr};
+    use cap_rust_sandbox::{
+        ledger::CapeLedger, model::EthereumAddr, universal_param::UNIVERSAL_PARAM,
+    };
     use cape_wallet::{
         mocks::test_asset_signing_key,
-        testing::{port, retry},
+        testing::{create_test_network, port, retry, spawn_eqs},
         ui::*,
     };
-    use eqs::configuration::EQSOptions;
     use ethers::prelude::{Address, U256};
     use jf_cap::{
         keys::{AuditorKeyPair, AuditorPubKey, FreezerKeyPair, FreezerPubKey, UserKeyPair},
@@ -1024,9 +1025,11 @@ mod tests {
         let view_address = false;
 
         // Start the EQS.
-        eqs::run_eqs(&EQSOptions::from_args())
-            .await
-            .expect("Failed to start the EQS");
+        let mut rng = ChaChaRng::from_seed([1u8; 32]);
+        let universal_param = &*UNIVERSAL_PARAM;
+        let (_, _, _, contract_address, _) =
+            create_test_network(&mut rng, universal_param, None).await;
+        let _ = spawn_eqs(contract_address, Some(50087)).await;
 
         // Should fail if a wallet is not already open.
         server
@@ -1119,7 +1122,11 @@ mod tests {
 
         // The sponsored asset should be reflected in the EQS.
         server
-            .post::<(sol::AssetDefinition, String)>("waitforsponsor/timeout/30")
+            .client
+            .post("waitforsponsor/timeout/300")
+            .body_json(&asset)
+            .unwrap()
+            .send()
             .await
             .unwrap();
 
@@ -1198,6 +1205,13 @@ mod tests {
         // Set parameters for sponsor and wrap.
         let erc20_code = Address::from([1u8; 20]);
         let sponsor_addr = Address::from([2u8; 20]);
+
+        // Start the EQS.
+        let mut rng = ChaChaRng::from_seed([1u8; 32]);
+        let universal_param = &*UNIVERSAL_PARAM;
+        let (_, _, _, contract_address, _) =
+            create_test_network(&mut rng, universal_param, None).await;
+        let _ = spawn_eqs(contract_address, Some(50087)).await;
 
         // Open a wallet.
         let server = TestServer::new().await;
@@ -2691,6 +2705,13 @@ mod tests {
         // Set parameters for sponsor and wrap.
         let erc20_code = Address::from([1u8; 20]);
         let sponsor_addr = Address::from([2u8; 20]);
+
+        // Start the EQS.
+        let mut rng = ChaChaRng::from_seed([1u8; 32]);
+        let universal_param = &*UNIVERSAL_PARAM;
+        let (_, _, _, contract_address, _) =
+            create_test_network(&mut rng, universal_param, None).await;
+        let _ = spawn_eqs(contract_address, Some(50087)).await;
 
         // Open a wallet.
         let server = TestServer::new().await;

@@ -957,18 +957,16 @@ async fn waitforsponsor(
     let mut backoff = Duration::from_secs(1);
     let now = Instant::now();
     while now.elapsed().as_secs() < timeout {
-        if surf::get(&format!(
-            "{}/get_wrapped_erc20_address/asset/{}",
-            options.eqs_url(),
-            asset_code
-        ))
-        .send()
-        .await?
-        .body_json::<Option<Address>>()
-        .await?
-        .is_some()
-        {
-            break;
+        let client: surf::Client = surf::Config::new()
+            .set_base_url(options.eqs_url())
+            .set_timeout(None)
+            .try_into()?;
+        let mut res = client
+            .get(&format!("get_wrapped_erc20_address/{}", asset_code))
+            .send()
+            .await?;
+        if res.body_json::<Option<Address>>().await?.is_some() {
+            return Ok(());
         }
         sleep(backoff).await;
         backoff *= 2;

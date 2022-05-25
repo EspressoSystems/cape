@@ -673,7 +673,7 @@ mod test {
         let universal_param = &*UNIVERSAL_PARAM;
         let (sender_key, relayer_url, address_book_url, contract_address, _) =
             create_test_network(&mut rng, universal_param, None).await;
-        let (eqs_url, _eqs_dir, _join_eqs) = spawn_eqs(contract_address).await;
+        let (eqs_url, _eqs_dir, _join_eqs) = spawn_eqs(contract_address, None).await;
 
         // Create a sender wallet and add the key pair that owns the faucet record.
         let sender_dir = TempDir::new("cape_wallet_backend_test").unwrap();
@@ -796,7 +796,7 @@ mod test {
         let universal_param = &*UNIVERSAL_PARAM;
         let (wrapper_key, relayer_url, address_book_url, contract_address, _) =
             create_test_network(&mut rng, universal_param, None).await;
-        let (eqs_url, _eqs_dir, _join_eqs) = spawn_eqs(contract_address).await;
+        let (eqs_url, _eqs_dir, _join_eqs) = spawn_eqs(contract_address, None).await;
 
         // Create a wallet to sponsor an asset and a different wallet to deposit (we should be able
         // to deposit from an account other than the sponsor).

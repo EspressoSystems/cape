@@ -452,7 +452,7 @@ must be the same that were used to build the asset definition.
 METHOD = "POST"
 PATH = [
   "waitforsponsor",
-  "waitforsponsor/:timeout"
+  "waitforsponsor/timeout/:timeout"
 ]
 ":timeout" = "Integer"
 DOC = """

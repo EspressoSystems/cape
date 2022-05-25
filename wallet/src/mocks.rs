@@ -8,7 +8,10 @@
 //! Test-only implementation of the [reef] ledger abstraction for CAPE.
 
 use crate::wallet::{CapeWalletBackend, CapeWalletError};
-use async_std::sync::{Mutex, MutexGuard};
+use async_std::{
+    sync::{Mutex, MutexGuard},
+    task::sleep,
+};
 use async_trait::async_trait;
 use cap_rust_sandbox::{
     deploy::EthMiddleware, ledger::*, model::*, universal_param::UNIVERSAL_PARAM,
@@ -38,10 +41,12 @@ use seahorse::{
     WalletBackend, WalletError, WalletState,
 };
 use serde::{de::DeserializeOwned, Serialize};
+use std::cmp::min;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::pin::Pin;
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 use tempdir::TempDir;
 use testing::{MockEventSource, MockLedger, MockNetwork, SystemUnderTest};
 
@@ -672,6 +677,27 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
         asset: &AssetDefinition,
     ) -> Result<Option<Erc20Code>, WalletError<CapeLedger>> {
         self.ledger.lock().await.network().get_wrapped_asset(asset)
+    }
+
+    async fn wait_for_wrapped_erc20_code(
+        &mut self,
+        asset: &AssetDefinition,
+        timeout: Option<u64>,
+    ) -> Result<(), CapeWalletError> {
+        let mut backoff = Duration::from_secs(1);
+        let now = Instant::now();
+        while self.get_wrapped_erc20_code(asset).await?.is_none() {
+            if let Some(time) = timeout {
+                if now.elapsed().as_secs() >= time {
+                    return Err(CapeWalletError::Failed {
+                        msg: format!("asset not reflected in the EQS in {} seconds", time),
+                    });
+                }
+            }
+            sleep(backoff).await;
+            backoff = min(backoff * 2, Duration::from_secs(60));
+        }
+        Ok(())
     }
 
     async fn wrap_erc20(

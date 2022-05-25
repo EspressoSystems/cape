@@ -56,7 +56,7 @@ use serde::{de::DeserializeOwned, Serialize};
 use std::cmp::min;
 use std::convert::{TryFrom, TryInto};
 use std::pin::Pin;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use surf::{StatusCode, Url};
 
 pub struct CapeBackendConfig {
@@ -519,11 +519,7 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
             .map(|_| ())?;
 
         // Don't report success until the EQS reflects the results of the sponsor.
-        let mut backoff = self.min_polling_delay;
-        while self.get_wrapped_erc20_code(asset).await?.is_none() {
-            sleep(backoff).await;
-            backoff = min(backoff * 2, Duration::from_secs(60));
-        }
+        self.wait_for_wrapped_erc20_code(&asset, None).await?;
 
         Ok(())
     }
@@ -536,6 +532,33 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
             .get_eqs(format!("get_wrapped_erc20_address/{}", asset.code))
             .await?;
         Ok(address.map(Erc20Code::from))
+    }
+
+    async fn wait_for_wrapped_erc20_code(
+        &mut self,
+        asset: &AssetDefinition,
+        timeout: Option<u64>,
+    ) -> Result<(), CapeWalletError> {
+        let mut backoff = self.min_polling_delay;
+        let now = Instant::now();
+        loop {
+            let address: Option<Address> = self
+                .get_eqs(format!("get_wrapped_erc20_address/{}", asset.code))
+                .await?;
+            if address.is_some() {
+                break;
+            }
+            if let Some(time) = timeout {
+                if now.elapsed().as_secs() >= time {
+                    return Err(CapeWalletError::Failed {
+                        msg: format!("asset not reflected in the EQS in {} seconds", time),
+                    });
+                }
+            }
+            sleep(backoff).await;
+            backoff = min(backoff * 2, Duration::from_secs(60));
+        }
+        Ok(())
     }
 
     async fn wrap_erc20(

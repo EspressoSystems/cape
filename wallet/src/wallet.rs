@@ -45,6 +45,14 @@ pub trait CapeWalletBackend<'a>: WalletBackend<'a, CapeLedger> {
         asset: &AssetDefinition,
     ) -> Result<Option<Erc20Code>, CapeWalletError>;
 
+    /// Wait until the EQS reflects the associated ERC20 code of the CAPE asset, or the `timeout`
+    /// (in seconds) is reached.
+    async fn wait_for_wrapped_erc20_code(
+        &mut self,
+        asset: &AssetDefinition,
+        timeout: Option<u64>,
+    ) -> Result<(), CapeWalletError>;
+
     /// Wrap some amount of an ERC20 token in a CAPE asset.
     ///
     /// The amount to wrap is determined by the `amount` field of `ro`. The CAPE asset type
@@ -113,6 +121,14 @@ pub trait CapeWalletExt<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> {
         erc20_code: Erc20Code,
         sponsor_addr: EthereumAddr,
         asset: &AssetDefinition,
+    ) -> Result<(), CapeWalletError>;
+
+    /// Wait until the sponsored asset is reflected in the EQS or the `timeout` (in seconds) is
+    /// reached.
+    async fn wait_for_sponsor(
+        &mut self,
+        asset: &AssetDefinition,
+        timeout: Option<u64>,
     ) -> Result<(), CapeWalletError>;
 
     /// Wrap some ERC-20 tokens into a CAPE asset.
@@ -270,6 +286,18 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
             .register_erc20_asset(asset, erc20_code, sponsor_addr)
             .await?;
         Ok(())
+    }
+
+    async fn wait_for_sponsor(
+        &mut self,
+        asset: &AssetDefinition,
+        timeout: Option<u64>,
+    ) -> Result<(), CapeWalletError> {
+        self.lock()
+            .await
+            .backend_mut()
+            .wait_for_wrapped_erc20_code(asset, timeout)
+            .await
     }
 
     async fn build_wrap(

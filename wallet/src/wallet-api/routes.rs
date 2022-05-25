@@ -9,7 +9,6 @@
 
 use crate::web::{NodeOpt, WebState};
 use async_std::fs::{read_dir, File};
-use async_std::task::sleep;
 use cap_rust_sandbox::ledger::CapeLedger;
 use cape_wallet::{
     ui::*,
@@ -45,7 +44,6 @@ use std::io::Cursor;
 use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
-use std::time::{Duration, Instant};
 use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, EnumIter, EnumString};
 use tagged_base64::TaggedBase64;
@@ -945,36 +943,20 @@ async fn submitsponsor(
 
 async fn waitforsponsor(
     req: &mut Request<WebState>,
-    options: &NodeOpt,
     bindings: &HashMap<String, RouteBinding>,
+    wallet: &mut Option<Wallet>,
 ) -> Result<(), tide::Error> {
-    let asset_code =
-        JfAssetDefinition::from(request_body::<sol::AssetDefinition, _>(req).await?).code;
+    let wallet = require_wallet(wallet)?;
+
+    let asset = JfAssetDefinition::from(request_body::<sol::AssetDefinition, _>(req).await?);
     let timeout = match bindings.get(":timeout") {
         Some(time) => time.value.as_u64()?,
         None => 60,
     };
-    let mut backoff = Duration::from_secs(1);
-    let now = Instant::now();
-    while now.elapsed().as_secs() < timeout {
-        let client: surf::Client = surf::Config::new()
-            .set_base_url(options.eqs_url())
-            .set_timeout(None)
-            .try_into()?;
-        let mut res = client
-            .get(&format!("get_wrapped_erc20_address/{}", asset_code))
-            .send()
-            .await?;
-        if res.body_json::<Option<Address>>().await?.is_some() {
-            return Ok(());
-        }
-        sleep(backoff).await;
-        backoff *= 2;
-    }
-    panic!(
-        "Sponsored asset not reflected in the EQS in {} seconds",
-        timeout
-    )
+    wallet
+        .wait_for_sponsor(&asset, Some(timeout))
+        .await
+        .map_err(wallet_error)
 }
 
 async fn buildwrap(
@@ -1521,7 +1503,7 @@ pub async fn dispatch_url(
         }
         ApiRouteKey::view => dummy_url_eval(route_pattern, bindings),
         ApiRouteKey::waitforsponsor => {
-            let res = waitforsponsor(&mut req, options, bindings).await?;
+            let res = waitforsponsor(&mut req, bindings, wallet).await?;
             response(&req, res)
         }
     }

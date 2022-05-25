@@ -225,7 +225,7 @@ async fn submit_block(web_state: &WebState, block: BlockWithMemos) -> Result<H25
     // the hash using a particular provider.
     event!(
         Level::INFO,
-        "Submitted Ethereum transaction hash ETH H256: {:x}",
+        "Submitted Ethereum transaction hash ETH H256: {:#x}",
         *pending
     );
     Ok(*pending)
@@ -449,14 +449,20 @@ mod test {
         }];
         let outputs = vec![RecordOpening::new(
             rng,
-            1,
+            1u64.into(),
             AssetDefinition::native(),
             receiver,
             FreezeFlag::Unfrozen,
         )];
-        let (note, sign_key, fee_output) =
-            TransferNote::generate_native(rng, inputs, &outputs, 1, valid_until, &xfr_prove_key)
-                .unwrap();
+        let (note, sign_key, fee_output) = TransferNote::generate_native(
+            rng,
+            inputs,
+            &outputs,
+            1u64.into(),
+            valid_until,
+            &xfr_prove_key,
+        )
+        .unwrap();
         let txn = CapeModelTxn::CAP(TransactionNote::Transfer(Box::new(note)));
         let memos = once(fee_output)
             .chain(outputs)

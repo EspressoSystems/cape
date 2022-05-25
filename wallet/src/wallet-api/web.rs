@@ -11,14 +11,13 @@
 //! configuration options, request parsing, and the main web server entrypoint. The implementation
 //! of the actual routes is defined in [crate::routes].
 
-use crate::routes::{
-    dispatch_url, CapeAPIError, RouteBinding, UrlSegmentType, UrlSegmentValue, Wallet,
-};
+use crate::routes::{dispatch_url, CapeAPIError, RouteBinding, UrlSegmentValue, Wallet};
 use async_std::{
     sync::{Arc, Mutex},
     task::{spawn, JoinHandle},
 };
 use cap_rust_sandbox::model::EthereumAddr;
+use cape_wallet::disco::{self, default_api_path, default_web_path, UrlSegmentType};
 use ethers::prelude::{Address, H160};
 use jf_cap::{keys::UserKeyPair, structs::AssetCode};
 use net::server;
@@ -36,9 +35,10 @@ use tide::{
 };
 
 pub const DEFAULT_ETH_ADDR: Address = H160([2; 20]);
-pub const DEFAULT_WRAPPED_AMT: u64 = 1000;
-pub const DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR: u64 = 500;
-pub const DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR: u64 = 400;
+// TODO change these to Amount type
+pub const DEFAULT_WRAPPED_AMT: u128 = 1000;
+pub const DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR: u128 = 500;
+pub const DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR: u128 = 400;
 
 /// Server configuration with command line parsing support.
 #[derive(Clone, Debug, StructOpt)]
@@ -214,33 +214,6 @@ impl NodeOpt {
     pub fn min_polling_delay(&self) -> Duration {
         Duration::from_millis(self.min_polling_delay_ms)
     }
-}
-
-/// Returns the project directory.
-fn project_path() -> PathBuf {
-    let dir = std::env::var("WALLET").unwrap_or_else(|_| {
-        println!(
-            "WALLET directory is not set. Using the default paths, ./public and ./api for asset \
-            and API paths, respectively. To use different paths, set the WALLET environment \
-            variable, or specify :assets and :api arguments."
-        );
-        String::from(".")
-    });
-    PathBuf::from(dir)
-}
-
-/// Returns the default path to the web directory.
-fn default_web_path() -> PathBuf {
-    const ASSET_DIR: &str = "public";
-    let dir = project_path();
-    [&dir, Path::new(ASSET_DIR)].iter().collect()
-}
-
-/// Returns the default path to the API file.
-fn default_api_path() -> PathBuf {
-    const API_FILE: &str = "api/api.toml";
-    let dir = project_path();
-    [&dir, Path::new(API_FILE)].iter().collect()
 }
 
 /// Returns the default path to store generated files.
@@ -478,7 +451,7 @@ async fn populatefortest(req: tide::Request<WebState>) -> Result<tide::Response,
             sponsor_addr,
             asset_def.clone(),
             wrapped_asset_addr.clone(),
-            DEFAULT_WRAPPED_AMT,
+            DEFAULT_WRAPPED_AMT.into(),
         )
         .await
         .map_err(wallet_error)?;
@@ -534,7 +507,7 @@ pub fn init_server(
     // Make sure relevant sub-directories of `storage` exist.
     create_dir_all(options.keystores_dir())?;
 
-    let api = crate::disco::load_messages(&options.api_path());
+    let api = disco::load_messages(&options.api_path());
     let faucet_key_pair = UserKeyPair::generate(&mut rng);
     let mut web_server = tide::with_state(WebState {
         api: api.clone(),
@@ -556,7 +529,14 @@ pub fn init_server(
 
     // Define the routes handled by the web server.
     web_server.at("/public").serve_dir(options.web_path())?;
-    web_server.at("/").get(crate::disco::compose_help);
+    web_server
+        .at("/")
+        .get(|req: tide::Request<WebState>| async move {
+            Ok(tide::Response::builder(200)
+                .content_type(tide::http::mime::HTML)
+                .body(disco::compose_help(&req.state().api))
+                .build())
+        });
 
     // Add routes from a configuration file.
     if let Some(api_map) = api["route"].as_table() {

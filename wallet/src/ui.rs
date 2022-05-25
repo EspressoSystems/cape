@@ -13,6 +13,7 @@ use cap_rust_sandbox::model::Erc20Code;
 use espresso_macros::ser_test;
 use ethers::prelude::{Address, U256};
 use futures::stream::{iter, StreamExt};
+use jf_cap::structs::Amount;
 use jf_cap::{
     keys::{AuditorKeyPair, AuditorPubKey, FreezerKeyPair, FreezerPubKey, UserKeyPair, UserPubKey},
     structs::{AssetCode, AssetDefinition as JfAssetDefinition, AssetPolicy as JfAssetPolicy},
@@ -47,7 +48,7 @@ pub struct AssetDefinition {
     pub address_viewable: bool,
     pub amount_viewable: bool,
     pub blind_viewable: bool,
-    pub viewing_threshold: u64,
+    pub viewing_threshold: u128,
 }
 
 impl AssetDefinition {
@@ -84,7 +85,7 @@ impl From<JfAssetDefinition> for AssetDefinition {
             address_viewable: policy.is_user_address_revealed(),
             amount_viewable: policy.is_amount_revealed(),
             blind_viewable: policy.is_blinding_factor_revealed(),
-            viewing_threshold: policy.reveal_threshold(),
+            viewing_threshold: policy.reveal_threshold().into(),
         }
     }
 }
@@ -117,7 +118,7 @@ impl From<AssetDefinition> for JfAssetDefinition {
                     .reveal_blinding_factor()
                     .expect("Failed to set reveal amount on asset policy");
             }
-            policy = policy.set_reveal_threshold(definition.viewing_threshold);
+            policy = policy.set_reveal_threshold(definition.viewing_threshold.into());
         }
         JfAssetDefinition::new(code, policy).expect("Failed to create Asset Definition")
     }
@@ -418,7 +419,7 @@ pub struct WalletSummary {
 pub struct Record {
     pub address: UserAddress,
     pub asset: AssetCode,
-    pub amount: u64,
+    pub amount: Amount,
     pub uid: u64,
 }
 
@@ -537,7 +538,7 @@ pub struct TransactionHistoryEntry {
     /// senders are and this field may be empty.
     pub senders: Vec<UserAddress>,
     /// Receivers and corresponding amounts.
-    pub receivers: Vec<(UserAddress, u64)>,
+    pub receivers: Vec<(UserAddress, Amount)>,
     pub status: String,
 }
 
@@ -573,7 +574,7 @@ impl TransactionHistoryEntry {
             receivers: entry
                 .receivers
                 .into_iter()
-                .map(|(addr, amt)| (addr.into(), amt))
+                .map(|(addr, amt)| (addr.into(), amt.into()))
                 .collect(),
             status: match entry.receipt {
                 Some(receipt) => match wallet.transaction_status(&receipt).await {
@@ -806,7 +807,7 @@ pub mod sol {
         pub cred_pk: EdOnBN254Point,
         pub freezer_pk: EdOnBN254Point,
         pub reveal_map: U256,
-        pub reveal_threshold: u64,
+        pub reveal_threshold: u128,
     }
 
     impl From<types::AssetPolicy> for AssetPolicy {
@@ -848,7 +849,7 @@ pub mod sol {
     #[ser_test(ark(false))]
     #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
     pub struct RecordOpening {
-        pub amount: u64,
+        pub amount: u128,
         pub asset_def: AssetDefinition,
         pub user_addr: EdOnBN254Point,
         pub enc_key: [u8; 32],

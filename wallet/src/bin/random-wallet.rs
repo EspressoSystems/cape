@@ -255,7 +255,7 @@ async fn main() {
             let txn = wallet
                 .mint(
                     Some(&address),
-                    1,
+                    1u64,
                     &my_asset.code,
                     1u64 << 32,
                     address.clone(),
@@ -324,8 +324,8 @@ async fn main() {
 
                 // All transfers are the same, small size. This should prevent fragmentation errors and
                 // allow us to make as many transactions as possible with the assets we have.
-                let amount = 1;
-                let fee = 1;
+                let amount = 1u64;
+                let fee = 1u64;
 
                 event!(
                     Level::INFO,
@@ -407,9 +407,15 @@ async fn main() {
                     .define_asset("my_asset".into(), &[], AssetPolicy::default())
                     .await
                     .expect("failed to define asset");
-                wrap_simple_token(&mut wallet, &address, asset_def, &erc20_contract, 100)
-                    .await
-                    .unwrap();
+                wrap_simple_token(
+                    &mut wallet,
+                    &address,
+                    asset_def,
+                    &erc20_contract,
+                    100u64.into(),
+                )
+                .await
+                .unwrap();
             }
             OperationType::Burn => {
                 let assets = wallet.assets().await;

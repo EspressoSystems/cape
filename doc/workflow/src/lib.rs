@@ -8,6 +8,7 @@
 //! This crate describes the workflow and interfaces of a CAPE contract deployed on Ethereum.
 
 use cap_rust_sandbox::model::{is_erc20_asset_def_valid, Erc20Code, EthereumAddr};
+use cap_rust_sandbox::types::GenericInto;
 use ethers::prelude::*;
 use itertools::Itertools;
 use jf_cap::keys::UserPubKey;
@@ -245,12 +246,16 @@ impl CapeContract {
 
         // 1.1 (optional) more sanity check on user provided CAPE asset record,
         // may help prevent users from crediting into some unspendable record or waste more gas.
-        assert!(ro.amount > 0);
+        assert!(ro.amount > 0u128.into());
         assert_ne!(ro.pub_key, UserPubKey::default()); // this would be EC point equality check
         assert_eq!(ro.freeze_flag, FreezeFlag::Unfrozen); // just a boolean flag
 
         // 2. attempt to `transferFrom` before mutating contract state to mitigate reentrancy attack
-        erc20_contract.transfer_from(depositor, self.address(), U256::from(ro.amount));
+        erc20_contract.transfer_from(
+            depositor,
+            self.address(),
+            ro.amount.generic_into::<u128>().into(),
+        );
 
         // 3. compute record commitment
         // this requires implementing `RecordOpening::derive_record_commitment()` function in Solidity
@@ -320,7 +325,7 @@ impl CapeContract {
 
                 // 2.2. upon successful verification, execute the withdraw for user
                 let mut erc20_contract = Erc20Contract::at(*erc20_addr);
-                erc20_contract.transfer(recipient, U256::from(withdraw_amount));
+                erc20_contract.transfer(recipient, withdraw_amount.generic_into::<u128>().into());
 
                 // 2.3. like other txn, insert input nullifiers and output record commitments
                 for &nf in burn_txn.nullifiers().iter() {
@@ -457,7 +462,7 @@ mod test {
         // 3. user: prepare the CAPE Record Opening, then invoke wrapper's deposit erc20
         let ro = RecordOpening::new(
             &mut rng,
-            deposit_amount.as_u64(),
+            deposit_amount.as_u128().into(),
             asset_def,
             cape_user_keypair.pub_key(),
             FreezeFlag::Unfrozen,
@@ -480,10 +485,10 @@ mod test {
 
         // 1. user: build and send a burn transaction to relayer (off-chain)
         let asset_def = usdc_cape_asset_def();
-        let burn_amount = 1000;
+        let burn_amount = 1000u64;
         let burned_ro = RecordOpening::new(
             &mut rng,
-            burn_amount,
+            burn_amount.into(),
             asset_def,
             cape_user_keypair.pub_key(),
             FreezeFlag::Unfrozen,

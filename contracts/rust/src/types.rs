@@ -279,7 +279,7 @@ impl From<jf_cap::structs::AssetPolicy> for AssetPolicy {
             cred_pk: policy.cred_issuer_pub_key().clone().into(),
             freezer_pk: policy.freezer_pub_key().clone().into(),
             reveal_map: field_to_u256(BaseField::from(policy.reveal_map())),
-            reveal_threshold: policy.reveal_threshold(),
+            reveal_threshold: policy.reveal_threshold().into(),
         }
     }
 }
@@ -292,7 +292,7 @@ impl From<AssetPolicy> for jf_cap::structs::AssetPolicy {
             .set_auditor_pub_key(policy_sol.auditor_pk.into())
             .set_cred_issuer_pub_key(policy_sol.cred_pk.into())
             .set_freezer_pub_key(policy_sol.freezer_pk.into())
-            .set_reveal_threshold(policy_sol.reveal_threshold)
+            .set_reveal_threshold(policy_sol.reveal_threshold.into())
             .set_reveal_map_for_test({
                 let map_sol = policy_sol.reveal_map;
                 if map_sol >= U256::from(2u32.pow(REVEAL_MAP_INTERNAL_LEN as u32)) {
@@ -335,7 +335,7 @@ impl From<AssetDefinition> for jf_cap::structs::AssetDefinition {
 impl From<jf_cap::structs::RecordOpening> for RecordOpening {
     fn from(ro: jf_cap::structs::RecordOpening) -> Self {
         Self {
-            amount: ro.amount,
+            amount: ro.amount.into(),
             asset_def: ro.asset_def.into(),
             user_addr: ro.pub_key.address().into(),
             enc_key: ro.pub_key.enc_key().into(),
@@ -348,7 +348,7 @@ impl From<jf_cap::structs::RecordOpening> for RecordOpening {
 impl From<RecordOpening> for jf_cap::structs::RecordOpening {
     fn from(ro_sol: RecordOpening) -> Self {
         Self {
-            amount: ro_sol.amount,
+            amount: ro_sol.amount.into(),
             asset_def: ro_sol.asset_def.into(),
             pub_key: UserPubKey::new(ro_sol.user_addr.into(), ro_sol.enc_key.into()),
             freeze_flag: if ro_sol.freeze_flag {
@@ -396,7 +396,7 @@ impl From<jf_cap::transfer::AuxInfo> for TransferAuxInfo {
     fn from(aux: jf_cap::transfer::AuxInfo) -> Self {
         Self {
             merkle_root: aux.merkle_root.generic_into::<MerkleRootSol>().0,
-            fee: aux.fee,
+            fee: aux.fee.into(),
             valid_until: aux.valid_until,
             txn_memo_ver_key: aux.txn_memo_ver_key.into(),
             extra_proof_bound_data: aux.extra_proof_bound_data.into(),
@@ -411,7 +411,7 @@ impl From<TransferAuxInfo> for jf_cap::transfer::AuxInfo {
                 .merkle_root
                 .generic_into::<MerkleRootSol>()
                 .generic_into::<NodeValue>(),
-            fee: aux_sol.fee,
+            fee: aux_sol.fee.into(),
             valid_until: aux_sol.valid_until,
             txn_memo_ver_key: aux_sol.txn_memo_ver_key.into(),
             extra_proof_bound_data: aux_sol.extra_proof_bound_data.to_vec(),
@@ -423,7 +423,7 @@ impl From<jf_cap::mint::MintAuxInfo> for MintAuxInfo {
     fn from(aux: jf_cap::mint::MintAuxInfo) -> Self {
         Self {
             merkle_root: aux.merkle_root.generic_into::<MerkleRootSol>().0,
-            fee: aux.fee,
+            fee: aux.fee.into(),
             txn_memo_ver_key: aux.txn_memo_ver_key.into(),
         }
     }
@@ -436,7 +436,7 @@ impl From<MintAuxInfo> for jf_cap::mint::MintAuxInfo {
                 .merkle_root
                 .generic_into::<MerkleRootSol>()
                 .generic_into::<NodeValue>(),
-            fee: aux_sol.fee,
+            fee: aux_sol.fee.into(),
             txn_memo_ver_key: aux_sol.txn_memo_ver_key.into(),
         }
     }
@@ -446,7 +446,7 @@ impl From<jf_cap::freeze::FreezeAuxInfo> for FreezeAuxInfo {
     fn from(aux: jf_cap::freeze::FreezeAuxInfo) -> Self {
         Self {
             merkle_root: aux.merkle_root.generic_into::<MerkleRootSol>().0,
-            fee: aux.fee,
+            fee: aux.fee.into(),
             txn_memo_ver_key: aux.txn_memo_ver_key.into(),
         }
     }
@@ -459,7 +459,7 @@ impl From<FreezeAuxInfo> for jf_cap::freeze::FreezeAuxInfo {
                 .merkle_root
                 .generic_into::<MerkleRootSol>()
                 .generic_into::<NodeValue>(),
-            fee: aux_sol.fee,
+            fee: aux_sol.fee.into(),
             txn_memo_ver_key: aux_sol.txn_memo_ver_key.into(),
         }
     }
@@ -627,7 +627,7 @@ impl From<jf_cap::mint::MintNote> for MintNote {
             input_nullifier: note.input_nullifier.generic_into::<NullifierSol>().0,
             chg_comm: note.chg_comm.generic_into::<RecordCommitmentSol>().0,
             mint_comm: note.mint_comm.generic_into::<RecordCommitmentSol>().0,
-            mint_amount: note.mint_amount,
+            mint_amount: note.mint_amount.into(),
             mint_asset_def: note.mint_asset_def.into(),
             mint_internal_asset_code: note
                 .mint_internal_asset_code
@@ -655,7 +655,7 @@ impl From<MintNote> for jf_cap::mint::MintNote {
                 .mint_comm
                 .generic_into::<RecordCommitmentSol>()
                 .into(),
-            mint_amount: note_sol.mint_amount,
+            mint_amount: note_sol.mint_amount.into(),
             mint_asset_def: note_sol.mint_asset_def.into(),
             mint_internal_asset_code: note_sol
                 .mint_internal_asset_code

@@ -19,7 +19,7 @@ use cap_rust_sandbox::{
     deploy::EthMiddleware,
     ledger::{CapeLedger, CapeNullifierSet, CapeTransition, CapeTruster},
     model::{Erc20Code, EthereumAddr},
-    types::{CAPE, ERC20},
+    types::{GenericInto, CAPE, ERC20},
     universal_param::{SUPPORTED_FREEZE_SIZES, SUPPORTED_TRANSFER_SIZES},
 };
 use eqs::routes::CapState;
@@ -579,7 +579,10 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
         // Before the contract can transfer from our account, in accordance with the ERC20 protocol,
         // we have to approve the transfer.
         ERC20::new(erc20_code.clone(), eth.client())
-            .approve(eth.contract.address(), ro.amount.into())
+            .approve(
+                eth.contract.address(),
+                ro.amount.generic_into::<u128>().into(),
+            )
             .send()
             .await
             .map_err(|err| CapeWalletError::Failed {
@@ -767,9 +770,9 @@ mod test {
         let txn = transfer_token(
             &mut sender,
             receiver_key.address(),
-            2,
+            2u64.into(),
             AssetCode::native(),
-            1,
+            1u64.into(),
         )
         .await
         .unwrap();
@@ -778,8 +781,9 @@ mod test {
             sender
                 .balance_breakdown(&sender_key.address(), &AssetCode::native())
                 .await,
-            total_balance - 3
+            total_balance - U256::from(3u64)
         );
+
         assert_eq!(
             receiver
                 .balance_breakdown(&receiver_key.address(), &AssetCode::native())
@@ -792,9 +796,9 @@ mod test {
         let txn = transfer_token(
             &mut receiver,
             sender_key.address(),
-            1,
+            1u64.into(),
             AssetCode::native(),
-            1,
+            1u64.into(),
         )
         .await
         .unwrap();
@@ -803,7 +807,7 @@ mod test {
             sender
                 .balance_breakdown(&sender_key.address(), &AssetCode::native())
                 .await,
-            total_balance - 2
+            total_balance - U256::from(2u64)
         );
         assert_eq!(
             receiver
@@ -896,7 +900,7 @@ mod test {
         for wallet in [&sponsor, &wrapper] {
             let tx = TransactionRequest::new()
                 .to(Address::from(wallet.eth_address().await.unwrap()))
-                .value(ethers::utils::parse_ether(U256::from(1)).unwrap())
+                .value(ethers::utils::parse_ether(U256::from(1u64)).unwrap())
                 .from(accounts[0]);
             provider
                 .send_transaction(tx, None)
@@ -945,7 +949,7 @@ mod test {
             &wrapper_key.address(),
             cape_asset.clone(),
             &erc20_contract,
-            100,
+            100u64.into(),
         )
         .await
         .unwrap();
@@ -956,8 +960,8 @@ mod test {
             .transfer(
                 Some(&wrapper_key.address()),
                 &AssetCode::native(),
-                &[(sponsor_key.address(), 1)],
-                1,
+                &[(sponsor_key.address(), 1u64)],
+                1u64,
             )
             .await
             .unwrap();
@@ -968,7 +972,7 @@ mod test {
             wrapper
                 .balance_breakdown(&wrapper_key.address(), &AssetCode::native())
                 .await
-                == total_native_balance - 2
+                == total_native_balance - U256::from(2u64)
         })
         .await;
         assert_eq!(
@@ -994,8 +998,8 @@ mod test {
             .transfer(
                 Some(&wrapper_key.address()),
                 &cape_asset.code,
-                &[(sponsor_key.address(), 100)],
-                1,
+                &[(sponsor_key.address(), 100u64)],
+                1u64,
             )
             .await
             .unwrap();
@@ -1019,8 +1023,8 @@ mod test {
                 Some(&sponsor_key.address()),
                 sponsor_eth_addr.clone().into(),
                 &cape_asset.code,
-                100,
-                1,
+                100u64.into(),
+                1u64.into(),
             )
             .await
             .unwrap();
@@ -1037,7 +1041,7 @@ mod test {
                 .call()
                 .await
                 .unwrap(),
-            100.into()
+            100u64.into()
         );
     }
 }

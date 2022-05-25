@@ -24,8 +24,8 @@ use jf_cap::proof::freeze::preprocess as freeze_preprocess;
 use jf_cap::proof::transfer::preprocess as transfer_preprocess;
 use jf_cap::proof::universal_setup_for_staging;
 use jf_cap::structs::{
-    AssetCode, AssetDefinition, AssetPolicy, FeeInput, FreezeFlag, RecordCommitment, RecordOpening,
-    TxnFeeInfo,
+    Amount, AssetCode, AssetDefinition, AssetPolicy, FeeInput, FreezeFlag, RecordCommitment,
+    RecordOpening, TxnFeeInfo,
 };
 use jf_cap::transfer::{TransferNote, TransferNoteInput};
 use jf_cap::{AccMemberWitness, MerkleTree, TransactionNote};
@@ -101,7 +101,7 @@ async fn integration_test_wrapped_assets_can_be_frozen() -> Result<()> {
 
     let wrapped_ro = RecordOpening::new(
         rng,
-        deposited_amount,
+        deposited_amount.into(),
         asset_def.clone(),
         user_key_pair.pub_key(),
         FreezeFlag::Unfrozen,
@@ -141,7 +141,7 @@ async fn integration_test_wrapped_assets_can_be_frozen() -> Result<()> {
     let srs = universal_setup_for_staging(max_degree, &mut prng)?;
     let (proving_key, _, _) = freeze_preprocess(&srs, 2, CapeLedger::merkle_height())?;
 
-    let fee = 0;
+    let fee = Amount::from(0u64);
 
     let freeze_note_input_wrapped_asset_record = FreezeNoteInput {
         ro: wrapped_ro,

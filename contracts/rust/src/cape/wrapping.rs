@@ -52,7 +52,7 @@ mod errors_when_calling_deposit_erc20 {
 
         // Approve
         let contract_address = cape_contract.address();
-        let deposited_amount = 1000;
+        let deposited_amount = 1000u64;
 
         let amount_u256 = U256::from(deposited_amount);
 
@@ -104,7 +104,7 @@ mod errors_when_calling_deposit_erc20 {
         // Build record opening
         let ro = RecordOpening::new(
             rng,
-            deposited_amount,
+            deposited_amount.into(),
             asset_def,
             UserPubKey::default(),
             FreezeFlag::Unfrozen,

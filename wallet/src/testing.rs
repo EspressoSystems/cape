@@ -23,6 +23,7 @@ use cap_rust_sandbox::deploy::EthMiddleware;
 use cap_rust_sandbox::ethereum::get_provider;
 use cap_rust_sandbox::ledger::CapeLedger;
 use cap_rust_sandbox::test_utils::keysets_for_test;
+use cap_rust_sandbox::types::GenericInto;
 use cap_rust_sandbox::types::SimpleToken;
 use eqs::configuration::Confirmations;
 use eqs::{configuration::EQSOptions, run_eqs};
@@ -36,6 +37,7 @@ use jf_cap::keys::UserAddress;
 use jf_cap::keys::UserKeyPair;
 use jf_cap::keys::UserPubKey;
 use jf_cap::proof::UniversalParam;
+use jf_cap::structs::Amount;
 use jf_cap::structs::AssetCode;
 use jf_cap::structs::AssetDefinition;
 use jf_cap::structs::AssetPolicy;
@@ -155,7 +157,7 @@ pub async fn fund_eth_wallet<'a>(wallet: &mut CapeWallet<'a, CapeBackend<'a, ()>
 pub async fn get_burn_amount<'a>(
     wallet: &CapeWallet<'a, CapeBackend<'a, ()>>,
     asset: AssetCode,
-) -> u64 {
+) -> Amount {
     // get records for this this asset type
     let records = wallet.records().await;
     let filtered = records
@@ -163,7 +165,7 @@ pub async fn get_burn_amount<'a>(
         .collect::<Vec<_>>();
     if filtered.is_empty() {
         event!(Level::INFO, "No records to burn");
-        0
+        0u128.into()
     } else {
         filtered[0].ro.amount
     }
@@ -267,7 +269,7 @@ pub async fn mint_token<'a>(
             Some(&address),
             1,
             &my_asset.code,
-            1u64 << 32,
+            1u128 << 32,
             address.clone(),
         )
         .await
@@ -304,7 +306,7 @@ pub async fn find_freezable_records<'a>(
 pub async fn freeze_token<'a>(
     freezer: &mut CapeWallet<'a, CapeBackend<'a, ()>>,
     asset: &AssetCode,
-    amount: u64,
+    amount: Amount,
     owner_address: UserAddress,
 ) -> Result<TransactionReceipt<CapeLedger>, CapeWalletError> {
     let freeze_address = freezer.pub_keys().await[0].address();
@@ -313,7 +315,7 @@ pub async fn freeze_token<'a>(
             Some(&freeze_address),
             1,
             asset,
-            amount.into(),
+            u128::from(amount),
             owner_address,
         )
         .await
@@ -322,7 +324,7 @@ pub async fn freeze_token<'a>(
 pub async fn unfreeze_token<'a>(
     freezer: &mut CapeWallet<'a, CapeBackend<'a, ()>>,
     asset: &AssetCode,
-    amount: u64,
+    amount: Amount,
     owner_address: UserAddress,
 ) -> Result<TransactionReceipt<CapeLedger>, CapeWalletError> {
     let unfreeze_address = freezer.pub_keys().await[0].address();
@@ -331,7 +333,7 @@ pub async fn unfreeze_token<'a>(
             Some(&unfreeze_address),
             1,
             asset,
-            amount.into(),
+            u128::from(amount),
             owner_address,
         )
         .await
@@ -342,12 +344,15 @@ pub async fn wrap_simple_token<'a>(
     wrapper_addr: &UserAddress,
     cape_asset: AssetDefinition,
     erc20_contract: &SimpleToken<EthMiddleware>,
-    amount: u64,
+    amount: Amount,
 ) -> Result<(), CapeWalletError> {
     let wrapper_eth_addr = wrapper.eth_address().await.unwrap();
     // Prepare to wrap: deposit some ERC20 tokens into the wrapper's ETH wallet.
     erc20_contract
-        .transfer(wrapper_eth_addr.clone().into(), amount.into())
+        .transfer(
+            wrapper_eth_addr.clone().into(),
+            amount.generic_into::<u128>().into(),
+        )
         .send()
         .await
         .unwrap()
@@ -385,7 +390,7 @@ pub async fn sponsor_simple_token<'a>(
 pub async fn burn_token<'a>(
     burner: &mut CapeWallet<'a, CapeBackend<'a, ()>>,
     cape_asset: AssetDefinition,
-    amount: u64,
+    amount: Amount,
 ) -> Result<TransactionReceipt<CapeLedger>, CapeWalletError> {
     let burner_key = burner.pub_keys().await[0].clone();
     burner
@@ -394,7 +399,7 @@ pub async fn burn_token<'a>(
             burner.eth_address().await.unwrap().clone(),
             &cape_asset.code,
             amount,
-            1,
+            1u128.into(),
         )
         .await
 }
@@ -402,9 +407,9 @@ pub async fn burn_token<'a>(
 pub async fn transfer_token<'a>(
     sender: &mut CapeWallet<'a, CapeBackend<'a, ()>>,
     receiver_address: UserAddress,
-    amount: u64,
+    amount: Amount,
     asset_code: AssetCode,
-    fee: u64,
+    fee: Amount,
 ) -> Result<TransactionReceipt<CapeLedger>, CapeWalletError> {
     event!(
         Level::INFO,

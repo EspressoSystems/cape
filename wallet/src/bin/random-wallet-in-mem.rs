@@ -30,6 +30,7 @@ use jf_cap::keys::UserAddress;
 use jf_cap::keys::UserKeyPair;
 use jf_cap::keys::UserPubKey;
 use jf_cap::proof::UniversalParam;
+use jf_cap::structs::Amount;
 use jf_cap::structs::AssetCode;
 use jf_cap::structs::FreezeFlag;
 use rand::seq::SliceRandom;
@@ -236,11 +237,11 @@ async fn create_wallet<'a>(
 
 fn add_balance(
     addr: &UserAddress,
-    amount: u64,
+    amount: Amount,
     asset: &AssetCode,
-    balances: &mut HashMap<UserAddress, HashMap<AssetCode, u64>>,
+    balances: &mut HashMap<UserAddress, HashMap<AssetCode, Amount>>,
 ) {
-    let balance_ref: &mut u64 = balances
+    let balance_ref: &mut Amount = balances
         .entry(addr.clone())
         .or_default()
         .entry(*asset)
@@ -250,9 +251,9 @@ fn add_balance(
 
 fn remove_balance(
     addr: &UserAddress,
-    amount: u64,
+    amount: Amount,
     asset: &AssetCode,
-    balances: &mut HashMap<UserAddress, HashMap<AssetCode, u64>>,
+    balances: &mut HashMap<UserAddress, HashMap<AssetCode, Amount>>,
 ) {
     assert!(
         balances.contains_key(addr),
@@ -260,7 +261,7 @@ fn remove_balance(
     );
 
     let assets = balances.get_mut(addr).unwrap();
-    let balance = *assets.get(asset).unwrap_or(&0);
+    let balance = *assets.get(asset).unwrap_or(&Amount::from(0u64));
 
     assert!(
         balance >= amount,
@@ -276,9 +277,9 @@ fn remove_balance(
 fn update_balances(
     send_addr: &UserAddress,
     receiver_addr: &UserAddress,
-    amount: u64,
+    amount: Amount,
     asset: &AssetCode,
-    balances: &mut HashMap<UserAddress, HashMap<AssetCode, u64>>,
+    balances: &mut HashMap<UserAddress, HashMap<AssetCode, Amount>>,
 ) {
     assert!(
         balances.contains_key(send_addr),
@@ -291,7 +292,7 @@ fn update_balances(
 
     let sender_assets = balances.get_mut(send_addr).unwrap();
     // Update with asset code
-    let send_balance = *sender_assets.get(asset).unwrap_or(&0);
+    let send_balance = *sender_assets.get(asset).unwrap_or(&Amount::from(0u64));
     assert!(
         send_balance >= amount,
         "Address {} only has {} balance but is trying to send {}.",
@@ -302,7 +303,7 @@ fn update_balances(
     sender_assets.insert(*asset, send_balance - amount);
 
     let rec_assets = balances.get_mut(receiver_addr).unwrap();
-    let receive_balance = *rec_assets.get(asset).unwrap_or(&0);
+    let receive_balance = *rec_assets.get(asset).unwrap_or(&Amount::from(0u64));
     rec_assets.insert(*asset, receive_balance + amount);
 }
 
@@ -398,9 +399,15 @@ async fn main() {
         fund_eth_wallet(&mut w).await;
         event!(Level::INFO, "Funded new wallet with eth");
         // Fund the wallet with some native asset for paying fees
-        let txn = transfer_token(&mut wallet, k.address(), 200, AssetCode::native(), 1)
-            .await
-            .unwrap();
+        let txn = transfer_token(
+            &mut wallet,
+            k.address(),
+            200u128.into(),
+            AssetCode::native(),
+            1u64.into(),
+        )
+        .await
+        .unwrap();
         w.await_transaction(&txn).await.unwrap();
         wallet.await_transaction(&txn).await.unwrap();
 
@@ -408,7 +415,7 @@ async fn main() {
         balances
             .get_mut(&k.address())
             .unwrap()
-            .insert(AssetCode::native(), 200);
+            .insert(AssetCode::native(), Amount::from(200u64));
 
         event!(Level::INFO, "Sent native token to new wallet");
         public_keys.push(k);
@@ -429,7 +436,7 @@ async fn main() {
                     balances
                         .get_mut(&address)
                         .unwrap()
-                        .insert(asset.code, 1u64 << 32);
+                        .insert(asset.code, Amount::from(1u128 << 32));
                 }
             }
             OperationType::Transfer => {
@@ -464,8 +471,8 @@ async fn main() {
                 }
                 // Randomly choose an asset type for the transfer.
                 let asset = asset_balances.choose(&mut rng).unwrap();
-                let amount = 1;
-                let fee = 1;
+                let amount = Amount::from(1u64);
+                let fee = Amount::from(1u64);
 
                 event!(
                     Level::INFO,
@@ -562,13 +569,13 @@ async fn main() {
                     &wrapper_key.address(),
                     sponsored_asset.clone(),
                     &erc20_contract,
-                    100,
+                    100u64.into(),
                 )
                 .await
                 .unwrap();
                 add_balance(
                     &wrapper_key.address(),
-                    100,
+                    100u64.into(),
                     &sponsored_asset.code,
                     &mut balances,
                 );
@@ -583,7 +590,7 @@ async fn main() {
                 if let Some(asset) = asset {
                     event!(Level::INFO, "Can burn something");
                     let amount = get_burn_amount(burner, asset.definition.code).await;
-                    if amount > 0 {
+                    if amount > 0u64.into() {
                         event!(
                             Level::INFO,
                             "Buring {} asset: {}",

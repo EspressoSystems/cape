@@ -519,7 +519,7 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
             .map(|_| ())?;
 
         // Don't report success until the EQS reflects the results of the sponsor.
-        self.wait_for_wrapped_erc20_code(&asset, None).await?;
+        self.wait_for_wrapped_erc20_code(asset, None).await?;
 
         Ok(())
     }

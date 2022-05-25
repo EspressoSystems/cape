@@ -26,10 +26,7 @@ use jf_cap::{
     structs::{AssetCode, FreezeFlag},
 };
 use rand::distributions::{Alphanumeric, DistString};
-
-// XXX looks wrong, but compilation fails if using reef::traits::Validator instead.
-use seahorse::reef::traits::Validator;
-
+use reef::traits::Validator;
 use seahorse::{
     events::EventIndex,
     loader::{Loader, LoaderMetadata},

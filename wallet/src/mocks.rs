@@ -497,7 +497,12 @@ impl<'a> MockNetwork<'a, CapeLedger> for MockCapeNetwork {
         txn.memos = Some((memos.clone(), sig));
         let event = LedgerEvent::Memos {
             outputs: memos,
-            transaction: Some((block_id as u64, txn_id as u64, txn.txn.kind())),
+            transaction: Some((
+                block_id as u64,
+                txn_id as u64,
+                txn.txn.hash(),
+                txn.txn.kind(),
+            )),
         };
         self.generate_event(event);
 
@@ -1085,7 +1090,7 @@ mod cape_wallet_tests {
                 sponsor_addr.clone(),
                 cap_asset.clone(),
                 wrap_account.clone(),
-                5u64.into(),
+                5,
             )
             .await
             .unwrap();
@@ -1140,13 +1145,7 @@ mod cape_wallet_tests {
         now = Instant::now();
         wallets[0]
             .0
-            .burn(
-                None,
-                sponsor_addr.clone(),
-                &cap_asset.code.clone(),
-                5u64.into(),
-                1u64.into(),
-            )
+            .burn(None, sponsor_addr.clone(), &cap_asset.code.clone(), 5, 1)
             .await
             .unwrap();
         t.sync(&ledger, &wallets).await;
@@ -1207,12 +1206,7 @@ mod cape_wallet_tests {
         let owner = wallets[0].1[0].clone();
         wallets[0]
             .0
-            .wrap(
-                sponsor_addr.clone(),
-                cap_asset.clone(),
-                owner.clone(),
-                5u64.into(),
-            )
+            .wrap(sponsor_addr.clone(), cap_asset.clone(), owner.clone(), 5)
             .await
             .unwrap();
         println!("Wrap completed: {}s", now.elapsed().as_secs_f32());
@@ -1252,13 +1246,7 @@ mod cape_wallet_tests {
         now = Instant::now();
         wallets[0]
             .0
-            .burn(
-                None,
-                sponsor_addr.clone(),
-                &cap_asset.code.clone(),
-                3u64.into(),
-                1u64.into(),
-            )
+            .burn(None, sponsor_addr.clone(), &cap_asset.code.clone(), 3, 1)
             .await
             .unwrap();
         t.sync(&ledger, &wallets).await;
@@ -1317,22 +1305,12 @@ mod cape_wallet_tests {
         let owner = wallets[0].1[0].clone();
         wallets[0]
             .0
-            .wrap(
-                sponsor_addr.clone(),
-                cap_asset.clone(),
-                owner.clone(),
-                2u64.into(),
-            )
+            .wrap(sponsor_addr.clone(), cap_asset.clone(), owner.clone(), 2)
             .await
             .unwrap();
         wallets[0]
             .0
-            .wrap(
-                sponsor_addr.clone(),
-                cap_asset.clone(),
-                owner.clone(),
-                3u64.into(),
-            )
+            .wrap(sponsor_addr.clone(), cap_asset.clone(), owner.clone(), 3)
             .await
             .unwrap();
         println!("Wraps completed: {}s", now.elapsed().as_secs_f32());
@@ -1372,13 +1350,7 @@ mod cape_wallet_tests {
         now = Instant::now();
         wallets[0]
             .0
-            .burn(
-                None,
-                sponsor_addr.clone(),
-                &cap_asset.code.clone(),
-                5u64.into(),
-                1u64.into(),
-            )
+            .burn(None, sponsor_addr.clone(), &cap_asset.code.clone(), 5, 1)
             .await
             .unwrap();
         t.sync(&ledger, &wallets).await;
@@ -1449,12 +1421,7 @@ mod cape_wallet_tests {
         let owner = wallets[0].1[0].clone();
         wallets[0]
             .0
-            .wrap(
-                sponsor_addr.clone(),
-                cap_asset.clone(),
-                owner.clone(),
-                3u64.into(),
-            )
+            .wrap(sponsor_addr.clone(), cap_asset.clone(), owner.clone(), 3)
             .await
             .unwrap();
 
@@ -1475,13 +1442,7 @@ mod cape_wallet_tests {
         // Unwrap with change.
         wallets[0]
             .0
-            .burn(
-                None,
-                sponsor_addr.clone(),
-                &cap_asset.code,
-                2u64.into(),
-                0u64.into(),
-            )
+            .burn(None, sponsor_addr.clone(), &cap_asset.code, 2, 0)
             .await
             .unwrap();
         t.sync(&ledger, &wallets).await;
@@ -1500,13 +1461,7 @@ mod cape_wallet_tests {
         // Unwrap again just to make sure things still work.
         wallets[0]
             .0
-            .burn(
-                None,
-                sponsor_addr,
-                &cap_asset.code,
-                1u64.into(),
-                0u64.into(),
-            )
+            .burn(None, sponsor_addr, &cap_asset.code, 1, 0)
             .await
             .unwrap();
         t.sync(&ledger, &wallets).await;

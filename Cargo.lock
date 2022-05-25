@@ -1097,7 +1097,7 @@ dependencies = [
  "async-trait",
  "bincode",
  "commit",
- "espresso-macros 0.1.0 (git+https://github.com/EspressoSystems/espresso-macros)",
+ "espresso-macros 0.1.0 (git+https://github.com/EspressoSystems/espresso-macros.git)",
  "ethers",
  "ethers-contract",
  "ethers-contract-abigen",
@@ -1160,7 +1160,7 @@ dependencies = [
  "commit",
  "eqs",
  "escargot",
- "espresso-macros 0.1.0 (git+https://github.com/EspressoSystems/espresso-macros)",
+ "espresso-macros 0.1.0 (git+https://github.com/EspressoSystems/espresso-macros.git)",
  "ethers",
  "futures",
  "futures-util",
@@ -2226,7 +2226,7 @@ dependencies = [
 [[package]]
 name = "espresso-macros"
 version = "0.1.0"
-source = "git+https://github.com/EspressoSystems/espresso-macros#9e0b0258c99757c567676c4dd92f1501db0cf580"
+source = "git+https://github.com/EspressoSystems/espresso-macros.git#9e0b0258c99757c567676c4dd92f1501db0cf580"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -5219,7 +5219,7 @@ dependencies = [
 [[package]]
 name = "seahorse"
 version = "0.2.3"
-source = "git+https://github.com/EspressoSystems/seahorse.git?branch=jeb-amount#7f8a2c958aadc3da7e0c1e06821d595c8f8a9725"
+source = "git+https://github.com/EspressoSystems/seahorse.git?branch=release-0.2#2ef7aa92949b0fa79b68c14932503bc183fb53ec"
 dependencies = [
  "arbitrary",
  "arbitrary-wrappers",

@@ -529,11 +529,11 @@ mod tests {
         let ro2 = &records[1].ro;
         let ro3 = &records[2].ro;
 
-        assert_eq!(ro1.amount, DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR);
+        assert_eq!(ro1.amount, DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR.into());
         assert_eq!(ro1.asset_def.code, AssetCode::native());
-        assert_eq!(ro2.amount, DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR);
+        assert_eq!(ro2.amount, DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR.into());
         assert_eq!(ro2.asset_def.code, AssetCode::native());
-        assert_eq!(ro3.amount, DEFAULT_WRAPPED_AMT);
+        assert_eq!(ro3.amount, DEFAULT_WRAPPED_AMT.into());
         assert_eq!(ro3.asset_def.code, asset);
     }
 
@@ -1740,14 +1740,17 @@ mod tests {
         assert_eq!(history[0].kind, "send");
         assert_eq!(history[0].asset, AssetCode::native());
         assert_eq!(history[0].senders, vec![src_address]);
-        assert_eq!(history[0].receivers, vec![(dst_address.clone(), 100)]);
+        assert_eq!(
+            history[0].receivers,
+            vec![(dst_address.clone(), 100u64.into())]
+        );
         assert_eq!(history[0].status, "accepted");
 
         assert_eq!(history[1].kind, "send");
         assert_eq!(history[1].asset, AssetCode::native());
         // We don't necessarily know the senders for the second transaction, since we allowed the
         // wallet to choose.
-        assert_eq!(history[1].receivers, vec![(dst_address, 100)]);
+        assert_eq!(history[1].receivers, vec![(dst_address, 100u64.into())]);
         assert_eq!(history[1].status, "accepted");
 
         // Check :from and :count.
@@ -1876,13 +1879,13 @@ mod tests {
             Record {
                 address: address.clone(),
                 asset: AssetCode::native(),
-                amount: DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR,
+                amount: DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR.into(),
                 uid: 2,
             },
             Record {
                 address,
                 asset: asset.definition.code,
-                amount: DEFAULT_WRAPPED_AMT,
+                amount: DEFAULT_WRAPPED_AMT.into(),
                 uid: 3,
             },
         ];

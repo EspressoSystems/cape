@@ -12,7 +12,7 @@ use async_trait::async_trait;
 use cap_rust_sandbox::{deploy::EthMiddleware, ledger::*, model::*};
 use jf_cap::{
     keys::UserAddress,
-    structs::{AssetCode, AssetDefinition, AssetPolicy, FreezeFlag, RecordOpening},
+    structs::{Amount, AssetCode, AssetDefinition, AssetPolicy, FreezeFlag, RecordOpening},
     VerKey,
 };
 use seahorse::{
@@ -134,7 +134,7 @@ pub trait CapeWalletExt<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> {
         // it.
         cap_asset: AssetDefinition,
         dst_addr: UserAddress,
-        amount: u64,
+        amount: Amount,
         // We may return a `WrapReceipt`, i.e., a record commitment to track wraps, once it's defined.
     ) -> Result<(), CapeWalletError>;
 
@@ -146,7 +146,7 @@ pub trait CapeWalletExt<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> {
         &mut self,
         cap_asset: AssetDefinition,
         dst_addr: UserAddress,
-        amount: u64,
+        amount: Amount,
     ) -> Result<RecordOpening, CapeWalletError>;
 
     /// Submit a wrap transaction to the CAPE contract.
@@ -171,8 +171,8 @@ pub trait CapeWalletExt<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> {
         account: Option<&UserAddress>,
         dst_addr: EthereumAddr,
         cap_asset: &AssetCode,
-        amount: u64,
-        fee: u64,
+        amount: Amount,
+        fee: Amount,
     ) -> Result<TransactionReceipt<CapeLedger>, CapeWalletError>;
 
     /// Construct the record opening of an asset for the given address.
@@ -180,7 +180,7 @@ pub trait CapeWalletExt<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> {
         &mut self,
         asset: AssetDefinition,
         address: UserAddress,
-        amount: u64,
+        amount: Amount,
         freeze_flag: FreezeFlag,
     ) -> Result<RecordOpening, CapeWalletError>;
 
@@ -276,7 +276,7 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
         &mut self,
         cap_asset: AssetDefinition,
         dst_addr: UserAddress,
-        amount: u64,
+        amount: Amount,
     ) -> Result<RecordOpening, CapeWalletError> {
         self.record_opening(cap_asset, dst_addr, amount, FreezeFlag::Unfrozen)
             .await
@@ -310,7 +310,7 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
         src_addr: EthereumAddr,
         cap_asset: AssetDefinition,
         dst_addr: UserAddress,
-        amount: u64,
+        amount: Amount,
     ) -> Result<(), CapeWalletError> {
         let ro = self.build_wrap(cap_asset, dst_addr, amount).await?;
 
@@ -322,8 +322,8 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
         account: Option<&UserAddress>,
         dst_addr: EthereumAddr,
         cap_asset: &AssetCode,
-        amount: u64,
-        fee: u64,
+        amount: Amount,
+        fee: Amount,
     ) -> Result<TransactionReceipt<CapeLedger>, CapeWalletError> {
         // The owner public key of the new record opening is ignored when processing a burn. All we
         // need is an address in the address book, so just use one from this wallet. If this wallet
@@ -335,7 +335,7 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
             .get(0)
             .ok_or(TransactionError::InsufficientBalance {
                 asset: *cap_asset,
-                required: amount.into(),
+                required: u128::from(amount).into(),
                 actual: 0u64.into(),
             })?
             .address();
@@ -377,7 +377,7 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
         &mut self,
         asset: AssetDefinition,
         address: UserAddress,
-        amount: u64,
+        amount: Amount,
         freeze_flag: FreezeFlag,
     ) -> Result<RecordOpening, CapeWalletError> {
         let mut state = self.lock().await;

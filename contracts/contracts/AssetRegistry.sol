@@ -31,7 +31,7 @@ contract AssetRegistry {
         EdOnBN254.EdOnBN254Point credPk;
         EdOnBN254.EdOnBN254Point freezerPk;
         uint256 revealMap;
-        uint64 revealThreshold;
+        uint128 revealThreshold;
     }
 
     /// @notice Return the CAP-native asset definition.

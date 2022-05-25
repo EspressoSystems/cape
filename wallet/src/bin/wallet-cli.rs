@@ -41,14 +41,14 @@ use ethers::prelude::Address;
 use jf_cap::{
     keys::{AuditorPubKey, FreezerPubKey},
     proof::UniversalParam,
-    structs::{AssetCode, AssetDefinition, AssetPolicy},
+    structs::{Amount, AssetCode, AssetDefinition, AssetPolicy},
 };
 use net::UserAddress;
 use seahorse::{
     cli::*,
     io::SharedIO,
     loader::{LoaderMetadata, WalletLoader},
-    WalletError,
+    RecordAmount, WalletError,
 };
 use std::any::type_name;
 use std::io::Write;
@@ -130,7 +130,7 @@ async fn cli_sponsor<'a, C: CLI<'a>>(
     view_amount: Option<bool>,
     view_address: Option<bool>,
     view_blind: Option<bool>,
-    viewing_threshold: Option<u64>,
+    viewing_threshold: Option<RecordAmount>,
 ) where
     C::Backend: CapeWalletBackend<'a> + Sync + 'a,
 {
@@ -169,7 +169,7 @@ async fn cli_sponsor<'a, C: CLI<'a>>(
         }
     }
     if let Some(viewing_threshold) = viewing_threshold {
-        policy = policy.set_reveal_threshold(viewing_threshold);
+        policy = policy.set_reveal_threshold(viewing_threshold.into());
     }
     match wallet
         .sponsor(symbol.unwrap_or_default(), erc20_code, sponsor_addr, policy)
@@ -191,7 +191,7 @@ async fn cli_wrap<'a, C: CLI<'a, Ledger = CapeLedger>>(
     asset_def: AssetDefinition,
     from: EthereumAddr,
     to: UserAddress,
-    amount: u64,
+    amount: Amount,
 ) where
     C::Backend: CapeWalletBackend<'a> + Sync + 'a,
 {
@@ -212,8 +212,8 @@ async fn cli_burn<'a, C: CLI<'a, Ledger = CapeLedger>>(
     wallet: &mut CapeWallet<'a, C::Backend>,
     asset: ListItem<AssetCode>,
     to: EthereumAddr,
-    amount: u64,
-    fee: u64,
+    amount: RecordAmount,
+    fee: RecordAmount,
     from: Option<UserAddress>,
     wait: Option<bool>,
 ) where
@@ -224,8 +224,8 @@ async fn cli_burn<'a, C: CLI<'a, Ledger = CapeLedger>>(
             from.map(|addr| addr.0).as_ref(),
             to,
             &asset.item,
-            amount,
-            fee,
+            amount.into(),
+            fee.into(),
         )
         .await;
     cli_writeln!(io, "{}", asset.item);
@@ -253,7 +253,7 @@ fn cape_specific_cli_commands<'a>() -> Vec<Command<'a, CapeCli>> {
              view_amount: Option<bool>,
              view_address: Option<bool>,
              view_blind: Option<bool>,
-             viewing_threshold: Option<u64>| {
+             viewing_threshold: Option<RecordAmount>| {
                 cli_sponsor::<CapeCli>(
                     io,
                     wallet,
@@ -278,8 +278,8 @@ fn cape_specific_cli_commands<'a>() -> Vec<Command<'a, CapeCli>> {
              asset_def: AssetDefinition,
              from: EthereumAddr,
              to: UserAddress,
-             amount: u64| {
-                cli_wrap::<CapeCli>(io, wallet, asset_def, from, to, amount).await;
+             amount: RecordAmount| {
+                cli_wrap::<CapeCli>(io, wallet, asset_def, from, to, amount.into()).await;
             }
         ),
         command!(
@@ -290,8 +290,8 @@ fn cape_specific_cli_commands<'a>() -> Vec<Command<'a, CapeCli>> {
              wallet,
              asset: ListItem<AssetCode>,
              to: EthereumAddr,
-             amount: u64,
-             fee: u64;
+             amount: RecordAmount,
+             fee: RecordAmount;
              from: Option<UserAddress>,
              wait: Option<bool>| {
                 cli_burn::<CapeCli>(io, wallet, asset, to, amount, fee, from, wait).await;
@@ -463,7 +463,7 @@ mod tests {
                      view_amount: Option<bool>,
                      view_address: Option<bool>,
                      view_blind: Option<bool>,
-                     viewing_threshold: Option<u64>| {
+                     viewing_threshold: Option<RecordAmount>| {
                         cli_sponsor::<MockCapeCli>(
                             io,
                             wallet,
@@ -488,8 +488,9 @@ mod tests {
                      asset_def: AssetDefinition,
                      from: EthereumAddr,
                      to: UserAddress,
-                     amount: u64| {
-                        cli_wrap::<MockCapeCli>(io, wallet, asset_def, from, to, amount).await;
+                     amount: RecordAmount| {
+                        cli_wrap::<MockCapeCli>(io, wallet, asset_def, from, to, amount.into())
+                            .await;
                     }
                 ),
                 command!(
@@ -500,8 +501,8 @@ mod tests {
                      wallet,
                      asset: ListItem<AssetCode>,
                      to: EthereumAddr,
-                     amount: u64,
-                     fee: u64;
+                     amount: RecordAmount,
+                     fee: RecordAmount;
                      from: Option<UserAddress>,
                      wait: Option<bool>| {
                         cli_burn::<MockCapeCli>(io, wallet, asset, to, amount, fee, from, wait).await;
@@ -671,7 +672,7 @@ mod tests {
     fn cli_wrap_sponsored(
         t: &mut CliClient,
         eth_addr: &EthereumAddr,
-        amount: u64,
+        amount: Amount,
     ) -> Result<(), String> {
         // Wrap an asset.
         t.command(
@@ -686,7 +687,7 @@ mod tests {
     fn cli_wrap_unsponsored(
         t: &mut CliClient,
         eth_addr: &EthereumAddr,
-        amount: u64,
+        amount: Amount,
     ) -> Result<(), String> {
         // Should fail to wrap an unsponsored asset.
         t.command(
@@ -743,7 +744,7 @@ mod tests {
             cli_sponsor_all_args(t, &sponsor_addr)?;
 
             let wrapper_addr = EthereumAddr([3u8; 20]);
-            let amount = 10;
+            let amount = Amount::from(10u64);
             cli_wrap_sponsored(t, &wrapper_addr, amount)?;
             cli_wrap_unsponsored(t, &wrapper_addr, amount)?;
 
@@ -784,7 +785,7 @@ mod tests {
         let asset_def =
             match_output(&mut sponsor_output, &["(?P<asset_def>ASSET_DEF~.*)"]).get("asset_def");
         let wrapper_eth_addr = EthereumAddr([3u8; 20]);
-        let wrap_amount = 10;
+        let wrap_amount = Amount::from(10u64);
         writeln!(
             wrapper_input,
             "wrap {} {} {} {}",
@@ -800,7 +801,7 @@ mod tests {
         // Submit a dummy transaction to finalize the wrap.
         writeln!(receiver_input, "create_asset my_asset").unwrap();
         wait_for_prompt(&mut receiver_output);
-        let mint_amount = 20;
+        let mint_amount = Amount::from(20u64);
         writeln!(receiver_input, "mint 1 {} {} 1", receiver_addr, mint_amount).unwrap();
         let txn = match_output(&mut receiver_output, &["(?P<txn>TXN~.*)"]).get("txn");
         await_transaction(

@@ -35,9 +35,10 @@ use tide::{
 };
 
 pub const DEFAULT_ETH_ADDR: Address = H160([2; 20]);
-pub const DEFAULT_WRAPPED_AMT: u64 = 1000;
-pub const DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR: u64 = 500;
-pub const DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR: u64 = 400;
+// TODO change these to Amount type
+pub const DEFAULT_WRAPPED_AMT: u128 = 1000;
+pub const DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR: u128 = 500;
+pub const DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR: u128 = 400;
 
 /// Server configuration with command line parsing support.
 #[derive(Clone, Debug, StructOpt)]
@@ -450,7 +451,7 @@ async fn populatefortest(req: tide::Request<WebState>) -> Result<tide::Response,
             sponsor_addr,
             asset_def.clone(),
             wrapped_asset_addr.clone(),
-            DEFAULT_WRAPPED_AMT,
+            DEFAULT_WRAPPED_AMT.into(),
         )
         .await
         .map_err(wallet_error)?;

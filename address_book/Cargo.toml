@@ -26,8 +26,8 @@ dirs = "4.0.0"
 futures = "0.3.21"
 hex = "0.4.3"
 itertools = "0.10.3"
-jf-cap = { features = ["std"], git = "https://github.com/EspressoSystems/cap.git", tag = "0.0.2" }
-net = { git = "https://github.com/EspressoSystems/net.git", tag = "0.2.1" }
+jf-cap = { features = ["std"], git = "https://github.com/EspressoSystems/cap.git", tag = "0.0.4" }
+net = { git = "https://github.com/EspressoSystems/net.git", tag = "0.2.2" }
 once_cell = "1"
 rand = "0.8.5"
 rand_chacha = "0.3.1"

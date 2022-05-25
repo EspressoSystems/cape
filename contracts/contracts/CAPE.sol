@@ -85,7 +85,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
         /// output commitment for the minted asset
         uint256 mintComm;
         /// the amount of the minted asset
-        uint64 mintAmount;
+        uint128 mintAmount;
         /// the asset definition of the asset
         AssetDefinition mintAssetDef;
         /// Internal asset code
@@ -107,7 +107,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
 
     struct TransferAuxInfo {
         uint256 merkleRoot;
-        uint64 fee;
+        uint128 fee;
         uint64 validUntil;
         EdOnBN254.EdOnBN254Point txnMemoVerKey;
         bytes extraProofBoundData;
@@ -115,18 +115,18 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
 
     struct MintAuxInfo {
         uint256 merkleRoot;
-        uint64 fee;
+        uint128 fee;
         EdOnBN254.EdOnBN254Point txnMemoVerKey;
     }
 
     struct FreezeAuxInfo {
         uint256 merkleRoot;
-        uint64 fee;
+        uint128 fee;
         EdOnBN254.EdOnBN254Point txnMemoVerKey;
     }
 
     struct RecordOpening {
-        uint64 amount;
+        uint128 amount;
         AssetDefinition assetDef;
         EdOnBN254.EdOnBN254Point userAddr;
         bytes32 encKey;
@@ -172,7 +172,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
         // allocate maximum possible amount of native CAP token to faucet manager on testnet
         // max amount len is set to 63 bits: https://github.com/EspressoSystems/cap/blob/main/src/constants.rs#L50-L51
         RecordOpening memory ro = RecordOpening(
-            type(uint64).max / 2,
+            type(uint128).max / 2,
             nativeDomesticAsset(),
             faucetManagerAddress,
             faucetManagerEncKey,

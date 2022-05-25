@@ -54,7 +54,7 @@ async fn test_reentrancy_guard() -> Result<()> {
         .await?
         .await?;
 
-    let deposited_amount = 1000;
+    let deposited_amount = 1000u64;
     malicious_erc20_contract
         .approve(cape_contract.address(), U256::from(deposited_amount))
         .send()
@@ -64,7 +64,7 @@ async fn test_reentrancy_guard() -> Result<()> {
     // Build record opening
     let ro = RecordOpening::new(
         rng,
-        deposited_amount,
+        deposited_amount.into(),
         asset_def,
         UserPubKey::default(),
         FreezeFlag::Unfrozen,

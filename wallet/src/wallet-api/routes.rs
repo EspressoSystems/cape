@@ -120,7 +120,7 @@ mod backend {
         let mut records = MerkleTree::new(CapeLedger::merkle_height()).unwrap();
         let faucet_ro = RecordOpening::new(
             rng,
-            1000,
+            1000u64.into(),
             jf_cap::structs::AssetDefinition::native(),
             faucet_pub_key,
             FreezeFlag::Unfrozen,
@@ -236,6 +236,17 @@ impl UrlSegmentValue {
 
     pub fn as_usize(&self) -> Result<usize, tide::Error> {
         Ok(self.as_u64()? as usize)
+    }
+
+    pub fn as_u128(&self) -> Result<u128, tide::Error> {
+        if let Integer(i) = self {
+            Ok(*i)
+        } else {
+            Err(server_error(CapeAPIError::Param {
+                expected: String::from("Integer"),
+                actual: self.to_string(),
+            }))
+        }
     }
 
     pub fn as_identifier(&self) -> Result<TaggedBase64, tide::Error> {
@@ -710,7 +721,7 @@ async fn newasset(
             }
         }
         if let Some(threshold) = bindings.get(":viewing_threshold") {
-            policy = policy.set_reveal_threshold(threshold.value.as_u64()?);
+            policy = policy.set_reveal_threshold(threshold.value.as_u128()?.into());
         };
     };
 
@@ -770,7 +781,7 @@ async fn buildsponsor(
             }
         }
         if let Some(threshold) = bindings.get(":viewing_threshold") {
-            policy = policy.set_reveal_threshold(threshold.value.as_u64()?);
+            policy = policy.set_reveal_threshold(threshold.value.as_u128()?.into());
         };
     };
 
@@ -835,9 +846,9 @@ async fn buildwrap(
         .await
         .expect("Asset code not in wallet's assets")
         .definition;
-    let amount = bindings[":amount"].value.as_u64()?;
+    let amount = bindings[":amount"].value.as_u128()?;
     let ro: sol::RecordOpening = wallet
-        .build_wrap(asset_definition, destination.into(), amount)
+        .build_wrap(asset_definition, destination.into(), amount.into())
         .await?
         .into();
     Ok(ro)
@@ -871,12 +882,12 @@ async fn mint(
         .get(":amount")
         .expect("mint must have ':amount' parameter")
         .value
-        .as_u64()?;
+        .as_u128()?;
     let fee = bindings
         .get(":fee")
         .expect("mint must have ':fee' parameter")
         .value
-        .as_u64()?;
+        .as_u128()?;
     let minter = match bindings.get(":minter") {
         Some(param) => Some(param.value.to::<UserAddress>()?.0),
         None => None,
@@ -905,11 +916,17 @@ async fn unwrap(
     };
     let eth_address: Address = bindings[":eth_address"].value.as_string()?.parse()?;
     let asset = bindings[":asset"].value.to::<AssetCode>()?;
-    let amount = bindings[":amount"].value.as_u64()?;
-    let fee = bindings[":fee"].value.as_u64()?;
+    let amount = bindings[":amount"].value.as_u128()?;
+    let fee = bindings[":fee"].value.as_u128()?;
 
     Ok(wallet
-        .burn(source.as_ref(), eth_address.into(), &asset, amount, fee)
+        .burn(
+            source.as_ref(),
+            eth_address.into(),
+            &asset,
+            amount.into(),
+            fee.into(),
+        )
         .await?)
 }
 
@@ -975,12 +992,12 @@ pub async fn send(
         .get(":amount")
         .expect("send must have ':amount' parameter")
         .value
-        .as_u64()?;
+        .as_u128()?;
     let fee = bindings
         .get(":fee")
         .expect("send must have ':fee' parameter")
         .value
-        .as_u64()?;
+        .as_u128()?;
 
     match bindings.get(":sender") {
         Some(addr) => wallet
@@ -1205,7 +1222,7 @@ async fn recordopening(
         .await
         .expect("Asset code not in the wallet's asset storage")
         .definition;
-    let amount = bindings[":amount"].value.as_u64()?;
+    let amount = bindings[":amount"].value.as_u128()?;
     let freeze = match bindings.get(":freeze") {
         Some(flag) => {
             if flag.value.as_boolean()? {
@@ -1217,7 +1234,7 @@ async fn recordopening(
         None => FreezeFlag::Unfrozen,
     };
     let ro: sol::RecordOpening = wallet
-        .record_opening(asset_definition, address.into(), amount, freeze)
+        .record_opening(asset_definition, address.into(), amount.into(), freeze)
         .await?
         .into();
     Ok(ro)

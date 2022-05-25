@@ -31,6 +31,7 @@ use seahorse::{
     events::EventIndex,
     loader::{Loader, LoaderMetadata},
     txn_builder::{RecordInfo, TransactionStatus},
+    RecordAmount,
 };
 use serde::{Deserialize, Serialize};
 use snafu::Snafu;
@@ -72,7 +73,7 @@ pub struct FaucetOptions {
 
     /// size of transfer for faucet grant
     #[structopt(long, env = "CAPE_FAUCET_GRANT_SIZE", default_value = "1000")]
-    pub grant_size: u64,
+    pub grant_size: RecordAmount,
 
     /// number of grants to give out per request
     #[structopt(long, env = "CAPE_FAUCET_NUM_GRANTS", default_value = "5")]
@@ -80,7 +81,7 @@ pub struct FaucetOptions {
 
     /// fee for faucet grant
     #[structopt(long, env = "CAPE_FAUCET_FEE_SIZE", default_value = "0")]
-    pub fee_size: u64,
+    pub fee_size: RecordAmount,
 
     /// number of records to maintain simultaneously.
     ///
@@ -125,9 +126,9 @@ pub struct FaucetOptions {
 #[derive(Clone)]
 struct FaucetState {
     wallet: Arc<Mutex<CapeWallet<'static, CapeBackend<'static, LoaderMetadata>>>>,
-    grant_size: u64,
+    grant_size: RecordAmount,
     num_grants: usize,
-    fee_size: u64,
+    fee_size: RecordAmount,
     num_records: usize,
     // Channel to signal when the distribution of records owned by the faucet changes. This will
     // wake the record breaker thread (which waits on the receiver) so it can create more records by
@@ -275,12 +276,12 @@ async fn request_fee_assets(
 
 async fn spendable_records(
     wallet: &CapeWallet<'static, CapeBackend<'static, LoaderMetadata>>,
-    grant_size: u64,
+    grant_size: RecordAmount,
 ) -> impl Iterator<Item = RecordInfo> {
     let now = wallet.lock().await.state().txn_state.validator.now();
     wallet.records().await.filter(move |record| {
         record.ro.asset_def.code == AssetCode::native()
-            && record.ro.amount >= grant_size
+            && record.ro.amount >= grant_size.into()
             && record.ro.freeze_flag == FreezeFlag::Unfrozen
             && !record.on_hold(now)
     })
@@ -312,7 +313,7 @@ async fn break_up_records(state: FaucetState, mut wakeup: mpsc::Receiver<()>) {
                 );
             } else if !records
                 .into_iter()
-                .any(|record| record.ro.amount > 2 * state.grant_size)
+                .any(|record| RecordAmount::from(record.ro.amount) > state.grant_size * 2u64)
             {
                 // There are no big records to break up, so there's nothing for us to do. Exit
                 // the inner loop and wait for a notification that the record distribution has
@@ -344,7 +345,7 @@ async fn break_up_records(state: FaucetState, mut wakeup: mpsc::Receiver<()>) {
             // Find a record which can be broken down into two smaller `grant_size` records.
             let record = match records
                 .into_iter()
-                .find(|record| record.ro.amount > 2 * state.grant_size)
+                .find(|record| RecordAmount::from(record.ro.amount) > state.grant_size * 2u64)
             {
                 Some(record) => record,
                 None => {
@@ -359,7 +360,7 @@ async fn break_up_records(state: FaucetState, mut wakeup: mpsc::Receiver<()>) {
                 "breaking up a record of size {} into records of size {} and {}",
                 record.ro.amount,
                 state.grant_size,
-                record.ro.amount - state.grant_size
+                record.ro.amount - state.grant_size.into()
             );
 
             // There is not yet an interface for transferring a specific record, so we just have to
@@ -373,8 +374,8 @@ async fn break_up_records(state: FaucetState, mut wakeup: mpsc::Receiver<()>) {
                 .transfer(
                     None,
                     &AssetCode::native(),
-                    &[(address.clone(), record.ro.amount - state.grant_size)],
-                    0,
+                    &[(address.clone(), record.ro.amount - state.grant_size.into())],
+                    0u64,
                 )
                 .await
             {
@@ -413,7 +414,7 @@ async fn wait_for_records(state: &FaucetState) -> usize {
         if num_records >= state.num_records
             || !spendable_records(&*wallet, state.grant_size)
                 .await
-                .any(|record| record.ro.amount > 2 * state.grant_size)
+                .any(|record| RecordAmount::from(record.ro.amount) > state.grant_size * 2u64)
         {
             return num_records;
         }
@@ -566,7 +567,7 @@ mod test {
         // Initiate a faucet server with the mnemonic associated with the faucet key pair.
         let faucet_dir = TempDir::new("cape_wallet_faucet").unwrap();
         let faucet_port = "50079".to_string();
-        let grant_size = 1000;
+        let grant_size = RecordAmount::from(1000u64);
         let num_grants = 5;
         let opt = FaucetOptions {
             mnemonic: mnemonic.to_string(),
@@ -576,7 +577,7 @@ mod test {
             grant_size,
             num_grants,
             num_records: num_grants,
-            fee_size: 0,
+            fee_size: 0u64.into(),
             eqs_url: eqs_url.clone(),
             relayer_url: relayer_url.clone(),
             address_book_url: address_book_url.clone(),
@@ -640,7 +641,7 @@ mod test {
         for record in records {
             assert_eq!(record.ro.asset_def, AssetDefinition::native());
             assert_eq!(record.ro.pub_key, receiver_key);
-            assert_eq!(record.ro.amount, grant_size);
+            assert_eq!(record.ro.amount, grant_size.into());
         }
     }
 }

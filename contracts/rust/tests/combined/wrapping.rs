@@ -130,7 +130,7 @@ async fn call_and_check_deposit_erc20(
     // Build record opening
     let ro = RecordOpening::new(
         rng,
-        deposited_amount,
+        deposited_amount.into(),
         asset_def,
         UserPubKey::default(),
         FreezeFlag::Unfrozen,

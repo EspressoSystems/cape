@@ -414,7 +414,7 @@ async fn wait_for_records(state: &FaucetState) -> usize {
         if num_records >= state.num_records
             || !spendable_records(&*wallet, state.grant_size)
                 .await
-                .any(|record| record.ro.amount > (state.grant_size * 2).into())
+                .any(|record| RecordAmount::from(record.ro.amount) > state.grant_size * 2u64)
         {
             return num_records;
         }

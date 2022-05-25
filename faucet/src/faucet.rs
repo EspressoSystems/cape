@@ -31,6 +31,7 @@ use seahorse::{
     events::EventIndex,
     loader::{Loader, LoaderMetadata},
     txn_builder::{RecordInfo, TransactionStatus},
+    RecordAmount,
 };
 use serde::{Deserialize, Serialize};
 use snafu::Snafu;
@@ -72,7 +73,7 @@ pub struct FaucetOptions {
 
     /// size of transfer for faucet grant
     #[structopt(long, env = "CAPE_FAUCET_GRANT_SIZE", default_value = "1000")]
-    pub grant_size: u64,
+    pub grant_size: RecordAmount,
 
     /// number of grants to give out per request
     #[structopt(long, env = "CAPE_FAUCET_NUM_GRANTS", default_value = "5")]
@@ -80,7 +81,7 @@ pub struct FaucetOptions {
 
     /// fee for faucet grant
     #[structopt(long, env = "CAPE_FAUCET_FEE_SIZE", default_value = "0")]
-    pub fee_size: u64,
+    pub fee_size: RecordAmount,
 
     /// number of records to maintain simultaneously.
     ///
@@ -125,9 +126,9 @@ pub struct FaucetOptions {
 #[derive(Clone)]
 struct FaucetState {
     wallet: Arc<Mutex<CapeWallet<'static, CapeBackend<'static, LoaderMetadata>>>>,
-    grant_size: u64,
+    grant_size: RecordAmount,
     num_grants: usize,
-    fee_size: u64,
+    fee_size: RecordAmount,
     num_records: usize,
     // Channel to signal when the distribution of records owned by the faucet changes. This will
     // wake the record breaker thread (which waits on the receiver) so it can create more records by
@@ -275,12 +276,12 @@ async fn request_fee_assets(
 
 async fn spendable_records(
     wallet: &CapeWallet<'static, CapeBackend<'static, LoaderMetadata>>,
-    grant_size: u64,
+    grant_size: RecordAmount,
 ) -> impl Iterator<Item = RecordInfo> {
     let now = wallet.lock().await.state().txn_state.validator.now();
     wallet.records().await.filter(move |record| {
         record.ro.asset_def.code == AssetCode::native()
-            && record.ro.amount >= grant_size
+            && record.ro.amount >= grant_size.into()
             && record.ro.freeze_flag == FreezeFlag::Unfrozen
             && !record.on_hold(now)
     })

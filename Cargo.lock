@@ -1173,6 +1173,7 @@ dependencies = [
  "lazy_static",
  "markdown",
  "net",
+ "num-traits",
  "pipe",
  "rand 0.8.5",
  "rand_chacha 0.3.1",

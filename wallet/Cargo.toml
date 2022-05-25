@@ -47,6 +47,7 @@ key-set = { git = "https://github.com/EspressoSystems/key-set.git", tag = "0.2.3
 lazy_static = "1.4.0"
 markdown = "0.3"
 net = { git = "https://github.com/EspressoSystems/net.git", tag = "0.2.2" }
+num-traits = "0.2"
 pipe = { version = "0.4" }
 rand = "0.8.4"
 rand_chacha = "0.3.1"

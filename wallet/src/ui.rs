@@ -13,19 +13,19 @@ use cap_rust_sandbox::model::Erc20Code;
 use espresso_macros::ser_test;
 use ethers::prelude::{Address, U256};
 use futures::stream::{iter, StreamExt};
-use jf_cap::structs::Amount;
 use jf_cap::{
     keys::{AuditorKeyPair, AuditorPubKey, FreezerKeyPair, FreezerPubKey, UserKeyPair, UserPubKey},
     structs::{AssetCode, AssetDefinition as JfAssetDefinition, AssetPolicy as JfAssetPolicy},
 };
 use net::UserAddress;
+use num_traits::identities::Zero;
 use reef::cap;
 use seahorse::{
     accounts::{AccountInfo, KeyPair},
     asset_library::Icon,
     events::EventIndex,
     txn_builder::RecordInfo,
-    MintInfo,
+    MintInfo, RecordAmount,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -48,7 +48,7 @@ pub struct AssetDefinition {
     pub address_viewable: bool,
     pub amount_viewable: bool,
     pub blind_viewable: bool,
-    pub viewing_threshold: u128,
+    pub viewing_threshold: RecordAmount,
 }
 
 impl AssetDefinition {
@@ -155,7 +155,7 @@ impl FromStr for AssetDefinition {
         let mut address_viewable = false;
         let mut amount_viewable = false;
         let mut blind_viewable = false;
-        let mut viewing_threshold = 0;
+        let mut viewing_threshold = RecordAmount::zero();
         for kv in s.split(',') {
             let (key, value) = match kv.split_once(':') {
                 Some(split) => split,
@@ -201,7 +201,7 @@ impl FromStr for AssetDefinition {
                 "viewing_threshold" => {
                     viewing_threshold = value
                         .parse()
-                        .map_err(|_| format!("expected u64, got {}", value))?;
+                        .map_err(|_| format!("expected RecordAmount, got {}", value))?;
                 }
                 _ => return Err(format!("unrecognized key {}", key)),
             }
@@ -419,7 +419,7 @@ pub struct WalletSummary {
 pub struct Record {
     pub address: UserAddress,
     pub asset: AssetCode,
-    pub amount: Amount,
+    pub amount: RecordAmount,
     pub uid: u64,
 }
 
@@ -428,7 +428,7 @@ impl From<RecordInfo> for Record {
         Self {
             address: record.ro.pub_key.address().into(),
             asset: record.ro.asset_def.code,
-            amount: record.ro.amount,
+            amount: record.amount(),
             uid: record.uid,
         }
     }
@@ -538,7 +538,7 @@ pub struct TransactionHistoryEntry {
     /// senders are and this field may be empty.
     pub senders: Vec<UserAddress>,
     /// Receivers and corresponding amounts.
-    pub receivers: Vec<(UserAddress, Amount)>,
+    pub receivers: Vec<(UserAddress, RecordAmount)>,
     pub status: String,
 }
 
@@ -574,7 +574,7 @@ impl TransactionHistoryEntry {
             receivers: entry
                 .receivers
                 .into_iter()
-                .map(|(addr, amt)| (addr.into(), amt.into()))
+                .map(|(addr, amt)| (addr.into(), amt))
                 .collect(),
             status: match entry.receipt {
                 Some(receipt) => match wallet.transaction_status(&receipt).await {
@@ -807,7 +807,7 @@ pub mod sol {
         pub cred_pk: EdOnBN254Point,
         pub freezer_pk: EdOnBN254Point,
         pub reveal_map: U256,
-        pub reveal_threshold: u128,
+        pub reveal_threshold: RecordAmount,
     }
 
     impl From<types::AssetPolicy> for AssetPolicy {
@@ -817,7 +817,7 @@ pub mod sol {
                 cred_pk: p.cred_pk.into(),
                 freezer_pk: p.freezer_pk.into(),
                 reveal_map: p.reveal_map.into(),
-                reveal_threshold: p.reveal_threshold,
+                reveal_threshold: p.reveal_threshold.into(),
             }
         }
     }
@@ -829,7 +829,7 @@ pub mod sol {
                 cred_pk: p.cred_pk.into(),
                 freezer_pk: p.freezer_pk.into(),
                 reveal_map: p.reveal_map.into(),
-                reveal_threshold: p.reveal_threshold,
+                reveal_threshold: p.reveal_threshold.into(),
             }
         }
     }
@@ -849,7 +849,7 @@ pub mod sol {
     #[ser_test(ark(false))]
     #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
     pub struct RecordOpening {
-        pub amount: u128,
+        pub amount: RecordAmount,
         pub asset_def: AssetDefinition,
         pub user_addr: EdOnBN254Point,
         pub enc_key: [u8; 32],
@@ -860,7 +860,7 @@ pub mod sol {
     impl From<types::RecordOpening> for RecordOpening {
         fn from(r: types::RecordOpening) -> Self {
             Self {
-                amount: r.amount,
+                amount: r.amount.into(),
                 asset_def: r.asset_def.into(),
                 user_addr: r.user_addr.into(),
                 enc_key: r.enc_key,
@@ -873,7 +873,7 @@ pub mod sol {
     impl From<RecordOpening> for types::RecordOpening {
         fn from(r: RecordOpening) -> Self {
             Self {
-                amount: r.amount,
+                amount: r.amount.into(),
                 asset_def: r.asset_def.into(),
                 user_addr: r.user_addr.into(),
                 enc_key: r.enc_key,

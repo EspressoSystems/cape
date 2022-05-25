@@ -374,14 +374,9 @@ async fn main() {
                 let owner_address = record.ro.pub_key.address().clone();
                 let asset_def = &record.ro.asset_def;
 
-                freeze_token(
-                    &mut wallet,
-                    &asset_def.code,
-                    record.ro.amount,
-                    owner_address,
-                )
-                .await
-                .unwrap();
+                freeze_token(&mut wallet, &asset_def.code, record.amount(), owner_address)
+                    .await
+                    .unwrap();
             }
             OperationType::Unfreeze => {
                 let freezable_records: Vec<RecordInfo> =
@@ -393,29 +388,18 @@ async fn main() {
                 let owner_address = record.ro.pub_key.address();
                 let asset_def = &record.ro.asset_def;
 
-                unfreeze_token(
-                    &mut wallet,
-                    &asset_def.code,
-                    record.ro.amount,
-                    owner_address,
-                )
-                .await
-                .unwrap();
+                unfreeze_token(&mut wallet, &asset_def.code, record.amount(), owner_address)
+                    .await
+                    .unwrap();
             }
             OperationType::Wrap => {
                 let asset_def = wallet
                     .define_asset("my_asset".into(), &[], AssetPolicy::default())
                     .await
                     .expect("failed to define asset");
-                wrap_simple_token(
-                    &mut wallet,
-                    &address,
-                    asset_def,
-                    &erc20_contract,
-                    100u64.into(),
-                )
-                .await
-                .unwrap();
+                wrap_simple_token(&mut wallet, &address, asset_def, &erc20_contract, 100)
+                    .await
+                    .unwrap();
             }
             OperationType::Burn => {
                 let assets = wallet.assets().await;

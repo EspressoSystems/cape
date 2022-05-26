@@ -197,7 +197,7 @@ pub async fn spawn_eqs(cape_address: Address) -> (Url, TempDir, JoinHandle<std::
         reset_store_state: true,
         query_interval: 500,
         ethers_block_max: 5000,
-        eqs_port: eqs_port as u16,
+        eqs_port,
         cape_address: Some(cape_address),
         rpc_url: rpc_url_for_test().to_string(),
         temp_test_run: false,

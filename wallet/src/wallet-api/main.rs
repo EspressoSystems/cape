@@ -1086,6 +1086,7 @@ mod tests {
         // body of the sponsor transaction.
         assert_eq!(info.wrapped_erc20, None);
         assert_eq!(sol::AssetDefinition::from(info.definition.clone()), asset);
+
         // After submitting the transaction, `wrapped_erc20` is populated.
         let mut submitted_info: AssetInfo = server
             .client
@@ -1105,11 +1106,22 @@ mod tests {
             Address::from_str(&submitted_info.wrapped_erc20.unwrap()).unwrap(),
             erc20_code
         );
+
         // Other than that, the new info is the same as the old one.
         submitted_info.wrapped_erc20 = None;
         assert_eq!(submitted_info, info);
 
-        // sponsor should return an asset with the default freezer public key if it's not given.
+        // The sponsored asset should be reflected in the EQS.
+        server
+            .client
+            .post("waitforsponsor/timeout/300")
+            .body_json(&asset)
+            .unwrap()
+            .send()
+            .await
+            .unwrap();
+
+        // buildsponsor should return an asset with the default freezer public key if it's not given.
         let erc20_code = Address::from([2u8; 20]);
         let (asset, _) = server
                 .post::<(sol::AssetDefinition, String)>(&format!(
@@ -1120,7 +1132,7 @@ mod tests {
                 .unwrap();
         assert!(!AssetPolicy::from(asset.policy).is_freezer_pub_key_set());
 
-        // sponsor should return an asset with the default auditor public key and no reveal
+        // buildsponsor should return an asset with the default auditor public key and no reveal
         // threshold if an auditor public key isn't given.
         let erc20_code = Address::from([3u8; 20]);
         let (asset, _) = server
@@ -1133,7 +1145,7 @@ mod tests {
         assert_eq!(asset.policy.reveal_threshold, 0u128.into());
         assert!(!AssetPolicy::from(asset.policy).is_auditor_pub_key_set());
 
-        // sponsor should return an asset with no reveal threshold if it's not given.
+        // buildsponsor should return an asset with no reveal threshold if it's not given.
         let erc20_code = Address::from([4u8; 20]);
         let (asset, _) = server
                 .post::<(sol::AssetDefinition, String)>(&format!(
@@ -1144,7 +1156,7 @@ mod tests {
                 .unwrap();
         assert_eq!(asset.policy.reveal_threshold, 0u128.into());
 
-        // sponsor should create an asset with a given symbol and description.
+        // buildsponsor should create an asset with a given symbol and description.
         let erc20_code = Address::from([5u8; 20]);
         let (asset, info) = server
                 .post::<(sol::AssetDefinition, String)>(&format!(

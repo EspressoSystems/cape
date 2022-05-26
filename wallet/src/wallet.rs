@@ -21,6 +21,7 @@ use seahorse::{
     AssetInfo, RecordAmount, Wallet, WalletBackend, WalletError,
 };
 use std::path::Path;
+use std::time::Duration;
 
 pub type CapeWalletError = WalletError<CapeLedger>;
 
@@ -42,8 +43,16 @@ pub trait CapeWalletBackend<'a>: WalletBackend<'a, CapeLedger> {
     /// Returns None if the asset is not a wrapped asset.
     async fn get_wrapped_erc20_code(
         &self,
-        asset: &AssetDefinition,
+        asset: &AssetCode,
     ) -> Result<Option<Erc20Code>, CapeWalletError>;
+
+    /// Wait until the EQS reflects the associated ERC20 code of the CAPE asset, or the `timeout`
+    /// is reached.
+    async fn wait_for_wrapped_erc20_code(
+        &mut self,
+        asset: &AssetCode,
+        timeout: Option<Duration>,
+    ) -> Result<(), CapeWalletError>;
 
     /// Wrap some amount of an ERC20 token in a CAPE asset.
     ///
@@ -71,6 +80,9 @@ pub trait CapeWalletBackend<'a>: WalletBackend<'a, CapeLedger> {
 
     /// The real-world time (as an event index) according to the EQS.
     async fn eqs_time(&self) -> Result<EventIndex, CapeWalletError>;
+
+    /// Wait until the EQS is running.
+    async fn wait_for_eqs(&self) -> Result<(), CapeWalletError>;
 }
 
 pub type CapeWallet<'a, Backend> = Wallet<'a, Backend, CapeLedger>;
@@ -91,7 +103,8 @@ pub trait CapeWalletExt<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> {
         cap_asset_policy: AssetPolicy,
     ) -> Result<AssetDefinition, CapeWalletError>;
 
-    /// Construct the information required to sponsor an asset, but do not submit a transaction.
+    /// Construct the information required to sponsor an asset if the EQS is running, but do not
+    /// submit a transaction.
     ///
     /// A new asset definition is created and returned. This asset can be passed to the contract's
     /// `sponsorCapeAsset` function, along with `erc20_code`, in order to sponsor the asset, but
@@ -113,6 +126,13 @@ pub trait CapeWalletExt<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> {
         erc20_code: Erc20Code,
         sponsor_addr: EthereumAddr,
         asset: &AssetDefinition,
+    ) -> Result<(), CapeWalletError>;
+
+    /// Wait until the sponsored asset is reflected in the EQS or the `timeout` is reached.
+    async fn wait_for_sponsor(
+        &mut self,
+        asset: &AssetCode,
+        timeout: Option<Duration>,
     ) -> Result<(), CapeWalletError>;
 
     /// Wrap some ERC-20 tokens into a CAPE asset.
@@ -240,6 +260,9 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
         sponsor_addr: EthereumAddr,
         cap_asset_policy: AssetPolicy,
     ) -> Result<AssetDefinition, CapeWalletError> {
+        // Make sure the EQS is running.
+        self.lock().await.backend_mut().wait_for_eqs().await?;
+
         let description =
             erc20_asset_description(&erc20_code, &sponsor_addr, cap_asset_policy.clone());
         let code = AssetCode::new_foreign(&description);
@@ -272,6 +295,18 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
         Ok(())
     }
 
+    async fn wait_for_sponsor(
+        &mut self,
+        asset: &AssetCode,
+        timeout: Option<Duration>,
+    ) -> Result<(), CapeWalletError> {
+        self.lock()
+            .await
+            .backend_mut()
+            .wait_for_wrapped_erc20_code(asset, timeout)
+            .await
+    }
+
     async fn build_wrap(
         &mut self,
         cap_asset: AssetDefinition,
@@ -290,7 +325,11 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
         let mut state = self.lock().await;
 
         let cap_asset = ro.asset_def.clone();
-        let erc20_code = match state.backend().get_wrapped_erc20_code(&cap_asset).await? {
+        let erc20_code = match state
+            .backend()
+            .get_wrapped_erc20_code(&cap_asset.code)
+            .await?
+        {
             Some(code) => code,
             None => {
                 return Err(WalletError::<CapeLedger>::UndefinedAsset {
@@ -397,11 +436,10 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
     }
 
     async fn wrapped_erc20(&self, asset: AssetCode) -> Option<Erc20Code> {
-        let asset = self.asset(asset).await?;
         let state = self.lock().await;
         state
             .backend()
-            .get_wrapped_erc20_code(&asset.definition)
+            .get_wrapped_erc20_code(&asset)
             .await
             .unwrap_or(None)
     }

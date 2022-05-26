@@ -40,9 +40,12 @@ pub enum ApiRouteKey {
     getbalance,
     getinfo,
     getmnemonic,
+    getprivatekey,
+    getrecords,
     importasset,
     healthcheck,
     importkey,
+    lastusedkeystore,
     listkeystores,
     mint,
     newasset,
@@ -61,9 +64,7 @@ pub enum ApiRouteKey {
     unwrap,
     updateasset,
     view,
-    getrecords,
-    lastusedkeystore,
-    getprivatekey,
+    waitforsponsor,
 }
 
 /// Check consistency of `api.toml`

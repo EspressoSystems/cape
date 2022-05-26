@@ -8,7 +8,10 @@
 //! Test-only implementation of the [reef] ledger abstraction for CAPE.
 
 use crate::wallet::{CapeWalletBackend, CapeWalletError};
-use async_std::sync::{Mutex, MutexGuard};
+use async_std::{
+    sync::{Mutex, MutexGuard},
+    task::sleep,
+};
 use async_trait::async_trait;
 use cap_rust_sandbox::{
     deploy::EthMiddleware, ledger::*, model::*, universal_param::UNIVERSAL_PARAM,
@@ -19,7 +22,9 @@ use itertools::izip;
 use jf_cap::{
     keys::{UserAddress, UserKeyPair, UserPubKey},
     proof::{freeze::FreezeProvingKey, transfer::TransferProvingKey, UniversalParam},
-    structs::{AssetDefinition, Nullifier, ReceiverMemo, RecordCommitment, RecordOpening},
+    structs::{
+        AssetCode, AssetDefinition, Nullifier, ReceiverMemo, RecordCommitment, RecordOpening,
+    },
     KeyPair, MerklePath, MerkleTree, Signature, TransactionNote, VerKey,
 };
 use key_set::{OrderByOutputs, ProverKeySet, SizedKey, VerifierKeySet};
@@ -38,10 +43,12 @@ use seahorse::{
     WalletBackend, WalletError, WalletState,
 };
 use serde::{de::DeserializeOwned, Serialize};
+use std::cmp::min;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::pin::Pin;
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 use tempdir::TempDir;
 use testing::{MockEventSource, MockLedger, MockNetwork, SystemUnderTest};
 
@@ -274,10 +281,15 @@ impl MockCapeNetwork {
 
     pub fn get_wrapped_asset(
         &self,
-        asset: &AssetDefinition,
+        asset: &AssetCode,
     ) -> Result<Option<Erc20Code>, CapeWalletError> {
-        match self.contract.erc20_registrar.get(asset) {
-            Some((erc20_code, _)) => Ok(Some(erc20_code.clone())),
+        match self
+            .contract
+            .erc20_registrar
+            .iter()
+            .find(|(definition, _)| definition.code == *asset)
+        {
+            Some((_, (erc20_code, _))) => Ok(Some(erc20_code.clone())),
             None => Ok(None),
         }
     }
@@ -674,9 +686,30 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
 
     async fn get_wrapped_erc20_code(
         &self,
-        asset: &AssetDefinition,
+        asset: &AssetCode,
     ) -> Result<Option<Erc20Code>, WalletError<CapeLedger>> {
         self.ledger.lock().await.network().get_wrapped_asset(asset)
+    }
+
+    async fn wait_for_wrapped_erc20_code(
+        &mut self,
+        asset: &AssetCode,
+        timeout: Option<Duration>,
+    ) -> Result<(), CapeWalletError> {
+        let mut backoff = Duration::from_secs(1);
+        let now = Instant::now();
+        while self.get_wrapped_erc20_code(asset).await?.is_none() {
+            if let Some(time) = timeout {
+                if now.elapsed() >= time {
+                    return Err(CapeWalletError::Failed {
+                        msg: format!("asset not reflected in the EQS in {:?}", time),
+                    });
+                }
+            }
+            sleep(backoff).await;
+            backoff = min(backoff * 2, Duration::from_secs(60));
+        }
+        Ok(())
     }
 
     async fn wrap_erc20(
@@ -705,6 +738,11 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
 
     async fn eqs_time(&self) -> Result<EventIndex, CapeWalletError> {
         Ok(self.ledger.lock().await.network().events.now())
+    }
+
+    async fn wait_for_eqs(&self) -> Result<(), CapeWalletError> {
+        // No need to wait for the mock EQS.
+        Ok(())
     }
 }
 
@@ -805,7 +843,7 @@ impl<'a> SystemUnderTest<'a> for CapeTest {
 mod cape_wallet_tests {
     use super::*;
     use crate::wallet::CapeWalletExt;
-    use jf_cap::structs::{Amount, AssetCode, AssetPolicy};
+    use jf_cap::structs::{Amount, AssetPolicy};
     use seahorse::txn_builder::TransactionError;
     use std::time::Instant;
 

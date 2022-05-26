@@ -317,12 +317,14 @@ impl EthPolling {
                                 ));
                                 index += 1;
                             }
+                            let txn = &transitions[txn_id];
                             let memo_event = LedgerEvent::Memos {
                                 outputs,
                                 transaction: Some((
                                     block_id,
                                     txn_id as u64,
-                                    transitions[txn_id].kind(),
+                                    txn.hash(),
+                                    txn.kind(),
                                 )),
                             };
                             memo_events.push(memo_event);
@@ -428,7 +430,7 @@ impl EthPolling {
                     let output = (memo.clone(), rc, uid, merkle_path.clone());
                     let memo_event = LedgerEvent::Memos {
                         outputs: vec![output],
-                        transaction: Some((0, 0, CapeTransactionKind::Faucet)),
+                        transaction: Some((0, 0, transition.hash(), CapeTransactionKind::Faucet)),
                     };
 
                     // Update the local data structures

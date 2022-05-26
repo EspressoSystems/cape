@@ -451,7 +451,7 @@ async fn populatefortest(req: tide::Request<WebState>) -> Result<tide::Response,
             sponsor_addr,
             asset_def.clone(),
             wrapped_asset_addr.clone(),
-            DEFAULT_WRAPPED_AMT.into(),
+            DEFAULT_WRAPPED_AMT,
         )
         .await
         .map_err(wallet_error)?;

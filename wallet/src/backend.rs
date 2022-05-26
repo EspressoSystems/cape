@@ -747,9 +747,9 @@ mod test {
         let txn = transfer_token(
             &mut sender,
             receiver_key.address(),
-            2u64.into(),
+            2,
             AssetCode::native(),
-            1u64.into(),
+            1,
         )
         .await
         .unwrap();
@@ -773,9 +773,9 @@ mod test {
         let txn = transfer_token(
             &mut receiver,
             sender_key.address(),
-            1u64.into(),
+            1,
             AssetCode::native(),
-            1u64.into(),
+            1,
         )
         .await
         .unwrap();
@@ -926,7 +926,7 @@ mod test {
             &wrapper_key.address(),
             cape_asset.clone(),
             &erc20_contract,
-            100u64.into(),
+            100,
         )
         .await
         .unwrap();
@@ -1000,8 +1000,8 @@ mod test {
                 Some(&sponsor_key.address()),
                 sponsor_eth_addr.clone().into(),
                 &cape_asset.code,
-                100u64.into(),
-                1u64.into(),
+                100,
+                1,
             )
             .await
             .unwrap();

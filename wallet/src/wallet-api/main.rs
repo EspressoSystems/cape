@@ -68,12 +68,10 @@ mod tests {
     };
     use ark_serialize::CanonicalDeserialize;
     use async_std::fs;
-    use cap_rust_sandbox::{
-        ledger::CapeLedger, model::EthereumAddr, universal_param::UNIVERSAL_PARAM,
-    };
+    use cap_rust_sandbox::{ledger::CapeLedger, model::EthereumAddr};
     use cape_wallet::{
         mocks::test_asset_signing_key,
-        testing::{create_test_network, port, retry, spawn_eqs},
+        testing::{port, retry},
         ui::*,
     };
     use ethers::prelude::{Address, U256};
@@ -1024,13 +1022,6 @@ mod tests {
         let view_amount = true;
         let view_address = false;
 
-        // Start the EQS.
-        let mut rng = ChaChaRng::from_seed([1u8; 32]);
-        let universal_param = &*UNIVERSAL_PARAM;
-        let (_, _, _, contract_address, _) =
-            create_test_network(&mut rng, universal_param, None).await;
-        let _ = spawn_eqs(contract_address, Some(50087)).await;
-
         // Should fail if a wallet is not already open.
         server
             .requires_wallet_post::<(sol::AssetDefinition, String)>(&format!(
@@ -1205,13 +1196,6 @@ mod tests {
         // Set parameters for sponsor and wrap.
         let erc20_code = Address::from([1u8; 20]);
         let sponsor_addr = Address::from([2u8; 20]);
-
-        // Start the EQS.
-        let mut rng = ChaChaRng::from_seed([1u8; 32]);
-        let universal_param = &*UNIVERSAL_PARAM;
-        let (_, _, _, contract_address, _) =
-            create_test_network(&mut rng, universal_param, None).await;
-        let _ = spawn_eqs(contract_address, Some(50087)).await;
 
         // Open a wallet.
         let server = TestServer::new().await;
@@ -2708,13 +2692,6 @@ mod tests {
         // Set parameters for sponsor and wrap.
         let erc20_code = Address::from([1u8; 20]);
         let sponsor_addr = Address::from([2u8; 20]);
-
-        // Start the EQS.
-        let mut rng = ChaChaRng::from_seed([1u8; 32]);
-        let universal_param = &*UNIVERSAL_PARAM;
-        let (_, _, _, contract_address, _) =
-            create_test_network(&mut rng, universal_param, None).await;
-        let _ = spawn_eqs(contract_address, Some(50087)).await;
 
         // Open a wallet.
         let server = TestServer::new().await;

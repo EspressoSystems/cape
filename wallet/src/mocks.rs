@@ -687,15 +687,15 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
     async fn wait_for_wrapped_erc20_code(
         &mut self,
         asset: &AssetDefinition,
-        timeout: Option<u64>,
+        timeout: Option<Duration>,
     ) -> Result<(), CapeWalletError> {
         let mut backoff = Duration::from_secs(1);
         let now = Instant::now();
         while self.get_wrapped_erc20_code(asset).await?.is_none() {
             if let Some(time) = timeout {
-                if now.elapsed().as_secs() >= time {
+                if now.elapsed() >= time {
                     return Err(CapeWalletError::Failed {
-                        msg: format!("asset not reflected in the EQS in {} seconds", time),
+                        msg: format!("asset not reflected in the EQS in {:?}", time),
                     });
                 }
             }
@@ -731,6 +731,11 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
 
     async fn eqs_time(&self) -> Result<EventIndex, CapeWalletError> {
         Ok(self.ledger.lock().await.network().events.now())
+    }
+
+    async fn wait_for_eqs(&self) -> Result<(), CapeWalletError> {
+        // No need to wait for the mock EQS.
+        Ok(())
     }
 }
 

@@ -45,6 +45,7 @@ use std::io::Cursor;
 use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
+use std::time::Duration;
 use tagged_base64::TaggedBase64;
 use tide::{Request, StatusCode};
 
@@ -744,16 +745,9 @@ async fn newasset(
 }
 
 async fn buildsponsor(
-    options: &NodeOpt,
     bindings: &HashMap<String, RouteBinding>,
     wallet: &mut Option<Wallet>,
 ) -> Result<(sol::AssetDefinition, String), tide::Error> {
-    // Make sure the EQS is running.
-    surf::connect(options.eqs_url())
-        .send()
-        .await
-        .expect("Cannot build the sponsor transaction since EQS is down");
-
     let wallet = require_wallet(wallet)?;
     let symbol = match bindings.get(":symbol") {
         Some(param) => param.value.as_string()?,
@@ -853,7 +847,7 @@ async fn waitforsponsor(
         None => 60,
     };
     wallet
-        .wait_for_sponsor(&asset, Some(timeout))
+        .wait_for_sponsor(&asset, Some(Duration::from_secs(timeout)))
         .await
         .map_err(wallet_error)
 }
@@ -1341,7 +1335,7 @@ pub async fn dispatch_url(
     let wallet = &mut *state.wallet.lock().await;
     let key = ApiRouteKey::from_str(segments.0).expect("Unknown route");
     match key {
-        ApiRouteKey::buildsponsor => response(&req, buildsponsor(options, bindings, wallet).await?),
+        ApiRouteKey::buildsponsor => response(&req, buildsponsor(bindings, wallet).await?),
         ApiRouteKey::buildwrap => response(&req, buildwrap(bindings, wallet).await?),
         ApiRouteKey::closewallet => response(&req, closewallet(wallet).await?),
         ApiRouteKey::exportasset => response(&req, exportasset(bindings, wallet).await?),

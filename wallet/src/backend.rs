@@ -537,7 +537,7 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
     async fn wait_for_wrapped_erc20_code(
         &mut self,
         asset: &AssetDefinition,
-        timeout: Option<u64>,
+        timeout: Option<Duration>,
     ) -> Result<(), CapeWalletError> {
         let mut backoff = self.min_polling_delay;
         let now = Instant::now();
@@ -549,9 +549,9 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
                 break;
             }
             if let Some(time) = timeout {
-                if now.elapsed().as_secs() >= time {
+                if now.elapsed() >= time {
                     return Err(CapeWalletError::Failed {
-                        msg: format!("asset not reflected in the EQS in {} seconds", time),
+                        msg: format!("asset not reflected in the EQS in {:?}", time),
                     });
                 }
             }
@@ -644,6 +644,10 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
             state.num_events as usize,
         ))
     }
+
+    async fn wait_for_eqs(&self) -> Result<(), CapeWalletError> {
+        self.wait_for_eqs().await
+    }
 }
 
 fn gen_proving_keys(srs: &UniversalParam) -> ProverKeySet<key_set::OrderByOutputs> {
@@ -699,7 +703,7 @@ mod test {
         let universal_param = &*UNIVERSAL_PARAM;
         let (sender_key, relayer_url, address_book_url, contract_address, _) =
             create_test_network(&mut rng, universal_param, None).await;
-        let (eqs_url, _eqs_dir, _join_eqs) = spawn_eqs(contract_address, None).await;
+        let (eqs_url, _eqs_dir, _join_eqs) = spawn_eqs(contract_address).await;
 
         // Create a sender wallet and add the key pair that owns the faucet record.
         let sender_dir = TempDir::new("cape_wallet_backend_test").unwrap();
@@ -823,7 +827,7 @@ mod test {
         let universal_param = &*UNIVERSAL_PARAM;
         let (wrapper_key, relayer_url, address_book_url, contract_address, _) =
             create_test_network(&mut rng, universal_param, None).await;
-        let (eqs_url, _eqs_dir, _join_eqs) = spawn_eqs(contract_address, None).await;
+        let (eqs_url, _eqs_dir, _join_eqs) = spawn_eqs(contract_address).await;
 
         // Create a wallet to sponsor an asset and a different wallet to deposit (we should be able
         // to deposit from an account other than the sponsor).

@@ -539,6 +539,35 @@ pub struct TransactionHistoryEntry {
     pub senders: Vec<UserAddress>,
     /// Receivers and corresponding amounts.
     pub receivers: Vec<(UserAddress, RecordAmount)>,
+    /// Amount of change included in the transaction from the fee.
+    ///
+    /// Every transaction includes a fee, but the record used to pay the fee may be larger than the
+    /// actual fee. In this case, one of the outputs of the transaction will contain change from the
+    /// fee, which the transaction sender receives when the transaction is finalized.
+    ///
+    /// Note that `None` indicates that the amount of change is unknown, not that there is no
+    /// change, which would be indicated by `Some(0)`. The amount of change may be unknown if, for
+    /// example, this is a transaction we received from someone else, in which case we may not know
+    /// how much of a fee they paid and how much change they expect to get.
+    pub fee_change: Option<RecordAmount>,
+    /// Amount of change included in the transaction in the asset being transferred.
+    ///
+    /// For non-native transfers, the amount of the asset being transferred which is consumed by the
+    /// transaction may exceed the amount that the sender wants to transfer, due to the way discrete
+    /// record amounts break down. In this case, one of the outputs of the transaction will contain
+    /// change from the fee, which the transaction sender receives when the transaction is
+    /// finalized.
+    ///
+    /// For native transfers, the transfer inputs and the fee input get mixed together, so there is
+    /// only one change output, which accounts for both the fee change and the transfer change. In
+    /// this case, the total amount of change will be reflected in `fee_change` and `asset_change`
+    /// will be `Some(0)`.
+    ///
+    /// Note that `None` indicates that the amount of change is unknown, not that there is no
+    /// change, which would be indicated by `Some(0)`. The amount of change may be unknown if, for
+    /// example, this is a transaction we received from someone else, and we do not hold the
+    /// necessary viewing keys to inspect the change outputs of the transaction.
+    pub asset_change: Option<RecordAmount>,
     pub status: String,
 }
 
@@ -576,6 +605,8 @@ impl TransactionHistoryEntry {
                 .into_iter()
                 .map(|(addr, amt)| (addr.into(), amt))
                 .collect(),
+            fee_change: entry.fee_change,
+            asset_change: entry.asset_change,
             status: match entry.receipt {
                 Some(receipt) => match wallet.transaction_status(&receipt).await {
                     Ok(status) => status.to_string(),

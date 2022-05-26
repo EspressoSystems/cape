@@ -76,7 +76,7 @@ Once you have an open wallet, you will get the REPL prompt, `>`. Now you can typ
   - `sponsor`: sponsor an asset
   - `wrap`: wrap an asset
     - Note: The `asset_def` argument must be an already-sponsored asset. To sponsor an asset, use the `sponsor` command.
-  - `burn`: burn some of a wrapped asset and withdraw the funds to an ERC-20 account
+  - `unwrap`: unwrap some of a wrapped asset and withdraw the funds to an ERC-20 account
   - `transfer`: transfer some owned assets to another user
   - `transfer_from`: transfer some assets from an owned address to another user
     - Note: Unlike the `transfer` command which allocates from all addresses owned by this wallet, `transfer_from` uses only the specified address, so make sure the address has sufficient balance.

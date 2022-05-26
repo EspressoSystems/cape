@@ -586,7 +586,7 @@ impl TransactionHistoryEntry {
                 CapeTransactionKind::CAP(cap::TransactionKind::Freeze) => "freeze".to_string(),
                 CapeTransactionKind::CAP(cap::TransactionKind::Unfreeze) => "unfreeze".to_string(),
                 CapeTransactionKind::CAP(cap::TransactionKind::Unknown) => "unknown".to_string(),
-                CapeTransactionKind::Burn => "burn".to_string(),
+                CapeTransactionKind::Burn => "unwrap".to_string(),
                 CapeTransactionKind::Wrap => "wrap".to_string(),
                 CapeTransactionKind::Faucet => "faucet".to_string(),
             },

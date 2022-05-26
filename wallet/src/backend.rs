@@ -609,7 +609,7 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
         // from themselves; after all, we can't stop a user from forking the wallet code and
         // commenting out the signature check altogether.
         std::env::var("CAPE_WALLET_ASSET_LIBRARY_VERIFIER_KEY")
-            .unwrap_or_else(|_| "VERKEY~b7yvQPPxjPlZ5gjKofFkf8T7CwAZ2xPnkkVRhE48D4ge".into())
+            .unwrap_or_else(|_| "SCHNORRVERKEY~b7yvQPPxjPlZ5gjKofFkf8T7CwAZ2xPnkkVRhE48D4jz".into())
             .parse()
             .expect("failed to parse verification key")
     }

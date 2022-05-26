@@ -22,14 +22,14 @@ amount = 1000000
 viewing_key = 'AUDPUBKEY~pqwRF_LGHH6obb4iX72qo6PWy2Fo3D9wmfqgRnYjmakB'
 
 [[assets]]
-symbol = 'WGTH'
+symbol = 'CapeWGTH'
 description = 'Wrapped WETH on Goerli'
 icon = 'icons/WGTH.png'
 type = 'wrapped'
 contract = '0x71C95911E9a5D330f4D621842EC243EE1343292e'
 
 [[assets]]
-symbol = 'DAI'
+symbol = 'CapeDAI'
 description = 'Wrapped DAI'
 icon = 'icons/DAI.png'
 type = 'wrapped'
@@ -38,7 +38,7 @@ contract = '0x948B3c65b89DF0B4894ABE91E6D02FE579834F8F'
 viewing_key = 'AUDPUBKEY~z1xFfj2B6dTdUn1tcyexZd8v8foMPDJibT8hrmXXkAhx'
 
 [[assets]]
-symbol = 'USDC'
+symbol = 'CapeUSDC'
 description = 'Wrapped USDC'
 icon = 'icons/USDC.png'
 type = 'wrapped'

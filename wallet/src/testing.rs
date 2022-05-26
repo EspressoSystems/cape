@@ -23,7 +23,6 @@ use cap_rust_sandbox::deploy::EthMiddleware;
 use cap_rust_sandbox::ethereum::get_provider;
 use cap_rust_sandbox::ledger::CapeLedger;
 use cap_rust_sandbox::test_utils::keysets_for_test;
-use cap_rust_sandbox::types::GenericInto;
 use cap_rust_sandbox::types::SimpleToken;
 use eqs::configuration::Confirmations;
 use eqs::{configuration::EQSOptions, run_eqs};
@@ -165,7 +164,7 @@ pub async fn get_burn_amount<'a>(
         .collect::<Vec<_>>();
     if filtered.is_empty() {
         event!(Level::INFO, "No records to burn");
-        0u128.into()
+        0u64.into()
     } else {
         filtered[0].amount()
     }
@@ -331,10 +330,7 @@ pub async fn wrap_simple_token<'a>(
     let wrapper_eth_addr = wrapper.eth_address().await.unwrap();
     // Prepare to wrap: deposit some ERC20 tokens into the wrapper's ETH wallet.
     erc20_contract
-        .transfer(
-            wrapper_eth_addr.clone().into(),
-            amount.generic_into::<u128>().into(),
-        )
+        .transfer(wrapper_eth_addr.clone().into(), amount.into())
         .send()
         .await
         .unwrap()

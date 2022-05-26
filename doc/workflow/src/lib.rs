@@ -246,7 +246,7 @@ impl CapeContract {
 
         // 1.1 (optional) more sanity check on user provided CAPE asset record,
         // may help prevent users from crediting into some unspendable record or waste more gas.
-        assert!(ro.amount > 0u128.into());
+        assert!(ro.amount > 0u64.into());
         assert_ne!(ro.pub_key, UserPubKey::default()); // this would be EC point equality check
         assert_eq!(ro.freeze_flag, FreezeFlag::Unfrozen); // just a boolean flag
 

@@ -177,7 +177,7 @@ pub fn generate_burn_tx(
         owner_keypair: faucet_key_pair,
     };
 
-    let txn_fee_info = TxnFeeInfo::new(&mut rng, fee_input, 10u128.into())
+    let txn_fee_info = TxnFeeInfo::new(&mut rng, fee_input, 10u64.into())
         .unwrap()
         .0;
 

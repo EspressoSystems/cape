@@ -873,7 +873,7 @@ async fn buildwrap(
         .definition;
     let amount = bindings[":amount"].value.as_u128()?;
     let ro: sol::RecordOpening = wallet
-        .build_wrap(asset_definition, destination.into(), amount.into())
+        .build_wrap(asset_definition, destination.into(), amount)
         .await?
         .into();
     Ok(ro)
@@ -945,13 +945,7 @@ async fn unwrap(
     let fee = bindings[":fee"].value.as_u128()?;
 
     Ok(wallet
-        .burn(
-            source.as_ref(),
-            eth_address.into(),
-            &asset,
-            amount.into(),
-            fee.into(),
-        )
+        .burn(source.as_ref(), eth_address.into(), &asset, amount, fee)
         .await?)
 }
 
@@ -1259,7 +1253,7 @@ async fn recordopening(
         None => FreezeFlag::Unfrozen,
     };
     let ro: sol::RecordOpening = wallet
-        .record_opening(asset_definition, address.into(), amount.into(), freeze)
+        .record_opening(asset_definition, address.into(), amount, freeze)
         .await?
         .into();
     Ok(ro)

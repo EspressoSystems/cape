@@ -12,13 +12,13 @@ use async_trait::async_trait;
 use cap_rust_sandbox::{deploy::EthMiddleware, ledger::*, model::*};
 use jf_cap::{
     keys::UserAddress,
-    structs::{Amount, AssetCode, AssetDefinition, AssetPolicy, FreezeFlag, RecordOpening},
+    structs::{AssetCode, AssetDefinition, AssetPolicy, FreezeFlag, RecordOpening},
     VerKey,
 };
 use seahorse::{
     events::EventIndex,
     txn_builder::{TransactionError, TransactionReceipt},
-    AssetInfo, Wallet, WalletBackend, WalletError,
+    AssetInfo, RecordAmount, Wallet, WalletBackend, WalletError,
 };
 use std::path::Path;
 
@@ -150,7 +150,7 @@ pub trait CapeWalletExt<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> {
         // it.
         cap_asset: AssetDefinition,
         dst_addr: UserAddress,
-        amount: Amount,
+        amount: impl Into<RecordAmount> + Send + 'static,
         // We may return a `WrapReceipt`, i.e., a record commitment to track wraps, once it's defined.
     ) -> Result<(), CapeWalletError>;
 
@@ -162,7 +162,7 @@ pub trait CapeWalletExt<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> {
         &mut self,
         cap_asset: AssetDefinition,
         dst_addr: UserAddress,
-        amount: Amount,
+        amount: impl Into<RecordAmount> + Send + 'static,
     ) -> Result<RecordOpening, CapeWalletError>;
 
     /// Submit a wrap transaction to the CAPE contract.
@@ -187,8 +187,8 @@ pub trait CapeWalletExt<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> {
         account: Option<&UserAddress>,
         dst_addr: EthereumAddr,
         cap_asset: &AssetCode,
-        amount: Amount,
-        fee: Amount,
+        amount: impl Into<RecordAmount> + Send + 'static,
+        fee: impl Into<RecordAmount> + Send + 'static,
     ) -> Result<TransactionReceipt<CapeLedger>, CapeWalletError>;
 
     /// Construct the record opening of an asset for the given address.
@@ -196,7 +196,7 @@ pub trait CapeWalletExt<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> {
         &mut self,
         asset: AssetDefinition,
         address: UserAddress,
-        amount: Amount,
+        amount: impl Into<RecordAmount> + Send + 'static,
         freeze_flag: FreezeFlag,
     ) -> Result<RecordOpening, CapeWalletError>;
 
@@ -304,7 +304,7 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
         &mut self,
         cap_asset: AssetDefinition,
         dst_addr: UserAddress,
-        amount: Amount,
+        amount: impl Into<RecordAmount> + Send + 'static,
     ) -> Result<RecordOpening, CapeWalletError> {
         self.record_opening(cap_asset, dst_addr, amount, FreezeFlag::Unfrozen)
             .await
@@ -338,9 +338,9 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
         src_addr: EthereumAddr,
         cap_asset: AssetDefinition,
         dst_addr: UserAddress,
-        amount: Amount,
+        amount: impl Into<RecordAmount> + Send + 'static,
     ) -> Result<(), CapeWalletError> {
-        let ro = self.build_wrap(cap_asset, dst_addr, amount).await?;
+        let ro = self.build_wrap(cap_asset, dst_addr, amount.into()).await?;
 
         self.submit_wrap(src_addr, ro).await
     }
@@ -350,9 +350,12 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
         account: Option<&UserAddress>,
         dst_addr: EthereumAddr,
         cap_asset: &AssetCode,
-        amount: Amount,
-        fee: Amount,
+        amount: impl Into<RecordAmount> + Send + 'static,
+        fee: impl Into<RecordAmount> + Send + 'static,
     ) -> Result<TransactionReceipt<CapeLedger>, CapeWalletError> {
+        let amount = amount.into();
+        let fee = fee.into();
+
         // The owner public key of the new record opening is ignored when processing a burn. All we
         // need is an address in the address book, so just use one from this wallet. If this wallet
         // doesn't have any accounts, the burn is going to fail anyways because we don't have a
@@ -363,7 +366,7 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
             .get(0)
             .ok_or(TransactionError::InsufficientBalance {
                 asset: *cap_asset,
-                required: u128::from(amount).into(),
+                required: amount.into(),
                 actual: 0u64.into(),
             })?
             .address();
@@ -387,7 +390,7 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
             )
             .await?;
         assert_eq!(info.outputs[1].asset_def.code, *cap_asset);
-        assert_eq!(info.outputs[1].amount, amount);
+        assert_eq!(info.outputs[1].amount, amount.into());
         assert_eq!(info.outputs[1].pub_key.address(), burn_address);
 
         if let Some(history) = &mut info.history {
@@ -405,7 +408,7 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
         &mut self,
         asset: AssetDefinition,
         address: UserAddress,
-        amount: Amount,
+        amount: impl Into<RecordAmount> + Send + 'static,
         freeze_flag: FreezeFlag,
     ) -> Result<RecordOpening, CapeWalletError> {
         let mut state = self.lock().await;
@@ -414,7 +417,7 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
 
         Ok(RecordOpening::new(
             state.rng(),
-            amount,
+            amount.into().into(),
             asset,
             pub_key,
             freeze_flag,

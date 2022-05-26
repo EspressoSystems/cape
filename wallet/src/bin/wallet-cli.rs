@@ -224,8 +224,8 @@ async fn cli_burn<'a, C: CLI<'a, Ledger = CapeLedger>>(
             from.map(|addr| addr.0).as_ref(),
             to,
             &asset.item,
-            amount.into(),
-            fee.into(),
+            amount,
+            fee,
         )
         .await;
     cli_writeln!(io, "{}", asset.item);

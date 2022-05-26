@@ -86,6 +86,7 @@ mod tests {
         asset_library::{Icon, VerifiedAssetLibrary},
         hd::{KeyTree, Mnemonic},
         txn_builder::{RecordInfo, TransactionReceipt},
+        RecordAmount,
     };
     use serde::de::DeserializeOwned;
     use std::collections::{HashMap, HashSet};
@@ -916,7 +917,7 @@ mod tests {
         let server = TestServer::new().await;
 
         // Set parameters for newasset.
-        let viewing_threshold = 10;
+        let viewing_threshold = RecordAmount::from(10u128);
         let view_amount = true;
         let view_address = false;
         let description = base64::encode_config(&[3u8; 32], base64::URL_SAFE_NO_PAD);
@@ -987,7 +988,7 @@ mod tests {
             .await
             .unwrap();
         assert!(asset.definition.viewing_key.is_none());
-        assert_eq!(asset.definition.viewing_threshold, 0);
+        assert_eq!(asset.definition.viewing_threshold, 0u128.into());
 
         // newasset should return an asset with no reveal threshold if it's not given.
         let asset = server
@@ -997,7 +998,7 @@ mod tests {
             ))
             .await
             .unwrap();
-        assert_eq!(asset.definition.viewing_threshold, 0);
+        assert_eq!(asset.definition.viewing_threshold, 0u128.into());
 
         // newasset should return an asset with a given symbol.
         let asset = server
@@ -1019,7 +1020,7 @@ mod tests {
         // Set parameters for /sponsor.
         let erc20_code = Address::from([1u8; 20]);
         let sponsor_addr = Address::from([2u8; 20]);
-        let viewing_threshold = 10;
+        let viewing_threshold = RecordAmount::from(10u128);
         let view_amount = true;
         let view_address = false;
 
@@ -1150,7 +1151,7 @@ mod tests {
             ))
             .await
             .unwrap();
-        assert_eq!(asset.policy.reveal_threshold, 0);
+        assert_eq!(asset.policy.reveal_threshold, 0u128.into());
         assert!(!AssetPolicy::from(asset.policy).is_auditor_pub_key_set());
 
         // buildsponsor should return an asset with no reveal threshold if it's not given.
@@ -1162,7 +1163,7 @@ mod tests {
                 ))
                 .await
                 .unwrap();
-        assert_eq!(asset.policy.reveal_threshold, 0);
+        assert_eq!(asset.policy.reveal_threshold, 0u128.into());
 
         // buildsponsor should create an asset with a given symbol and description.
         let erc20_code = Address::from([5u8; 20]);
@@ -2687,7 +2688,7 @@ mod tests {
             ))
             .await
             .unwrap();
-        assert_eq!(ro.amount, 10);
+        assert_eq!(ro.amount, 10u128.into());
         assert_eq!(ro.asset_def.code, asset.into());
         assert!(ro.freeze_flag);
         let ro = server
@@ -2697,7 +2698,7 @@ mod tests {
             ))
             .await
             .unwrap();
-        assert_eq!(ro.amount, 10);
+        assert_eq!(ro.amount, 10u128.into());
         assert_eq!(ro.asset_def.code, asset.into());
         assert!(!ro.freeze_flag);
     }

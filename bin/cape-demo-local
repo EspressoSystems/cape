@@ -73,8 +73,8 @@ export CAPE_WALLET_STORAGE_BOB="$(mktemp -d -t cape-wallet-bob-XXXXXXX)"
 
 export CAPE_ASSET_LIBRARY_ETH_MNEMONIC="ketchup disorder wing wine island brave business season strike mango mammal purchase"
 export CAPE_ASSET_LIBRARY_CAPE_MNEMONIC="gift snow sheriff fresh abstract flag peanut right dress scissors elevator price"
-export CAPE_ASSET_LIBRARY_SIGNING_KEY="SIGNKEYPAIR~RxKAN5JSZoYmVU3usjmU2CyIVlf2jqjr7AtMJS6_WAD3cogIQYGZSoOPhHdBLkhkgmDzdNmBQD4d3WTZEghekx0"
-export CAPE_WALLET_ASSET_LIBRARY_VERIFIER_KEY="VERKEY~93KICEGBmUqDj4R3QS5IZIJg83TZgUA-Hd1k2RIIXpNS"
+export CAPE_ASSET_LIBRARY_SIGNING_KEY="SIGNKEYPAIR~yB2OQArlfzxpygFWRA5A-9h2iCd0M0XPudzU2xax5QOc_3wp4JpDAbyfvZYpdNLYYWPLKGCGiL3-5Pry9W5HKYk"
+export CAPE_WALLET_ASSET_LIBRARY_VERIFIER_KEY="SCHNORRVERKEY~nP98KeCaQwG8n72WKXTS2GFjyyhghoi9_uT68vVuRymC"
 
 # File that consolidates the logs
 export LOG_FILENAME=/tmp/cape-services-log.txt

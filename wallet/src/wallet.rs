@@ -43,14 +43,14 @@ pub trait CapeWalletBackend<'a>: WalletBackend<'a, CapeLedger> {
     /// Returns None if the asset is not a wrapped asset.
     async fn get_wrapped_erc20_code(
         &self,
-        asset: &AssetDefinition,
+        asset: &AssetCode,
     ) -> Result<Option<Erc20Code>, CapeWalletError>;
 
     /// Wait until the EQS reflects the associated ERC20 code of the CAPE asset, or the `timeout`
     /// is reached.
     async fn wait_for_wrapped_erc20_code(
         &mut self,
-        asset: &AssetDefinition,
+        asset: &AssetCode,
         timeout: Option<Duration>,
     ) -> Result<(), CapeWalletError>;
 
@@ -131,7 +131,7 @@ pub trait CapeWalletExt<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> {
     /// Wait until the sponsored asset is reflected in the EQS or the `timeout` is reached.
     async fn wait_for_sponsor(
         &mut self,
-        asset: &AssetDefinition,
+        asset: &AssetCode,
         timeout: Option<Duration>,
     ) -> Result<(), CapeWalletError>;
 
@@ -297,7 +297,7 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
 
     async fn wait_for_sponsor(
         &mut self,
-        asset: &AssetDefinition,
+        asset: &AssetCode,
         timeout: Option<Duration>,
     ) -> Result<(), CapeWalletError> {
         self.lock()
@@ -325,7 +325,11 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
         let mut state = self.lock().await;
 
         let cap_asset = ro.asset_def.clone();
-        let erc20_code = match state.backend().get_wrapped_erc20_code(&cap_asset).await? {
+        let erc20_code = match state
+            .backend()
+            .get_wrapped_erc20_code(&cap_asset.code)
+            .await?
+        {
             Some(code) => code,
             None => {
                 return Err(WalletError::<CapeLedger>::UndefinedAsset {
@@ -432,11 +436,10 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
     }
 
     async fn wrapped_erc20(&self, asset: AssetCode) -> Option<Erc20Code> {
-        let asset = self.asset(asset).await?;
         let state = self.lock().await;
         state
             .backend()
-            .get_wrapped_erc20_code(&asset.definition)
+            .get_wrapped_erc20_code(&asset)
             .await
             .unwrap_or(None)
     }

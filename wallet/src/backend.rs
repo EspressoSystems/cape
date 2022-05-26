@@ -36,7 +36,7 @@ use futures::stream::{self, Stream, StreamExt};
 use jf_cap::{
     keys::{UserAddress, UserKeyPair, UserPubKey},
     proof::UniversalParam,
-    structs::{AssetDefinition, Nullifier, RecordOpening},
+    structs::{AssetCode, AssetDefinition, Nullifier, RecordOpening},
     MerkleTree, VerKey,
 };
 use key_set::ProverKeySet;
@@ -519,31 +519,31 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
             .map(|_| ())?;
 
         // Don't report success until the EQS reflects the results of the sponsor.
-        self.wait_for_wrapped_erc20_code(asset, None).await?;
+        self.wait_for_wrapped_erc20_code(&asset.code, None).await?;
 
         Ok(())
     }
 
     async fn get_wrapped_erc20_code(
         &self,
-        asset: &AssetDefinition,
+        asset: &AssetCode,
     ) -> Result<Option<Erc20Code>, CapeWalletError> {
         let address: Option<Address> = self
-            .get_eqs(format!("get_wrapped_erc20_address/{}", asset.code))
+            .get_eqs(format!("get_wrapped_erc20_address/{}", asset))
             .await?;
         Ok(address.map(Erc20Code::from))
     }
 
     async fn wait_for_wrapped_erc20_code(
         &mut self,
-        asset: &AssetDefinition,
+        asset: &AssetCode,
         timeout: Option<Duration>,
     ) -> Result<(), CapeWalletError> {
         let mut backoff = self.min_polling_delay;
         let now = Instant::now();
         loop {
             let address: Option<Address> = self
-                .get_eqs(format!("get_wrapped_erc20_address/{}", asset.code))
+                .get_eqs(format!("get_wrapped_erc20_address/{}", asset))
                 .await?;
             if address.is_some() {
                 break;

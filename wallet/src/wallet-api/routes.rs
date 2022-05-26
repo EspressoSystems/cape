@@ -847,7 +847,7 @@ async fn waitforsponsor(
         None => 60,
     };
     wallet
-        .wait_for_sponsor(&asset, Some(Duration::from_secs(timeout)))
+        .wait_for_sponsor(&asset.code, Some(Duration::from_secs(timeout)))
         .await
         .map_err(wallet_error)
 }

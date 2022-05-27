@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # Copyright (c) 2022 Espresso Systems (espressosys.com)
 # This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
 #
@@ -5,23 +6,8 @@
 # This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 # You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-[tool.poetry]
-name = "cap-on-ethereum"
-version = "0.1.0"
-description = ""
-authors = ["Espresso Systems <hello@espressosys.com>"]
 
-[tool.poetry.dependencies]
-python = "^3.9"
-md-toc = "^8.1.1"
-pre-commit-hooks = {git = "https://github.com/Lucas-C/pre-commit-hooks"}
+set -euo pipefail
 
-[tool.poetry.dev-dependencies]
-black = "*"
-hdwallet = "^1.3.2"
-ipython = "^7.28.0"
-slither-analyzer = "^0.8.3"
+slither --solc-remaps @openzeppelin/=`pwd`/node_modules/.pnpm/@openzeppelin+contracts@4.3.3/node_modules/@openzeppelin/,@rari-capital/=`pwd`/node_modules/.pnpm/@rari-capital+solmate@6.2.0/node_modules/@rari-capital/,solidity-bytes-utils/=`pwd`/node_modules/.pnpm/solidity-bytes-utils@0.8.0/node_modules/solidity_bytes_utils/ contracts
 
-[build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"

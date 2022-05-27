@@ -22,7 +22,7 @@
 #       hardhat deploy --network goerli
 #       etherscan-verify goerli
 #
-set -euxo pipefail
+set -euo pipefail
 
 NETWORK=$1
 
@@ -38,6 +38,36 @@ cat <<EOF > $LIBRARIES
 module.exports = $(cat contracts/deployments/$NETWORK/CAPE.json | jq -r '.libraries')
 EOF
 
-hardhat verify --network $NETWORK $RESCUE_LIB_ADDRESS
-hardhat verify --network $NETWORK $VERIFYING_KEYS_ADDRESS
-hardhat verify --network $NETWORK --libraries $LIBRARIES $CAPE_ADDRESS $CONSTRUCTOR_ARGS
+# Often the two libraries are already verified because of a previous deployment.
+# Therefore try to verify the remaining contracts in case of failures.
+
+# Don't abort on error.
+set +e
+
+function ensure_verified() {
+    output="$($@ 2>&1)"
+    status=$?
+
+    if [ $status -eq 0 ]; then
+        echo "Contract sucessfully verified."
+    elif echo "$output" | grep -q "Contract source code already verified"; then
+        echo "Contract already verified."
+    else
+        echo "Something went wrong when running \"$@\."
+        echo "Aborting."
+        exit 1
+    fi
+}
+
+echo Verifying RescueLib
+ensure_verified hardhat verify --network $NETWORK $RESCUE_LIB_ADDRESS
+
+echo Verifying VerifyingKeys
+ensure_verified hardhat verify --network $NETWORK $VERIFYING_KEYS_ADDRESS
+
+echo Verifying CAPE
+ensure_verified hardhat verify --network $NETWORK --libraries $LIBRARIES $CAPE_ADDRESS $CONSTRUCTOR_ARGS
+
+set -e
+
+echo "All contracts verified!"

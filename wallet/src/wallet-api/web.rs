@@ -35,7 +35,6 @@ use tide::{
 };
 
 pub const DEFAULT_ETH_ADDR: Address = H160([2; 20]);
-// TODO change these to Amount type
 pub const DEFAULT_WRAPPED_AMT: u128 = 1000;
 pub const DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR: u128 = 500;
 pub const DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR: u128 = 400;
@@ -467,7 +466,9 @@ async fn populatefortest(req: tide::Request<WebState>) -> Result<tide::Response,
                 wrapped_asset_addr.clone(),
                 DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR,
             )],
-            1000 - DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR - DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR,
+            DEFAULT_WRAPPED_AMT
+                - DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR
+                - DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR,
         )
         .await
         .map_err(wallet_error)?;

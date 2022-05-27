@@ -843,8 +843,8 @@ impl<'a> SystemUnderTest<'a> for CapeTest {
 mod cape_wallet_tests {
     use super::*;
     use crate::wallet::CapeWalletExt;
-    use jf_cap::structs::{Amount, AssetPolicy};
-    use seahorse::txn_builder::TransactionError;
+    use jf_cap::structs::{AssetCode, AssetPolicy};
+    use seahorse::{txn_builder::TransactionError, RecordAmount};
     use std::time::Instant;
 
     #[cfg(feature = "slow-tests")]
@@ -860,11 +860,14 @@ mod cape_wallet_tests {
         let mut now = Instant::now();
         let num_inputs = 2;
         let num_outputs = 2;
-        let grant_raw = 20u64;
-        let total_initial_grant = Amount::from(grant_raw);
-        let initial_grant = total_initial_grant / 2;
+        let total_initial_grant = 20u64;
+        let initial_grant = RecordAmount::from(total_initial_grant / 2);
         let (ledger, mut wallets) = t
-            .create_test_network(&[(num_inputs, num_outputs)], vec![grant_raw], &mut now)
+            .create_test_network(
+                &[(num_inputs, num_outputs)],
+                vec![total_initial_grant],
+                &mut now,
+            )
             .await;
         assert_eq!(wallets.len(), 1);
         let owner = wallets[0].1[0].clone();
@@ -906,7 +909,7 @@ mod cape_wallet_tests {
         assert_eq!(info.name, Some("sponsored_asset".into()));
 
         // Wrapping an undefined asset should fail.
-        let wrap_amount = Amount::from(6u64);
+        let wrap_amount = RecordAmount::from(6u64);
         match wallets[0]
             .0
             .wrap(
@@ -955,7 +958,7 @@ mod cape_wallet_tests {
             )
             .await
             .unwrap();
-        let mint_fee = Amount::from(1u64);
+        let mint_fee = RecordAmount::from(1u64);
         wallets[0]
             .0
             .mint(
@@ -979,19 +982,19 @@ mod cape_wallet_tests {
                 .0
                 .balance_breakdown(&owner, &AssetCode::native())
                 .await,
-            u128::from(initial_grant - mint_fee).into()
+            (initial_grant - mint_fee).into()
         );
         assert_eq!(
             wallets[0]
                 .0
                 .balance_breakdown(&owner, &cap_asset.code)
                 .await,
-            u128::from(wrap_amount).into()
+            wrap_amount.into()
         );
 
         // Burning an amount more than the wrapped asset should fail.
         let mut burn_amount = wrap_amount + 1u64.into();
-        let burn_fee = Amount::from(1u64);
+        let burn_fee = RecordAmount::from(1u64);
         match wallets[0]
             .0
             .burn(

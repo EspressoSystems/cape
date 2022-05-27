@@ -9,7 +9,7 @@
 mod tests {
     use crate::{
         cape::{
-            submit_block::{fetch_cape_block, submit_cape_block_with_memos},
+            submit_block::{fetch_cape_memos, submit_cape_block_with_memos},
             BlockWithMemos, CapeBlock,
         },
         ethereum::EthConnection,
@@ -32,7 +32,7 @@ mod tests {
     use std::iter::repeat_with;
 
     #[tokio::test]
-    async fn test_fetch_cape_block_from_event() -> Result<()> {
+    async fn test_fetch_cape_memos_from_event() -> Result<()> {
         let connection = EthConnection::for_test().await;
 
         let mut rng = ChaChaRng::from_seed([0x42u8; 32]);
@@ -100,11 +100,11 @@ mod tests {
 
         let (_, meta) = events[0].clone();
 
-        let fetched_block_with_memos = fetch_cape_block(&query_connection, meta.transaction_hash)
+        let fetched_memos = fetch_cape_memos(&query_connection, meta.transaction_hash)
             .await?
             .unwrap();
 
-        assert_eq!(fetched_block_with_memos, block_with_memos);
+        assert_eq!(fetched_memos, memos_with_sigs);
 
         Ok(())
     }

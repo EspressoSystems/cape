@@ -255,7 +255,7 @@ async fn main() {
             let txn = wallet
                 .mint(
                     Some(&address),
-                    1,
+                    1u64,
                     &my_asset.code,
                     1u64 << 32,
                     address.clone(),
@@ -324,8 +324,8 @@ async fn main() {
 
                 // All transfers are the same, small size. This should prevent fragmentation errors and
                 // allow us to make as many transactions as possible with the assets we have.
-                let amount = 1;
-                let fee = 1;
+                let amount = 1u64;
+                let fee = 1u64;
 
                 event!(
                     Level::INFO,
@@ -374,14 +374,9 @@ async fn main() {
                 let owner_address = record.ro.pub_key.address().clone();
                 let asset_def = &record.ro.asset_def;
 
-                freeze_token(
-                    &mut wallet,
-                    &asset_def.code,
-                    record.ro.amount,
-                    owner_address,
-                )
-                .await
-                .unwrap();
+                freeze_token(&mut wallet, &asset_def.code, record.amount(), owner_address)
+                    .await
+                    .unwrap();
             }
             OperationType::Unfreeze => {
                 let freezable_records: Vec<RecordInfo> =
@@ -393,14 +388,9 @@ async fn main() {
                 let owner_address = record.ro.pub_key.address();
                 let asset_def = &record.ro.asset_def;
 
-                unfreeze_token(
-                    &mut wallet,
-                    &asset_def.code,
-                    record.ro.amount,
-                    owner_address,
-                )
-                .await
-                .unwrap();
+                unfreeze_token(&mut wallet, &asset_def.code, record.amount(), owner_address)
+                    .await
+                    .unwrap();
             }
             OperationType::Wrap => {
                 let asset_def = wallet

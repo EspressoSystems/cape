@@ -172,7 +172,14 @@
         buildInputs = with pkgs;
           [
             nixWithFlakes
-            go-ethereum
+            (go-ethereum.overrideAttrs (old: {
+              # Set deployed bytecode size limit to 32kB (which is also the tx size limit)
+              # in order to deploy the TestCAPE contracts that currently exceeds the
+              # 24kB size limit.
+              patchPhase = old.patchPhase or "" + ''
+                substituteInPlace params/protocol_params.go --replace "MaxCodeSize = 24576" "MaxCodeSize = 32768"
+              '';
+            }))
             nodePackages.pnpm
             mySolc
             hivemind # process runner

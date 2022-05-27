@@ -35,7 +35,7 @@ use jf_cap::structs::FreezeFlag;
 use rand::seq::SliceRandom;
 use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
 use seahorse::txn_builder::RecordInfo;
-use seahorse::{events::EventIndex, hd::KeyTree};
+use seahorse::{events::EventIndex, hd::KeyTree, RecordAmount};
 use std::collections::HashMap;
 use std::convert::TryInto;
 use std::path::Path;
@@ -236,11 +236,11 @@ async fn create_wallet<'a>(
 
 fn add_balance(
     addr: &UserAddress,
-    amount: u64,
+    amount: RecordAmount,
     asset: &AssetCode,
-    balances: &mut HashMap<UserAddress, HashMap<AssetCode, u64>>,
+    balances: &mut HashMap<UserAddress, HashMap<AssetCode, RecordAmount>>,
 ) {
-    let balance_ref: &mut u64 = balances
+    let balance_ref: &mut RecordAmount = balances
         .entry(addr.clone())
         .or_default()
         .entry(*asset)
@@ -250,9 +250,9 @@ fn add_balance(
 
 fn remove_balance(
     addr: &UserAddress,
-    amount: u64,
+    amount: RecordAmount,
     asset: &AssetCode,
-    balances: &mut HashMap<UserAddress, HashMap<AssetCode, u64>>,
+    balances: &mut HashMap<UserAddress, HashMap<AssetCode, RecordAmount>>,
 ) {
     assert!(
         balances.contains_key(addr),
@@ -260,7 +260,7 @@ fn remove_balance(
     );
 
     let assets = balances.get_mut(addr).unwrap();
-    let balance = *assets.get(asset).unwrap_or(&0);
+    let balance = *assets.get(asset).unwrap_or(&RecordAmount::from(0u64));
 
     assert!(
         balance >= amount,
@@ -276,9 +276,9 @@ fn remove_balance(
 fn update_balances(
     send_addr: &UserAddress,
     receiver_addr: &UserAddress,
-    amount: u64,
+    amount: RecordAmount,
     asset: &AssetCode,
-    balances: &mut HashMap<UserAddress, HashMap<AssetCode, u64>>,
+    balances: &mut HashMap<UserAddress, HashMap<AssetCode, RecordAmount>>,
 ) {
     assert!(
         balances.contains_key(send_addr),
@@ -291,7 +291,9 @@ fn update_balances(
 
     let sender_assets = balances.get_mut(send_addr).unwrap();
     // Update with asset code
-    let send_balance = *sender_assets.get(asset).unwrap_or(&0);
+    let send_balance = *sender_assets
+        .get(asset)
+        .unwrap_or(&RecordAmount::from(0u64));
     assert!(
         send_balance >= amount,
         "Address {} only has {} balance but is trying to send {}.",
@@ -302,7 +304,7 @@ fn update_balances(
     sender_assets.insert(*asset, send_balance - amount);
 
     let rec_assets = balances.get_mut(receiver_addr).unwrap();
-    let receive_balance = *rec_assets.get(asset).unwrap_or(&0);
+    let receive_balance = *rec_assets.get(asset).unwrap_or(&RecordAmount::from(0u64));
     rec_assets.insert(*asset, receive_balance + amount);
 }
 
@@ -408,7 +410,7 @@ async fn main() {
         balances
             .get_mut(&k.address())
             .unwrap()
-            .insert(AssetCode::native(), 200);
+            .insert(AssetCode::native(), RecordAmount::from(200u64));
 
         event!(Level::INFO, "Sent native token to new wallet");
         public_keys.push(k);
@@ -429,7 +431,7 @@ async fn main() {
                     balances
                         .get_mut(&address)
                         .unwrap()
-                        .insert(asset.code, 1u64 << 32);
+                        .insert(asset.code, RecordAmount::from(1u128 << 32));
                 }
             }
             OperationType::Transfer => {
@@ -464,8 +466,8 @@ async fn main() {
                 }
                 // Randomly choose an asset type for the transfer.
                 let asset = asset_balances.choose(&mut rng).unwrap();
-                let amount = 1;
-                let fee = 1;
+                let amount = RecordAmount::from(1u64);
+                let fee = RecordAmount::from(1u64);
 
                 event!(
                     Level::INFO,
@@ -525,7 +527,7 @@ async fn main() {
                     owner_address
                 );
 
-                freeze_token(freezer, &asset_def.code, record.ro.amount, owner_address)
+                freeze_token(freezer, &asset_def.code, record.amount(), owner_address)
                     .await
                     .ok();
             }
@@ -549,7 +551,7 @@ async fn main() {
                     record.ro.amount,
                     owner_address
                 );
-                unfreeze_token(freezer, &asset_def.code, record.ro.amount, owner_address)
+                unfreeze_token(freezer, &asset_def.code, record.amount(), owner_address)
                     .await
                     .ok();
             }
@@ -568,7 +570,7 @@ async fn main() {
                 .unwrap();
                 add_balance(
                     &wrapper_key.address(),
-                    100,
+                    100u64.into(),
                     &sponsored_asset.code,
                     &mut balances,
                 );
@@ -583,7 +585,7 @@ async fn main() {
                 if let Some(asset) = asset {
                     event!(Level::INFO, "Can burn something");
                     let amount = get_burn_amount(burner, asset.definition.code).await;
-                    if amount > 0 {
+                    if amount > 0u64.into() {
                         event!(
                             Level::INFO,
                             "Buring {} asset: {}",

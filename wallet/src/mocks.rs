@@ -8,7 +8,10 @@
 //! Test-only implementation of the [reef] ledger abstraction for CAPE.
 
 use crate::wallet::{CapeWalletBackend, CapeWalletError};
-use async_std::sync::{Mutex, MutexGuard};
+use async_std::{
+    sync::{Mutex, MutexGuard},
+    task::sleep,
+};
 use async_trait::async_trait;
 use cap_rust_sandbox::{
     deploy::EthMiddleware, ledger::*, model::*, universal_param::UNIVERSAL_PARAM,
@@ -19,7 +22,9 @@ use itertools::izip;
 use jf_cap::{
     keys::{UserAddress, UserKeyPair, UserPubKey},
     proof::{freeze::FreezeProvingKey, transfer::TransferProvingKey, UniversalParam},
-    structs::{AssetDefinition, Nullifier, ReceiverMemo, RecordCommitment, RecordOpening},
+    structs::{
+        AssetCode, AssetDefinition, Nullifier, ReceiverMemo, RecordCommitment, RecordOpening,
+    },
     KeyPair, MerklePath, MerkleTree, Signature, TransactionNote, VerKey,
 };
 use key_set::{OrderByOutputs, ProverKeySet, SizedKey, VerifierKeySet};
@@ -38,10 +43,12 @@ use seahorse::{
     WalletBackend, WalletError, WalletState,
 };
 use serde::{de::DeserializeOwned, Serialize};
+use std::cmp::min;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::pin::Pin;
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 use tempdir::TempDir;
 use testing::{MockEventSource, MockLedger, MockNetwork, SystemUnderTest};
 
@@ -274,10 +281,15 @@ impl MockCapeNetwork {
 
     pub fn get_wrapped_asset(
         &self,
-        asset: &AssetDefinition,
+        asset: &AssetCode,
     ) -> Result<Option<Erc20Code>, CapeWalletError> {
-        match self.contract.erc20_registrar.get(asset) {
-            Some((erc20_code, _)) => Ok(Some(erc20_code.clone())),
+        match self
+            .contract
+            .erc20_registrar
+            .iter()
+            .find(|(definition, _)| definition.code == *asset)
+        {
+            Some((_, (erc20_code, _))) => Ok(Some(erc20_code.clone())),
             None => Ok(None),
         }
     }
@@ -492,7 +504,12 @@ impl<'a> MockNetwork<'a, CapeLedger> for MockCapeNetwork {
         txn.memos = Some((memos.clone(), sig));
         let event = LedgerEvent::Memos {
             outputs: memos,
-            transaction: Some((block_id as u64, txn_id as u64, txn.txn.kind())),
+            transaction: Some((
+                block_id as u64,
+                txn_id as u64,
+                txn.txn.hash(),
+                txn.txn.kind(),
+            )),
         };
         self.generate_event(event);
 
@@ -669,9 +686,30 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
 
     async fn get_wrapped_erc20_code(
         &self,
-        asset: &AssetDefinition,
+        asset: &AssetCode,
     ) -> Result<Option<Erc20Code>, WalletError<CapeLedger>> {
         self.ledger.lock().await.network().get_wrapped_asset(asset)
+    }
+
+    async fn wait_for_wrapped_erc20_code(
+        &mut self,
+        asset: &AssetCode,
+        timeout: Option<Duration>,
+    ) -> Result<(), CapeWalletError> {
+        let mut backoff = Duration::from_secs(1);
+        let now = Instant::now();
+        while self.get_wrapped_erc20_code(asset).await?.is_none() {
+            if let Some(time) = timeout {
+                if now.elapsed() >= time {
+                    return Err(CapeWalletError::Failed {
+                        msg: format!("asset not reflected in the EQS in {:?}", time),
+                    });
+                }
+            }
+            sleep(backoff).await;
+            backoff = min(backoff * 2, Duration::from_secs(60));
+        }
+        Ok(())
     }
 
     async fn wrap_erc20(
@@ -700,6 +738,11 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
 
     async fn eqs_time(&self) -> Result<EventIndex, CapeWalletError> {
         Ok(self.ledger.lock().await.network().events.now())
+    }
+
+    async fn wait_for_eqs(&self) -> Result<(), CapeWalletError> {
+        // No need to wait for the mock EQS.
+        Ok(())
     }
 }
 
@@ -801,7 +844,7 @@ mod cape_wallet_tests {
     use super::*;
     use crate::wallet::CapeWalletExt;
     use jf_cap::structs::{AssetCode, AssetPolicy};
-    use seahorse::txn_builder::TransactionError;
+    use seahorse::{txn_builder::TransactionError, RecordAmount};
     use std::time::Instant;
 
     #[cfg(feature = "slow-tests")]
@@ -817,8 +860,8 @@ mod cape_wallet_tests {
         let mut now = Instant::now();
         let num_inputs = 2;
         let num_outputs = 2;
-        let total_initial_grant = 20;
-        let initial_grant = total_initial_grant / 2;
+        let total_initial_grant = 20u64;
+        let initial_grant = RecordAmount::from(total_initial_grant / 2);
         let (ledger, mut wallets) = t
             .create_test_network(
                 &[(num_inputs, num_outputs)],
@@ -837,7 +880,7 @@ mod cape_wallet_tests {
                 .0
                 .balance_breakdown(&owner, &AssetCode::native())
                 .await,
-            initial_grant.into()
+            u128::from(initial_grant).into()
         );
 
         // Create an ERC20 code, sponsor address, and asset information.
@@ -866,7 +909,7 @@ mod cape_wallet_tests {
         assert_eq!(info.name, Some("sponsored_asset".into()));
 
         // Wrapping an undefined asset should fail.
-        let wrap_amount = 6;
+        let wrap_amount = RecordAmount::from(6u64);
         match wallets[0]
             .0
             .wrap(
@@ -915,10 +958,16 @@ mod cape_wallet_tests {
             )
             .await
             .unwrap();
-        let mint_fee = 1;
+        let mint_fee = RecordAmount::from(1u64);
         wallets[0]
             .0
-            .mint(Some(&owner), mint_fee, &dummy_coin.code, 5, owner.clone())
+            .mint(
+                Some(&owner),
+                mint_fee,
+                &dummy_coin.code,
+                5u64,
+                owner.clone(),
+            )
             .await
             .unwrap();
         t.sync(&ledger, &wallets).await;
@@ -944,8 +993,8 @@ mod cape_wallet_tests {
         );
 
         // Burning an amount more than the wrapped asset should fail.
-        let mut burn_amount = wrap_amount + 1;
-        let burn_fee = 1;
+        let mut burn_amount = wrap_amount + 1u64.into();
+        let burn_fee = RecordAmount::from(1u64);
         match wallets[0]
             .0
             .burn(
@@ -998,7 +1047,8 @@ mod cape_wallet_tests {
                 .0
                 .balance_breakdown(&owner, &AssetCode::native())
                 .await,
-            (initial_grant - mint_fee - burn_fee).into()
+            // TODO should we implement From<Amount> for U256 in jf-cap?
+            u128::from(initial_grant - mint_fee - burn_fee).into(),
         );
 
         Ok(())
@@ -1013,7 +1063,11 @@ mod cape_wallet_tests {
         // Initialize a ledger and wallet, and get the owner address.
         let mut now = Instant::now();
         let (ledger, mut wallets) = t
-            .create_test_network(&[(1, 2), (2, 2), (2, 3), (3, 3)], vec![20], &mut now)
+            .create_test_network(
+                &[(1, 2), (2, 2), (2, 3), (3, 3)],
+                vec![20u64.into()],
+                &mut now,
+            )
             .await;
 
         // Create an ERC20 code, sponsor address, and asset information.
@@ -1135,7 +1189,11 @@ mod cape_wallet_tests {
         // Initialize a ledger and wallet, and get the owner address.
         let mut now = Instant::now();
         let (ledger, mut wallets) = t
-            .create_test_network(&[(1, 2), (2, 2), (2, 3), (3, 3)], vec![20], &mut now)
+            .create_test_network(
+                &[(1, 2), (2, 2), (2, 3), (3, 3)],
+                vec![20u64.into()],
+                &mut now,
+            )
             .await;
 
         // Create an ERC20 code, sponsor address, and asset information.
@@ -1230,7 +1288,11 @@ mod cape_wallet_tests {
         // Initialize a ledger and wallet, and get the owner address.
         let mut now = Instant::now();
         let (ledger, mut wallets) = t
-            .create_test_network(&[(1, 2), (2, 2), (2, 3), (3, 3)], vec![20], &mut now)
+            .create_test_network(
+                &[(1, 2), (2, 2), (2, 3), (3, 3)],
+                vec![20u64.into()],
+                &mut now,
+            )
             .await;
 
         // Create an ERC20 code, sponsor address, and asset information.
@@ -1329,7 +1391,11 @@ mod cape_wallet_tests {
         // Initialize a ledger and wallet, and get the owner address.
         let mut now = Instant::now();
         let (ledger, mut wallets) = t
-            .create_test_network(&[(1, 2), (2, 2), (2, 3), (3, 3)], vec![20], &mut now)
+            .create_test_network(
+                &[(1, 2), (2, 2), (2, 3), (3, 3)],
+                vec![20u64.into()],
+                &mut now,
+            )
             .await;
 
         // Create an ERC20 code, sponsor address, and asset information.
@@ -1405,7 +1471,7 @@ mod cape_wallet_tests {
             .filter(|rec| rec.ro.asset_def.code == cap_asset.code)
             .collect::<Vec<_>>();
         assert_eq!(records.len(), 1);
-        assert_eq!(records[0].ro.amount, 1);
+        assert_eq!(records[0].ro.amount, 1u64.into());
 
         // Unwrap again just to make sure things still work.
         wallets[0]

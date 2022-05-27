@@ -14,7 +14,7 @@ use core::fmt::Debug;
 use ethers::abi::AbiEncode;
 use jf_cap::{
     errors::TxnApiError,
-    structs::{AssetDefinition, AssetPolicy, Nullifier, RecordCommitment, RecordOpening},
+    structs::{Amount, AssetDefinition, AssetPolicy, Nullifier, RecordCommitment, RecordOpening},
     transfer::TransferNote,
     txn_batch_verify, MerkleCommitment, MerkleFrontier, MerkleTree, NodeValue, TransactionNote,
 };
@@ -177,7 +177,7 @@ pub enum CapeModelEvent {
 pub enum CapeModelEthEffect {
     ReceiveErc20 {
         erc20_code: Erc20Code,
-        amount: u64,
+        amount: Amount,
         src_addr: EthereumAddr,
     },
     CheckErc20Exists {
@@ -185,7 +185,7 @@ pub enum CapeModelEthEffect {
     },
     SendErc20 {
         erc20_code: Erc20Code,
-        amount: u64,
+        amount: Amount,
         dst_addr: EthereumAddr,
     },
     Emit(CapeModelEvent),
@@ -425,7 +425,7 @@ impl CapeContractState {
                     *new_state
                         .erc20_deposited
                         .entry(erc20_code.clone())
-                        .or_insert(0) += ro.amount as u128;
+                        .or_insert(0) += u128::from(ro.amount);
                     effects.push(CapeModelEthEffect::ReceiveErc20 {
                         erc20_code: erc20_code.clone(),
                         amount: ro.amount,
@@ -539,7 +539,7 @@ impl CapeContractState {
                                     .erc20_deposited
                                     .get_mut(erc20_code)
                                     .unwrap()
-                                    .checked_sub(ro.amount as u128)
+                                    .checked_sub(ro.amount.into())
                                     .unwrap();
 
                                 let verif_key = new_state

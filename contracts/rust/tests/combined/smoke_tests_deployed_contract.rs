@@ -117,7 +117,7 @@ async fn smoke_tests() -> Result<()> {
 
     let wrapped_ro = RecordOpening::new(
         rng,
-        deposited_amount,
+        deposited_amount.into(),
         asset_def,
         faucet_key_pair.pub_key(),
         FreezeFlag::Unfrozen,
@@ -145,7 +145,7 @@ async fn smoke_tests() -> Result<()> {
     println!("Submitting empty block to credit deposit.");
     cape_contract
         .submit_cape_block(empty_block.clone().into())
-        .gas(5_000_000) // If the gas estimate is made against an outdated state it will be too low.
+        .gas(5_000_000u64) // If the gas estimate is made against an outdated state it will be too low.
         .send()
         .await?
         .await?
@@ -210,7 +210,7 @@ async fn smoke_tests() -> Result<()> {
             .balance_of(cape_contract_address)
             .call()
             .await?;
-        if balance == U256::from(0) {
+        if balance == U256::from(0u64) {
             break;
         };
         if attempt == 2 {

@@ -18,13 +18,14 @@ use jf_cap::{
     structs::{AssetCode, AssetDefinition as JfAssetDefinition, AssetPolicy as JfAssetPolicy},
 };
 use net::UserAddress;
+use num_traits::identities::Zero;
 use reef::cap;
 use seahorse::{
     accounts::{AccountInfo, KeyPair},
     asset_library::Icon,
     events::EventIndex,
     txn_builder::RecordInfo,
-    MintInfo,
+    MintInfo, RecordAmount,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -47,7 +48,7 @@ pub struct AssetDefinition {
     pub address_viewable: bool,
     pub amount_viewable: bool,
     pub blind_viewable: bool,
-    pub viewing_threshold: u64,
+    pub viewing_threshold: RecordAmount,
 }
 
 impl AssetDefinition {
@@ -84,7 +85,7 @@ impl From<JfAssetDefinition> for AssetDefinition {
             address_viewable: policy.is_user_address_revealed(),
             amount_viewable: policy.is_amount_revealed(),
             blind_viewable: policy.is_blinding_factor_revealed(),
-            viewing_threshold: policy.reveal_threshold(),
+            viewing_threshold: policy.reveal_threshold().into(),
         }
     }
 }
@@ -117,7 +118,7 @@ impl From<AssetDefinition> for JfAssetDefinition {
                     .reveal_blinding_factor()
                     .expect("Failed to set reveal amount on asset policy");
             }
-            policy = policy.set_reveal_threshold(definition.viewing_threshold);
+            policy = policy.set_reveal_threshold(definition.viewing_threshold.into());
         }
         JfAssetDefinition::new(code, policy).expect("Failed to create Asset Definition")
     }
@@ -154,7 +155,7 @@ impl FromStr for AssetDefinition {
         let mut address_viewable = false;
         let mut amount_viewable = false;
         let mut blind_viewable = false;
-        let mut viewing_threshold = 0;
+        let mut viewing_threshold = RecordAmount::zero();
         for kv in s.split(',') {
             let (key, value) = match kv.split_once(':') {
                 Some(split) => split,
@@ -200,7 +201,7 @@ impl FromStr for AssetDefinition {
                 "viewing_threshold" => {
                     viewing_threshold = value
                         .parse()
-                        .map_err(|_| format!("expected u64, got {}", value))?;
+                        .map_err(|_| format!("expected RecordAmount, got {}", value))?;
                 }
                 _ => return Err(format!("unrecognized key {}", key)),
             }
@@ -418,7 +419,7 @@ pub struct WalletSummary {
 pub struct Record {
     pub address: UserAddress,
     pub asset: AssetCode,
-    pub amount: u64,
+    pub amount: RecordAmount,
     pub uid: u64,
 }
 
@@ -427,7 +428,7 @@ impl From<RecordInfo> for Record {
         Self {
             address: record.ro.pub_key.address().into(),
             asset: record.ro.asset_def.code,
-            amount: record.ro.amount,
+            amount: record.amount(),
             uid: record.uid,
         }
     }
@@ -537,7 +538,36 @@ pub struct TransactionHistoryEntry {
     /// senders are and this field may be empty.
     pub senders: Vec<UserAddress>,
     /// Receivers and corresponding amounts.
-    pub receivers: Vec<(UserAddress, u64)>,
+    pub receivers: Vec<(UserAddress, RecordAmount)>,
+    /// Amount of change included in the transaction from the fee.
+    ///
+    /// Every transaction includes a fee, but the record used to pay the fee may be larger than the
+    /// actual fee. In this case, one of the outputs of the transaction will contain change from the
+    /// fee, which the transaction sender receives when the transaction is finalized.
+    ///
+    /// Note that `None` indicates that the amount of change is unknown, not that there is no
+    /// change, which would be indicated by `Some(0)`. The amount of change may be unknown if, for
+    /// example, this is a transaction we received from someone else, in which case we may not know
+    /// how much of a fee they paid and how much change they expect to get.
+    pub fee_change: Option<RecordAmount>,
+    /// Amount of change included in the transaction in the asset being transferred.
+    ///
+    /// For non-native transfers, the amount of the asset being transferred which is consumed by the
+    /// transaction may exceed the amount that the sender wants to transfer, due to the way discrete
+    /// record amounts break down. In this case, one of the outputs of the transaction will contain
+    /// change from the fee, which the transaction sender receives when the transaction is
+    /// finalized.
+    ///
+    /// For native transfers, the transfer inputs and the fee input get mixed together, so there is
+    /// only one change output, which accounts for both the fee change and the transfer change. In
+    /// this case, the total amount of change will be reflected in `fee_change` and `asset_change`
+    /// will be `Some(0)`.
+    ///
+    /// Note that `None` indicates that the amount of change is unknown, not that there is no
+    /// change, which would be indicated by `Some(0)`. The amount of change may be unknown if, for
+    /// example, this is a transaction we received from someone else, and we do not hold the
+    /// necessary viewing keys to inspect the change outputs of the transaction.
+    pub asset_change: Option<RecordAmount>,
     pub status: String,
 }
 
@@ -556,7 +586,7 @@ impl TransactionHistoryEntry {
                 CapeTransactionKind::CAP(cap::TransactionKind::Freeze) => "freeze".to_string(),
                 CapeTransactionKind::CAP(cap::TransactionKind::Unfreeze) => "unfreeze".to_string(),
                 CapeTransactionKind::CAP(cap::TransactionKind::Unknown) => "unknown".to_string(),
-                CapeTransactionKind::Burn => "burn".to_string(),
+                CapeTransactionKind::Burn => "unwrap".to_string(),
                 CapeTransactionKind::Wrap => "wrap".to_string(),
                 CapeTransactionKind::Faucet => "faucet".to_string(),
             },
@@ -575,6 +605,8 @@ impl TransactionHistoryEntry {
                 .into_iter()
                 .map(|(addr, amt)| (addr.into(), amt))
                 .collect(),
+            fee_change: entry.fee_change,
+            asset_change: entry.asset_change,
             status: match entry.receipt {
                 Some(receipt) => match wallet.transaction_status(&receipt).await {
                     Ok(status) => status.to_string(),
@@ -806,7 +838,7 @@ pub mod sol {
         pub cred_pk: EdOnBN254Point,
         pub freezer_pk: EdOnBN254Point,
         pub reveal_map: U256,
-        pub reveal_threshold: u64,
+        pub reveal_threshold: RecordAmount,
     }
 
     impl From<types::AssetPolicy> for AssetPolicy {
@@ -816,7 +848,7 @@ pub mod sol {
                 cred_pk: p.cred_pk.into(),
                 freezer_pk: p.freezer_pk.into(),
                 reveal_map: p.reveal_map.into(),
-                reveal_threshold: p.reveal_threshold,
+                reveal_threshold: p.reveal_threshold.into(),
             }
         }
     }
@@ -828,7 +860,7 @@ pub mod sol {
                 cred_pk: p.cred_pk.into(),
                 freezer_pk: p.freezer_pk.into(),
                 reveal_map: p.reveal_map.into(),
-                reveal_threshold: p.reveal_threshold,
+                reveal_threshold: p.reveal_threshold.into(),
             }
         }
     }
@@ -848,7 +880,7 @@ pub mod sol {
     #[ser_test(ark(false))]
     #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
     pub struct RecordOpening {
-        pub amount: u64,
+        pub amount: RecordAmount,
         pub asset_def: AssetDefinition,
         pub user_addr: EdOnBN254Point,
         pub enc_key: [u8; 32],
@@ -859,7 +891,7 @@ pub mod sol {
     impl From<types::RecordOpening> for RecordOpening {
         fn from(r: types::RecordOpening) -> Self {
             Self {
-                amount: r.amount,
+                amount: r.amount.into(),
                 asset_def: r.asset_def.into(),
                 user_addr: r.user_addr.into(),
                 enc_key: r.enc_key,
@@ -872,7 +904,7 @@ pub mod sol {
     impl From<RecordOpening> for types::RecordOpening {
         fn from(r: RecordOpening) -> Self {
             Self {
-                amount: r.amount,
+                amount: r.amount.into(),
                 asset_def: r.asset_def.into(),
                 user_addr: r.user_addr.into(),
                 enc_key: r.enc_key,

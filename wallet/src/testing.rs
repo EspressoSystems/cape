@@ -50,6 +50,7 @@ use rand_chacha::ChaChaRng;
 use relayer::testing::start_minimal_relayer_for_test;
 use seahorse::txn_builder::RecordInfo;
 use seahorse::txn_builder::TransactionReceipt;
+use seahorse::RecordAmount;
 use std::collections::HashSet;
 use std::time::Duration;
 use surf::Url;
@@ -155,7 +156,7 @@ pub async fn fund_eth_wallet<'a>(wallet: &mut CapeWallet<'a, CapeBackend<'a, ()>
 pub async fn get_burn_amount<'a>(
     wallet: &CapeWallet<'a, CapeBackend<'a, ()>>,
     asset: AssetCode,
-) -> u64 {
+) -> RecordAmount {
     // get records for this this asset type
     let records = wallet.records().await;
     let filtered = records
@@ -163,9 +164,9 @@ pub async fn get_burn_amount<'a>(
         .collect::<Vec<_>>();
     if filtered.is_empty() {
         event!(Level::INFO, "No records to burn");
-        0
+        0u64.into()
     } else {
-        filtered[0].ro.amount
+        filtered[0].amount()
     }
 }
 
@@ -195,7 +196,7 @@ pub async fn spawn_eqs(cape_address: Address) -> (Url, TempDir, JoinHandle<std::
         reset_store_state: true,
         query_interval: 500,
         ethers_block_max: 5000,
-        eqs_port: eqs_port as u16,
+        eqs_port,
         cape_address: Some(cape_address),
         rpc_url: rpc_url_for_test().to_string(),
         temp_test_run: false,
@@ -260,7 +261,7 @@ pub async fn mint_token<'a>(
             Some(&address),
             1,
             &my_asset.code,
-            1u64 << 32,
+            1u128 << 32,
             address.clone(),
         )
         .await
@@ -297,36 +298,24 @@ pub async fn find_freezable_records<'a>(
 pub async fn freeze_token<'a>(
     freezer: &mut CapeWallet<'a, CapeBackend<'a, ()>>,
     asset: &AssetCode,
-    amount: u64,
+    amount: impl Into<U256>,
     owner_address: UserAddress,
 ) -> Result<TransactionReceipt<CapeLedger>, CapeWalletError> {
     let freeze_address = freezer.pub_keys().await[0].address();
     freezer
-        .freeze(
-            Some(&freeze_address),
-            1,
-            asset,
-            amount.into(),
-            owner_address,
-        )
+        .freeze(Some(&freeze_address), 1, asset, amount, owner_address)
         .await
 }
 
 pub async fn unfreeze_token<'a>(
     freezer: &mut CapeWallet<'a, CapeBackend<'a, ()>>,
     asset: &AssetCode,
-    amount: u64,
+    amount: impl Into<U256>,
     owner_address: UserAddress,
 ) -> Result<TransactionReceipt<CapeLedger>, CapeWalletError> {
     let unfreeze_address = freezer.pub_keys().await[0].address();
     freezer
-        .unfreeze(
-            Some(&unfreeze_address),
-            1,
-            asset,
-            amount.into(),
-            owner_address,
-        )
+        .unfreeze(Some(&unfreeze_address), 1, asset, amount, owner_address)
         .await
 }
 
@@ -335,8 +324,9 @@ pub async fn wrap_simple_token<'a>(
     wrapper_addr: &UserAddress,
     cape_asset: AssetDefinition,
     erc20_contract: &SimpleToken<EthMiddleware>,
-    amount: u64,
+    amount: impl Into<RecordAmount>,
 ) -> Result<(), CapeWalletError> {
+    let amount = amount.into();
     let wrapper_eth_addr = wrapper.eth_address().await.unwrap();
     // Prepare to wrap: deposit some ERC20 tokens into the wrapper's ETH wallet.
     erc20_contract
@@ -378,7 +368,7 @@ pub async fn sponsor_simple_token<'a>(
 pub async fn burn_token<'a>(
     burner: &mut CapeWallet<'a, CapeBackend<'a, ()>>,
     cape_asset: AssetDefinition,
-    amount: u64,
+    amount: impl Into<RecordAmount> + Send + 'static,
 ) -> Result<TransactionReceipt<CapeLedger>, CapeWalletError> {
     let burner_key = burner.pub_keys().await[0].clone();
     burner
@@ -395,10 +385,11 @@ pub async fn burn_token<'a>(
 pub async fn transfer_token<'a>(
     sender: &mut CapeWallet<'a, CapeBackend<'a, ()>>,
     receiver_address: UserAddress,
-    amount: u64,
+    amount: impl Into<RecordAmount>,
     asset_code: AssetCode,
-    fee: u64,
+    fee: impl Into<RecordAmount>,
 ) -> Result<TransactionReceipt<CapeLedger>, CapeWalletError> {
+    let amount = amount.into();
     event!(
         Level::INFO,
         "Sending {} to: {} from {}.  Asset: code {}",

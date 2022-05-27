@@ -40,12 +40,14 @@ cape_wallet = { path = "../wallet" }
 ethers = { git = "https://github.com/gakonst/ethers-rs" }
 futures = "0.3.0"
 hex = "0.4.3"
+itertools = "0.10.3"
 
-jf-cap = { git = "https://github.com/EspressoSystems/cap.git", tag = "0.0.2" }
-key-set = { git = "https://github.com/EspressoSystems/key-set.git", tag = "0.2.2" }
-net = { git = "https://github.com/EspressoSystems/net.git", tag = "0.2.1" }
+jf-cap = { git = "https://github.com/EspressoSystems/cap.git", tag = "0.0.4" }
+key-set = { git = "https://github.com/EspressoSystems/key-set.git", tag = "0.2.3" }
+net = { git = "https://github.com/EspressoSystems/net.git", tag = "0.2.2" }
 rand = "0.8.5"
 rand_chacha = "0.3.1"
+reef = { git = "https://github.com/EspressoSystems/reef.git", tag = "0.2.2" }
 seahorse = { git = "https://github.com/EspressoSystems/seahorse.git", branch = "release-0.2" }
 serde = "1.0.136"
 serde_json = "1.0.67"
@@ -59,4 +61,5 @@ tracing-futures = "0.2"
 tracing-log = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
-
+[dev-dependencies]
+tracing-test = "0.2.1"

@@ -433,7 +433,7 @@ PATH = [
 ":view_address" = "Boolean"
 ":viewing_threshold" = "Integer"
 DOC = """
-Build, but do not submit, a sponsor transaction.
+Build, but do not submit, a sponsor transaction if the EQS is running.
 """
 
 [route.submitsponsor]
@@ -446,6 +446,18 @@ Submit a sponsor transaction to the CAPE contract.
 
 The request body should be the asset definition returned by `buildsponsor`. `:erc20` and `:sponsor`
 must be the same that were used to build the asset definition.
+"""
+
+[route.waitforsponsor]
+METHOD = "POST"
+PATH = [
+  "waitforsponsor",
+  "waitforsponsor/timeout/:timeout"
+]
+":timeout" = "Integer"
+DOC = """
+Wait until the sponsor is reflected in the EQS. Timeout after 60 seconds or the specified
+`:timeout` in seconds.
 """
 
 [route.updateasset]

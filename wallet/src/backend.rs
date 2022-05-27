@@ -19,7 +19,7 @@ use cap_rust_sandbox::{
     deploy::EthMiddleware,
     ledger::{CapeLedger, CapeNullifierSet, CapeTransition, CapeTruster},
     model::{Erc20Code, EthereumAddr},
-    types::{CAPE, ERC20},
+    types::{GenericInto, CAPE, ERC20},
     universal_param::{SUPPORTED_FREEZE_SIZES, SUPPORTED_TRANSFER_SIZES},
 };
 use eqs::routes::CapState;
@@ -36,7 +36,7 @@ use futures::stream::{self, Stream, StreamExt};
 use jf_cap::{
     keys::{UserAddress, UserKeyPair, UserPubKey},
     proof::UniversalParam,
-    structs::{AssetDefinition, Nullifier, RecordOpening},
+    structs::{AssetCode, AssetDefinition, Nullifier, RecordOpening},
     MerkleTree, VerKey,
 };
 use key_set::ProverKeySet;
@@ -56,7 +56,7 @@ use serde::{de::DeserializeOwned, Serialize};
 use std::cmp::min;
 use std::convert::{TryFrom, TryInto};
 use std::pin::Pin;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use surf::{StatusCode, Url};
 
 pub struct CapeBackendConfig {
@@ -519,23 +519,46 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
             .map(|_| ())?;
 
         // Don't report success until the EQS reflects the results of the sponsor.
-        let mut backoff = self.min_polling_delay;
-        while self.get_wrapped_erc20_code(asset).await?.is_none() {
-            sleep(backoff).await;
-            backoff = min(backoff * 2, Duration::from_secs(60));
-        }
+        self.wait_for_wrapped_erc20_code(&asset.code, None).await?;
 
         Ok(())
     }
 
     async fn get_wrapped_erc20_code(
         &self,
-        asset: &AssetDefinition,
+        asset: &AssetCode,
     ) -> Result<Option<Erc20Code>, CapeWalletError> {
         let address: Option<Address> = self
-            .get_eqs(format!("get_wrapped_erc20_address/{}", asset.code))
+            .get_eqs(format!("get_wrapped_erc20_address/{}", asset))
             .await?;
         Ok(address.map(Erc20Code::from))
+    }
+
+    async fn wait_for_wrapped_erc20_code(
+        &mut self,
+        asset: &AssetCode,
+        timeout: Option<Duration>,
+    ) -> Result<(), CapeWalletError> {
+        let mut backoff = self.min_polling_delay;
+        let now = Instant::now();
+        loop {
+            let address: Option<Address> = self
+                .get_eqs(format!("get_wrapped_erc20_address/{}", asset))
+                .await?;
+            if address.is_some() {
+                break;
+            }
+            if let Some(time) = timeout {
+                if now.elapsed() >= time {
+                    return Err(CapeWalletError::Failed {
+                        msg: format!("asset not reflected in the EQS in {:?}", time),
+                    });
+                }
+            }
+            sleep(backoff).await;
+            backoff = min(backoff * 2, Duration::from_secs(60));
+        }
+        Ok(())
     }
 
     async fn wrap_erc20(
@@ -556,7 +579,10 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
         // Before the contract can transfer from our account, in accordance with the ERC20 protocol,
         // we have to approve the transfer.
         ERC20::new(erc20_code.clone(), eth.client())
-            .approve(eth.contract.address(), ro.amount.into())
+            .approve(
+                eth.contract.address(),
+                ro.amount.generic_into::<u128>().into(),
+            )
             .send()
             .await
             .map_err(|err| CapeWalletError::Failed {
@@ -606,7 +632,7 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
         // from themselves; after all, we can't stop a user from forking the wallet code and
         // commenting out the signature check altogether.
         std::env::var("CAPE_WALLET_ASSET_LIBRARY_VERIFIER_KEY")
-            .unwrap_or_else(|_| "VERKEY~b7yvQPPxjPlZ5gjKofFkf8T7CwAZ2xPnkkVRhE48D4ge".into())
+            .unwrap_or_else(|_| "SCHNORRVERKEY~b7yvQPPxjPlZ5gjKofFkf8T7CwAZ2xPnkkVRhE48D4jz".into())
             .parse()
             .expect("failed to parse verification key")
     }
@@ -617,6 +643,10 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
             EventSource::QueryService,
             state.num_events as usize,
         ))
+    }
+
+    async fn wait_for_eqs(&self) -> Result<(), CapeWalletError> {
+        self.wait_for_eqs().await
     }
 }
 
@@ -755,8 +785,9 @@ mod test {
             sender
                 .balance_breakdown(&sender_key.address(), &AssetCode::native())
                 .await,
-            total_balance - 3
+            total_balance - U256::from(3u64)
         );
+
         assert_eq!(
             receiver
                 .balance_breakdown(&receiver_key.address(), &AssetCode::native())
@@ -780,7 +811,7 @@ mod test {
             sender
                 .balance_breakdown(&sender_key.address(), &AssetCode::native())
                 .await,
-            total_balance - 2
+            total_balance - U256::from(2u64)
         );
         assert_eq!(
             receiver
@@ -873,7 +904,7 @@ mod test {
         for wallet in [&sponsor, &wrapper] {
             let tx = TransactionRequest::new()
                 .to(Address::from(wallet.eth_address().await.unwrap()))
-                .value(ethers::utils::parse_ether(U256::from(1)).unwrap())
+                .value(ethers::utils::parse_ether(U256::from(1u64)).unwrap())
                 .from(accounts[0]);
             provider
                 .send_transaction(tx, None)
@@ -933,8 +964,8 @@ mod test {
             .transfer(
                 Some(&wrapper_key.address()),
                 &AssetCode::native(),
-                &[(sponsor_key.address(), 1)],
-                1,
+                &[(sponsor_key.address(), 1u64)],
+                1u64,
             )
             .await
             .unwrap();
@@ -945,7 +976,7 @@ mod test {
             wrapper
                 .balance_breakdown(&wrapper_key.address(), &AssetCode::native())
                 .await
-                == total_native_balance - 2
+                == total_native_balance - U256::from(2u64)
         })
         .await;
         assert_eq!(
@@ -971,8 +1002,8 @@ mod test {
             .transfer(
                 Some(&wrapper_key.address()),
                 &cape_asset.code,
-                &[(sponsor_key.address(), 100)],
-                1,
+                &[(sponsor_key.address(), 100u64)],
+                1u64,
             )
             .await
             .unwrap();
@@ -1014,7 +1045,7 @@ mod test {
                 .call()
                 .await
                 .unwrap(),
-            100.into()
+            100u64.into()
         );
     }
 }

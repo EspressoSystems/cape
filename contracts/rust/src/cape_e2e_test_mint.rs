@@ -77,7 +77,7 @@ async fn test_mint_maybe_submit(should_submit: bool) -> Result<()> {
 
     let alice_rec1 = RecordOpening::new(
         &mut prng,
-        2,
+        2u64.into(),
         coin.clone(),
         alice_key.pub_key(),
         FreezeFlag::Unfrozen,
@@ -96,7 +96,7 @@ async fn test_mint_maybe_submit(should_submit: bool) -> Result<()> {
     if let Some(contract) = contract.as_ref() {
         assert_eq!(
             contract.get_root_value().call().await.unwrap(),
-            U256::from(0)
+            U256::from(0u64)
         );
 
         contract
@@ -111,7 +111,7 @@ async fn test_mint_maybe_submit(should_submit: bool) -> Result<()> {
 
         assert_eq!(
             contract.get_num_leaves().call().await.unwrap(),
-            U256::from(1)
+            U256::from(1u64)
         );
 
         assert_eq!(
@@ -164,10 +164,10 @@ async fn test_mint_maybe_submit(should_submit: bool) -> Result<()> {
         let policy = AssetPolicy::default();
         let new_coin = AssetDefinition::new(code, policy).unwrap();
 
-        let (fee_info, _fee_ro) = TxnFeeInfo::new(&mut prng, fee_input, 1).unwrap();
+        let (fee_info, _fee_ro) = TxnFeeInfo::new(&mut prng, fee_input, 1u64.into()).unwrap();
         let mint_ro = RecordOpening::new(
             &mut prng,
-            1, /* 1 less, for the transaction fee */
+            1u64.into(), /* 1 less, for the transaction fee */
             new_coin,
             alice_key.pub_key(),
             FreezeFlag::Unfrozen,

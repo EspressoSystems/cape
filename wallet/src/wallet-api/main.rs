@@ -39,7 +39,6 @@
 //! the web server. Most of the functionality, such as API interpretation, request parsing, and
 //! route handling, is defined in the [cape_wallet] crate.
 
-mod disco;
 mod routes;
 mod web;
 
@@ -85,6 +84,7 @@ mod tests {
         asset_library::{Icon, VerifiedAssetLibrary},
         hd::{KeyTree, Mnemonic},
         txn_builder::{RecordInfo, TransactionReceipt},
+        RecordAmount,
     };
     use serde::de::DeserializeOwned;
     use std::collections::{HashMap, HashSet};
@@ -530,11 +530,11 @@ mod tests {
         let ro2 = &records[1].ro;
         let ro3 = &records[2].ro;
 
-        assert_eq!(ro1.amount, DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR);
+        assert_eq!(ro1.amount, DEFAULT_NATIVE_AMT_IN_FAUCET_ADDR.into());
         assert_eq!(ro1.asset_def.code, AssetCode::native());
-        assert_eq!(ro2.amount, DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR);
+        assert_eq!(ro2.amount, DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR.into());
         assert_eq!(ro2.asset_def.code, AssetCode::native());
-        assert_eq!(ro3.amount, DEFAULT_WRAPPED_AMT);
+        assert_eq!(ro3.amount, DEFAULT_WRAPPED_AMT.into());
         assert_eq!(ro3.asset_def.code, asset);
     }
 
@@ -915,7 +915,7 @@ mod tests {
         let server = TestServer::new().await;
 
         // Set parameters for newasset.
-        let viewing_threshold = 10;
+        let viewing_threshold = RecordAmount::from(10u64);
         let view_amount = true;
         let view_address = false;
         let description = base64::encode_config(&[3u8; 32], base64::URL_SAFE_NO_PAD);
@@ -986,7 +986,7 @@ mod tests {
             .await
             .unwrap();
         assert!(asset.definition.viewing_key.is_none());
-        assert_eq!(asset.definition.viewing_threshold, 0);
+        assert_eq!(asset.definition.viewing_threshold, 0u64.into());
 
         // newasset should return an asset with no reveal threshold if it's not given.
         let asset = server
@@ -996,7 +996,7 @@ mod tests {
             ))
             .await
             .unwrap();
-        assert_eq!(asset.definition.viewing_threshold, 0);
+        assert_eq!(asset.definition.viewing_threshold, 0u64.into());
 
         // newasset should return an asset with a given symbol.
         let asset = server
@@ -1018,7 +1018,7 @@ mod tests {
         // Set parameters for /sponsor.
         let erc20_code = Address::from([1u8; 20]);
         let sponsor_addr = Address::from([2u8; 20]);
-        let viewing_threshold = 10;
+        let viewing_threshold = RecordAmount::from(10u64);
         let view_amount = true;
         let view_address = false;
 
@@ -1086,6 +1086,7 @@ mod tests {
         // body of the sponsor transaction.
         assert_eq!(info.wrapped_erc20, None);
         assert_eq!(sol::AssetDefinition::from(info.definition.clone()), asset);
+
         // After submitting the transaction, `wrapped_erc20` is populated.
         let mut submitted_info: AssetInfo = server
             .client
@@ -1105,11 +1106,22 @@ mod tests {
             Address::from_str(&submitted_info.wrapped_erc20.unwrap()).unwrap(),
             erc20_code
         );
+
         // Other than that, the new info is the same as the old one.
         submitted_info.wrapped_erc20 = None;
         assert_eq!(submitted_info, info);
 
-        // sponsor should return an asset with the default freezer public key if it's not given.
+        // The sponsored asset should be reflected in the EQS.
+        server
+            .client
+            .post("waitforsponsor/timeout/300")
+            .body_json(&asset)
+            .unwrap()
+            .send()
+            .await
+            .unwrap();
+
+        // buildsponsor should return an asset with the default freezer public key if it's not given.
         let erc20_code = Address::from([2u8; 20]);
         let (asset, _) = server
                 .post::<(sol::AssetDefinition, String)>(&format!(
@@ -1120,7 +1132,7 @@ mod tests {
                 .unwrap();
         assert!(!AssetPolicy::from(asset.policy).is_freezer_pub_key_set());
 
-        // sponsor should return an asset with the default auditor public key and no reveal
+        // buildsponsor should return an asset with the default auditor public key and no reveal
         // threshold if an auditor public key isn't given.
         let erc20_code = Address::from([3u8; 20]);
         let (asset, _) = server
@@ -1130,10 +1142,10 @@ mod tests {
             ))
             .await
             .unwrap();
-        assert_eq!(asset.policy.reveal_threshold, 0);
+        assert_eq!(asset.policy.reveal_threshold, 0u64.into());
         assert!(!AssetPolicy::from(asset.policy).is_auditor_pub_key_set());
 
-        // sponsor should return an asset with no reveal threshold if it's not given.
+        // buildsponsor should return an asset with no reveal threshold if it's not given.
         let erc20_code = Address::from([4u8; 20]);
         let (asset, _) = server
                 .post::<(sol::AssetDefinition, String)>(&format!(
@@ -1142,9 +1154,9 @@ mod tests {
                 ))
                 .await
                 .unwrap();
-        assert_eq!(asset.policy.reveal_threshold, 0);
+        assert_eq!(asset.policy.reveal_threshold, 0u64.into());
 
-        // sponsor should create an asset with a given symbol and description.
+        // buildsponsor should create an asset with a given symbol and description.
         let erc20_code = Address::from([5u8; 20]);
         let (asset, info) = server
                 .post::<(sol::AssetDefinition, String)>(&format!(
@@ -1741,14 +1753,17 @@ mod tests {
         assert_eq!(history[0].kind, "send");
         assert_eq!(history[0].asset, AssetCode::native());
         assert_eq!(history[0].senders, vec![src_address]);
-        assert_eq!(history[0].receivers, vec![(dst_address.clone(), 100)]);
+        assert_eq!(
+            history[0].receivers,
+            vec![(dst_address.clone(), 100u64.into())]
+        );
         assert_eq!(history[0].status, "accepted");
 
         assert_eq!(history[1].kind, "send");
         assert_eq!(history[1].asset, AssetCode::native());
         // We don't necessarily know the senders for the second transaction, since we allowed the
         // wallet to choose.
-        assert_eq!(history[1].receivers, vec![(dst_address, 100)]);
+        assert_eq!(history[1].receivers, vec![(dst_address, 100u64.into())]);
         assert_eq!(history[1].status, "accepted");
 
         // Check :from and :count.
@@ -1877,13 +1892,13 @@ mod tests {
             Record {
                 address: address.clone(),
                 asset: AssetCode::native(),
-                amount: DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR,
+                amount: DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR.into(),
                 uid: 2,
             },
             Record {
                 address,
                 asset: asset.definition.code,
-                amount: DEFAULT_WRAPPED_AMT,
+                amount: DEFAULT_WRAPPED_AMT.into(),
                 uid: 3,
             },
         ];
@@ -2657,7 +2672,7 @@ mod tests {
             ))
             .await
             .unwrap();
-        assert_eq!(ro.amount, 10);
+        assert_eq!(ro.amount, 10u64.into());
         assert_eq!(ro.asset_def.code, asset.into());
         assert!(ro.freeze_flag);
         let ro = server
@@ -2667,7 +2682,7 @@ mod tests {
             ))
             .await
             .unwrap();
-        assert_eq!(ro.amount, 10);
+        assert_eq!(ro.amount, 10u64.into());
         assert_eq!(ro.asset_def.code, asset.into());
         assert!(!ro.freeze_flag);
     }

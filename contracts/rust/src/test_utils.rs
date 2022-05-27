@@ -76,7 +76,7 @@ pub fn compute_faucet_record_opening(faucet_pub_key: UserPubKey) -> RecordOpenin
     RecordOpening {
         pub_key: faucet_pub_key,
         asset_def: AssetDefinition::native(),
-        amount: u64::MAX / 2,
+        amount: (u128::MAX / 2).into(),
         freeze_flag: FreezeFlag::Unfrozen,
         blind: BlindFactor::from(BaseField::from(0)),
     }
@@ -177,7 +177,9 @@ pub fn generate_burn_tx(
         owner_keypair: faucet_key_pair,
     };
 
-    let txn_fee_info = TxnFeeInfo::new(&mut rng, fee_input, 10).unwrap().0;
+    let txn_fee_info = TxnFeeInfo::new(&mut rng, fee_input, 10u64.into())
+        .unwrap()
+        .0;
 
     let inputs = vec![TransferNoteInput {
         ro: wrapped_ro.clone(),

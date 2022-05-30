@@ -5,16 +5,49 @@
 // This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+use ethers::abi::AbiDecode;
+
+use super::CapeBlock;
+use crate::types::{BurnNote, CAPEEvents, EdOnBN254Point, FreezeNote, MintNote, TransferNote};
+
+// Unable to import BlockCommittedFilter as type because it's "ambigious". There
+// is one definition for the CAPE and CAPETest contract.
+//
+// Is there a better workaround?
+pub fn decode_cape_block(event: CAPEEvents) -> CapeBlock {
+    if let CAPEEvents::BlockCommittedFilter(block) = event {
+        let miner_addr: EdOnBN254Point = AbiDecode::decode(block.miner_addr).unwrap();
+        let note_types: Vec<u8> = AbiDecode::decode(block.note_types).unwrap();
+        let transfer_notes: Vec<TransferNote> = AbiDecode::decode(block.transfer_notes).unwrap();
+        let mint_notes: Vec<MintNote> = AbiDecode::decode(block.mint_notes).unwrap();
+        let freeze_notes: Vec<FreezeNote> = AbiDecode::decode(block.freeze_notes).unwrap();
+        let burn_notes: Vec<BurnNote> = AbiDecode::decode(block.burn_notes).unwrap();
+
+        let event_cape_block = crate::types::CapeBlock {
+            miner_addr,
+            note_types,
+            transfer_notes,
+            mint_notes,
+            freeze_notes,
+            burn_notes,
+        };
+        event_cape_block.into()
+    } else {
+        panic!("Only works on BlockCommittedFilter event.")
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{
         cape::{
+            events::decode_cape_block,
             submit_block::{fetch_cape_memos, submit_cape_block_with_memos},
             BlockWithMemos, CapeBlock,
         },
         ethereum::EthConnection,
         ledger::CapeLedger,
-        types::{GenericInto, MerkleRootSol},
+        types::{CAPEEvents, GenericInto, MerkleRootSol},
     };
     use anyhow::Result;
     use ethers::prelude::BlockNumber;
@@ -36,7 +69,7 @@ mod tests {
         let connection = EthConnection::for_test().await;
 
         let mut rng = ChaChaRng::from_seed([0x42u8; 32]);
-        let params = TxnsParams::generate_txns(&mut rng, 1, 0, 0, CapeLedger::merkle_height());
+        let params = TxnsParams::generate_txns(&mut rng, 1, 1, 1, CapeLedger::merkle_height());
         let miner = UserPubKey::default();
 
         let root = params.txns[0].merkle_root();
@@ -98,13 +131,15 @@ mod tests {
             .query_with_meta()
             .await?;
 
-        let (_, meta) = events[0].clone();
+        let (data, meta) = events[0].clone();
 
         let fetched_memos = fetch_cape_memos(&query_connection, meta.transaction_hash)
             .await?
             .unwrap();
-
         assert_eq!(fetched_memos, memos_with_sigs);
+
+        let event_cape_block = decode_cape_block(CAPEEvents::BlockCommittedFilter(data));
+        assert_eq!(cape_block, event_cape_block);
 
         Ok(())
     }

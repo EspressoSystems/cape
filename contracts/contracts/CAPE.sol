@@ -49,7 +49,22 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
     uint256 public constant MAX_NUM_PENDING_DEPOSIT = 10;
 
     event FaucetInitialized(bytes roBytes);
-    event BlockCommitted(uint64 indexed height, uint256[] depositCommitments, bytes blockBytes);
+
+    event BlockCommitted(
+        uint64 indexed height,
+        uint256[] depositCommitments,
+        // What follows is a `CapeBlock` struct split up into fields.
+        // This may no longer be necessary once
+        // https://github.com/gakonst/ethers-rs/issues/1220
+        // if fixed.
+        bytes minerAddr,
+        bytes noteTypes,
+        bytes transferNotes,
+        bytes mintNotes,
+        bytes freezeNotes,
+        bytes burnNotes
+    );
+
     event Erc20TokensDeposited(bytes roBytes, address erc20TokenAddress, address from);
 
     struct AuditMemo {
@@ -357,10 +372,24 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
         blockHeight += 1;
 
         // Inform clients about the new block and the processed deposits.
-        emit BlockCommitted(blockHeight, pendingDeposits, abi.encode(newBlock));
+        _emitBlockEvent(newBlock);
 
         // Empty the queue now that the record commitments have been inserted
         delete pendingDeposits;
+    }
+
+    /// @notice This function only exists to avoid a stack too deep compilation error.
+    function _emitBlockEvent(CapeBlock memory newBlock) internal {
+        emit BlockCommitted(
+            blockHeight,
+            pendingDeposits,
+            abi.encode(newBlock.minerAddr),
+            abi.encode(newBlock.noteTypes),
+            abi.encode(newBlock.transferNotes),
+            abi.encode(newBlock.mintNotes),
+            abi.encode(newBlock.freezeNotes),
+            abi.encode(newBlock.burnNotes)
+        );
     }
 
     /// @dev send the ERC-20 tokens equivalent to the asset records being burnt. Recall that the burned record opening is contained inside the note.

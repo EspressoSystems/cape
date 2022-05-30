@@ -68,6 +68,9 @@ jobs:
       - name: Generate Docs
         run: nix-shell --run "prepend-timestamps make-doc"
 
+      - name: Generate Wallet
+        run: ./target/release/export-wallet-api-docs --api ./wallet/api/api.toml --assets ./wallet/public/ ./doc/mdbook/book/wallet
+
       - name: Deploy Docs
         uses: peaceiris/actions-gh-pages@v3
         if: ${{ github.ref == 'refs/heads/main' }}

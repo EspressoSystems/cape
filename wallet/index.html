@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang='en'>
+  <head>
+    <meta charset='utf-8'>
+    <title>Espresso Systems CAPE Web Help</title>
+    <link rel='stylesheet' href='public/css/style.css'>
+    <script src='public/js/script.js'></script>
+  </head>
+  <body>
+    <div><img src='public/media/Horizontal02.png'
+              alt='Espresso Systems Logo'
+              height='115'/></div>
+    <h1>Espresso Systems CAPE Web Interface</h1>
+    <p>The Espresso Systems CAPE Web Inteface provides a way to create and interact with a local wallet that can be used to build, submit, and track transactions, as well as creating and managing new types of assets.</p>
+<a name='buildsponsor'><h3 class='entry'>buildsponsor</h3></a>
+<h3>Routes</h3><p class='path'>buildsponsor/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address/viewing_threshold/:viewing_threshold</p>
+<p class='path'>buildsponsor/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address</p>
+<p class='path'>buildsponsor/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/viewing_threshold/:viewing_threshold</p>
+<p class='path'>buildsponsor/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount</p>
+<p class='path'>buildsponsor/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_address/:view_address/viewing_threshold/:viewing_threshold</p>
+<p class='path'>buildsponsor/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_address/:view_address</p>
+<p class='path'>buildsponsor/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/viewing_threshold/:viewing_threshold</p>
+<p class='path'>buildsponsor/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key</p>
+<p class='path'>buildsponsor/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key</p>
+<p class='path'>buildsponsor/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address/viewing_threshold/:viewing_threshold</p>
+<p class='path'>buildsponsor/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address</p>
+<p class='path'>buildsponsor/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_amount/:view_amount/viewing_threshold/:viewing_threshold</p>
+<p class='path'>buildsponsor/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_amount/:view_amount</p>
+<p class='path'>buildsponsor/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_address/:view_address/viewing_threshold/:viewing_threshold</p>
+<p class='path'>buildsponsor/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_address/:view_address</p>
+<p class='path'>buildsponsor/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/viewing_threshold/:viewing_threshold</p>
+<p class='path'>buildsponsor/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key</p>
+<p class='path'>buildsponsor/erc20/:erc20/sponsor/:sponsor</p>
+<p class='path'>buildsponsor/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address/viewing_threshold/:viewing_threshold</p>
+<p class='path'>buildsponsor/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address</p>
+<p class='path'>buildsponsor/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/viewing_threshold/:viewing_threshold</p>
+<p class='path'>buildsponsor/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount</p>
+<p class='path'>buildsponsor/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_address/:view_address/viewing_threshold/:viewing_threshold</p>
+<p class='path'>buildsponsor/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_address/:view_address</p>
+<p class='path'>buildsponsor/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/viewing_threshold/:viewing_threshold</p>
+<p class='path'>buildsponsor/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key</p>
+<p class='path'>buildsponsor/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key</p>
+<p class='path'>buildsponsor/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address/viewing_threshold/:viewing_threshold</p>
+<p class='path'>buildsponsor/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address</p>
+<p class='path'>buildsponsor/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_amount/:view_amount/viewing_threshold/:viewing_threshold</p>
+<p class='path'>buildsponsor/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_amount/:view_amount</p>
+<p class='path'>buildsponsor/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_address/:view_address/viewing_threshold/:viewing_threshold</p>
+<p class='path'>buildsponsor/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_address/:view_address</p>
+<p class='path'>buildsponsor/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/viewing_threshold/:viewing_threshold</p>
+<p class='path'>buildsponsor/symbol/:symbol/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key</p>
+<p class='path'>buildsponsor/symbol/:symbol/erc20/:erc20/sponsor/:sponsor</p>
+<p class='path'>buildsponsor/symbol/:symbol/description/:description/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address/viewing_threshold/:viewing_threshold</p>
+<p class='path'>buildsponsor/symbol/:symbol/description/:description/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address</p>
+<p class='path'>buildsponsor/symbol/:symbol/description/:description/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/viewing_threshold/:viewing_threshold</p>
+<p class='path'>buildsponsor/symbol/:symbol/description/:description/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount</p>
+<p class='path'>buildsponsor/symbol/:symbol/description/:description/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_address/:view_address/viewing_threshold/:viewing_threshold</p>
+<p class='path'>buildsponsor/symbol/:symbol/description/:description/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/view_address/:view_address</p>
+<p class='path'>buildsponsor/symbol/:symbol/description/:description/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key/viewing_threshold/:viewing_threshold</p>
+<p class='path'>buildsponsor/symbol/:symbol/description/:description/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key/viewing_key/:viewing_key</p>
+<p class='path'>buildsponsor/symbol/:symbol/description/:description/erc20/:erc20/sponsor/:sponsor/freezing_key/:freezing_key</p>
+<p class='path'>buildsponsor/symbol/:symbol/description/:description/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address/viewing_threshold/:viewing_threshold</p>
+<p class='path'>buildsponsor/symbol/:symbol/description/:description/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address</p>
+<p class='path'>buildsponsor/symbol/:symbol/description/:description/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_amount/:view_amount/viewing_threshold/:viewing_threshold</p>
+<p class='path'>buildsponsor/symbol/:symbol/description/:description/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_amount/:view_amount</p>
+<p class='path'>buildsponsor/symbol/:symbol/description/:description/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_address/:view_address/viewing_threshold/:viewing_threshold</p>
+<p class='path'>buildsponsor/symbol/:symbol/description/:description/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/view_address/:view_address</p>
+<p class='path'>buildsponsor/symbol/:symbol/description/:description/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key/viewing_threshold/:viewing_threshold</p>
+<p class='path'>buildsponsor/symbol/:symbol/description/:description/erc20/:erc20/sponsor/:sponsor/viewing_key/:viewing_key</p>
+<p class='path'>buildsponsor/symbol/:symbol/description/:description/erc20/:erc20/sponsor/:sponsor</p>
+<h3>Parameters</h3>
+<table>
+<tr><td class='parameter'>description</td><td class='type'>Base64</td></tr>
+<tr><td class='parameter'>erc20</td><td class='type'>Literal</td></tr>
+<tr><td class='parameter'>freezing_key</td><td class='type'>TaggedBase64</td></tr>
+<tr><td class='parameter'>sponsor</td><td class='type'>Literal</td></tr>
+<tr><td class='parameter'>symbol</td><td class='type'>Base64</td></tr>
+<tr><td class='parameter'>view_address</td><td class='type'>Boolean</td></tr>
+<tr><td class='parameter'>view_amount</td><td class='type'>Boolean</td></tr>
+<tr><td class='parameter'>viewing_key</td><td class='type'>TaggedBase64</td></tr>
+<tr><td class='parameter'>viewing_threshold</td><td class='type'>Integer</td></tr>
+</table>
+<h3>Description</h3>
+<p>Build, but do not submit, a sponsor transaction if the EQS is running.</p>
+
+<a name='buildwrap'><h3 class='entry'>buildwrap</h3></a>
+<h3>Routes</h3><p class='path'>buildwrap/destination/:destination/asset/:asset/amount/:amount</p>
+<h3>Parameters</h3>
+<table>
+<tr><td class='parameter'>amount</td><td class='type'>Integer</td></tr>
+<tr><td class='parameter'>asset</td><td class='type'>TaggedBase64</td></tr>
+<tr><td class='parameter'>destination</td><td class='type'>TaggedBase64</td></tr>
+</table>
+<h3>Description</h3>
+<p>Build, but do not submit, a wrap transaction. Returns the record opening corresponding to the wrap.</p>
+
+<a name='closewallet'><h3 class='entry'>closewallet</h3></a>
+<h3>Routes</h3><p class='path'>closewallet</p>
+<h3>Parameters</h3>
+<table>
+<div class='meta'>None</div></table>
+<h3>Description</h3>
+<p>Close the current wallet.</p>
+
+<a name='exportasset'><h3 class='entry'>exportasset</h3></a>
+<h3>Routes</h3><p class='path'>exportasset/:asset</p>
+<h3>Parameters</h3>
+<table>
+<tr><td class='parameter'>asset</td><td class='type'>TaggedBase64</td></tr>
+</table>
+<h3>Description</h3>
+<p>Return a serialized representation of the asset with the given code.</p>
+
+<a name='freeze'><h3 class='entry'>freeze</h3></a>
+<h3>Routes</h3><p class='path'>freeze/:address/:asset/fee/:fee_address/:fee_amount</p>
+<p class='path'>freeze/:address/:asset/fee/:fee_amount</p>
+<h3>Parameters</h3>
+<table>
+<tr><td class='parameter'>address</td><td class='type'>TaggedBase64</td></tr>
+<tr><td class='parameter'>asset</td><td class='type'>TaggedBase64</td></tr>
+<tr><td class='parameter'>fee_address</td><td class='type'>TaggedBase64</td></tr>
+<tr><td class='parameter'>fee_amount</td><td class='type'>Integer</td></tr>
+</table>
+<h3>Description</h3>
+<p>Freeze the asset associated with the given address and asset type. Assumes the asset was defined with a freezing key.</p>
+
+<a name='getaccount'><h3 class='entry'>getaccount</h3></a>
+<h3>Routes</h3><p class='path'>getaccount/:address</p>
+<h3>Parameters</h3>
+<table>
+<tr><td class='parameter'>address</td><td class='type'>TaggedBase64</td></tr>
+</table>
+<h3>Description</h3>
+<p>Get information about an account.</p>
+
+<p><code>:address</code> can be an account address, or a viewing, freezing, or sending public key. In any case, the result contains at least the following fields:</p>
+
+<ul>
+<li><code>&quot;records&quot;</code> - a list of records related to this account. For addresses and sending public keys, it is a list of owned records. For viewing keys it is a list of viewable records, and for freezing keys, a list of freezable records.</li>
+
+<li><code>&quot;assets&quot;</code> - assets related to this account, indexed by code. Each asset is an <code>AssetInfo</code> structure, as returned by <code>getinfo/asset</code>. For addresses and sending public keys, this is just the collection of assets currently owned by the account. For viewing and freezing keys, it also includes all assets known to the wallet which are viewable or freezable using that key. It is still guaranteed to contain the asset type of every record in <code>&quot;records&quot;</code>.</li>
+</ul>
+
+<p>Each record contains the following fields:</p>
+
+<ul>
+<li><code>&quot;asset&quot;</code> - an asset code, which can be used as an index into <code>:assets</code></li>
+
+<li><code>&quot;address&quot;</code> - owner of the record, in <code>TaggedBase64</code></li>
+
+<li><code>&quot;amount&quot;</code> - record amount as an integer</li>
+
+<li><code>&quot;uid&quot;</code> - integer unique to this record</li>
+</ul>
+
+<a name='getaccounts'><h3 class='entry'>getaccounts</h3></a>
+<h3>Routes</h3><p class='path'>getaccounts/all</p>
+<p class='path'>getaccounts/sending</p>
+<p class='path'>getaccounts/viewing</p>
+<p class='path'>getaccounts/freezing</p>
+<h3>Parameters</h3>
+<table>
+<div class='meta'>None</div></table>
+<h3>Description</h3>
+<p>Get information about accounts.</p>
+
+<p>Returns an array of account information, as returned by <code>getaccount</code>, for each matching account.</p>
+
+<a name='getaddress'><h3 class='entry'>getaddress</h3></a>
+<h3>Routes</h3><p class='path'>getaddress</p>
+<h3>Parameters</h3>
+<table>
+<div class='meta'>None</div></table>
+<h3>Description</h3>
+<p>Get the addresses for the current wallet.</p>
+
+<a name='getbalance'><h3 class='entry'>getbalance</h3></a>
+<h3>Routes</h3><p class='path'>getbalance/all</p>
+<p class='path'>getbalance/address/:address</p>
+<p class='path'>getbalance/address/:address/asset/:asset</p>
+<h3>Parameters</h3>
+<table>
+<tr><td class='parameter'>address</td><td class='type'>TaggedBase64</td></tr>
+<tr><td class='parameter'>asset</td><td class='type'>TaggedBase64</td></tr>
+</table>
+<h3>Description</h3>
+<p>Get all balances for the current wallet, all the balances for a given address, or the balance for a given address and asset type.</p>
+
+<a name='getinfo'><h3 class='entry'>getinfo</h3></a>
+<h3>Routes</h3><p class='path'>getinfo</p>
+<p class='path'>getinfo/address</p>
+<p class='path'>getinfo/key</p>
+<p class='path'>getinfo/asset</p>
+<p class='path'>getinfo/asset/:asset</p>
+<p class='path'>getinfo/freezing_key</p>
+<p class='path'>getinfo/sending_key</p>
+<p class='path'>getinfo/viewing_key</p>
+<h3>Parameters</h3>
+<table>
+<tr><td class='parameter'>asset</td><td class='type'>TaggedBase64</td></tr>
+</table>
+<h3>Description</h3>
+<p>Get the addresses, public keys, and asset types for the current wallet.</p>
+
+<a name='getmnemonic'><h3 class='entry'>getmnemonic</h3></a>
+<h3>Routes</h3><p class='path'>getmnemonic</p>
+<h3>Parameters</h3>
+<table>
+<div class='meta'>None</div></table>
+<h3>Description</h3>
+<p>Generate a random mnemonic phrase.</p>
+
+<a name='getprivatekey'><h3 class='entry'>getprivatekey</h3></a>
+<h3>Routes</h3><p class='path'>getprivatekey/:address</p>
+<h3>Parameters</h3>
+<table>
+<tr><td class='parameter'>address</td><td class='type'>TaggedBase64</td></tr>
+</table>
+<h3>Description</h3>
+<p>Get the private key of an account.</p>
+
+<a name='getrecords'><h3 class='entry'>getrecords</h3></a>
+<h3>Routes</h3><p class='path'>getrecords</p>
+<h3>Parameters</h3>
+<table>
+<div class='meta'>None</div></table>
+<h3>Description</h3>
+<p>Get all records related to the current wallet.</p>
+
+<a name='healthcheck'><h3 class='entry'>healthcheck</h3></a>
+<h3>Routes</h3><p class='path'>healthcheck</p>
+<h3>Parameters</h3>
+<table>
+<div class='meta'>None</div></table>
+<h3>Description</h3>
+<p>Responds with JSON {&quot;status&quot;: &quot;available&quot;}.</p>
+
+<a name='importasset'><h3 class='entry'>importasset</h3></a>
+<h3>Routes</h3><p class='path'>importasset</p>
+<h3>Parameters</h3>
+<table>
+<div class='meta'>None</div></table>
+<h3>Description</h3>
+<p>Add an asset to the wallet&#8217;s asset library.</p>
+
+<p>The request body should be a JSON string containing a serialized representation of an asset, as returned by <code>exportasset</code>. The asset may have been created and exported in a different keystore or wallet.</p>
+
+<a name='importkey'><h3 class='entry'>importkey</h3></a>
+<h3>Routes</h3><p class='path'>importkey/freezing/:freezing</p>
+<p class='path'>importkey/freezing/:freezing/description/:description</p>
+<p class='path'>importkey/sending/:sending</p>
+<p class='path'>importkey/sending/:sending/description/:description</p>
+<p class='path'>importkey/sending/:sending/description/:description/scan_from/:index</p>
+<p class='path'>importkey/sending/:sending/scan_from/:index</p>
+<p class='path'>importkey/viewing/:viewing</p>
+<p class='path'>importkey/viewing/:viewing/description/:description</p>
+<h3>Parameters</h3>
+<table>
+<tr><td class='parameter'>description</td><td class='type'>Base64</td></tr>
+<tr><td class='parameter'>freezing</td><td class='type'>TaggedBase64</td></tr>
+<tr><td class='parameter'>index</td><td class='type'>Integer</td></tr>
+<tr><td class='parameter'>sending</td><td class='type'>TaggedBase64</td></tr>
+<tr><td class='parameter'>viewing</td><td class='type'>TaggedBase64</td></tr>
+</table>
+<h3>Description</h3>
+<p>Import the given key into the current wallet. For sending keys, the optional scan index give a block index at which to begin scanning. If omitted, the entire ledger is scanned for transactions using the key.</p>
+
+<a name='lastusedkeystore'><h3 class='entry'>lastusedkeystore</h3></a>
+<h3>Routes</h3><p class='path'>lastusedkeystore</p>
+<h3>Parameters</h3>
+<table>
+<div class='meta'>None</div></table>
+<h3>Description</h3>
+<p>Get the last used wallet&#8217;s path.</p>
+
+<a name='listkeystores'><h3 class='entry'>listkeystores</h3></a>
+<h3>Routes</h3><p class='path'>listkeystores</p>
+<h3>Parameters</h3>
+<table>
+<div class='meta'>None</div></table>
+<h3>Description</h3>
+<p>Return a list of all named keystores.</p>
+
+<p>Named keystores are those created with <code>newwallet/:mnemonic/:password/name/:name</code>.</p>
+
+<a name='mint'><h3 class='entry'>mint</h3></a>
+<h3>Routes</h3><p class='path'>mint/asset/:asset/amount/:amount/fee/:fee/minter/:minter/recipient/:recipient</p>
+<p class='path'>mint/asset/:asset/amount/:amount/fee/:fee/recipient/:recipient</p>
+<h3>Parameters</h3>
+<table>
+<tr><td class='parameter'>amount</td><td class='type'>Integer</td></tr>
+<tr><td class='parameter'>asset</td><td class='type'>TaggedBase64</td></tr>
+<tr><td class='parameter'>fee</td><td class='type'>Integer</td></tr>
+<tr><td class='parameter'>minter</td><td class='type'>TaggedBase64</td></tr>
+<tr><td class='parameter'>recipient</td><td class='type'>TaggedBase64</td></tr>
+</table>
+<h3>Description</h3>
+<p>Mint amount units of a given asset code controlled by the current wallet to the recipient.</p>
+
+<p>Returns a serialized receipt which can be used to track the transaction through the validation process.</p>
+
+<a name='newasset'><h3 class='entry'>newasset</h3></a>
+<h3>Routes</h3><p class='path'>newasset/description/:description/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address/viewing_threshold/:viewing_threshold</p>
+<p class='path'>newasset/description/:description/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address</p>
+<p class='path'>newasset/description/:description/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/viewing_threshold/:viewing_threshold</p>
+<p class='path'>newasset/description/:description/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount</p>
+<p class='path'>newasset/description/:description/freezing_key/:freezing_key/viewing_key/:viewing_key/view_address/:view_address/viewing_threshold/:viewing_threshold</p>
+<p class='path'>newasset/description/:description/freezing_key/:freezing_key/viewing_key/:viewing_key/view_address/:view_address</p>
+<p class='path'>newasset/description/:description/freezing_key/:freezing_key/viewing_key/:viewing_key/viewing_threshold/:viewing_threshold</p>
+<p class='path'>newasset/description/:description/freezing_key/:freezing_key/viewing_key/:viewing_key</p>
+<p class='path'>newasset/description/:description/freezing_key/:freezing_key</p>
+<p class='path'>newasset/description/:description/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address/viewing_threshold/:viewing_threshold</p>
+<p class='path'>newasset/description/:description/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address</p>
+<p class='path'>newasset/description/:description/viewing_key/:viewing_key/view_amount/:view_amount/viewing_threshold/:viewing_threshold</p>
+<p class='path'>newasset/description/:description/viewing_key/:viewing_key/view_amount/:view_amount</p>
+<p class='path'>newasset/description/:description/viewing_key/:viewing_key/view_address/:view_address/viewing_threshold/:viewing_threshold</p>
+<p class='path'>newasset/description/:description/viewing_key/:viewing_key/view_address/:view_address</p>
+<p class='path'>newasset/description/:description/viewing_key/:viewing_key/viewing_threshold/:viewing_threshold</p>
+<p class='path'>newasset/description/:description/viewing_key/:viewing_key</p>
+<p class='path'>newasset/description/:description</p>
+<p class='path'>newasset/symbol/:symbol/description/:description/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address/viewing_threshold/:viewing_threshold</p>
+<p class='path'>newasset/symbol/:symbol/description/:description/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address</p>
+<p class='path'>newasset/symbol/:symbol/description/:description/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/viewing_threshold/:viewing_threshold</p>
+<p class='path'>newasset/symbol/:symbol/description/:description/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount</p>
+<p class='path'>newasset/symbol/:symbol/description/:description/freezing_key/:freezing_key/viewing_key/:viewing_key/view_address/:view_address/viewing_threshold/:viewing_threshold</p>
+<p class='path'>newasset/symbol/:symbol/description/:description/freezing_key/:freezing_key/viewing_key/:viewing_key/view_address/:view_address</p>
+<p class='path'>newasset/symbol/:symbol/description/:description/freezing_key/:freezing_key/viewing_key/:viewing_key/viewing_threshold/:viewing_threshold</p>
+<p class='path'>newasset/symbol/:symbol/description/:description/freezing_key/:freezing_key/viewing_key/:viewing_key</p>
+<p class='path'>newasset/symbol/:symbol/description/:description/freezing_key/:freezing_key</p>
+<p class='path'>newasset/symbol/:symbol/description/:description/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address/viewing_threshold/:viewing_threshold</p>
+<p class='path'>newasset/symbol/:symbol/description/:description/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address</p>
+<p class='path'>newasset/symbol/:symbol/description/:description/viewing_key/:viewing_key/view_amount/:view_amount/viewing_threshold/:viewing_threshold</p>
+<p class='path'>newasset/symbol/:symbol/description/:description/viewing_key/:viewing_key/view_amount/:view_amount</p>
+<p class='path'>newasset/symbol/:symbol/description/:description/viewing_key/:viewing_key/view_address/:view_address/viewing_threshold/:viewing_threshold</p>
+<p class='path'>newasset/symbol/:symbol/description/:description/viewing_key/:viewing_key/view_address/:view_address</p>
+<p class='path'>newasset/symbol/:symbol/description/:description/viewing_key/:viewing_key/viewing_threshold/:viewing_threshold</p>
+<p class='path'>newasset/symbol/:symbol/description/:description/viewing_key/:viewing_key</p>
+<p class='path'>newasset/symbol/:symbol/description/:description</p>
+<p class='path'>newasset/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address/viewing_threshold/:viewing_threshold</p>
+<p class='path'>newasset/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address</p>
+<p class='path'>newasset/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/viewing_threshold/:viewing_threshold</p>
+<p class='path'>newasset/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount</p>
+<p class='path'>newasset/freezing_key/:freezing_key/viewing_key/:viewing_key/view_address/:view_address/viewing_threshold/:viewing_threshold</p>
+<p class='path'>newasset/freezing_key/:freezing_key/viewing_key/:viewing_key/view_address/:view_address</p>
+<p class='path'>newasset/freezing_key/:freezing_key/viewing_key/:viewing_key/viewing_threshold/:viewing_threshold</p>
+<p class='path'>newasset/freezing_key/:freezing_key/viewing_key/:viewing_key</p>
+<p class='path'>newasset/freezing_key/:freezing_key</p>
+<p class='path'>newasset/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address/viewing_threshold/:viewing_threshold</p>
+<p class='path'>newasset/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address</p>
+<p class='path'>newasset/viewing_key/:viewing_key/view_amount/:view_amount/viewing_threshold/:viewing_threshold</p>
+<p class='path'>newasset/viewing_key/:viewing_key/view_amount/:view_amount</p>
+<p class='path'>newasset/viewing_key/:viewing_key/view_address/:view_address/viewing_threshold/:viewing_threshold</p>
+<p class='path'>newasset/viewing_key/:viewing_key/view_address/:view_address</p>
+<p class='path'>newasset/viewing_key/:viewing_key/viewing_threshold/:viewing_threshold</p>
+<p class='path'>newasset/viewing_key/:viewing_key</p>
+<p class='path'>newasset</p>
+<p class='path'>newasset/symbol/:symbol/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address/viewing_threshold/:viewing_threshold</p>
+<p class='path'>newasset/symbol/:symbol/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address</p>
+<p class='path'>newasset/symbol/:symbol/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount/viewing_threshold/:viewing_threshold</p>
+<p class='path'>newasset/symbol/:symbol/freezing_key/:freezing_key/viewing_key/:viewing_key/view_amount/:view_amount</p>
+<p class='path'>newasset/symbol/:symbol/freezing_key/:freezing_key/viewing_key/:viewing_key/view_address/:view_address/viewing_threshold/:viewing_threshold</p>
+<p class='path'>newasset/symbol/:symbol/freezing_key/:freezing_key/viewing_key/:viewing_key/view_address/:view_address</p>
+<p class='path'>newasset/symbol/:symbol/freezing_key/:freezing_key/viewing_key/:viewing_key/viewing_threshold/:viewing_threshold</p>
+<p class='path'>newasset/symbol/:symbol/freezing_key/:freezing_key/viewing_key/:viewing_key</p>
+<p class='path'>newasset/symbol/:symbol/freezing_key/:freezing_key</p>
+<p class='path'>newasset/symbol/:symbol/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address/viewing_threshold/:viewing_threshold</p>
+<p class='path'>newasset/symbol/:symbol/viewing_key/:viewing_key/view_amount/:view_amount/view_address/:view_address</p>
+<p class='path'>newasset/symbol/:symbol/viewing_key/:viewing_key/view_amount/:view_amount/viewing_threshold/:viewing_threshold</p>
+<p class='path'>newasset/symbol/:symbol/viewing_key/:viewing_key/view_amount/:view_amount</p>
+<p class='path'>newasset/symbol/:symbol/viewing_key/:viewing_key/view_address/:view_address/viewing_threshold/:viewing_threshold</p>
+<p class='path'>newasset/symbol/:symbol/viewing_key/:viewing_key/view_address/:view_address</p>
+<p class='path'>newasset/symbol/:symbol/viewing_key/:viewing_key/viewing_threshold/:viewing_threshold</p>
+<p class='path'>newasset/symbol/:symbol/viewing_key/:viewing_key</p>
+<p class='path'>newasset/symbol/:symbol</p>
+<h3>Parameters</h3>
+<table>
+<tr><td class='parameter'>description</td><td class='type'>Base64</td></tr>
+<tr><td class='parameter'>erc20</td><td class='type'>TaggedBase64</td></tr>
+<tr><td class='parameter'>freezing_key</td><td class='type'>TaggedBase64</td></tr>
+<tr><td class='parameter'>sponsor</td><td class='type'>TaggedBase64</td></tr>
+<tr><td class='parameter'>symbol</td><td class='type'>Base64</td></tr>
+<tr><td class='parameter'>view_address</td><td class='type'>Boolean</td></tr>
+<tr><td class='parameter'>view_amount</td><td class='type'>Boolean</td></tr>
+<tr><td class='parameter'>viewing_key</td><td class='type'>TaggedBase64</td></tr>
+<tr><td class='parameter'>viewing_threshold</td><td class='type'>Integer</td></tr>
+</table>
+<h3>Description</h3>
+<p>Sponsor or define an asset, depending on if an ERC20 code is given. Reports the asset definition.</p>
+
+<a name='newkey'><h3 class='entry'>newkey</h3></a>
+<h3>Routes</h3><p class='path'>newkey/sending</p>
+<p class='path'>newkey/sending/description/:description</p>
+<p class='path'>newkey/viewing</p>
+<p class='path'>newkey/viewing/description/:description</p>
+<p class='path'>newkey/freezing</p>
+<p class='path'>newkey/freezing/description/:description</p>
+<h3>Parameters</h3>
+<table>
+<tr><td class='parameter'>description</td><td class='type'>Base64</td></tr>
+</table>
+<h3>Description</h3>
+<p>Generate and return a key of the given type.</p>
+
+<a name='newwallet'><h3 class='entry'>newwallet</h3></a>
+<h3>Routes</h3><p class='path'>newwallet/:mnemonic/:password</p>
+<p class='path'>newwallet/:mnemonic/:password/path/:path</p>
+<p class='path'>newwallet/:mnemonic/:password/name/:name</p>
+<h3>Parameters</h3>
+<table>
+<tr><td class='parameter'>mnemonic</td><td class='type'>Literal</td></tr>
+<tr><td class='parameter'>name</td><td class='type'>Base64</td></tr>
+<tr><td class='parameter'>password</td><td class='type'>Base64</td></tr>
+<tr><td class='parameter'>path</td><td class='type'>Base64</td></tr>
+</table>
+<h3>Description</h3>
+<p>Creates and opens a new the wallet with the given mnemonic and password.</p>
+
+<p>If <code>:path</code> is given, the wallet will be stored in the given location. If <code>:name</code> is given, the walllet will be stored in <code>~/.espresso/cape/wallet/keystores/:name</code>. If neither <code>:path</code> nor <code>:name</code> is given, the wallet will be stored in <code>~/.espresso/cape/wallet/keystores/default</code>.</p>
+
+<a name='openwallet'><h3 class='entry'>openwallet</h3></a>
+<h3>Routes</h3><p class='path'>openwallet/:password</p>
+<p class='path'>openwallet/:password/path/:path</p>
+<p class='path'>openwallet/:password/name/:name</p>
+<h3>Parameters</h3>
+<table>
+<tr><td class='parameter'>name</td><td class='type'>Base64</td></tr>
+<tr><td class='parameter'>password</td><td class='type'>Base64</td></tr>
+<tr><td class='parameter'>path</td><td class='type'>Base64</td></tr>
+</table>
+<h3>Description</h3>
+<p>Open the wallet from local storage with the given password and path.</p>
+
+<p><code>:path</code> and <code>:name</code> work as they do for <code>newwallet</code>.</p>
+
+<a name='recordopening'><h3 class='entry'>recordopening</h3></a>
+<h3>Routes</h3><p class='path'>recordopening/address/:address/asset/:asset/amount/:amount/freeze/:freeze</p>
+<p class='path'>recordopening/address/:address/asset/:asset/amount/:amount</p>
+<h3>Parameters</h3>
+<table>
+<tr><td class='parameter'>address</td><td class='type'>TaggedBase64</td></tr>
+<tr><td class='parameter'>amount</td><td class='type'>Integer</td></tr>
+<tr><td class='parameter'>asset</td><td class='type'>TaggedBase64</td></tr>
+<tr><td class='parameter'>freeze</td><td class='type'>Boolean</td></tr>
+</table>
+<h3>Description</h3>
+<p>Create an record opening of an asset for the given address.</p>
+
+<a name='recoverkey'><h3 class='entry'>recoverkey</h3></a>
+<h3>Routes</h3><p class='path'>recoverkey/sending</p>
+<p class='path'>recoverkey/sending/description/:description</p>
+<p class='path'>recoverkey/sending/:scan_from</p>
+<p class='path'>recoverkey/sending/:scan_from/description/:description</p>
+<p class='path'>recoverkey/viewing</p>
+<p class='path'>recoverkey/viewing/description/:description</p>
+<p class='path'>recoverkey/freezing</p>
+<p class='path'>recoverkey/freezing/description/:description</p>
+<h3>Parameters</h3>
+<table>
+<tr><td class='parameter'>description</td><td class='type'>Base64</td></tr>
+<tr><td class='parameter'>scan_from</td><td class='type'>Integer</td></tr>
+</table>
+<h3>Description</h3>
+<p>Regenerate an old key in a recovered wallet.</p>
+
+<p>Since key generation is deterministic, recovering keys amounts to creating a new wallet with the same mnemonic as the wallet being recovered, and then creating new keys, as if by <code>newkey</code>. The <code>n</code>th key of each type in the recovered wallet will be the same as the <code>n</code>th key of that type in the original wallet.</p>
+
+<p>The only difference between <code>recoverkey</code> and <code>newkey</code> is that when recovering a sending key, the wallet will initiate a scan of the ledger for existing records belonging to the recovered key. The optional <code>scan_from</code> parameter can be used to control how far back in time the scan starts. It is index into the event stream provided by the EQS. If not specified, the scan will start from event 0; that is, the entire ledger will be scanned.</p>
+
+<a name='resetpassword'><h3 class='entry'>resetpassword</h3></a>
+<h3>Routes</h3><p class='path'>resetpassword/:mnemonic/:password</p>
+<p class='path'>resetpassword/:mnemonic/:password/path/:path</p>
+<p class='path'>resetpassword/:mnemonic/:password/name/:name</p>
+<h3>Parameters</h3>
+<table>
+<tr><td class='parameter'>mnemonic</td><td class='type'>Literal</td></tr>
+<tr><td class='parameter'>name</td><td class='type'>Base64</td></tr>
+<tr><td class='parameter'>password</td><td class='type'>Base64</td></tr>
+<tr><td class='parameter'>path</td><td class='type'>Base64</td></tr>
+</table>
+<h3>Description</h3>
+<p>Reset the password of the given wallet, and open it.</p>
+
+<p>The wallet to open is specified by <code>:path</code> or <code>:name</code> as in <code>newwallet</code>. <code>:mnemonic</code> must be the recover phrase used to create the wallet. If <code>:mnemonic</code> is correct, the wallet&#8217;s password will be changed to <code>:password</code> and the wallet will be opened.</p>
+
+<a name='send'><h3 class='entry'>send</h3></a>
+<h3>Routes</h3><p class='path'>send/sender/:sender/asset/:asset/recipient/:recipient/amount/:amount/fee/:fee</p>
+<p class='path'>send/asset/:asset/recipient/:recipient/amount/:amount/fee/:fee</p>
+<h3>Parameters</h3>
+<table>
+<tr><td class='parameter'>amount</td><td class='type'>Integer</td></tr>
+<tr><td class='parameter'>asset</td><td class='type'>TaggedBase64</td></tr>
+<tr><td class='parameter'>fee</td><td class='type'>Integer</td></tr>
+<tr><td class='parameter'>recipient</td><td class='type'>TaggedBase64</td></tr>
+<tr><td class='parameter'>sender</td><td class='type'>TaggedBase64</td></tr>
+</table>
+<h3>Description</h3>
+<p>Transfer amount units of the given asset to the recipient from the sender, or any addresses owned by the current wallet if a sender isn&#8217;t given. Returns a serialized receipt which can be used to track the transaction through the validation process.</p>
+
+<a name='submitsponsor'><h3 class='entry'>submitsponsor</h3></a>
+<h3>Routes</h3><p class='path'>submitsponsor/erc20/:erc20/sponsor/:sponsor</p>
+<h3>Parameters</h3>
+<table>
+<tr><td class='parameter'>erc20</td><td class='type'>Literal</td></tr>
+<tr><td class='parameter'>sponsor</td><td class='type'>Literal</td></tr>
+</table>
+<h3>Description</h3>
+<p>Submit a sponsor transaction to the CAPE contract.</p>
+
+<p>The request body should be the asset definition returned by <code>buildsponsor</code>. <code>:erc20</code> and <code>:sponsor</code> must be the same that were used to build the asset definition.</p>
+
+<a name='submitwrap'><h3 class='entry'>submitwrap</h3></a>
+<h3>Routes</h3><p class='path'>submitwrap/ethaddress/:eth_address</p>
+<h3>Parameters</h3>
+<table>
+<tr><td class='parameter'>eth_address</td><td class='type'>Literal</td></tr>
+</table>
+<h3>Description</h3>
+<p>Submit a wrap transaction to the CAPE contract. The request body should be the record opening returned by <code>buildwrap</code>.</p>
+
+<a name='transaction'><h3 class='entry'>transaction</h3></a>
+<h3>Routes</h3><p class='path'>transaction/status/:receipt</p>
+<p class='path'>transaction/await/:receipt</p>
+<h3>Parameters</h3>
+<table>
+<tr><td class='parameter'>receipt</td><td class='type'>TaggedBase64</td></tr>
+</table>
+<h3>Description</h3>
+<p>Poll the status of a given transaction, or await events for a given transaction.</p>
+
+<a name='transactionhistory'><h3 class='entry'>transactionhistory</h3></a>
+<h3>Routes</h3><p class='path'>transactionhistory</p>
+<p class='path'>transactionhistory/from/:from</p>
+<p class='path'>transactionhistory/from/:from/count/:count</p>
+<h3>Parameters</h3>
+<table>
+<tr><td class='parameter'>count</td><td class='type'>Integer</td></tr>
+<tr><td class='parameter'>from</td><td class='type'>Integer</td></tr>
+</table>
+<h3>Description</h3>
+<p>List transaction history.</p>
+
+<p>The first form returns all transactions. The second from returns the <code>:from</code> most recent. The third form returns at most <code>:count</code> transactions starting from the <code>:from</code> most recent.</p>
+
+<a name='unfreeze'><h3 class='entry'>unfreeze</h3></a>
+<h3>Routes</h3><p class='path'>unfreeze/:address/:asset/fee/:fee_address/:fee_amount</p>
+<p class='path'>unfreeze/:address/:asset/fee/:fee_amount</p>
+<h3>Parameters</h3>
+<table>
+<tr><td class='parameter'>address</td><td class='type'>TaggedBase64</td></tr>
+<tr><td class='parameter'>asset</td><td class='type'>TaggedBase64</td></tr>
+<tr><td class='parameter'>fee_address</td><td class='type'>TaggedBase64</td></tr>
+<tr><td class='parameter'>fee_amount</td><td class='type'>Integer</td></tr>
+</table>
+<h3>Description</h3>
+<p>Unfreeze the asset associated with the given address and asset type. Assumes the asset was defined with a freezing key.</p>
+
+<a name='unwrap'><h3 class='entry'>unwrap</h3></a>
+<h3>Routes</h3><p class='path'>unwrap/source/:source/ethaddress/:eth_address/asset/:asset/amount/:amount/fee/:fee</p>
+<p class='path'>unwrap/ethaddress/:eth_address/asset/:asset/amount/:amount/fee/:fee</p>
+<h3>Parameters</h3>
+<table>
+<tr><td class='parameter'>amount</td><td class='type'>Integer</td></tr>
+<tr><td class='parameter'>asset</td><td class='type'>TaggedBase64</td></tr>
+<tr><td class='parameter'>eth_address</td><td class='type'>Literal</td></tr>
+<tr><td class='parameter'>fee</td><td class='type'>Integer</td></tr>
+<tr><td class='parameter'>source</td><td class='type'>TaggedBase64</td></tr>
+</table>
+<h3>Description</h3>
+<p>Unwrap amount units of the given asset to the Ethereum address.</p>
+
+<p>Returns a serialized receipt which can be used to track the transaction through the validation process.</p>
+
+<p>If <code>:source</code> is given, it will be used as the address of the CAPE account to pay both the CAPE fee and the amount of the ERC20 withdrawal. Otherwise, the transaction inputs will be aggregated from all of this wallet&#8217;s accounts.</p>
+
+<a name='updateasset'><h3 class='entry'>updateasset</h3></a>
+<h3>Routes</h3><p class='path'>updateasset/:asset</p>
+<h3>Parameters</h3>
+<table>
+<tr><td class='parameter'>asset</td><td class='type'>TaggedBase64</td></tr>
+</table>
+<h3>Description</h3>
+<p>Edit the local metadata associated with the given asset code.</p>
+
+<p>Parameters to update are past as fields of the request body. Available parameters are</p>
+
+<ul>
+<li><code>symbol</code>: <code>Literal</code></li>
+
+<li><code>description</code>: <code>Literal</code></li>
+
+<li><code>icon</code>: <code>Base64</code></li>
+</ul>
+
+<p>Will fail if the asset code does not exist in the wallet. Will have no effect on verified assets.</p>
+
+<a name='view'><h3 class='entry'>view</h3></a>
+<h3>Routes</h3><p class='path'>view/:asset</p>
+<p class='path'>view/key/:key</p>
+<h3>Parameters</h3>
+<table>
+<tr><td class='parameter'>asset</td><td class='type'>TaggedBase64</td></tr>
+<tr><td class='parameter'>key</td><td class='type'>TaggedBase64</td></tr>
+</table>
+<h3>Description</h3>
+<p>View the given asset or view the asset associated with the given viewing key.</p>
+
+<a name='waitforsponsor'><h3 class='entry'>waitforsponsor</h3></a>
+<h3>Routes</h3><p class='path'>waitforsponsor</p>
+<p class='path'>waitforsponsor/timeout/:timeout</p>
+<h3>Parameters</h3>
+<table>
+<tr><td class='parameter'>timeout</td><td class='type'>Integer</td></tr>
+</table>
+<h3>Description</h3>
+<p>Wait until the sponsor is reflected in the EQS. Timeout after 60 seconds or the specified <code>:timeout</code> in seconds.</p>
+
+  </body>
+</html>
+

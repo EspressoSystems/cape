@@ -126,7 +126,7 @@ wait-port $CAPE_FAUCET_PORT
 mkdir -p "$CAPE_WALLET_STORAGE_ALICE"
 mkdir -p "$CAPE_WALLET_STORAGE_BOB"
 echo "Deploying official asset library"
-target/release/gen-official-asset-library --assets wallet/official_assets/cape_demo_local_official_assets.toml \
+target/release/official-asset-library generate --assets wallet/official_assets/cape_demo_local_official_assets.toml \
     -o "$CAPE_WALLET_STORAGE_ALICE/verified_assets" 
 cp "$CAPE_WALLET_STORAGE_ALICE/verified_assets" "$CAPE_WALLET_STORAGE_BOB/verified_assets"
 

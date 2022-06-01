@@ -10,7 +10,7 @@ use crate::query_result_state::{EthEventIndex, QueryResultState};
 use crate::state_persistence::StatePersistence;
 
 use async_std::sync::{Arc, RwLock};
-use cap_rust_sandbox::cape::events::decode_cape_block;
+use cap_rust_sandbox::cape::events::decode_cape_block_from_event;
 use cap_rust_sandbox::{
     cape::submit_block::fetch_cape_memos,
     ethereum::EthConnection,
@@ -210,11 +210,11 @@ impl EthPolling {
                         .unwrap()
                         .unwrap();
 
-                    let model_txns =
-                        decode_cape_block(CAPEEvents::BlockCommittedFilter(filter_data))
-                            .into_cape_transactions()
-                            .unwrap()
-                            .0;
+                    let model_txns = decode_cape_block_from_event(filter_data)
+                        .unwrap()
+                        .into_cape_transactions()
+                        .unwrap()
+                        .0;
 
                     // TODO Instead of panicking here we need to handle cases of missing memos gracefully
                     let num_txn = model_txns.len();

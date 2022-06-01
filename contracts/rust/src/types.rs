@@ -26,13 +26,13 @@ use jf_primitives::elgamal::{self, EncKey};
 use std::convert::TryInto;
 
 pub use crate::bindings::{
-    AssetDefinition, AssetPolicy, AssetRegistry, AuditMemo, BurnNote, CAPEEvents, CapeBlock,
-    Challenges, EdOnBN254Point, EvalData, EvalDomain, FreezeAuxInfo, FreezeNote, G1Point, G2Point,
-    Greeter, MaliciousToken, MintAuxInfo, MintNote, PcsInfo, PlonkProof, RecordOpening,
-    SimpleToken, TestBN254, TestCAPE, TestCAPEEvents, TestCapeTypes, TestEdOnBN254,
-    TestPlonkVerifier, TestPolynomialEval, TestRecordsMerkleTree, TestRescue, TestRootStore,
-    TestTranscript, TestVerifyingKeys, TranscriptData, TransferAuxInfo, TransferNote, VerifyingKey,
-    CAPE, ERC20,
+    cape_mod::BlockCommittedFilter, AssetDefinition, AssetPolicy, AssetRegistry, AuditMemo,
+    BurnNote, CAPEEvents, CapeBlock, Challenges, EdOnBN254Point, EvalData, EvalDomain,
+    FreezeAuxInfo, FreezeNote, G1Point, G2Point, Greeter, MaliciousToken, MintAuxInfo, MintNote,
+    PcsInfo, PlonkProof, RecordOpening, SimpleToken, TestBN254, TestCAPE, TestCAPEEvents,
+    TestCapeTypes, TestEdOnBN254, TestPlonkVerifier, TestPolynomialEval, TestRecordsMerkleTree,
+    TestRescue, TestRootStore, TestTranscript, TestVerifyingKeys, TranscriptData, TransferAuxInfo,
+    TransferNote, VerifyingKey, CAPE, ERC20,
 };
 
 // The number of input wires of TurboPlonk.

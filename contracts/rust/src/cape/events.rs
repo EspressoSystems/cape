@@ -6,48 +6,34 @@
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use ethers::abi::AbiDecode;
+use ethers::prelude::AbiError;
 
 use super::CapeBlock;
-use crate::types::{BurnNote, CAPEEvents, EdOnBN254Point, FreezeNote, MintNote, TransferNote};
+use crate::types::BlockCommittedFilter;
 
-// Unable to import BlockCommittedFilter as type because it's "ambigious". There
-// is one definition for the CAPE and CAPETest contract.
-//
-// Is there a better workaround?
-pub fn decode_cape_block(event: CAPEEvents) -> CapeBlock {
-    if let CAPEEvents::BlockCommittedFilter(block) = event {
-        let miner_addr: EdOnBN254Point = AbiDecode::decode(block.miner_addr).unwrap();
-        let note_types: Vec<u8> = AbiDecode::decode(block.note_types).unwrap();
-        let transfer_notes: Vec<TransferNote> = AbiDecode::decode(block.transfer_notes).unwrap();
-        let mint_notes: Vec<MintNote> = AbiDecode::decode(block.mint_notes).unwrap();
-        let freeze_notes: Vec<FreezeNote> = AbiDecode::decode(block.freeze_notes).unwrap();
-        let burn_notes: Vec<BurnNote> = AbiDecode::decode(block.burn_notes).unwrap();
-
-        let event_cape_block = crate::types::CapeBlock {
-            miner_addr,
-            note_types,
-            transfer_notes,
-            mint_notes,
-            freeze_notes,
-            burn_notes,
-        };
-        event_cape_block.into()
-    } else {
-        panic!("Only works on BlockCommittedFilter event.")
+pub fn decode_cape_block_from_event(block: BlockCommittedFilter) -> Result<CapeBlock, AbiError> {
+    Ok(crate::types::CapeBlock {
+        miner_addr: AbiDecode::decode(block.miner_addr)?,
+        note_types: AbiDecode::decode(block.note_types)?,
+        transfer_notes: AbiDecode::decode(block.transfer_notes)?,
+        mint_notes: AbiDecode::decode(block.mint_notes)?,
+        freeze_notes: AbiDecode::decode(block.freeze_notes)?,
+        burn_notes: AbiDecode::decode(block.burn_notes)?,
     }
+    .into())
 }
 
 #[cfg(test)]
 mod tests {
     use crate::{
         cape::{
-            events::decode_cape_block,
+            events::decode_cape_block_from_event,
             submit_block::{fetch_cape_memos, submit_cape_block_with_memos},
             BlockWithMemos, CapeBlock,
         },
         ethereum::EthConnection,
         ledger::CapeLedger,
-        types::{CAPEEvents, GenericInto, MerkleRootSol},
+        types::{GenericInto, MerkleRootSol},
     };
     use anyhow::Result;
     use ethers::prelude::BlockNumber;
@@ -138,7 +124,7 @@ mod tests {
             .unwrap();
         assert_eq!(fetched_memos, memos_with_sigs);
 
-        let event_cape_block = decode_cape_block(CAPEEvents::BlockCommittedFilter(data));
+        let event_cape_block = decode_cape_block_from_event(data)?;
         assert_eq!(cape_block, event_cape_block);
 
         Ok(())

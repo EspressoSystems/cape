@@ -10,9 +10,8 @@ use crate::query_result_state::{EthEventIndex, QueryResultState};
 use crate::state_persistence::StatePersistence;
 
 use async_std::sync::{Arc, RwLock};
-use cap_rust_sandbox::cape::events::decode_cape_block_from_event;
 use cap_rust_sandbox::{
-    cape::submit_block::fetch_cape_memos,
+    cape::{events::decode_cape_block_from_event, submit_block::fetch_cape_memos},
     ethereum::EthConnection,
     ledger::{CapeTransactionKind, CapeTransition},
     model::{CapeModelTxn, Erc20Code, EthereumAddr},

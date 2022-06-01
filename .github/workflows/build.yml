@@ -20,7 +20,7 @@ jobs:
     container:
       image: ghcr.io/espressosystems/nix:main
       volumes:
-        - github_nix_281:/nix
+        - github_nix:/nix
     steps:
       - uses: styfle/cancel-workflow-action@0.9.1
         name: Cancel Outdated Builds

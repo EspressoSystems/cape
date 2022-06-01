@@ -7,18 +7,19 @@
 // This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+// TODO remove this file
 pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
-import "../RecordsMerkleTree.sol";
+import {RecordsMerkleTree as R} from "../RecordsMerkleTree.sol";
 import "../libraries/RescueLib.sol";
 
-contract TestRecordsMerkleTree is RecordsMerkleTree {
-    constructor(uint8 height) RecordsMerkleTree(height) {}
+contract TestRecordsMerkleTree is R {
+    constructor(uint8 height) R(height) {}
 
-    function testUpdateRecordsMerkleTree(uint256[] memory elements) public {
-        _updateRecordsMerkleTree(elements);
-    }
+    // function testUpdateRecordsMerkleTree(uint256[] memory elements) public {
+    //     R.updateRecordsMerkleTree(elements);
+    // }
 
     function doNothing() public {}
 }

@@ -9,6 +9,12 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
 import { BigNumber } from "ethers";
 
+const treeDepth = 24;
+
+// Enough so that a wallet CAP transaction can make it to the CAPE contract,
+// but not too much in order to free the records of a rejected/lost transaction after a reasonable amount of time.
+const nRoots = 40;
+
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy, execute } = deployments;
@@ -19,6 +25,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     args: [],
     log: true,
   });
+
   let verifyingKeys = await deploy("VerifyingKeys", {
     from: deployer,
     args: [],
@@ -31,11 +38,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     log: true,
   });
 
-  const treeDepth = 24;
-
-  // Enough so that a wallet CAP transaction can make it to the CAPE contract,
-  // but not too much in order to free the records of a rejected/lost transaction after a reasonable amount of time.
-  const nRoots = 40;
+  let recordsMerkleTreeContract = await deploy("RecordsMerkleTree", {
+    from: deployer,
+    args: [treeDepth],
+    log: true,
+    libraries: {
+      RescueLib: rescueLib.address,
+    },
+  });
 
   // To change, update change FAUCET_MANAGER_ENCRYPTION_KEY in rust/src/cape/faucet.rs
   //
@@ -68,15 +78,16 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     };
   }
 
-  await deploy("CAPE", {
+  const CAPE = await deploy("CAPE", {
     from: deployer,
-    args: [treeDepth, nRoots, plonkVerifierContract.address],
+    args: [treeDepth, nRoots, plonkVerifierContract.address, recordsMerkleTreeContract.address],
     log: true,
     libraries: {
       RescueLib: rescueLib.address,
       VerifyingKeys: verifyingKeys.address,
     },
   });
+
   await execute(
     "CAPE",
     {
@@ -86,6 +97,16 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     "faucetSetupForTestnet",
     faucetManagerAddress,
     faucetManagerEncKey
+  );
+
+  await execute(
+    "RecordsMerkleTree",
+    {
+      log: true,
+      from: deployer,
+    },
+    "transferOwnership",
+    CAPE.address
   );
 };
 

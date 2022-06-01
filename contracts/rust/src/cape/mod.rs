@@ -308,22 +308,34 @@ pub struct CAPEConstructorArgs {
     height: u8,
     n_roots: u64,
     verifier_addr: Address,
+    records_merkle_tree_addr: Address,
 }
 
 #[allow(dead_code)]
 impl CAPEConstructorArgs {
-    pub fn new(height: u8, n_roots: u64, verifier_addr: Address) -> Self {
+    pub fn new(
+        height: u8,
+        n_roots: u64,
+        verifier_addr: Address,
+        records_merkle_tree_addr: Address,
+    ) -> Self {
         Self {
             height,
             n_roots,
             verifier_addr,
+            records_merkle_tree_addr,
         }
     }
 }
 
-impl From<CAPEConstructorArgs> for (u8, u64, Address) {
-    fn from(args: CAPEConstructorArgs) -> (u8, u64, Address) {
-        (args.height, args.n_roots, args.verifier_addr)
+impl From<CAPEConstructorArgs> for (u8, u64, Address, Address) {
+    fn from(args: CAPEConstructorArgs) -> (u8, u64, Address, Address) {
+        (
+            args.height,
+            args.n_roots,
+            args.verifier_addr,
+            args.records_merkle_tree_addr,
+        )
     }
 }
 

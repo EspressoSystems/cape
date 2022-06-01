@@ -15,7 +15,7 @@ pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
 
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+// import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@rari-capital/solmate/src/utils/SafeTransferLib.sol";
 
 import "solidity-bytes-utils/contracts/BytesLib.sol";
@@ -24,16 +24,17 @@ import "./libraries/EdOnBN254.sol";
 import "./libraries/RescueLib.sol";
 import "./libraries/VerifyingKeys.sol";
 import "./interfaces/IPlonkVerifier.sol";
+import "./interfaces/IRecordsMerkleTree.sol";
 import "./AssetRegistry.sol";
-import "./RecordsMerkleTree.sol";
 import "./RootStore.sol";
 
-contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
+contract CAPE is RootStore, AssetRegistry {
     using AccumulatingArray for AccumulatingArray.Data;
 
     mapping(uint256 => bool) public nullifiers;
     uint64 public blockHeight;
     IPlonkVerifier private _verifier;
+    IRecordsMerkleTree internal _recordsMerkleTree;
     uint256[] public pendingDeposits;
 
     // NOTE: used for faucet in testnet only, will be removed for mainnet
@@ -163,11 +164,13 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
     /// @param nRoots number of the most recent roots of the records merkle tree to be stored
     /// @param verifierAddr address of the Plonk Verifier contract
     constructor(
-        uint8 merkleTreeHeight,
+        uint8 merkleTreeHeight, // TODO remove
         uint64 nRoots,
-        address verifierAddr
-    ) RecordsMerkleTree(merkleTreeHeight) RootStore(nRoots) {
+        address verifierAddr,
+        address recordsMerkleTreeAddr
+    ) RootStore(nRoots) {
         _verifier = IPlonkVerifier(verifierAddr);
+        _recordsMerkleTree = IRecordsMerkleTree(recordsMerkleTreeAddr);
 
         // NOTE: used for faucet in testnet only, will be removed for mainnet
         deployer = msg.sender;
@@ -198,8 +201,8 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
         recordCommitments[0] = _deriveRecordCommitment(ro);
 
         // insert the record into record accumulator
-        _updateRecordsMerkleTree(recordCommitments);
-        _addRoot(_rootValue);
+        _recordsMerkleTree.updateRecordsMerkleTree(recordCommitments);
+        _addRoot(_recordsMerkleTree.getRootValue());
 
         emit FaucetInitialized(abi.encode(ro));
         faucetInitialized = true;
@@ -226,7 +229,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
     /// @notice Wraps ERC-20 tokens into a CAPE asset defined in the record opening.
     /// @param ro record opening that will be inserted in the records merkle tree once the deposit is validated
     /// @param erc20Address address of the ERC-20 token corresponding to the deposit
-    function depositErc20(RecordOpening memory ro, address erc20Address) public nonReentrant {
+    function depositErc20(RecordOpening memory ro, address erc20Address) public {
         require(isCapeAssetRegistered(ro.assetDef), "Asset definition not registered");
         require(lookup(ro.assetDef) == erc20Address, "Wrong ERC20 address");
 
@@ -257,7 +260,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
     /// @notice Submit a new block to the CAPE contract.
     /// @dev Transactions are validated and the blockchain state is updated. Moreover *BURN* transactions trigger the unwrapping of cape asset records into erc20 tokens.
     /// @param newBlock block to be processed by the CAPE contract.
-    function submitCapeBlock(CapeBlock memory newBlock) public nonReentrant {
+    function submitCapeBlock(CapeBlock memory newBlock) public {
         AccumulatingArray.Data memory commitments = AccumulatingArray.create(
             _computeNumCommitments(newBlock) + pendingDeposits.length
         );
@@ -364,8 +367,8 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
 
         // Only update the merkle tree and add the root if the list of records commitments is non empty
         if (!commitments.isEmpty()) {
-            _updateRecordsMerkleTree(commitments.items);
-            _addRoot(_rootValue);
+            _recordsMerkleTree.updateRecordsMerkleTree(commitments.items);
+            _addRoot(_recordsMerkleTree.getRootValue());
         }
 
         // In all cases (the block is empty or not), the height is incremented.
@@ -453,10 +456,8 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
     /// @dev Checks if a sequence of bytes contains hardcoded prefix.
     /// @param byteSeq sequence of bytes
     function _containsBurnPrefix(bytes memory byteSeq) internal pure returns (bool) {
-        if (byteSeq.length < CAPE_BURN_MAGIC_BYTES_SIZE) {
-            return false;
-        }
         return
+            byteSeq.length >= CAPE_BURN_MAGIC_BYTES_SIZE &&
             BytesLib.equal(
                 BytesLib.slice(byteSeq, 0, CAPE_BURN_MAGIC_BYTES_SIZE),
                 CAPE_BURN_MAGIC_BYTES
@@ -466,11 +467,9 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
     /// @dev Check if the burned record opening and the record commitment in position 1 are consistent.
     /// @param note note of type *BURN*
     function _containsBurnRecord(BurnNote memory note) internal view returns (bool) {
-        if (note.transferNote.outputCommitments.length < 2) {
-            return false;
-        }
-        uint256 rc = _deriveRecordCommitment(note.recordOpening);
-        return rc == note.transferNote.outputCommitments[1];
+        return
+            note.transferNote.outputCommitments.length >= 2 &&
+            _deriveRecordCommitment(note.recordOpening) == note.transferNote.outputCommitments[1];
     }
 
     /// @dev Compute the commitment of a record opening.
@@ -523,7 +522,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
                 uint8(NoteType.TRANSFER),
                 uint8(note.inputNullifiers.length),
                 uint8(note.outputCommitments.length),
-                uint8(_merkleTreeHeight)
+                uint8(_recordsMerkleTree.getHeight())
             )
         );
         // prepare public inputs
@@ -604,7 +603,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
                 uint8(NoteType.MINT),
                 1, // num of input
                 2, // num of output
-                uint8(_merkleTreeHeight)
+                uint8(_recordsMerkleTree.getHeight())
             )
         );
 
@@ -665,7 +664,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
                 uint8(NoteType.FREEZE),
                 uint8(note.inputNullifiers.length),
                 uint8(note.outputCommitments.length),
-                uint8(_merkleTreeHeight)
+                uint8(_recordsMerkleTree.getHeight())
             )
         );
 
@@ -693,5 +692,9 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
 
         // prepare transcript init messages
         transcriptInitMsg = EdOnBN254.serialize(note.auxInfo.txnMemoVerKey);
+    }
+
+    function getRootValue() public view returns (uint256) {
+        return _recordsMerkleTree.getRootValue();
     }
 }

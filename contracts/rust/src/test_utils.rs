@@ -9,8 +9,8 @@ use crate::cape::{BurnNote, DOM_SEP_CAPE_BURN};
 use crate::deploy::EthMiddleware;
 use crate::helpers::compare_merkle_root_from_contract_and_jf_tree;
 use crate::ledger::CapeLedger;
+use crate::types::{RecordsMerkleTree, CAPE};
 use crate::types::{SimpleToken, TestCAPE};
-use crate::types::{TestRecordsMerkleTree, CAPE};
 use crate::universal_param::UNIVERSAL_PARAM;
 use ethers::prelude::TransactionReceipt;
 use ethers::prelude::{Address, H160, U256};
@@ -227,7 +227,7 @@ pub fn generate_burn_tx(
 /// one can check that the CAPE contract updates the root value correctly after inserting new records commitments.
 pub async fn compare_roots_records_merkle_tree_contract(
     mt: &MerkleTree,
-    contract: &TestRecordsMerkleTree<EthMiddleware>,
+    contract: &RecordsMerkleTree<EthMiddleware>,
     should_be_equal: bool,
 ) {
     let root_fr254 = mt.commitment().root_value;

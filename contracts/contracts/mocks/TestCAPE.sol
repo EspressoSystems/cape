@@ -15,17 +15,18 @@ contract TestCAPE is CAPE {
     constructor(
         uint8 merkleTreeHeight,
         uint64 nRoots,
-        address verifierAddr
-    ) CAPE(merkleTreeHeight, nRoots, verifierAddr) {}
+        address verifierAddr,
+        address recordsMerkleTreeAddr
+    ) CAPE(merkleTreeHeight, nRoots, verifierAddr, recordsMerkleTreeAddr) {}
 
     function getNumLeaves() public view returns (uint256) {
-        return _numLeaves;
+        return _recordsMerkleTree.getNumLeaves();
     }
 
     function setInitialRecordCommitments(uint256[] memory elements) public {
-        require(_rootValue == 0, "Merkle tree is nonempty");
-        _updateRecordsMerkleTree(elements);
-        addRoot(_rootValue);
+        require(_recordsMerkleTree.getRootValue() == 0, "Merkle tree is nonempty");
+        _recordsMerkleTree.updateRecordsMerkleTree(elements);
+        addRoot(_recordsMerkleTree.getRootValue());
     }
 
     function publish(uint256 nullifier) public {

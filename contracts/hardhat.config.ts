@@ -113,7 +113,7 @@ const config: HardhatUserConfig = {
   // test contracts to exceed the limit.
   contractSizer: {
     runOnCompile: true,
-    strict: true,
+    strict: false,
     only: ["/CAPE"],
   },
 };

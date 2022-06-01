@@ -11,8 +11,9 @@ pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
 import "./libraries/RescueLib.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract RecordsMerkleTree {
+contract RecordsMerkleTree is Ownable {
     enum Position {
         LEFT,
         MIDDLE,
@@ -311,7 +312,7 @@ contract RecordsMerkleTree {
 
     /// @dev Update the state of the record merkle tree by inserting new elements.
     /// @param elements The list of elements to be appended to the current merkle tree described by the frontier.
-    function _updateRecordsMerkleTree(uint256[] memory elements) internal {
+    function updateRecordsMerkleTree(uint256[] memory elements) external onlyOwner {
         // The total number of nodes is bounded by 3*height+1 + 3*N*height = 3*(N+1)*height + 1
         // where N is the number of new records
         uint256 numElements = elements.length;

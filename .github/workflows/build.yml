@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+    tags:
+      # YYYYMMDD
+      - "20[0-9][0-9][0-1][0-9][0-3][0-9]"
   pull_request:
   schedule:
     - cron: "0 1 * * 1"
@@ -64,6 +67,9 @@ jobs:
 
       - name: Generate Docs
         run: nix-shell --run "prepend-timestamps make-doc"
+
+      - name: Generate Wallet
+        run: ./target/release/export-wallet-api-docs --api ./wallet/api/api.toml --assets ./wallet/public/ ./doc/mdbook/book/wallet
 
       - name: Deploy Docs
         uses: peaceiris/actions-gh-pages@v3

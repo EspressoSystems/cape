@@ -15,7 +15,7 @@ pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
 
-// import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@rari-capital/solmate/src/utils/SafeTransferLib.sol";
 
 import "solidity-bytes-utils/contracts/BytesLib.sol";
@@ -28,7 +28,7 @@ import "./interfaces/IRecordsMerkleTree.sol";
 import "./AssetRegistry.sol";
 import "./RootStore.sol";
 
-contract CAPE is RootStore, AssetRegistry {
+contract CAPE is RootStore, AssetRegistry, ReentrancyGuard {
     using AccumulatingArray for AccumulatingArray.Data;
 
     mapping(uint256 => bool) public nullifiers;
@@ -229,7 +229,7 @@ contract CAPE is RootStore, AssetRegistry {
     /// @notice Wraps ERC-20 tokens into a CAPE asset defined in the record opening.
     /// @param ro record opening that will be inserted in the records merkle tree once the deposit is validated
     /// @param erc20Address address of the ERC-20 token corresponding to the deposit
-    function depositErc20(RecordOpening memory ro, address erc20Address) public {
+    function depositErc20(RecordOpening memory ro, address erc20Address) public nonReentrant {
         require(isCapeAssetRegistered(ro.assetDef), "Asset definition not registered");
         require(lookup(ro.assetDef) == erc20Address, "Wrong ERC20 address");
 
@@ -260,7 +260,7 @@ contract CAPE is RootStore, AssetRegistry {
     /// @notice Submit a new block to the CAPE contract.
     /// @dev Transactions are validated and the blockchain state is updated. Moreover *BURN* transactions trigger the unwrapping of cape asset records into erc20 tokens.
     /// @param newBlock block to be processed by the CAPE contract.
-    function submitCapeBlock(CapeBlock memory newBlock) public {
+    function submitCapeBlock(CapeBlock memory newBlock) public nonReentrant {
         AccumulatingArray.Data memory commitments = AccumulatingArray.create(
             _computeNumCommitments(newBlock) + pendingDeposits.length
         );
@@ -456,8 +456,10 @@ contract CAPE is RootStore, AssetRegistry {
     /// @dev Checks if a sequence of bytes contains hardcoded prefix.
     /// @param byteSeq sequence of bytes
     function _containsBurnPrefix(bytes memory byteSeq) internal pure returns (bool) {
+        if (byteSeq.length < CAPE_BURN_MAGIC_BYTES_SIZE) {
+            return false;
+        }
         return
-            byteSeq.length >= CAPE_BURN_MAGIC_BYTES_SIZE &&
             BytesLib.equal(
                 BytesLib.slice(byteSeq, 0, CAPE_BURN_MAGIC_BYTES_SIZE),
                 CAPE_BURN_MAGIC_BYTES
@@ -467,9 +469,11 @@ contract CAPE is RootStore, AssetRegistry {
     /// @dev Check if the burned record opening and the record commitment in position 1 are consistent.
     /// @param note note of type *BURN*
     function _containsBurnRecord(BurnNote memory note) internal view returns (bool) {
-        return
-            note.transferNote.outputCommitments.length >= 2 &&
-            _deriveRecordCommitment(note.recordOpening) == note.transferNote.outputCommitments[1];
+        if (note.transferNote.outputCommitments.length < 2) {
+            return false;
+        }
+        uint256 rc = _deriveRecordCommitment(note.recordOpening);
+        return rc == note.transferNote.outputCommitments[1];
     }
 
     /// @dev Compute the commitment of a record opening.

@@ -47,6 +47,7 @@
     "lodash": "^4.17.21",
     "prettier": "^2.4.1",
     "prettier-plugin-solidity": "^1.0.0-beta.19",
+    "sol2uml": "^1.1.29",
     "solc-0.8": "npm:solc@^0.8.10",
     "solhint": "^3.3.6",
     "solidity-bytes-utils": "0.8.0",

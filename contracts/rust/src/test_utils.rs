@@ -222,9 +222,11 @@ pub fn generate_burn_tx(
     BurnNote::generate(note, burn_ro).unwrap()
 }
 
-/// Compare the roots of a local merkle tree and the TestRecordsMerkleTree contract merkle tree.
-/// By calling the CAPE contract `get_root_value` and comparing it to the root of the merkle tree passed as argument,
-/// one can check that the CAPE contract updates the root value correctly after inserting new records commitments.
+/// Compare the roots of a local merkle tree and the RecordsMerkleTree contract
+/// merkle tree. By calling the CAPE contract `get_root_value` and comparing it
+/// to the root of the merkle tree passed as argument, one can check that the
+/// CAPE contract updates the root value correctly after inserting new records
+/// commitments.
 pub async fn compare_roots_records_merkle_tree_contract(
     mt: &MerkleTree,
     contract: &RecordsMerkleTree<EthMiddleware>,

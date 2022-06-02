@@ -6,16 +6,16 @@
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::assertion::EnsureMined;
-use crate::cape::CAPEConstructorArgs;
+use crate::cape::{CAPEConstructorArgs, RecordsMerkleTreeConstructorArgs};
 use crate::ethereum::{deploy, get_funded_client};
-use crate::model::CAPE_MERKLE_HEIGHT;
+use crate::model::{CAPE_MERKLE_HEIGHT, CAPE_NUM_ROOTS};
 use crate::test_utils::contract_abi_path;
 use crate::types::{
-    AssetRegistry, GenericInto, MaliciousToken, RecordsMerkleTree, SimpleToken, TestBN254,
-    TestCAPE, TestCapeTypes, TestEdOnBN254, TestPlonkVerifier, TestPolynomialEval, TestRescue,
-    TestRootStore, TestTranscript, TestVerifyingKeys, CAPE,
+    AssetRegistry, MaliciousToken, RecordsMerkleTree, SimpleToken, TestBN254, TestCAPE,
+    TestCapeTypes, TestEdOnBN254, TestPlonkVerifier, TestPolynomialEval, TestRescue, TestRootStore,
+    TestTranscript, TestVerifyingKeys, CAPE,
 };
-use ethers::prelude::{k256::ecdsa::SigningKey, Address, Http, Provider, SignerMiddleware, Wallet};
+use ethers::prelude::{k256::ecdsa::SigningKey, Http, Provider, SignerMiddleware, Wallet};
 use std::sync::Arc;
 
 // Middleware used for locally signing transactions
@@ -46,7 +46,7 @@ pub async fn deploy_test_cape_with_deployer(
     let records_merkle_tree = deploy(
         deployer.clone(),
         &contract_abi_path("RecordsMerkleTree.sol/RecordsMerkleTree"),
-        (CAPE_MERKLE_HEIGHT,),
+        RecordsMerkleTreeConstructorArgs::new(CAPE_MERKLE_HEIGHT).to_tuple(),
     )
     .await
     .unwrap();
@@ -56,12 +56,11 @@ pub async fn deploy_test_cape_with_deployer(
         deployer.clone(),
         &contract_abi_path("mocks/TestCAPE.sol/TestCAPE"),
         CAPEConstructorArgs::new(
-            CAPE_MERKLE_HEIGHT,
-            1000,
+            CAPE_NUM_ROOTS,
             verifier.address(),
             records_merkle_tree.address(),
         )
-        .generic_into::<(u8, u64, Address, Address)>(),
+        .to_tuple(),
     )
     .await
     .unwrap();
@@ -91,7 +90,7 @@ pub async fn deploy_cape_with_deployer(deployer: Arc<EthMiddleware>) -> CAPE<Eth
     let records_merkle_tree = deploy(
         deployer.clone(),
         &contract_abi_path("RecordsMerkleTree.sol/RecordsMerkleTree"),
-        (CAPE_MERKLE_HEIGHT,),
+        RecordsMerkleTreeConstructorArgs::new(CAPE_MERKLE_HEIGHT).to_tuple(),
     )
     .await
     .unwrap();
@@ -101,12 +100,11 @@ pub async fn deploy_cape_with_deployer(deployer: Arc<EthMiddleware>) -> CAPE<Eth
         deployer.clone(),
         &contract_abi_path("CAPE.sol/CAPE"),
         CAPEConstructorArgs::new(
-            CAPE_MERKLE_HEIGHT,
-            1000,
+            CAPE_NUM_ROOTS,
             verifier.address(),
             records_merkle_tree.address(),
         )
-        .generic_into::<(u8, u64, Address, Address)>(),
+        .to_tuple(),
     )
     .await
     .unwrap();
@@ -229,7 +227,7 @@ mod test {
         ensure_connected_to_contract, get_provider, has_code_at_block, is_connected_to_contract,
     };
     use anyhow::Result;
-    use ethers::prelude::Middleware;
+    use ethers::prelude::{Address, Middleware};
 
     #[tokio::test]
     async fn test_is_connected_to_contract() -> Result<()> {

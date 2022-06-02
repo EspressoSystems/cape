@@ -338,6 +338,16 @@ contract RecordsMerkleTree is Ownable {
         return _rootValue;
     }
 
+    /// @notice Returns the height of the Merkle tree.
+    function getHeight() public view returns (uint8) {
+        return _merkleTreeHeight;
+    }
+
+    /// @notice Returns the number of leaves of the Merkle tree.
+    function getNumLeaves() public view returns (uint64) {
+        return _numLeaves;
+    }
+
     /// @dev Update the tree by hashing the children of each node.
     /// @param nodes The tree. Note that the nodes are updated by this function.
     /// @param rootNodePos The index of the root node in the list of nodes.

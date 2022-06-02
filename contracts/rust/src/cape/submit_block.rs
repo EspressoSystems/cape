@@ -104,7 +104,7 @@ pub async fn submit_cape_block_with_memos(
 mod tests {
     use super::*;
     use crate::{
-        assertion::Matcher,
+        assertion::{EnsureMined, Matcher},
         cape::CapeBlock,
         deploy::deploy_test_cape,
         ledger::CapeLedger,
@@ -350,13 +350,15 @@ mod tests {
             .add_root(root.generic_into::<MerkleRootSol>().0)
             .send()
             .await?
-            .await?;
+            .await?
+            .ensure_mined();
 
         contract
             .submit_cape_block(cape_block.into())
             .send()
             .await?
-            .await?;
+            .await?
+            .ensure_mined();
 
         assert_eq!(contract.block_height().call().await?, 1u64);
         Ok(())

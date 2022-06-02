@@ -160,11 +160,9 @@ contract CAPE is RootStore, AssetRegistry, ReentrancyGuard {
     }
 
     /// @notice CAPE contract constructor method.
-    /// @param merkleTreeHeight height of the merkle tree that stores the asset record commitments
     /// @param nRoots number of the most recent roots of the records merkle tree to be stored
     /// @param verifierAddr address of the Plonk Verifier contract
     constructor(
-        uint8 merkleTreeHeight, // TODO remove
         uint64 nRoots,
         address verifierAddr,
         address recordsMerkleTreeAddr

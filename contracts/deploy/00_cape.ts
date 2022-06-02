@@ -80,13 +80,23 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const CAPE = await deploy("CAPE", {
     from: deployer,
-    args: [treeDepth, nRoots, plonkVerifierContract.address, recordsMerkleTreeContract.address],
+    args: [nRoots, plonkVerifierContract.address, recordsMerkleTreeContract.address],
     log: true,
     libraries: {
       RescueLib: rescueLib.address,
       VerifyingKeys: verifyingKeys.address,
     },
   });
+
+  await execute(
+    "RecordsMerkleTree",
+    {
+      log: true,
+      from: deployer,
+    },
+    "transferOwnership",
+    CAPE.address
+  );
 
   await execute(
     "CAPE",
@@ -97,16 +107,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     "faucetSetupForTestnet",
     faucetManagerAddress,
     faucetManagerEncKey
-  );
-
-  await execute(
-    "RecordsMerkleTree",
-    {
-      log: true,
-      from: deployer,
-    },
-    "transferOwnership",
-    CAPE.address
   );
 };
 

@@ -13,11 +13,10 @@ import "../CAPE.sol";
 
 contract TestCAPE is CAPE {
     constructor(
-        uint8 merkleTreeHeight,
         uint64 nRoots,
         address verifierAddr,
         address recordsMerkleTreeAddr
-    ) CAPE(merkleTreeHeight, nRoots, verifierAddr, recordsMerkleTreeAddr) {}
+    ) CAPE(nRoots, verifierAddr, recordsMerkleTreeAddr) {}
 
     function getNumLeaves() public view returns (uint256) {
         return _recordsMerkleTree.getNumLeaves();

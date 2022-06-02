@@ -379,6 +379,7 @@ mod test {
     use super::*;
     use async_std::sync::{Arc, Mutex};
     use cap_rust_sandbox::assertion::{EnsureMined, EnsureRejected};
+    use cap_rust_sandbox::cape::RecordsMerkleTreeConstructorArgs;
     use cap_rust_sandbox::model::CAPE_MERKLE_HEIGHT;
     use cap_rust_sandbox::test_utils::upcast_test_cape_to_cape;
     use cap_rust_sandbox::{
@@ -387,10 +388,10 @@ mod test {
         ledger::CapeLedger,
         model::CapeModelTxn,
         test_utils::contract_abi_path,
-        types::{GenericInto, CAPE},
+        types::CAPE,
         universal_param::UNIVERSAL_PARAM,
     };
-    use ethers::{prelude::PendingTransaction, providers::Middleware, types::Address};
+    use ethers::{prelude::PendingTransaction, providers::Middleware};
     use jf_cap::{
         keys::UserKeyPair,
         sign_receiver_memos,
@@ -612,7 +613,7 @@ mod test {
             let records_merkle_tree = deploy(
                 deployer.clone(),
                 &contract_abi_path("RecordsMerkleTree.sol/RecordsMerkleTree"),
-                (CAPE_MERKLE_HEIGHT,),
+                RecordsMerkleTreeConstructorArgs::new(CAPE_MERKLE_HEIGHT).to_tuple(),
             )
             .await
             .unwrap();
@@ -620,12 +621,11 @@ mod test {
                 deployer.clone(),
                 &contract_abi_path("CAPE.sol/CAPE"),
                 CAPEConstructorArgs::new(
-                    CapeLedger::merkle_height(),
                     CapeLedger::record_root_history() as u64,
                     verifier.address(),
                     records_merkle_tree.address(),
                 )
-                .generic_into::<(u8, u64, Address, Address)>(),
+                .to_tuple(),
             )
             .await
             .unwrap()

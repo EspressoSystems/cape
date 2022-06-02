@@ -16,7 +16,9 @@ interface IRecordsMerkleTree {
     /// @notice Returns the root value of the Merkle tree.
     function getRootValue() external view returns (uint256);
 
+    /// @notice Returns the height of the Merkle tree.
     function getHeight() external view returns (uint8);
 
+    /// @notice Returns the number of leaves of the Merkle tree.
     function getNumLeaves() external view returns (uint64);
 }

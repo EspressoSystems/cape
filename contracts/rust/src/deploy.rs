@@ -115,7 +115,8 @@ pub async fn deploy_cape_with_deployer(deployer: Arc<EthMiddleware>) -> CAPE<Eth
         .await
         .unwrap()
         .await
-        .unwrap();
+        .unwrap()
+        .ensure_mined();
 
     CAPE::new(cape.address(), deployer)
 }

@@ -1,0 +1,44 @@
+@startuml
+autonumber
+
+skinparam roundcorner 20
+
+participant "Cape Contract" as C
+participant "Ethereum Query Service" as EQS
+participant "Alice's Wallet" as W_A
+participant "Bob's Wallet" as W_B
+participant "Relayer" as R
+participant "Freezer" as F
+participant "Auditor" as A
+participant "AddressBook" as AB
+
+group Transfer
+
+    W_A -> AB: **get_enc_pk**(alice_address)
+    AB -> W_A: alice_enc_pk
+    note left W_A: The first memo <i>alice_memo</i> is for the change, \n the second one corresponds \n to the actual transfer of 1000 units of <i>asset_code</i> to Bob
+    W_A -> W_A: (transfer_tx,[alice_memo, bob_memo]):=**build_transfer_tx**(alice_address,asset_code,\n bob_address,1000)
+    W_A -> R: (transfer_tx,[alice_memo, bob_memo])
+    R -> R: b:= **create_new_block**(transfer_tx,[alice_memo, bob_memo])
+    R -> C: b
+    C -> EQS: **new_block_event**(b,[])
+    EQS -> W_A: **new_block_event**(b,[])
+    EQS -> W_B: **new_block_event**(b,[])
+    EQS -> A: **new_block_event**(b,[])
+    EQS -> F: **new_block_event**(b,[])
+
+    note left W_B: Alice receives an asset record identified by <i>asset_code</i> and amount <i>49000</i>
+    W_A -> W_A: [alice_memo] := **fetch_memos_from**(b)
+    W_A -> W_A: **update_local_state_from**(alice_memo)
+
+    note left W_B: Bob receives an asset record of identified by <i>asset_code</i> and amount <i>1000</i>
+    W_B -> W_B: [bob_memo] := **fetch_memos_from**(b)
+    W_B -> W_B: **update_local_state_from**(bob_memo)
+
+    note left A: The Auditor processes the audit memos. \n Due to the viewing policy the auditor obtains both asset records from Alice and Bob
+    A -> A: **get_and_store_info_from_txs**(b)
+
+end group
+
+
+@enduml

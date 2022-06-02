@@ -1,0 +1,48 @@
+@startuml
+autonumber
+
+skinparam roundcorner 20
+
+participant "Cape Contract" as C
+participant "Ethereum Query Service" as EQS
+participant "Alice's Wallet" as W_A
+participant "Bob's Wallet" as W_B
+participant "Relayer" as R
+participant "Freezer" as F
+participant "Auditor" as A
+participant "Ethereum Wallet Eve" as ETH_WX
+
+group Conversion between ERC20 and CAP assets
+
+    group Sponsor
+        W_A -> C: **sponsorCapeAsset**(USDC, asset_def)
+        C -> C: **update_list_registered_assets**(USDC, asset_def)
+    end group
+
+    group Wrap
+        W_B -> C: **depositErc20**(record_opening,USDC)
+        C -> EQS: new_erc_deposit_event(record_opening, USDC, bob_eth_address)
+        EQS -> W_A: new_erc_deposit_event(record_opening, USDC, bob_eth_address)
+        EQS -> W_B: new_erc_deposit_event(record_opening, USDC, bob_eth_address)
+        W_A -> R: transfer_tx:= **build_transfer_tx**(...)
+        R -> R: b:=**new_block**(transfer_tx,[])
+        R -> C: b
+        C -> EQS: new_block_event(b,[record_opening])
+        EQS -> W_A: new_block_event(b,[record_opening])
+        EQS -> W_B: new_block_event(b,[record_opening])
+        EQS -> A: new_block_event(b,[record_opening])
+        EQS -> F: new_block_event(b,[record_opening])
+        W_B -> W_B: **update_local_state_from_erc_20_deposit**(record_opening)
+
+    end group
+
+    group Unwrap
+        W_A -> R: burn_tx:= **build_burn_tx**(record_opening,eve_eth_address,...)
+        R -> R: b:= **new_block_from**(burn_tx,[])
+        R -> C: b
+        C -> ETH_WX: (USDC,10)
+    end group
+
+end group
+
+@enduml

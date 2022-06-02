@@ -57,7 +57,7 @@ contract CAPE is RootStore, AssetRegistry, ReentrancyGuard {
         // What follows is a `CapeBlock` struct split up into fields.
         // This may no longer be necessary once
         // https://github.com/gakonst/ethers-rs/issues/1220
-        // if fixed.
+        // is fixed.
         bytes minerAddr,
         bytes noteTypes,
         bytes transferNotes,

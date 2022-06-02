@@ -202,8 +202,7 @@
         SOLCX_BINARY_PATH = "${mySolc}/bin";
         SOLC_VERSION = mySolc.version;
         SOLC_PATH = "${mySolc}/bin/solc";
-        # TODO: increase this when contract size limit is not a problem
-        SOLC_OPTIMIZER_RUNS = "20";
+        SOLC_OPTIMIZER_RUNS = "1000";
 
         shellHook = ''
           echo "Ensuring node dependencies are installed"
@@ -217,7 +216,7 @@
           echo "Exporting all vars in .env file"
           set -a; source .env; set +a;
 
-          # on mac os `bin/pwd -P` returns the canonical path on case insenstive file-systems
+          # on mac os `bin/pwd -P` returns the canonical path on case insensitive file-systems
           my_pwd=$(/bin/pwd -P 2> /dev/null || pwd)
 
           export CONTRACTS_DIR=''${my_pwd}/contracts
@@ -251,8 +250,7 @@
           SOLCX_BINARY_PATH = "${mySolc}/bin";
           SOLC_VERSION = mySolc.version;
           SOLC_PATH = "${mySolc}/bin/solc";
-          # TODO: increase this when contract size limit is not a problem
-          SOLC_OPTIMIZER_RUNS = "20";
+          SOLC_OPTIMIZER_RUNS = "1000";
           CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER = "${muslPkgs.llvmPackages_latest.lld}/bin/lld";
           RUSTFLAGS = "-C target-feature=+crt-static -L${opensslMusl.out}/lib/";
           OPENSSL_STATIC = "true";
@@ -272,7 +270,7 @@
             echo "Exporting all vars in .env file"
             set -a; source .env; set +a;
 
-            # on mac os `bin/pwd -P` returns the canonical path on case insenstive file-systems
+            # on mac os `bin/pwd -P` returns the canonical path on case insensitive file-systems
             my_pwd=$(/bin/pwd -P 2> /dev/null || pwd)
 
             export CONTRACTS_DIR=''${my_pwd}/contracts

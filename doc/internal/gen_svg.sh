@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-rm -f *.png
+rm -f *.svg
 for file in *.puml; do
     echo $file
-    plantuml $file
+    plantuml -tsvg $file
 done

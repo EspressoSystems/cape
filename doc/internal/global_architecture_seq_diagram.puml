@@ -15,7 +15,7 @@ participant "Ethereum Wallet Eve" as ETH_WX
 
 group Mint
     note left W_A: Alice mints some asset records, and she is the recipient
-    W_A -> W_A: (mint_tx,[alice_memo]) := **build_mint_tx**(alice_address,fee, \n asset_definition4,50000, alice_address)
+    W_A -> W_A: (mint_tx,[alice_memo]) := **build_mint_tx**(alice_address,fee, alice_coin, 50000, alice_address)
     W_A -> R: (mint_tx,[alice_memo])
     R -> R: b:= **create_new_block**(mint_tx,[alice_memo])
     R -> C: b

@@ -32,6 +32,8 @@ cleanup(){
     remove-directory "$CAPE_ADDRESS_BOOK_STORE_PATH"
     remove-directory "$CAPE_WALLET_STORAGE_ALICE"
     remove-directory "$CAPE_WALLET_STORAGE_BOB"
+    # Kill the process group to stop background processes and their child processes.
+    kill -- -$$
 }
 
 # Build all the rust executables

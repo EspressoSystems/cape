@@ -9,7 +9,7 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
 /*
-import { TestRecordsMerkleTree } from "../typechain-types";
+import { RecordsMerkleTree } from "../typechain-types";
 */
 
 describe("Records Merkle Tree tests", function () {
@@ -20,7 +20,7 @@ describe("Records Merkle Tree tests", function () {
 
   beforeEach(async function () {
     let rescue = await (await ethers.getContractFactory("RescueLib")).deploy();
-    rmtFactory = await ethers.getContractFactory("TestRecordsMerkleTree", {
+    rmtFactory = await ethers.getContractFactory("RecordsMerkleTree", {
       libraries: {
         RescueLib: rescue.address,
       },
@@ -37,7 +37,7 @@ describe("Records Merkle Tree tests", function () {
     ];
 
     // Insert all these elements does not trigger an error
-    let tx = await recordsMerkleTree.testUpdateRecordsMerkleTree(elems);
+    let tx = await recordsMerkleTree.updateRecordsMerkleTree(elems);
     await tx.wait();
   });
 
@@ -50,7 +50,7 @@ describe("Records Merkle Tree tests", function () {
       26, 27, 28,
     ];
 
-    await expect(recordsMerkleTree.testUpdateRecordsMerkleTree(elems)).to.be.revertedWith(
+    await expect(recordsMerkleTree.updateRecordsMerkleTree(elems)).to.be.revertedWith(
       "The tree is full."
     );
   });

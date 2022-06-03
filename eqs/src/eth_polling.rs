@@ -11,7 +11,7 @@ use crate::state_persistence::StatePersistence;
 
 use async_std::sync::{Arc, RwLock};
 use cap_rust_sandbox::{
-    cape::submit_block::fetch_cape_block,
+    cape::{events::decode_cape_block_from_event, submit_block::fetch_cape_memos},
     ethereum::EthConnection,
     ledger::{CapeTransactionKind, CapeTransition},
     model::{CapeModelTxn, Erc20Code, EthereumAddr},
@@ -203,23 +203,21 @@ impl EthPolling {
                 }
             }
             match filter {
-                CAPEEvents::BlockCommittedFilter(_) => {
-                    let fetched_block_with_memos =
-                        fetch_cape_block(&self.connection, meta.transaction_hash)
-                            .await
-                            .unwrap()
-                            .unwrap();
+                CAPEEvents::BlockCommittedFilter(filter_data) => {
+                    let memos = fetch_cape_memos(&self.connection, meta.transaction_hash)
+                        .await
+                        .unwrap()
+                        .unwrap();
 
-                    let model_txns = fetched_block_with_memos
-                        .block
-                        .clone()
+                    let model_txns = decode_cape_block_from_event(filter_data)
+                        .unwrap()
                         .into_cape_transactions()
                         .unwrap()
                         .0;
 
                     // TODO Instead of panicking here we need to handle cases of missing memos gracefully
                     let num_txn = model_txns.len();
-                    let num_txn_memo = fetched_block_with_memos.memos.len();
+                    let num_txn_memo = memos.len();
                     if num_txn != num_txn_memo {
                         panic!(
                             "Different number of txns and txn memos: {} vs {}",
@@ -276,7 +274,7 @@ impl EthPolling {
 
                     let memos_sig_valid: Vec<_> = model_txns
                         .iter()
-                        .zip(fetched_block_with_memos.memos.iter())
+                        .zip(memos.iter())
                         .map(|(tx, (recv_memos, sig))| {
                             match tx {
                                 CapeModelTxn::CAP(note) => note.clone(),
@@ -298,8 +296,7 @@ impl EthPolling {
                     // Create LedgerEvent::Memos if memo signature is valid, skip otherwise
                     let mut memo_events = Vec::new();
                     let mut index = 0;
-                    fetched_block_with_memos
-                        .memos
+                    memos
                         .iter()
                         .enumerate()
                         .filter_map(|(txn_id, (txn_memo, _))| match memos_sig_valid[txn_id] {

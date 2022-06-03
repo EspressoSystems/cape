@@ -117,7 +117,7 @@ fn parse_flattened_frontier(flattened_frontier: &[Fr254], uid: u64) -> MerkleFro
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::deploy::deploy_test_records_merkle_tree_contract;
+    use crate::deploy::deploy_records_merkle_tree_contract;
     use crate::helpers::convert_fr254_to_u256;
     use crate::test_utils::compare_roots_records_merkle_tree_contract;
     use ark_ed_on_bn254::Fq as Fr254;
@@ -231,7 +231,7 @@ mod tests {
     ) {
         // Check that we can insert values in the Merkle tree
 
-        let contract = deploy_test_records_merkle_tree_contract(height).await;
+        let contract = deploy_records_merkle_tree_contract(height).await;
         let mut mt = MerkleTree::<Fr254>::new(height).unwrap();
 
         // At beginning (no leaf inserted) both roots are the same.
@@ -240,7 +240,7 @@ mod tests {
         // We insert the first set of leaves
         let elems_u256 = insert_elements_into_jellyfish_mt(&mut mt, n_leaves_before);
         contract
-            .test_update_records_merkle_tree(elems_u256)
+            .update_records_merkle_tree(elems_u256)
             .legacy()
             .send()
             .await
@@ -253,7 +253,7 @@ mod tests {
         // We insert the second set of leaves
         let elems_u256 = insert_elements_into_jellyfish_mt(&mut mt, n_leaves_after);
         contract
-            .test_update_records_merkle_tree(elems_u256)
+            .update_records_merkle_tree(elems_u256)
             .legacy()
             .send()
             .await

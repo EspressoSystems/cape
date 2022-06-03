@@ -9,14 +9,16 @@
 
 pragma solidity ^0.8.0;
 
-import "hardhat/console.sol";
-import {RecordsMerkleTree as R} from "../RecordsMerkleTree.sol";
-import "../libraries/RescueLib.sol";
+interface IRecordsMerkleTree {
+    /// @param elements The list of elements to be appended to the current merkle tree described by the frontier.
+    function updateRecordsMerkleTree(uint256[] memory elements) external;
 
-// This contract is only used in a javascript benchmark and
-// could be removed.
-contract TestRecordsMerkleTree is R {
-    constructor(uint8 height) R(height) {}
+    /// @notice Returns the root value of the Merkle tree.
+    function getRootValue() external view returns (uint256);
 
-    function doNothing() public {}
+    /// @notice Returns the height of the Merkle tree.
+    function getHeight() external view returns (uint8);
+
+    /// @notice Returns the number of leaves of the Merkle tree.
+    function getNumLeaves() external view returns (uint64);
 }

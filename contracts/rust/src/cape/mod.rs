@@ -6,7 +6,7 @@
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #![deny(warnings)]
-mod events;
+pub mod events;
 pub mod faucet;
 mod note_types;
 mod reentrancy;
@@ -305,25 +305,44 @@ impl From<TransactionNote> for NoteType {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct CAPEConstructorArgs {
-    height: u8,
     n_roots: u64,
     verifier_addr: Address,
+    records_merkle_tree_addr: Address,
 }
 
-#[allow(dead_code)]
 impl CAPEConstructorArgs {
-    pub fn new(height: u8, n_roots: u64, verifier_addr: Address) -> Self {
+    pub fn new(n_roots: u64, verifier_addr: Address, records_merkle_tree_addr: Address) -> Self {
         Self {
-            height,
             n_roots,
             verifier_addr,
+            records_merkle_tree_addr,
         }
+    }
+
+    /// We need to pass a tuple when we deploy the contract. The function that
+    /// deploys the contract is not aware of the exact type of the tuple. It's
+    /// convenient to "fix" this type in one place.
+    pub fn to_tuple(&self) -> (u64, Address, Address) {
+        (
+            self.n_roots,
+            self.verifier_addr,
+            self.records_merkle_tree_addr,
+        )
     }
 }
 
-impl From<CAPEConstructorArgs> for (u8, u64, Address) {
-    fn from(args: CAPEConstructorArgs) -> (u8, u64, Address) {
-        (args.height, args.n_roots, args.verifier_addr)
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct RecordsMerkleTreeConstructorArgs {
+    height: u8,
+}
+
+impl RecordsMerkleTreeConstructorArgs {
+    pub fn new(height: u8) -> Self {
+        Self { height }
+    }
+
+    pub fn to_tuple(&self) -> (u8,) {
+        (self.height,)
     }
 }
 

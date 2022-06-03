@@ -33,11 +33,11 @@ describe("Records Merkle Tree Benchmarks", function () {
     it("shows how much gas is spent by updateRecordsMerkleTree", async function () {
       let elems = [1, 2, 3, 4, 5];
 
-      const txEmpty = await rmtContract.testUpdateRecordsMerkleTree([]);
+      const txEmpty = await rmtContract.updateRecordsMerkleTree([]);
       const txEmptyReceipt = await txEmpty.wait();
       let emptyGasUsed = txEmptyReceipt.gasUsed;
 
-      tx = await rmtContract.testUpdateRecordsMerkleTree(elems);
+      tx = await rmtContract.updateRecordsMerkleTree(elems);
       const txReceipt = await tx.wait();
       let totalGasUsed = txReceipt.gasUsed;
 

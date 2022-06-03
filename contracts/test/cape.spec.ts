@@ -8,6 +8,9 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 
+const TREE_HEIGHT = 24;
+const N_ROOTS = 1000;
+
 describe("CAPE", function () {
   describe("Handling of nullifiers", async function () {
     let cape: any;
@@ -16,6 +19,15 @@ describe("CAPE", function () {
       let rescue = await (await ethers.getContractFactory("RescueLib")).deploy();
       let verifyingKeys = await (await ethers.getContractFactory("VerifyingKeys")).deploy();
       let plonkVerifier = await (await ethers.getContractFactory("PlonkVerifier")).deploy();
+
+      let merkleTree = await (
+        await ethers.getContractFactory("RecordsMerkleTree", {
+          libraries: {
+            RescueLib: rescue.address,
+          },
+        })
+      ).deploy(TREE_HEIGHT);
+
       let capeFactory = await ethers.getContractFactory("TestCAPE", {
         libraries: {
           RescueLib: rescue.address,
@@ -23,9 +35,10 @@ describe("CAPE", function () {
         },
       });
 
-      const TREE_HEIGHT = 24;
-      const N_ROOTS = 1000;
-      cape = await capeFactory.deploy(TREE_HEIGHT, N_ROOTS, plonkVerifier.address);
+      cape = await capeFactory.deploy(N_ROOTS, plonkVerifier.address, merkleTree.address);
+
+      let tx = await merkleTree.transferOwnership(cape.address);
+      await tx.wait();
     });
 
     it("is possible to check for non-membership", async function () {

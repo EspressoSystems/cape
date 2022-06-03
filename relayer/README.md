@@ -28,5 +28,5 @@ The CAPE contract address shown in the terminal and an Ethereum wallet mnemonic
 need to be passed to relayer executable, for example:
 
 ```console
-cargo run --release --bin minimal-relayer -- 0x20Dc424c5fa468CbB1c702308F0cC9c14DA2825C "$TEST_MNEMONIC"
+cargo run --release --bin minimal-relayer -- 0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9 "$TEST_MNEMONIC"
 ```

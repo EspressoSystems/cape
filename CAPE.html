@@ -137,7 +137,6 @@
                         <h1 id="functions"><a class="header" href="#functions">Functions</a></h1>
 <h2 id="constructor"><a class="header" href="#constructor">constructor</a></h2>
 <pre><code class="language-solidity">  function constructor(
-    uint8 merkleTreeHeight,
     uint64 nRoots,
     address verifierAddr
   ) public
@@ -145,7 +144,6 @@
 <p>CAPE contract constructor method.</p>
 <h3 id="parameters"><a class="header" href="#parameters">Parameters</a></h3>
 <table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
-<tr><td style="text-align: left"><code>merkleTreeHeight</code></td><td style="text-align: left">uint8</td><td style="text-align: left">height of the merkle tree that stores the asset record commitments</td></tr>
 <tr><td style="text-align: left"><code>nRoots</code></td><td style="text-align: left">uint64</td><td style="text-align: left">number of the most recent roots of the records merkle tree to be stored</td></tr>
 <tr><td style="text-align: left"><code>verifierAddr</code></td><td style="text-align: left">address</td><td style="text-align: left">address of the Plonk Verifier contract</td></tr>
 </tbody></table>
@@ -225,6 +223,12 @@ A block creator must not submit notes with duplicate nullifiers.</p>
 <table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>newBlock</code></td><td style="text-align: left">struct CAPE.CapeBlock</td><td style="text-align: left">block to be processed by the CAPE contract.</td></tr>
 </tbody></table>
+<hr />
+<h2 id="_emitblockevent"><a class="header" href="#_emitblockevent">_emitBlockEvent</a></h2>
+<pre><code class="language-solidity">  function _emitBlockEvent(
+  ) internal
+</code></pre>
+<p>This function only exists to avoid a stack too deep compilation error.</p>
 <hr />
 <h2 id="_handlewithdrawal"><a class="header" href="#_handlewithdrawal">_handleWithdrawal</a></h2>
 <pre><code class="language-solidity">  function _handleWithdrawal(
@@ -352,6 +356,11 @@ A block creator must not submit notes with duplicate nullifiers.</p>
 <table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>note</code></td><td style="text-align: left">struct CAPE.FreezeNote</td><td style="text-align: left">note of type <em>FREEZE</em></td></tr>
 </tbody></table>
+<hr />
+<h2 id="getrootvalue"><a class="header" href="#getrootvalue">getRootValue</a></h2>
+<pre><code class="language-solidity">  function getRootValue(
+  ) public returns (uint256)
+</code></pre>
 <hr />
 <h1 id="events"><a class="header" href="#events">Events</a></h1>
 <h2 id="faucetinitialized"><a class="header" href="#faucetinitialized">FaucetInitialized</a></h2>

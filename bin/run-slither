@@ -9,5 +9,4 @@
 
 set -euo pipefail
 
-slither --solc-remaps @openzeppelin/=`pwd`/node_modules/.pnpm/@openzeppelin+contracts@4.3.3/node_modules/@openzeppelin/,@rari-capital/=`pwd`/node_modules/.pnpm/@rari-capital+solmate@6.2.0/node_modules/@rari-capital/,solidity-bytes-utils/=`pwd`/node_modules/.pnpm/solidity-bytes-utils@0.8.0/node_modules/solidity_bytes_utils/ contracts
-
+slither contracts

@@ -44,6 +44,15 @@ jobs:
       - name: Initialize Nix Shell
         run: nix-shell --run "echo Init"
 
+      - name: Run slither
+        run: slither ./contracts
+        continue-on-error: true
+
+      - name: Upload slither SARIF file
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: slither.sarif
+
       - name: Cache cargo
         uses: actions/cache@v2
         with:

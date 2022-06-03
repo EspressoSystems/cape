@@ -1,0 +1,4 @@
+{
+  "filter_paths": "Token.sol,mocks",
+  "sarif": "slither.sarif"
+}

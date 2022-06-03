@@ -14,8 +14,8 @@ participant "AddressBook" as AB
 
 group Transfer
 
-    W_A -> AB: **get_enc_pk**(alice_address)
-    AB -> W_A: alice_enc_pk
+    W_A -> AB: **get_enc_pk**(bob_address)
+    AB -> W_A: bob_enc_pk
     note left W_A: The first memo <i>alice_memo</i> is for the change, \n the second one corresponds \n to the actual transfer of 1000 units of <i>asset_code</i> to Bob
     W_A -> W_A: (transfer_tx,[alice_memo, bob_memo]):=**build_transfer_tx**(alice_address,asset_code,\n bob_address,1000)
     W_A -> R: (transfer_tx,[alice_memo, bob_memo])

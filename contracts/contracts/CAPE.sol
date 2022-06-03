@@ -249,9 +249,11 @@ contract CAPE is RootStore, AssetRegistry, ReentrancyGuard {
 
     /// @notice Submit a new block with extra data to the CAPE contract.
     /// @param newBlock block to be processed by the CAPE contract
-    /// @param extraData extra data to be stored in calldata; this data is ignored by the contract function
-    // solhint-disable-next-line no-unused-vars
-    function submitCapeBlockWithMemos(CapeBlock memory newBlock, bytes calldata extraData) public {
+    /// @param {bytes} extraData data to be stored in calldata; this data is ignored by the contract function
+    function submitCapeBlockWithMemos(
+        CapeBlock memory newBlock,
+        bytes calldata /* extraData */
+    ) public {
         submitCapeBlock(newBlock);
     }
 

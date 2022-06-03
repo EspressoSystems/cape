@@ -123,7 +123,7 @@
 <text text-anchor="start" x="1600.3644" y="-330.5" font-family="Times,serif" font-size="14.00" fill="#000000"> &#160;&#160;&#160;constructor(nRoots: uint64, verifierAddr: address, recordsMerkleTreeAddr: address)</text>
 <text text-anchor="start" x="1600.3644" y="-313.7" font-family="Times,serif" font-size="14.00" fill="#000000"> &#160;&#160;&#160;faucetSetupForTestnet(faucetManagerAddress: EdOnBN254.EdOnBN254Point, faucetManagerEncKey: bytes32)</text>
 <text text-anchor="start" x="1600.3644" y="-296.9" font-family="Times,serif" font-size="14.00" fill="#000000"> &#160;&#160;&#160;depositErc20(ro: RecordOpening, erc20Address: address)</text>
-<text text-anchor="start" x="1600.3644" y="-280.1" font-family="Times,serif" font-size="14.00" fill="#000000"> &#160;&#160;&#160;submitCapeBlockWithMemos(newBlock: CapeBlock, extraData: bytes)</text>
+<text text-anchor="start" x="1600.3644" y="-280.1" font-family="Times,serif" font-size="14.00" fill="#000000"> &#160;&#160;&#160;submitCapeBlockWithMemos(newBlock: CapeBlock, bytes)</text>
 <text text-anchor="start" x="1600.3644" y="-263.3" font-family="Times,serif" font-size="14.00" fill="#000000"> &#160;&#160;&#160;submitCapeBlock(newBlock: CapeBlock)</text>
 <text text-anchor="start" x="1600.3644" y="-246.5" font-family="Times,serif" font-size="14.00" fill="#000000"> &#160;&#160;&#160;getRootValue(): uint256</text>
 </g>

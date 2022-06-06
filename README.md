@@ -367,7 +367,7 @@ yourself and let hardhat connect to it.
 
 Note: when making calls (not transactions) to the hardhat node, `msg.sender` is
 set by the hardhat node to be the first address in `hardhat accounts`. Since
-this is differnt from the behaviour we see with go-ethereum this can lead to
+this is different from the behaviour we see with go-ethereum this can lead to
 confusion for example when switching from go-ethereum to hardhat to debug.
 
 ### Separate hardhat node

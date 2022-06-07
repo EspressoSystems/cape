@@ -261,6 +261,14 @@ contract RecordsMerkleTree is Ownable {
         _updateChildNode(nodes[previousNodeIndex], newNodeIndex, Position(localPos));
 
         // Increment the number of leaves
+        //
+        // This operation is costly and happens in a loop. However, for now the
+        // merkle tree is usually updated with a single new element. In this
+        // case we would not save gas by moving the update of _numLeaves. The
+        // gas cost is also likely negligible compared to the whole operation of
+        // inserting an element.
+        //
+        // slither-disable-next-line costly-loop
         _numLeaves += 1;
 
         // Return the new value of maxIndex

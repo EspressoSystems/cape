@@ -201,8 +201,10 @@ contract CAPE is RootStore, AssetRegistry, ReentrancyGuard {
         // This is a call to our own contract, not an arbitrary external contract.
         // slither-disable-next-line reentrancy-no-eth
         _recordsMerkleTree.updateRecordsMerkleTree(recordCommitments);
+        // slither-disable-next-line reentrancy-benign
         _addRoot(_recordsMerkleTree.getRootValue());
 
+        // slither-disable-next-line reentrancy-events
         emit FaucetInitialized(abi.encode(ro));
         faucetInitialized = true;
     }
@@ -371,6 +373,7 @@ contract CAPE is RootStore, AssetRegistry, ReentrancyGuard {
             // This is a call to our own contract, not an arbitrary external contract.
             // slither-disable-next-line reentrancy-no-eth
             _recordsMerkleTree.updateRecordsMerkleTree(commitments.items);
+            // slither-disable-next-line reentrancy-benign
             _addRoot(_recordsMerkleTree.getRootValue());
         }
 
@@ -378,6 +381,7 @@ contract CAPE is RootStore, AssetRegistry, ReentrancyGuard {
         blockHeight += 1;
 
         // Inform clients about the new block and the processed deposits.
+        // slither-disable-next-line reentrancy-events
         _emitBlockEvent(newBlock);
 
         // Empty the queue now that the record commitments have been inserted

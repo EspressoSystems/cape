@@ -50,13 +50,6 @@ contract RecordsMerkleTree is Ownable {
         return (node.left == 0) && (node.middle == 0) && (node.right == 0);
     }
 
-    /// @dev Does the given node have children?
-    /// @param node A node
-    /// @return _ True if the node has at least one child, false otherwise
-    function _hasChildren(Node memory node) private pure returns (bool) {
-        return !_isTerminal(node);
-    }
-
     /// @dev Is the given node null?
     /// @param node A node
     /// @return _ True if the node is NULL, false otherwise

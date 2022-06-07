@@ -9,7 +9,6 @@
 
 pragma solidity ^0.8.0;
 
-import "hardhat/console.sol";
 import "./libraries/RescueLib.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
@@ -81,16 +80,15 @@ contract RecordsMerkleTree is Ownable {
         // indexFirstSibling = cursor - 2;
         // indexSecondSibling = cursor - 1;
 
-        Node memory node;
         if (posSibling == Position.LEFT) {
-            node = Node(0, cursor - 3, cursor - 2, cursor - 1);
+            return Node(0, cursor - 3, cursor - 2, cursor - 1);
         } else if (posSibling == Position.MIDDLE) {
-            node = Node(0, cursor - 2, cursor - 3, cursor - 1);
+            return Node(0, cursor - 2, cursor - 3, cursor - 1);
         } else if (posSibling == Position.RIGHT) {
-            node = Node(0, cursor - 2, cursor - 1, cursor - 3);
+            return Node(0, cursor - 2, cursor - 1, cursor - 3);
+        } else {
+            revert("unreachable");
         }
-
-        return node;
     }
 
     /// @dev Create a Merkle tree from the given frontier.
@@ -155,17 +153,15 @@ contract RecordsMerkleTree is Ownable {
         uint64 nodeIndex,
         Position pos
     ) private pure returns (uint64) {
-        uint64 res;
-
         if (pos == Position.LEFT) {
-            res = nodes[nodeIndex].left;
+            return nodes[nodeIndex].left;
         } else if (pos == Position.MIDDLE) {
-            res = nodes[nodeIndex].middle;
+            return nodes[nodeIndex].middle;
         } else if (pos == Position.RIGHT) {
-            res = nodes[nodeIndex].right;
+            return nodes[nodeIndex].right;
+        } else {
+            revert("unreachable");
         }
-
-        return res;
     }
 
     /// @dev Update the child of a node based on the position (which child to select) and an index to the new child.

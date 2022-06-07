@@ -13,8 +13,6 @@ pragma solidity ^0.8.0;
 /// CAPE provides auditable anonymous payments on Ethereum.
 /// @author Espresso Systems <hello@espressosys.com>
 
-import "hardhat/console.sol";
-
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@rari-capital/solmate/src/utils/SafeTransferLib.sol";
 

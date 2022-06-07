@@ -10,7 +10,6 @@
 pragma solidity ^0.8.0;
 
 import "solidity-bytes-utils/contracts/BytesLib.sol";
-import "hardhat/console.sol";
 import "../libraries/Utils.sol";
 import {BN254} from "../libraries/BN254.sol";
 import {IPlonkVerifier} from "../interfaces/IPlonkVerifier.sol";

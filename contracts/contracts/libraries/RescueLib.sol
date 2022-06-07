@@ -169,6 +169,7 @@ library RescueLib {
             uint256
         )
     {
+        // slither-disable-next-line uninitialized-local
         uint256[6] memory alphaInvScratch;
 
         _expAlphaInv4Setup(alphaInvScratch);

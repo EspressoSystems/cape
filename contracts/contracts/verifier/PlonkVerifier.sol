@@ -10,7 +10,6 @@
 pragma solidity ^0.8.0;
 
 import {BN254} from "../libraries/BN254.sol";
-import "hardhat/console.sol";
 import "../interfaces/IPlonkVerifier.sol";
 import {PolynomialEval as Poly} from "../libraries/PolynomialEval.sol";
 import "./Transcript.sol";
@@ -212,6 +211,7 @@ contract PlonkVerifier is IPlonkVerifier {
         transcript.appendGroupElement(proof.wire4);
 
         // have to compute tau, but not really used anywhere
+        // slither-disable-next-line unused-return
         transcript.getAndAppendChallenge();
         res.beta = transcript.getAndAppendChallenge();
         res.gamma = transcript.getAndAppendChallenge();

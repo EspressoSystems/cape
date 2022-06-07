@@ -41,7 +41,7 @@ library EdOnBN254 {
     }
 
     function serialize(EdOnBN254Point memory point) internal pure returns (bytes memory res) {
-        uint256 mask;
+        uint256 mask = 0;
         // Edward curve does not have an infinity flag.
         // Set the 255-th bit to 1 for positive Y
         // See: https://github.com/arkworks-rs/algebra/blob/d6365c3a0724e5d71322fe19cbdb30f979b064c8/serialize/src/flags.rs#L148

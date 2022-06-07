@@ -524,6 +524,7 @@ contract CAPE is RootStore, AssetRegistry, ReentrancyGuard {
         )
     {
         // load the correct (hardcoded) vk
+        // slither-disable-next-line calls-loop
         vk = VerifyingKeys.getVkById(
             VerifyingKeys.getEncodedId(
                 uint8(NoteType.TRANSFER),
@@ -605,6 +606,7 @@ contract CAPE is RootStore, AssetRegistry, ReentrancyGuard {
         )
     {
         // load the correct (hardcoded) vk
+        // slither-disable-next-line calls-loop
         vk = VerifyingKeys.getVkById(
             VerifyingKeys.getEncodedId(
                 uint8(NoteType.MINT),
@@ -666,6 +668,7 @@ contract CAPE is RootStore, AssetRegistry, ReentrancyGuard {
         )
     {
         // load the correct (hardcoded) vk
+        // slither-disable-next-line calls-loop
         vk = VerifyingKeys.getVkById(
             VerifyingKeys.getEncodedId(
                 uint8(NoteType.FREEZE),

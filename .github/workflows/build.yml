@@ -45,7 +45,7 @@ jobs:
         run: nix-shell --run "echo Init"
 
       - name: Run slither
-        run: slither ./contracts
+        run: nix-shell --run "slither ./contracts"
         continue-on-error: true
 
       - name: Upload slither SARIF file

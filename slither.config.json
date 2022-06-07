@@ -1,4 +1,5 @@
 {
-  "filter_paths": "Token.sol,mocks",
+  "filter_paths": "ERC20.sol|Token.sol|USDC|mocks|Test|RescueNonOptimized|BytesLib",
+  "detectors_to_exclude": "assembly,similar-names,too-many-digits,naming-convention,write-after-write,solc-version",
   "sarif": "slither.sarif"
 }

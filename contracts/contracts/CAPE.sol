@@ -198,7 +198,10 @@ contract CAPE is RootStore, AssetRegistry, ReentrancyGuard {
         uint256[] memory recordCommitments = new uint256[](1);
         recordCommitments[0] = _deriveRecordCommitment(ro);
 
-        // insert the record into record accumulator
+        // Insert the record into record accumulator.
+        //
+        // This is a call to our own contract, not an arbitrary external contract.
+        // slither-disable-next-line reentrancy-no-eth
         _recordsMerkleTree.updateRecordsMerkleTree(recordCommitments);
         _addRoot(_recordsMerkleTree.getRootValue());
 
@@ -367,6 +370,8 @@ contract CAPE is RootStore, AssetRegistry, ReentrancyGuard {
 
         // Only update the merkle tree and add the root if the list of records commitments is non empty
         if (!commitments.isEmpty()) {
+            // This is a call to our own contract, not an arbitrary external contract.
+            // slither-disable-next-line reentrancy-no-eth
             _recordsMerkleTree.updateRecordsMerkleTree(commitments.items);
             _addRoot(_recordsMerkleTree.getRootValue());
         }

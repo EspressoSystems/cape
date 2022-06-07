@@ -68,7 +68,7 @@ contract AssetRegistry {
     /// registered or the ERC-20 token address is zero.
     /// @param erc20Address An ERC-20 token address
     /// @param newAsset An asset type to be registered in the contract
-    function sponsorCapeAsset(address erc20Address, AssetDefinition memory newAsset) public {
+    function sponsorCapeAsset(address erc20Address, AssetDefinition memory newAsset) external {
         require(erc20Address != address(0), "Bad asset address");
         require(!isCapeAssetRegistered(newAsset), "Asset already registered");
 

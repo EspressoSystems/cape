@@ -178,7 +178,7 @@ contract CAPE is RootStore, AssetRegistry, ReentrancyGuard {
     function faucetSetupForTestnet(
         EdOnBN254.EdOnBN254Point memory faucetManagerAddress,
         bytes32 faucetManagerEncKey
-    ) public {
+    ) external {
         // faucet can only be set up once by the manager
         require(msg.sender == deployer, "Only invocable by deployer");
         require(!faucetInitialized, "Faucet already set up");
@@ -230,7 +230,7 @@ contract CAPE is RootStore, AssetRegistry, ReentrancyGuard {
     /// @notice Wraps ERC-20 tokens into a CAPE asset defined in the record opening.
     /// @param ro record opening that will be inserted in the records merkle tree once the deposit is validated
     /// @param erc20Address address of the ERC-20 token corresponding to the deposit
-    function depositErc20(RecordOpening memory ro, address erc20Address) public nonReentrant {
+    function depositErc20(RecordOpening memory ro, address erc20Address) external nonReentrant {
         require(isCapeAssetRegistered(ro.assetDef), "Asset definition not registered");
         require(lookup(ro.assetDef) == erc20Address, "Wrong ERC20 address");
 
@@ -256,7 +256,7 @@ contract CAPE is RootStore, AssetRegistry, ReentrancyGuard {
     function submitCapeBlockWithMemos(
         CapeBlock memory newBlock,
         bytes calldata /* extraData */
-    ) public {
+    ) external {
         submitCapeBlock(newBlock);
     }
 
@@ -708,7 +708,7 @@ contract CAPE is RootStore, AssetRegistry, ReentrancyGuard {
         transcriptInitMsg = EdOnBN254.serialize(note.auxInfo.txnMemoVerKey);
     }
 
-    function getRootValue() public view returns (uint256) {
+    function getRootValue() external view returns (uint256) {
         return _recordsMerkleTree.getRootValue();
     }
 }

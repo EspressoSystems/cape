@@ -1,4 +1,4 @@
 {
-  "filter_paths": "ERC20.sol|Token.sol|USDC|mocks|Test|RescueNonOptimized|BytesLib",
+  "filter_paths": "ERC20.sol|Token.sol|USDC|mocks|Test|RescueNonOptimized|BytesLib|Ownable.sol",
   "detectors_to_exclude": "assembly,similar-names,too-many-digits,naming-convention,write-after-write,solc-version"
 }

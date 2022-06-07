@@ -709,9 +709,10 @@ library RescueLib {
         }
     }
 
-    // Must be public so it doesn't get inlined into CAPE.sol and blow
-    // the size limit
-    function commit(uint256[15] memory inputs) public view returns (uint256) {
+    // This function is external to ensure that the solidity compiler generates
+    // a separate library contract. This is required to reduce the size of the
+    // CAPE contract.
+    function commit(uint256[15] memory inputs) external view returns (uint256) {
         checkBounded(inputs);
 
         uint256 a;

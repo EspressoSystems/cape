@@ -331,17 +331,17 @@ contract RecordsMerkleTree is Ownable {
     }
 
     /// @notice Returns the root value of the Merkle tree.
-    function getRootValue() public view returns (uint256) {
+    function getRootValue() external view returns (uint256) {
         return _rootValue;
     }
 
     /// @notice Returns the height of the Merkle tree.
-    function getHeight() public view returns (uint8) {
+    function getHeight() external view returns (uint8) {
         return _merkleTreeHeight;
     }
 
     /// @notice Returns the number of leaves of the Merkle tree.
-    function getNumLeaves() public view returns (uint64) {
+    function getNumLeaves() external view returns (uint64) {
         return _numLeaves;
     }
 

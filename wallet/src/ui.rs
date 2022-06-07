@@ -538,7 +538,7 @@ pub struct TransactionHistoryEntry {
     /// senders are and this field may be empty.
     pub senders: Vec<UserAddress>,
     /// Receivers and corresponding amounts.
-    pub receivers: Vec<(UserAddress, RecordAmount)>,
+    pub receivers: Vec<(UserAddress, String)>,
     /// Amount of change included in the transaction from the fee.
     ///
     /// Every transaction includes a fee, but the record used to pay the fee may be larger than the
@@ -549,7 +549,7 @@ pub struct TransactionHistoryEntry {
     /// change, which would be indicated by `Some(0)`. The amount of change may be unknown if, for
     /// example, this is a transaction we received from someone else, in which case we may not know
     /// how much of a fee they paid and how much change they expect to get.
-    pub fee_change: Option<RecordAmount>,
+    pub fee_change: Option<String>,
     /// Amount of change included in the transaction in the asset being transferred.
     ///
     /// For non-native transfers, the amount of the asset being transferred which is consumed by the
@@ -567,7 +567,7 @@ pub struct TransactionHistoryEntry {
     /// change, which would be indicated by `Some(0)`. The amount of change may be unknown if, for
     /// example, this is a transaction we received from someone else, and we do not hold the
     /// necessary viewing keys to inspect the change outputs of the transaction.
-    pub asset_change: Option<RecordAmount>,
+    pub asset_change: Option<String>,
     pub status: String,
 }
 
@@ -603,10 +603,10 @@ impl TransactionHistoryEntry {
             receivers: entry
                 .receivers
                 .into_iter()
-                .map(|(addr, amt)| (addr.into(), amt))
+                .map(|(addr, amt)| (addr.into(), amt.to_string()))
                 .collect(),
-            fee_change: entry.fee_change,
-            asset_change: entry.asset_change,
+            fee_change: entry.fee_change.map(|amt| amt.to_string()),
+            asset_change: entry.asset_change.map(|amt| amt.to_string()),
             status: match entry.receipt {
                 Some(receipt) => match wallet.transaction_status(&receipt).await {
                     Ok(status) => status.to_string(),

@@ -1755,7 +1755,7 @@ mod tests {
         assert_eq!(history[0].senders, vec![src_address]);
         assert_eq!(
             history[0].receivers,
-            vec![(dst_address.clone(), 100u64.into())]
+            vec![(dst_address.clone(), "100".to_string())]
         );
         assert_eq!(history[0].status, "accepted");
 
@@ -1763,7 +1763,7 @@ mod tests {
         assert_eq!(history[1].asset, AssetCode::native());
         // We don't necessarily know the senders for the second transaction, since we allowed the
         // wallet to choose.
-        assert_eq!(history[1].receivers, vec![(dst_address, 100u64.into())]);
+        assert_eq!(history[1].receivers, vec![(dst_address, "100".to_string())]);
         assert_eq!(history[1].status, "accepted");
 
         // Check :from and :count.

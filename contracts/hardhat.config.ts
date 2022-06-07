@@ -69,20 +69,24 @@ const config: HardhatUserConfig = {
       },
       // Avoid: "InvalidInputError: Transaction gas limit is 31061912 and exceeds block gas limit of 30000000"
       gas: 25_000_000,
+      tags: ["local"],
     },
     rinkeby: {
       url: process.env.RINKEBY_URL,
       gasPrice: 2_000_000_000,
       accounts: { mnemonic: process.env.RINKEBY_MNEMONIC },
+      tags: ["public"],
     },
     goerli: {
       url: process.env.GOERLI_URL,
       gasPrice: 2_000_000_000,
       accounts: { mnemonic: process.env.GOERLI_MNEMONIC },
+      tags: ["public"],
     },
     localhost: {
       url: `http://localhost:${process.env.RPC_PORT || 8545}`,
       timeout: 120000, // when running against hardhat, some tests are very slow
+      tags: ["local"],
     },
   },
   solidity: {

@@ -5,25 +5,21 @@
 // This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-import hre from "hardhat";
-const networkName = hre.network.name;
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
-  if (networkName == "localhost") {
-    console.log("Deploying tokens on " + networkName);
-    const { deployments, getNamedAccounts } = hre;
-    const { deploy } = deployments;
-    const { tokenOwner } = await getNamedAccounts();
+  const { deployments, getNamedAccounts } = hre;
+  const { deploy } = deployments;
+  const { tokenOwner } = await getNamedAccounts();
 
-    await deploy("SimpleToken", { from: tokenOwner, log: true });
-    await deploy("WETH", { from: tokenOwner, log: true });
-    await deploy("DAI", { from: tokenOwner, log: true });
-    await deploy("USDC", { from: tokenOwner, log: true });
-  }
+  await deploy("SimpleToken", { from: tokenOwner, log: true });
+  await deploy("WETH", { from: tokenOwner, log: true });
+  await deploy("DAI", { from: tokenOwner, log: true });
+  await deploy("USDC", { from: tokenOwner, log: true });
 };
 
 export default func;
 func.id = "deploy_token"; // id required to prevent re-execution
-func.tags = ["CAPE"];
+func.tags = ["Token"];
+func.skip = async (hre: HardhatRuntimeEnvironment) => hre.network.tags.public;

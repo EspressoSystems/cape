@@ -505,6 +505,7 @@ contract PlonkVerifier is IPlonkVerifier {
                         uint256 s = pcsInfos[i].commScalars[j];
                         uint256 tmp;
                         assembly {
+                            // slither-disable-next-line variable-scope
                             tmp := mulmod(rBase, s, p)
                         }
                         scalars[idx] = tmp;
@@ -518,6 +519,7 @@ contract PlonkVerifier is IPlonkVerifier {
                     uint256 evalPoint = pcsInfos[i].evalPoint;
                     uint256 tmp;
                     assembly {
+                        // slither-disable-next-line variable-scope
                         tmp := mulmod(rBase, evalPoint, p)
                     }
                     scalars[idx] = tmp;
@@ -531,6 +533,7 @@ contract PlonkVerifier is IPlonkVerifier {
                     uint256 nextEvalPoint = pcsInfos[i].nextEvalPoint;
                     uint256 tmp;
                     assembly {
+                        // slither-disable-next-line variable-scope
                         tmp := mulmod(rBase, mulmod(u, nextEvalPoint, p), p)
                     }
                     scalars[idx] = tmp;

@@ -468,6 +468,7 @@ contract PlonkVerifier is IPlonkVerifier {
                 bases[2 * i] = pcsInfos[i].openingProof;
 
                 {
+                    // slither-disable-next-line write-after-write
                     uint256 tmp;
                     uint256 u = pcsInfos[i].u;
                     assembly {

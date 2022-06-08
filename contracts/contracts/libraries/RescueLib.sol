@@ -154,9 +154,13 @@ library RescueLib {
     // @param input input for the permutation
     // @return permutation output
     function perm(
+        // slither-disable-next-line write-after-write
         uint256 s0,
+        // slither-disable-next-line write-after-write
         uint256 s1,
+        // slither-disable-next-line write-after-write
         uint256 s2,
+        // slither-disable-next-line write-after-write
         uint256 s3
     )
         internal

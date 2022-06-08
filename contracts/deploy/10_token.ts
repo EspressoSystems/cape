@@ -21,4 +21,5 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 export default func;
 func.id = "deploy_token"; // id required to prevent re-execution
-func.tags = ["CAPE"];
+func.tags = ["Token"];
+func.skip = async (hre: HardhatRuntimeEnvironment) => hre.network.tags.public;

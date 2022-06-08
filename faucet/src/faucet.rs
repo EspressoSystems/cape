@@ -11,7 +11,7 @@
 extern crate cape_wallet;
 
 use async_std::{
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex, RwLock},
     task::{spawn, JoinHandle},
 };
 use cap_rust_sandbox::universal_param::UNIVERSAL_PARAM;
@@ -25,6 +25,7 @@ use jf_cap::{
     keys::{UserKeyPair, UserPubKey},
     structs::{AssetCode, FreezeFlag},
 };
+use net::server::response;
 use rand::distributions::{Alphanumeric, DistString};
 use reef::traits::Validator;
 use seahorse::{
@@ -123,9 +124,17 @@ pub struct FaucetOptions {
     pub min_polling_delay_ms: u64,
 }
 
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum FaucetStatus {
+    Initializing,
+    Available,
+}
+
 #[derive(Clone)]
 struct FaucetState {
     wallet: Arc<Mutex<CapeWallet<'static, CapeBackend<'static, LoaderMetadata>>>>,
+    status: Arc<RwLock<FaucetStatus>>,
     grant_size: RecordAmount,
     num_grants: usize,
     fee_size: RecordAmount,
@@ -147,6 +156,7 @@ impl FaucetState {
     ) -> Self {
         Self {
             wallet: Arc::new(Mutex::new(wallet)),
+            status: Arc::new(RwLock::new(FaucetStatus::Initializing)),
             grant_size: opt.grant_size,
             num_grants: opt.num_grants,
             fee_size: opt.fee_size,
@@ -164,6 +174,9 @@ pub enum FaucetError {
 
     #[snafu(display("internal server error: {}", msg))]
     Internal { msg: String },
+
+    #[snafu(display("faucet service temporarily unavailable"))]
+    Unavailable,
 }
 
 impl net::Error for FaucetError {
@@ -174,6 +187,7 @@ impl net::Error for FaucetError {
         match self {
             Self::Transfer { .. } => StatusCode::BadRequest,
             Self::Internal { .. } => StatusCode::InternalServerError,
+            Self::Unavailable => StatusCode::ServiceUnavailable,
         }
     }
 }
@@ -188,22 +202,42 @@ pub fn faucet_error(source: CapeWalletError) -> tide::Error {
     })
 }
 
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
+pub struct HealthCheck {
+    pub status: FaucetStatus,
+}
+
 /// Return a JSON expression with status 200 indicating the server
 /// is up and running. The JSON expression is simply,
-///    {"status": "available"}
+///    `{"status": Status}`
+/// where `Status` is one of
+/// * "initializing"
+/// * "available"
 /// When the server is running but unable to process requests
 /// normally, a response with status 503 and payload {"status":
 /// "unavailable"} should be added.
-async fn healthcheck(_req: tide::Request<FaucetState>) -> Result<tide::Response, tide::Error> {
-    Ok(tide::Response::builder(200)
-        .content_type(tide::http::mime::JSON)
-        .body(tide::prelude::json!({"status": "available"}))
-        .build())
+async fn healthcheck(req: tide::Request<FaucetState>) -> Result<tide::Response, tide::Error> {
+    response(
+        &req,
+        &HealthCheck {
+            status: *req.state().status.read().await,
+        },
+    )
+}
+
+async fn check_service_available(state: &FaucetState) -> Result<(), tide::Error> {
+    if *state.status.read().await == FaucetStatus::Available {
+        Ok(())
+    } else {
+        Err(faucet_server_error(FaucetError::Unavailable))
+    }
 }
 
 async fn request_fee_assets(
     mut req: tide::Request<FaucetState>,
 ) -> Result<tide::Response, tide::Error> {
+    check_service_available(req.state()).await?;
+
     let pub_key: UserPubKey = net::server::request_body(&mut req).await?;
     let mut wallet = req.state().wallet.lock().await;
     let faucet_addr = wallet.pub_keys().await[0].address();
@@ -261,7 +295,7 @@ async fn request_fee_assets(
 
     if !txns.is_empty() {
         // If we successfully transferred any assets, return success.
-        net::server::response(&req, txns)
+        response(&req, txns)
     } else {
         // Otherwise, explain why the transactions failed.
         let mut msgs = errs.into_iter().map(|err| format!("  - {}", err));
@@ -502,21 +536,29 @@ pub async fn init_web_server(
     // Spawn a thread to break records into smaller records to maintain `opt.num_records` at a time.
     spawn(break_up_records(state.clone(), signal_breaker_thread.1));
 
-    // Wait for the thread to create at least `opt.num_records` if possible, before starting to
-    // handle requests.
-    wait_for_records(&state).await;
-
-    let mut app = tide::with_state(state);
+    // Start the app before we wait for our records to be broken up into smaller records. This can
+    // take a long time, and we want the healthcheck endpoint to be available and returning
+    // "initializing" until then. Other endpoints will fail while the app is initializing. Once the
+    // record initialization is complete, the healthcheck state will change to "available" and the
+    // other endpoints will start to work.
+    let mut app = tide::with_state(state.clone());
+    app.at("/healthcheck").get(healthcheck);
     app.with(
         CorsMiddleware::new()
             .allow_methods("GET, POST".parse::<HeaderValue>().unwrap())
             .allow_headers("*".parse::<HeaderValue>().unwrap())
             .allow_origin(Origin::from("*")),
     );
-    app.at("/healthcheck").get(healthcheck);
     app.at("/request_fee_assets").post(request_fee_assets);
     let address = format!("0.0.0.0:{}", opt.faucet_port);
-    Ok(spawn(app.listen(address)))
+    let handle = spawn(app.listen(address));
+
+    // Wait for the thread to create at least `opt.num_records` if possible, before starting to
+    // handle requests.
+    wait_for_records(&state).await;
+    *state.status.write().await = FaucetStatus::Available;
+
+    Ok(handle)
 }
 
 #[async_std::main]
@@ -585,6 +627,19 @@ mod test {
         };
         init_web_server(&opt, Some(faucet_key_pair)).await.unwrap();
         println!("Faucet server initiated.");
+
+        // Check the status is "available".
+        let mut res = surf::get(format!("http://localhost:{}/healthcheck", faucet_port))
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::Ok);
+        assert_eq!(
+            HealthCheck {
+                status: FaucetStatus::Available
+            },
+            res.body_json().await.unwrap(),
+        );
 
         // Create a receiver wallet.
         let receiver_dir = TempDir::new("cape_wallet_receiver").unwrap();

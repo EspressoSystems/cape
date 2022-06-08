@@ -284,7 +284,7 @@ library BN254 {
     }
 
     function g1Serialize(G1Point memory point) internal pure returns (bytes memory) {
-        uint256 mask;
+        uint256 mask = 0;
 
         // Set the 254-th bit to 1 for infinity
         // https://docs.rs/ark-serialize/0.3.0/src/ark_serialize/flags.rs.html#117

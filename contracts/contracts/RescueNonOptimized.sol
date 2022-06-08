@@ -293,7 +293,7 @@ contract RescueNonOptimized {
         uint256 a,
         uint256 b,
         uint256 c
-    ) public returns (uint256) {
+    ) public view returns (uint256) {
         uint256[_STATE_SIZE] memory input;
         uint256[_STATE_SIZE] memory state;
 
@@ -307,7 +307,7 @@ contract RescueNonOptimized {
         return state[0];
     }
 
-    function commit(uint256[15] memory inputs) public returns (uint256) {
+    function commit(uint256[15] memory inputs) public view returns (uint256) {
         uint256 a = inputs[0];
         uint256 b = inputs[1];
         uint256 c = inputs[2];

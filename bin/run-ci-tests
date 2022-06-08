@@ -10,6 +10,7 @@ set -euo pipefail
 
 make-doc
 lint-ci
+run-slither
 cape-test-geth
 
 echo Ok!

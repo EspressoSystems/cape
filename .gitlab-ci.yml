@@ -16,13 +16,13 @@ lint:
   tags:
     - docker
   script:
-    - nix-shell --run "prepend-timestamps lint-ci"
+    - nix-shell --run "lint-ci"
 
 test:
   tags:
     - docker
   script:
-    - nix-shell --run "prepend-timestamps cape-test-geth"
+    - nix-shell --run "cape-test-geth"
   cache:
     key: cape-test
     paths:
@@ -33,7 +33,7 @@ doc:
   tags:
     - docker
   script:
-    - nix-shell --run "prepend-timestamps make-doc"
+    - nix-shell --run "make-doc"
   artifacts:
     paths:
       - doc

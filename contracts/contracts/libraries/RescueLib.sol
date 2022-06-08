@@ -13,17 +13,16 @@ library RescueLib {
     /// The constants are obtained from the Sage script
     /// https://github.com/EspressoSystems/Marvellous/blob/fcd4c41672f485ac2f62526bc87a16789d4d0459/rescue254.sage
 
-    uint256 private constant _N_ROUNDS = 12;
-    uint256 private constant _STATE_SIZE = 4;
-    uint256 private constant _SCHEDULED_KEY_SIZE = (2 * _N_ROUNDS + 1) * _STATE_SIZE;
+    // These constants are no longer used, left here for readability.
+    // uint256 private constant _N_ROUNDS = 12;
+    // uint256 private constant _STATE_SIZE = 4;
+    // uint256 private constant _SCHEDULED_KEY_SIZE = (2 * _N_ROUNDS + 1) * _STATE_SIZE;
+    // uint256 private constant _ALPHA = 5;
 
     // Obtained by running KeyScheduling([0,0,0,0]). See Algorithm 2 of AT specification document.
-    // solhint-disable-next-line var-name-mixedcase
 
     uint256 private constant _PRIME =
         21888242871839275222246405745257275088548364400416034343698204186575808495617;
-
-    uint256 private constant _ALPHA = 5;
 
     uint256 private constant _ALPHA_INV =
         17510594297471420177797124596205820070838691520332827474958563349260646796493;
@@ -155,9 +154,13 @@ library RescueLib {
     // @param input input for the permutation
     // @return permutation output
     function perm(
+        // slither-disable-next-line write-after-write
         uint256 s0,
+        // slither-disable-next-line write-after-write
         uint256 s1,
+        // slither-disable-next-line write-after-write
         uint256 s2,
+        // slither-disable-next-line write-after-write
         uint256 s3
     )
         internal
@@ -169,6 +172,7 @@ library RescueLib {
             uint256
         )
     {
+        // slither-disable-next-line uninitialized-local
         uint256[6] memory alphaInvScratch;
 
         _expAlphaInv4Setup(alphaInvScratch);
@@ -709,9 +713,10 @@ library RescueLib {
         }
     }
 
-    // Must be public so it doesn't get inlined into CAPE.sol and blow
-    // the size limit
-    function commit(uint256[15] memory inputs) public view returns (uint256) {
+    // This function is external to ensure that the solidity compiler generates
+    // a separate library contract. This is required to reduce the size of the
+    // CAPE contract.
+    function commit(uint256[15] memory inputs) external view returns (uint256) {
         checkBounded(inputs);
 
         uint256 a;

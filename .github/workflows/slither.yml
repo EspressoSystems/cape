@@ -1,0 +1,42 @@
+name: Slither
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  slither:
+    runs-on: [self-hosted, X64]
+    container:
+      image: ghcr.io/espressosystems/nix:main
+      volumes:
+        - github_nix_281:/nix
+    steps:
+      - uses: styfle/cancel-workflow-action@0.9.1
+        name: Cancel Outdated Builds
+        with:
+          access_token: ${{ github.token }}
+
+      - uses: cachix/cachix-action@v10
+        with:
+          name: espresso-systems-private
+          authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
+
+      - uses: actions/checkout@v2
+        name: Checkout Repository
+
+      - name: Work around git issue after git CVE-2022-24765 fix.
+        run: git config --global --add safe.directory "$PWD"
+
+      - name: Run slither
+        run: nix-shell --run "slither ./contracts --sarif slither.sarif"
+        continue-on-error: true
+
+      - name: Upload slither SARIF file
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: slither.sarif
+

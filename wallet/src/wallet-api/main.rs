@@ -84,7 +84,6 @@ mod tests {
         asset_library::{Icon, VerifiedAssetLibrary},
         hd::{KeyTree, Mnemonic},
         txn_builder::{RecordInfo, TransactionReceipt},
-        RecordAmount,
     };
     use serde::de::DeserializeOwned;
     use std::collections::{HashMap, HashSet};
@@ -915,7 +914,7 @@ mod tests {
         let server = TestServer::new().await;
 
         // Set parameters for newasset.
-        let viewing_threshold = RecordAmount::from(10u64);
+        let viewing_threshold = "10".to_string();
         let view_amount = true;
         let view_address = false;
         let description = base64::encode_config(&[3u8; 32], base64::URL_SAFE_NO_PAD);
@@ -986,7 +985,7 @@ mod tests {
             .await
             .unwrap();
         assert!(asset.definition.viewing_key.is_none());
-        assert_eq!(asset.definition.viewing_threshold, 0u64.into());
+        assert_eq!(asset.definition.viewing_threshold, "0".to_string());
 
         // newasset should return an asset with no reveal threshold if it's not given.
         let asset = server
@@ -996,7 +995,7 @@ mod tests {
             ))
             .await
             .unwrap();
-        assert_eq!(asset.definition.viewing_threshold, 0u64.into());
+        assert_eq!(asset.definition.viewing_threshold, "0".to_string());
 
         // newasset should return an asset with a given symbol.
         let asset = server
@@ -1018,7 +1017,7 @@ mod tests {
         // Set parameters for /sponsor.
         let erc20_code = Address::from([1u8; 20]);
         let sponsor_addr = Address::from([2u8; 20]);
-        let viewing_threshold = RecordAmount::from(10u64);
+        let viewing_threshold = "10".to_string();
         let view_amount = true;
         let view_address = false;
 
@@ -1064,7 +1063,7 @@ mod tests {
             &FreezerPubKey::from(asset.policy.freezer_pk.clone()),
             freezing_key
         );
-        assert_eq!(asset.policy.reveal_threshold, viewing_threshold);
+        assert_eq!(asset.policy.reveal_threshold.to_string(), viewing_threshold);
         // Add the asset to the library.
         server
             .client
@@ -1142,7 +1141,7 @@ mod tests {
             ))
             .await
             .unwrap();
-        assert_eq!(asset.policy.reveal_threshold, 0u64.into());
+        assert_eq!(asset.policy.reveal_threshold, "0".to_string());
         assert!(!AssetPolicy::from(asset.policy).is_auditor_pub_key_set());
 
         // buildsponsor should return an asset with no reveal threshold if it's not given.
@@ -1154,7 +1153,7 @@ mod tests {
                 ))
                 .await
                 .unwrap();
-        assert_eq!(asset.policy.reveal_threshold, 0u64.into());
+        assert_eq!(asset.policy.reveal_threshold, "0".to_string());
 
         // buildsponsor should create an asset with a given symbol and description.
         let erc20_code = Address::from([5u8; 20]);
@@ -1755,7 +1754,7 @@ mod tests {
         assert_eq!(history[0].senders, vec![src_address]);
         assert_eq!(
             history[0].receivers,
-            vec![(dst_address.clone(), 100u64.into())]
+            vec![(dst_address.clone(), "100".to_string())]
         );
         assert_eq!(history[0].status, "accepted");
 
@@ -1763,7 +1762,7 @@ mod tests {
         assert_eq!(history[1].asset, AssetCode::native());
         // We don't necessarily know the senders for the second transaction, since we allowed the
         // wallet to choose.
-        assert_eq!(history[1].receivers, vec![(dst_address, 100u64.into())]);
+        assert_eq!(history[1].receivers, vec![(dst_address, "100".to_string())]);
         assert_eq!(history[1].status, "accepted");
 
         // Check :from and :count.
@@ -1892,13 +1891,13 @@ mod tests {
             Record {
                 address: address.clone(),
                 asset: AssetCode::native(),
-                amount: DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR.into(),
+                amount: DEFAULT_NATIVE_AMT_IN_WRAPPER_ADDR.to_string(),
                 uid: 2,
             },
             Record {
                 address,
                 asset: asset.definition.code,
-                amount: DEFAULT_WRAPPED_AMT.into(),
+                amount: DEFAULT_WRAPPED_AMT.to_string(),
                 uid: 3,
             },
         ];
@@ -2672,7 +2671,7 @@ mod tests {
             ))
             .await
             .unwrap();
-        assert_eq!(ro.amount, 10u64.into());
+        assert_eq!(ro.amount, "10".to_string());
         assert_eq!(ro.asset_def.code, asset.into());
         assert!(ro.freeze_flag);
         let ro = server
@@ -2682,7 +2681,7 @@ mod tests {
             ))
             .await
             .unwrap();
-        assert_eq!(ro.amount, 10u64.into());
+        assert_eq!(ro.amount, "10".to_string());
         assert_eq!(ro.asset_def.code, asset.into());
         assert!(!ro.freeze_flag);
     }

@@ -23,25 +23,13 @@ library EdOnBN254 {
         uint256 y;
     }
 
-    /// @dev check if a G1 point is Infinity
-    /// @notice precompile bn256Add at address(6) takes (0, 0) as Point of Infinity,
-    /// some crypto libraries (such as arkwork) uses a boolean flag to mark PoI, and
-    /// just use (0, 1) as affine coordinates (not on curve) to represents PoI.
-    function isInfinity(EdOnBN254Point memory point) internal pure returns (bool result) {
-        assembly {
-            let x := mload(point)
-            let y := mload(add(point, 0x20))
-            result := and(iszero(x), iszero(y))
-        }
-    }
-
     /// @dev Check if y-coordinate of G1 point is negative.
     function isYNegative(EdOnBN254Point memory point) internal pure returns (bool) {
         return (point.y << 1) < P_MOD;
     }
 
     function serialize(EdOnBN254Point memory point) internal pure returns (bytes memory res) {
-        uint256 mask;
+        uint256 mask = 0;
         // Edward curve does not have an infinity flag.
         // Set the 255-th bit to 1 for positive Y
         // See: https://github.com/arkworks-rs/algebra/blob/d6365c3a0724e5d71322fe19cbdb30f979b064c8/serialize/src/flags.rs#L148

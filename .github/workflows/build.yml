@@ -56,17 +56,17 @@ jobs:
           key: cape-v5-${{ hashFiles('Cargo.lock') }}
 
       - name: Linting
-        run: nix-shell --run "prepend-timestamps lint-ci"
+        run: nix-shell --run "lint-ci"
 
       - name: Build Slow Tests
         # Make sure the slow tests build, but don't run them (we have another workflow for that).
-        run: nix-shell --run "prepend-timestamps cargo test --release --features=slow-tests --no-run"
+        run: nix-shell --run "cargo test --release --features=slow-tests --no-run"
 
       - name: Run Tests
-        run: nix-shell --run "prepend-timestamps cape-test-geth"
+        run: nix-shell --run "cape-test-geth"
 
       - name: Generate Docs
-        run: nix-shell --run "prepend-timestamps make-doc"
+        run: nix-shell --run "make-doc"
 
       - name: Build all executables
         run: nix-shell --run "cargo build --release"

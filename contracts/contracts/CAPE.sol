@@ -13,8 +13,6 @@ pragma solidity ^0.8.0;
 /// CAPE provides auditable anonymous payments on Ethereum.
 /// @author Espresso Systems <hello@espressosys.com>
 
-import "hardhat/console.sol";
-
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@rari-capital/solmate/src/utils/SafeTransferLib.sol";
 
@@ -180,7 +178,7 @@ contract CAPE is RootStore, AssetRegistry, ReentrancyGuard {
     function faucetSetupForTestnet(
         EdOnBN254.EdOnBN254Point memory faucetManagerAddress,
         bytes32 faucetManagerEncKey
-    ) public {
+    ) external {
         // faucet can only be set up once by the manager
         require(msg.sender == deployer, "Only invocable by deployer");
         require(!faucetInitialized, "Faucet already set up");
@@ -198,10 +196,15 @@ contract CAPE is RootStore, AssetRegistry, ReentrancyGuard {
         uint256[] memory recordCommitments = new uint256[](1);
         recordCommitments[0] = _deriveRecordCommitment(ro);
 
-        // insert the record into record accumulator
+        // Insert the record into record accumulator.
+        //
+        // This is a call to our own contract, not an arbitrary external contract.
+        // slither-disable-next-line reentrancy-no-eth
         _recordsMerkleTree.updateRecordsMerkleTree(recordCommitments);
+        // slither-disable-next-line reentrancy-benign
         _addRoot(_recordsMerkleTree.getRootValue());
 
+        // slither-disable-next-line reentrancy-events
         emit FaucetInitialized(abi.encode(ro));
         faucetInitialized = true;
     }
@@ -227,7 +230,7 @@ contract CAPE is RootStore, AssetRegistry, ReentrancyGuard {
     /// @notice Wraps ERC-20 tokens into a CAPE asset defined in the record opening.
     /// @param ro record opening that will be inserted in the records merkle tree once the deposit is validated
     /// @param erc20Address address of the ERC-20 token corresponding to the deposit
-    function depositErc20(RecordOpening memory ro, address erc20Address) public nonReentrant {
+    function depositErc20(RecordOpening memory ro, address erc20Address) external nonReentrant {
         require(isCapeAssetRegistered(ro.assetDef), "Asset definition not registered");
         require(lookup(ro.assetDef) == erc20Address, "Wrong ERC20 address");
 
@@ -249,9 +252,11 @@ contract CAPE is RootStore, AssetRegistry, ReentrancyGuard {
 
     /// @notice Submit a new block with extra data to the CAPE contract.
     /// @param newBlock block to be processed by the CAPE contract
-    /// @param extraData extra data to be stored in calldata; this data is ignored by the contract function
-    // solhint-disable-next-line no-unused-vars
-    function submitCapeBlockWithMemos(CapeBlock memory newBlock, bytes calldata extraData) public {
+    /// @param {bytes} extraData data to be stored in calldata; this data is ignored by the contract function
+    function submitCapeBlockWithMemos(
+        CapeBlock memory newBlock,
+        bytes calldata /* extraData */
+    ) external {
         submitCapeBlock(newBlock);
     }
 
@@ -365,7 +370,10 @@ contract CAPE is RootStore, AssetRegistry, ReentrancyGuard {
 
         // Only update the merkle tree and add the root if the list of records commitments is non empty
         if (!commitments.isEmpty()) {
+            // This is a call to our own contract, not an arbitrary external contract.
+            // slither-disable-next-line reentrancy-no-eth
             _recordsMerkleTree.updateRecordsMerkleTree(commitments.items);
+            // slither-disable-next-line reentrancy-benign
             _addRoot(_recordsMerkleTree.getRootValue());
         }
 
@@ -373,6 +381,7 @@ contract CAPE is RootStore, AssetRegistry, ReentrancyGuard {
         blockHeight += 1;
 
         // Inform clients about the new block and the processed deposits.
+        // slither-disable-next-line reentrancy-events
         _emitBlockEvent(newBlock);
 
         // Empty the queue now that the record commitments have been inserted
@@ -519,6 +528,7 @@ contract CAPE is RootStore, AssetRegistry, ReentrancyGuard {
         )
     {
         // load the correct (hardcoded) vk
+        // slither-disable-next-line calls-loop
         vk = VerifyingKeys.getVkById(
             VerifyingKeys.getEncodedId(
                 uint8(NoteType.TRANSFER),
@@ -600,6 +610,7 @@ contract CAPE is RootStore, AssetRegistry, ReentrancyGuard {
         )
     {
         // load the correct (hardcoded) vk
+        // slither-disable-next-line calls-loop
         vk = VerifyingKeys.getVkById(
             VerifyingKeys.getEncodedId(
                 uint8(NoteType.MINT),
@@ -661,6 +672,7 @@ contract CAPE is RootStore, AssetRegistry, ReentrancyGuard {
         )
     {
         // load the correct (hardcoded) vk
+        // slither-disable-next-line calls-loop
         vk = VerifyingKeys.getVkById(
             VerifyingKeys.getEncodedId(
                 uint8(NoteType.FREEZE),
@@ -696,7 +708,7 @@ contract CAPE is RootStore, AssetRegistry, ReentrancyGuard {
         transcriptInitMsg = EdOnBN254.serialize(note.auxInfo.txnMemoVerKey);
     }
 
-    function getRootValue() public view returns (uint256) {
+    function getRootValue() external view returns (uint256) {
         return _recordsMerkleTree.getRootValue();
     }
 }

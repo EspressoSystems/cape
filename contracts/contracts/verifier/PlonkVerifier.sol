@@ -10,7 +10,6 @@
 pragma solidity ^0.8.0;
 
 import {BN254} from "../libraries/BN254.sol";
-import "hardhat/console.sol";
 import "../interfaces/IPlonkVerifier.sol";
 import {PolynomialEval as Poly} from "../libraries/PolynomialEval.sol";
 import "./Transcript.sol";
@@ -212,6 +211,7 @@ contract PlonkVerifier is IPlonkVerifier {
         transcript.appendGroupElement(proof.wire4);
 
         // have to compute tau, but not really used anywhere
+        // slither-disable-next-line unused-return
         transcript.getAndAppendChallenge();
         res.beta = transcript.getAndAppendChallenge();
         res.gamma = transcript.getAndAppendChallenge();
@@ -468,6 +468,7 @@ contract PlonkVerifier is IPlonkVerifier {
                 bases[2 * i] = pcsInfos[i].openingProof;
 
                 {
+                    // slither-disable-next-line write-after-write
                     uint256 tmp;
                     uint256 u = pcsInfos[i].u;
                     assembly {
@@ -505,6 +506,7 @@ contract PlonkVerifier is IPlonkVerifier {
                         uint256 s = pcsInfos[i].commScalars[j];
                         uint256 tmp;
                         assembly {
+                            // slither-disable-next-line variable-scope
                             tmp := mulmod(rBase, s, p)
                         }
                         scalars[idx] = tmp;
@@ -518,6 +520,7 @@ contract PlonkVerifier is IPlonkVerifier {
                     uint256 evalPoint = pcsInfos[i].evalPoint;
                     uint256 tmp;
                     assembly {
+                        // slither-disable-next-line variable-scope
                         tmp := mulmod(rBase, evalPoint, p)
                     }
                     scalars[idx] = tmp;
@@ -531,6 +534,7 @@ contract PlonkVerifier is IPlonkVerifier {
                     uint256 nextEvalPoint = pcsInfos[i].nextEvalPoint;
                     uint256 tmp;
                     assembly {
+                        // slither-disable-next-line variable-scope
                         tmp := mulmod(rBase, mulmod(u, nextEvalPoint, p), p)
                     }
                     scalars[idx] = tmp;

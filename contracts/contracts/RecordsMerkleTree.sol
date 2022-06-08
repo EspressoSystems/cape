@@ -9,7 +9,6 @@
 
 pragma solidity ^0.8.0;
 
-import "hardhat/console.sol";
 import "./libraries/RescueLib.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
@@ -51,13 +50,6 @@ contract RecordsMerkleTree is Ownable {
         return (node.left == 0) && (node.middle == 0) && (node.right == 0);
     }
 
-    /// @dev Does the given node have children?
-    /// @param node A node
-    /// @return _ True if the node has at least one child, false otherwise
-    function _hasChildren(Node memory node) private pure returns (bool) {
-        return !_isTerminal(node);
-    }
-
     /// @dev Is the given node null?
     /// @param node A node
     /// @return _ True if the node is NULL, false otherwise
@@ -81,16 +73,15 @@ contract RecordsMerkleTree is Ownable {
         // indexFirstSibling = cursor - 2;
         // indexSecondSibling = cursor - 1;
 
-        Node memory node;
         if (posSibling == Position.LEFT) {
-            node = Node(0, cursor - 3, cursor - 2, cursor - 1);
+            return Node(0, cursor - 3, cursor - 2, cursor - 1);
         } else if (posSibling == Position.MIDDLE) {
-            node = Node(0, cursor - 2, cursor - 3, cursor - 1);
+            return Node(0, cursor - 2, cursor - 3, cursor - 1);
         } else if (posSibling == Position.RIGHT) {
-            node = Node(0, cursor - 2, cursor - 1, cursor - 3);
+            return Node(0, cursor - 2, cursor - 1, cursor - 3);
+        } else {
+            revert("unreachable");
         }
-
-        return node;
     }
 
     /// @dev Create a Merkle tree from the given frontier.
@@ -155,17 +146,15 @@ contract RecordsMerkleTree is Ownable {
         uint64 nodeIndex,
         Position pos
     ) private pure returns (uint64) {
-        uint64 res;
-
         if (pos == Position.LEFT) {
-            res = nodes[nodeIndex].left;
+            return nodes[nodeIndex].left;
         } else if (pos == Position.MIDDLE) {
-            res = nodes[nodeIndex].middle;
+            return nodes[nodeIndex].middle;
         } else if (pos == Position.RIGHT) {
-            res = nodes[nodeIndex].right;
+            return nodes[nodeIndex].right;
+        } else {
+            revert("unreachable");
         }
-
-        return res;
     }
 
     /// @dev Update the child of a node based on the position (which child to select) and an index to the new child.
@@ -265,6 +254,14 @@ contract RecordsMerkleTree is Ownable {
         _updateChildNode(nodes[previousNodeIndex], newNodeIndex, Position(localPos));
 
         // Increment the number of leaves
+        //
+        // This operation is costly and happens in a loop. However, for now the
+        // merkle tree is usually updated with a single new element. In this
+        // case we would not save gas by moving the update of _numLeaves. The
+        // gas cost is also likely negligible compared to the whole operation of
+        // inserting an element.
+        //
+        // slither-disable-next-line costly-loop
         _numLeaves += 1;
 
         // Return the new value of maxIndex
@@ -334,17 +331,17 @@ contract RecordsMerkleTree is Ownable {
     }
 
     /// @notice Returns the root value of the Merkle tree.
-    function getRootValue() public view returns (uint256) {
+    function getRootValue() external view returns (uint256) {
         return _rootValue;
     }
 
     /// @notice Returns the height of the Merkle tree.
-    function getHeight() public view returns (uint8) {
+    function getHeight() external view returns (uint8) {
         return _merkleTreeHeight;
     }
 
     /// @notice Returns the number of leaves of the Merkle tree.
-    function getNumLeaves() public view returns (uint64) {
+    function getNumLeaves() external view returns (uint64) {
         return _numLeaves;
     }
 

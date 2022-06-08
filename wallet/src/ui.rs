@@ -18,14 +18,13 @@ use jf_cap::{
     structs::{AssetCode, AssetDefinition as JfAssetDefinition, AssetPolicy as JfAssetPolicy},
 };
 use net::UserAddress;
-use num_traits::identities::Zero;
 use reef::cap;
 use seahorse::{
     accounts::{AccountInfo, KeyPair},
     asset_library::Icon,
     events::EventIndex,
     txn_builder::RecordInfo,
-    MintInfo, RecordAmount,
+    MintInfo,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -48,7 +47,7 @@ pub struct AssetDefinition {
     pub address_viewable: bool,
     pub amount_viewable: bool,
     pub blind_viewable: bool,
-    pub viewing_threshold: RecordAmount,
+    pub viewing_threshold: String,
 }
 
 impl AssetDefinition {
@@ -85,7 +84,7 @@ impl From<JfAssetDefinition> for AssetDefinition {
             address_viewable: policy.is_user_address_revealed(),
             amount_viewable: policy.is_amount_revealed(),
             blind_viewable: policy.is_blinding_factor_revealed(),
-            viewing_threshold: policy.reveal_threshold().into(),
+            viewing_threshold: policy.reveal_threshold().to_string(),
         }
     }
 }
@@ -118,7 +117,13 @@ impl From<AssetDefinition> for JfAssetDefinition {
                     .reveal_blinding_factor()
                     .expect("Failed to set reveal amount on asset policy");
             }
-            policy = policy.set_reveal_threshold(definition.viewing_threshold.into());
+            policy = policy.set_reveal_threshold(
+                definition
+                    .viewing_threshold
+                    .parse::<u128>()
+                    .expect("Failed to parse viewing threshold")
+                    .into(),
+            );
         }
         JfAssetDefinition::new(code, policy).expect("Failed to create Asset Definition")
     }
@@ -155,7 +160,7 @@ impl FromStr for AssetDefinition {
         let mut address_viewable = false;
         let mut amount_viewable = false;
         let mut blind_viewable = false;
-        let mut viewing_threshold = RecordAmount::zero();
+        let mut viewing_threshold = "0".to_string();
         for kv in s.split(',') {
             let (key, value) = match kv.split_once(':') {
                 Some(split) => split,
@@ -199,9 +204,7 @@ impl FromStr for AssetDefinition {
                         .map_err(|_| format!("expected bool, got {}", value))?;
                 }
                 "viewing_threshold" => {
-                    viewing_threshold = value
-                        .parse()
-                        .map_err(|_| format!("expected RecordAmount, got {}", value))?;
+                    viewing_threshold = value.to_string();
                 }
                 _ => return Err(format!("unrecognized key {}", key)),
             }
@@ -419,7 +422,7 @@ pub struct WalletSummary {
 pub struct Record {
     pub address: UserAddress,
     pub asset: AssetCode,
-    pub amount: RecordAmount,
+    pub amount: String,
     pub uid: u64,
 }
 
@@ -428,7 +431,7 @@ impl From<RecordInfo> for Record {
         Self {
             address: record.ro.pub_key.address().into(),
             asset: record.ro.asset_def.code,
-            amount: record.amount(),
+            amount: record.amount().to_string(),
             uid: record.uid,
         }
     }
@@ -838,7 +841,7 @@ pub mod sol {
         pub cred_pk: EdOnBN254Point,
         pub freezer_pk: EdOnBN254Point,
         pub reveal_map: U256,
-        pub reveal_threshold: RecordAmount,
+        pub reveal_threshold: String,
     }
 
     impl From<types::AssetPolicy> for AssetPolicy {
@@ -848,7 +851,7 @@ pub mod sol {
                 cred_pk: p.cred_pk.into(),
                 freezer_pk: p.freezer_pk.into(),
                 reveal_map: p.reveal_map.into(),
-                reveal_threshold: p.reveal_threshold.into(),
+                reveal_threshold: p.reveal_threshold.to_string(),
             }
         }
     }
@@ -860,7 +863,10 @@ pub mod sol {
                 cred_pk: p.cred_pk.into(),
                 freezer_pk: p.freezer_pk.into(),
                 reveal_map: p.reveal_map.into(),
-                reveal_threshold: p.reveal_threshold.into(),
+                reveal_threshold: p
+                    .reveal_threshold
+                    .parse()
+                    .expect("failed to parse reveal threshold"),
             }
         }
     }
@@ -880,7 +886,7 @@ pub mod sol {
     #[ser_test(ark(false))]
     #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
     pub struct RecordOpening {
-        pub amount: RecordAmount,
+        pub amount: String,
         pub asset_def: AssetDefinition,
         pub user_addr: EdOnBN254Point,
         pub enc_key: [u8; 32],
@@ -891,7 +897,7 @@ pub mod sol {
     impl From<types::RecordOpening> for RecordOpening {
         fn from(r: types::RecordOpening) -> Self {
             Self {
-                amount: r.amount.into(),
+                amount: r.amount.to_string(),
                 asset_def: r.asset_def.into(),
                 user_addr: r.user_addr.into(),
                 enc_key: r.enc_key,
@@ -904,7 +910,7 @@ pub mod sol {
     impl From<RecordOpening> for types::RecordOpening {
         fn from(r: RecordOpening) -> Self {
             Self {
-                amount: r.amount.into(),
+                amount: r.amount.parse().expect("failed to parse amount"),
                 asset_def: r.asset_def.into(),
                 user_addr: r.user_addr.into(),
                 enc_key: r.enc_key,

@@ -353,8 +353,9 @@ async fn break_up_records(state: FaucetState, mut wakeup: mpsc::Receiver<()>) {
                 // the inner loop and wait for a notification that the record distribution has
                 // changed.
                 tracing::warn!("not enough records, but no large records to break up");
-                break;
             } else {
+                // We don't have enough records and we do have a big record to break up. Break out
+                // of the wait loop and enter the next loop to break up our records.
                 break;
             }
 

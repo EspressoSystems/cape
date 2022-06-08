@@ -15,7 +15,7 @@ To disable warnings add a code comment, for example
 
     // slither-disable-next-line variable-scope
 
-The configuration is [slither.config.json](./slither.config.json).
+The configuration file is [slither.config.json](./slither.config.json).
 
 The slither github workflow file is
 [.github/workflows/slither.yml](./.github/workflows/slither.yml).

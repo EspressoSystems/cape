@@ -379,6 +379,8 @@ mod test {
     use super::*;
     use async_std::sync::{Arc, Mutex};
     use cap_rust_sandbox::assertion::{EnsureMined, EnsureRejected};
+    use cap_rust_sandbox::cape::RecordsMerkleTreeConstructorArgs;
+    use cap_rust_sandbox::model::CAPE_MERKLE_HEIGHT;
     use cap_rust_sandbox::test_utils::upcast_test_cape_to_cape;
     use cap_rust_sandbox::{
         cape::CAPEConstructorArgs,
@@ -386,10 +388,10 @@ mod test {
         ledger::CapeLedger,
         model::CapeModelTxn,
         test_utils::contract_abi_path,
-        types::{GenericInto, CAPE},
+        types::CAPE,
         universal_param::UNIVERSAL_PARAM,
     };
-    use ethers::{prelude::PendingTransaction, providers::Middleware, types::Address};
+    use ethers::{prelude::PendingTransaction, providers::Middleware};
     use jf_cap::{
         keys::UserKeyPair,
         sign_receiver_memos,
@@ -590,8 +592,11 @@ mod test {
         let hash = response_body::<H256>(&mut res).await.unwrap();
         let receipt = PendingTransaction::new(hash, &provider);
         receipt.await.unwrap().ensure_mined();
-        assert_eq!(contract.get_num_leaves().call().await.unwrap(), 3.into());
+        assert_eq!(contract.get_num_leaves().call().await.unwrap(), 3u64.into());
 
+        // TODO (mathis) check validity of comment below. Should we update test
+        // to do a sucessful txn? Or is it no longer useful?
+        //
         // Test with the non-mock CAPE contract. We can't generate any valid transactions for this
         // contract, since there's no faucet yet and it doesn't have the
         // `set_initial_record_commitments` method, but we can at least check that our transaction
@@ -605,15 +610,22 @@ mod test {
             )
             .await
             .unwrap();
+            let records_merkle_tree = deploy(
+                deployer.clone(),
+                &contract_abi_path("RecordsMerkleTree.sol/RecordsMerkleTree"),
+                RecordsMerkleTreeConstructorArgs::new(CAPE_MERKLE_HEIGHT).to_tuple(),
+            )
+            .await
+            .unwrap();
             let address = deploy(
                 deployer.clone(),
                 &contract_abi_path("CAPE.sol/CAPE"),
                 CAPEConstructorArgs::new(
-                    CapeLedger::merkle_height(),
                     CapeLedger::record_root_history() as u64,
                     verifier.address(),
+                    records_merkle_tree.address(),
                 )
-                .generic_into::<(u8, u64, Address)>(),
+                .to_tuple(),
             )
             .await
             .unwrap()

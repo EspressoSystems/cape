@@ -6,11 +6,15 @@
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 use anyhow::Result;
 use cap_rust_sandbox::{
+    assertion::Matcher,
     cape::faucet::FAUCET_MANAGER_ENCRYPTION_KEY,
     ethereum::get_funded_client,
-    types::{self as sol, GenericInto, CAPE},
+    types::{self as sol, GenericInto, RecordsMerkleTree, CAPE},
 };
-use ethers::{abi::AbiDecode, prelude::Address};
+use ethers::{
+    abi::AbiDecode,
+    prelude::{Address, U256},
+};
 use jf_cap::{keys::UserPubKey, structs::RecordOpening};
 use regex::Regex;
 use std::{process::Command, str::FromStr};
@@ -39,7 +43,7 @@ async fn test_hardhat_deploy() -> Result<()> {
     // Get the address out of
     // deploying "CAPE" (tx: 0x64...211)...: deployed at 0x8A791620dd6260079BF849Dc5567aDC3F2FdC318 with 7413790 gas
     let re = Regex::new(r#""CAPE".*(0x[0-9a-fA-F]{40})"#).unwrap();
-    let address = re
+    let cape_address = re
         .captures_iter(&text)
         .next()
         .unwrap_or_else(|| panic!("Address not found in {}", text))[1]
@@ -47,8 +51,8 @@ async fn test_hardhat_deploy() -> Result<()> {
         .unwrap_or_else(|_| panic!("Address not found in {}", text));
 
     let client = get_funded_client().await.unwrap();
-    let contract = CAPE::new(address, client.clone());
-    let event = contract
+    let cape = CAPE::new(cape_address, client.clone());
+    let event = cape
         .faucet_initialized_filter()
         .from_block(0u64)
         .query()
@@ -62,6 +66,27 @@ async fn test_hardhat_deploy() -> Result<()> {
         UserPubKey::from_str(FAUCET_MANAGER_ENCRYPTION_KEY).unwrap(),
         ro_sol.generic_into::<RecordOpening>().pub_key,
     );
+
+    let re = Regex::new(r#""RecordsMerkleTree".*(0x[0-9a-fA-F]{40})"#).unwrap();
+    let merkle_tree_address = re
+        .captures_iter(&text)
+        .next()
+        .unwrap_or_else(|| panic!("Address not found in {}", text))[1]
+        .parse::<Address>()
+        .unwrap_or_else(|_| panic!("Address not found in {}", text));
+
+    let merkle_tree = RecordsMerkleTree::new(merkle_tree_address, client.clone());
+
+    // Check that the cape contract owns the records merkle tree contract.
+    assert_eq!(merkle_tree.owner().call().await?, cape.address());
+
+    // Check that the deployer is no longer able to operate the
+    // records merkle tree contract.
+    merkle_tree
+        .update_records_merkle_tree(vec![U256::from(0)])
+        .call()
+        .await
+        .should_revert_with_message("Ownable: caller is not the owner");
 
     Ok(())
 }

@@ -108,6 +108,14 @@ const config: HardhatUserConfig = {
     target: "ethers-v5",
     alwaysGenerateOverloads: false,
   },
+  // Mainnet only allows contracts up to 24kB in size.
+  // Fail hardhat compile task if CAPE exceeds the limit but allow the
+  // test contracts to exceed the limit.
+  contractSizer: {
+    runOnCompile: true,
+    strict: true,
+    only: ["/CAPE"],
+  },
 };
 
 export default config;

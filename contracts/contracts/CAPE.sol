@@ -24,16 +24,17 @@ import "./libraries/EdOnBN254.sol";
 import "./libraries/RescueLib.sol";
 import "./libraries/VerifyingKeys.sol";
 import "./interfaces/IPlonkVerifier.sol";
+import "./interfaces/IRecordsMerkleTree.sol";
 import "./AssetRegistry.sol";
-import "./RecordsMerkleTree.sol";
 import "./RootStore.sol";
 
-contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
+contract CAPE is RootStore, AssetRegistry, ReentrancyGuard {
     using AccumulatingArray for AccumulatingArray.Data;
 
     mapping(uint256 => bool) public nullifiers;
     uint64 public blockHeight;
     IPlonkVerifier private _verifier;
+    IRecordsMerkleTree internal _recordsMerkleTree;
     uint256[] public pendingDeposits;
 
     // NOTE: used for faucet in testnet only, will be removed for mainnet
@@ -49,7 +50,22 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
     uint256 public constant MAX_NUM_PENDING_DEPOSIT = 10;
 
     event FaucetInitialized(bytes roBytes);
-    event BlockCommitted(uint64 indexed height, uint256[] depositCommitments);
+
+    event BlockCommitted(
+        uint64 indexed height,
+        uint256[] depositCommitments,
+        // What follows is a `CapeBlock` struct split up into fields.
+        // This may no longer be necessary once
+        // https://github.com/gakonst/ethers-rs/issues/1220
+        // is fixed.
+        bytes minerAddr,
+        bytes noteTypes,
+        bytes transferNotes,
+        bytes mintNotes,
+        bytes freezeNotes,
+        bytes burnNotes
+    );
+
     event Erc20TokensDeposited(bytes roBytes, address erc20TokenAddress, address from);
 
     struct AuditMemo {
@@ -144,15 +160,15 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
     }
 
     /// @notice CAPE contract constructor method.
-    /// @param merkleTreeHeight height of the merkle tree that stores the asset record commitments
     /// @param nRoots number of the most recent roots of the records merkle tree to be stored
     /// @param verifierAddr address of the Plonk Verifier contract
     constructor(
-        uint8 merkleTreeHeight,
         uint64 nRoots,
-        address verifierAddr
-    ) RecordsMerkleTree(merkleTreeHeight) RootStore(nRoots) {
+        address verifierAddr,
+        address recordsMerkleTreeAddr
+    ) RootStore(nRoots) {
         _verifier = IPlonkVerifier(verifierAddr);
+        _recordsMerkleTree = IRecordsMerkleTree(recordsMerkleTreeAddr);
 
         // NOTE: used for faucet in testnet only, will be removed for mainnet
         deployer = msg.sender;
@@ -183,8 +199,8 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
         recordCommitments[0] = _deriveRecordCommitment(ro);
 
         // insert the record into record accumulator
-        _updateRecordsMerkleTree(recordCommitments);
-        _addRoot(_rootValue);
+        _recordsMerkleTree.updateRecordsMerkleTree(recordCommitments);
+        _addRoot(_recordsMerkleTree.getRootValue());
 
         emit FaucetInitialized(abi.encode(ro));
         faucetInitialized = true;
@@ -349,18 +365,32 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
 
         // Only update the merkle tree and add the root if the list of records commitments is non empty
         if (!commitments.isEmpty()) {
-            _updateRecordsMerkleTree(commitments.items);
-            _addRoot(_rootValue);
+            _recordsMerkleTree.updateRecordsMerkleTree(commitments.items);
+            _addRoot(_recordsMerkleTree.getRootValue());
         }
 
         // In all cases (the block is empty or not), the height is incremented.
         blockHeight += 1;
 
         // Inform clients about the new block and the processed deposits.
-        emit BlockCommitted(blockHeight, pendingDeposits);
+        _emitBlockEvent(newBlock);
 
         // Empty the queue now that the record commitments have been inserted
         delete pendingDeposits;
+    }
+
+    /// @notice This function only exists to avoid a stack too deep compilation error.
+    function _emitBlockEvent(CapeBlock memory newBlock) internal {
+        emit BlockCommitted(
+            blockHeight,
+            pendingDeposits,
+            abi.encode(newBlock.minerAddr),
+            abi.encode(newBlock.noteTypes),
+            abi.encode(newBlock.transferNotes),
+            abi.encode(newBlock.mintNotes),
+            abi.encode(newBlock.freezeNotes),
+            abi.encode(newBlock.burnNotes)
+        );
     }
 
     /// @dev send the ERC-20 tokens equivalent to the asset records being burnt. Recall that the burned record opening is contained inside the note.
@@ -494,7 +524,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
                 uint8(NoteType.TRANSFER),
                 uint8(note.inputNullifiers.length),
                 uint8(note.outputCommitments.length),
-                uint8(_merkleTreeHeight)
+                uint8(_recordsMerkleTree.getHeight())
             )
         );
         // prepare public inputs
@@ -575,7 +605,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
                 uint8(NoteType.MINT),
                 1, // num of input
                 2, // num of output
-                uint8(_merkleTreeHeight)
+                uint8(_recordsMerkleTree.getHeight())
             )
         );
 
@@ -636,7 +666,7 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
                 uint8(NoteType.FREEZE),
                 uint8(note.inputNullifiers.length),
                 uint8(note.outputCommitments.length),
-                uint8(_merkleTreeHeight)
+                uint8(_recordsMerkleTree.getHeight())
             )
         );
 
@@ -664,5 +694,9 @@ contract CAPE is RecordsMerkleTree, RootStore, AssetRegistry, ReentrancyGuard {
 
         // prepare transcript init messages
         transcriptInitMsg = EdOnBN254.serialize(note.auxInfo.txnMemoVerKey);
+    }
+
+    function getRootValue() public view returns (uint256) {
+        return _recordsMerkleTree.getRootValue();
     }
 }

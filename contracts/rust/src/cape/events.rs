@@ -5,11 +5,27 @@
 // This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+use crate::{cape::CapeBlock, types::BlockCommittedFilter};
+use ethers::{abi::AbiDecode, prelude::AbiError};
+
+pub fn decode_cape_block_from_event(block: BlockCommittedFilter) -> Result<CapeBlock, AbiError> {
+    Ok(crate::types::CapeBlock {
+        miner_addr: AbiDecode::decode(block.miner_addr)?,
+        note_types: AbiDecode::decode(block.note_types)?,
+        transfer_notes: AbiDecode::decode(block.transfer_notes)?,
+        mint_notes: AbiDecode::decode(block.mint_notes)?,
+        freeze_notes: AbiDecode::decode(block.freeze_notes)?,
+        burn_notes: AbiDecode::decode(block.burn_notes)?,
+    }
+    .into())
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{
         cape::{
-            submit_block::{fetch_cape_block, submit_cape_block_with_memos},
+            events::decode_cape_block_from_event,
+            submit_block::{fetch_cape_memos, submit_cape_block_with_memos},
             BlockWithMemos, CapeBlock,
         },
         ethereum::EthConnection,
@@ -32,11 +48,11 @@ mod tests {
     use std::iter::repeat_with;
 
     #[tokio::test]
-    async fn test_fetch_cape_block_from_event() -> Result<()> {
+    async fn test_fetch_cape_memos_from_event() -> Result<()> {
         let connection = EthConnection::for_test().await;
 
         let mut rng = ChaChaRng::from_seed([0x42u8; 32]);
-        let params = TxnsParams::generate_txns(&mut rng, 1, 0, 0, CapeLedger::merkle_height());
+        let params = TxnsParams::generate_txns(&mut rng, 1, 1, 1, CapeLedger::merkle_height());
         let miner = UserPubKey::default();
 
         let root = params.txns[0].merkle_root();
@@ -98,13 +114,15 @@ mod tests {
             .query_with_meta()
             .await?;
 
-        let (_, meta) = events[0].clone();
+        let (data, meta) = events[0].clone();
 
-        let fetched_block_with_memos = fetch_cape_block(&query_connection, meta.transaction_hash)
+        let fetched_memos = fetch_cape_memos(&query_connection, meta.transaction_hash)
             .await?
             .unwrap();
+        assert_eq!(fetched_memos, memos_with_sigs);
 
-        assert_eq!(fetched_block_with_memos, block_with_memos);
+        let event_cape_block = decode_cape_block_from_event(data)?;
+        assert_eq!(cape_block, event_cape_block);
 
         Ok(())
     }

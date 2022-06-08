@@ -31,6 +31,7 @@ use std::sync::Arc;
 // can be changed later.
 pub const CAPE_MERKLE_HEIGHT: u8 = 24 /*H*/;
 pub const CAPE_BURN_MAGIC_BYTES: &str = "EsSCAPE burn";
+pub const CAPE_NUM_ROOTS: u64 = 40;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum CapeModelTxn {

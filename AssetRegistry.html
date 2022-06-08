@@ -176,7 +176,7 @@ given asset definition.</p>
 <pre><code class="language-solidity">  function sponsorCapeAsset(
     address erc20Address,
     struct AssetRegistry.AssetDefinition newAsset
-  ) public
+  ) external
 </code></pre>
 <p>Create and register a new asset type associated with an
 ERC-20 token. Will revert if the asset type is already

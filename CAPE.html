@@ -152,7 +152,7 @@
 <pre><code class="language-solidity">  function faucetSetupForTestnet(
     struct EdOnBN254.EdOnBN254Point faucetManagerAddress,
     bytes32 faucetManagerEncKey
-  ) public
+  ) external
 </code></pre>
 <p>Allocate native token faucet to a manager. For testnet only.</p>
 <h3 id="parameters-1"><a class="header" href="#parameters-1">Parameters</a></h3>
@@ -190,7 +190,7 @@ A block creator must not submit notes with duplicate nullifiers.</p>
 <pre><code class="language-solidity">  function depositErc20(
     struct CAPE.RecordOpening ro,
     address erc20Address
-  ) public
+  ) external
 </code></pre>
 <p>Wraps ERC-20 tokens into a CAPE asset defined in the record opening.</p>
 <h3 id="parameters-4"><a class="header" href="#parameters-4">Parameters</a></h3>
@@ -203,13 +203,13 @@ A block creator must not submit notes with duplicate nullifiers.</p>
 <pre><code class="language-solidity">  function submitCapeBlockWithMemos(
     struct CAPE.CapeBlock newBlock,
     bytes extraData
-  ) public
+  ) external
 </code></pre>
 <p>Submit a new block with extra data to the CAPE contract.</p>
 <h3 id="parameters-5"><a class="header" href="#parameters-5">Parameters</a></h3>
 <table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>newBlock</code></td><td style="text-align: left">struct CAPE.CapeBlock</td><td style="text-align: left">block to be processed by the CAPE contract</td></tr>
-<tr><td style="text-align: left"><code>extraData</code></td><td style="text-align: left">bytes</td><td style="text-align: left">extra data to be stored in calldata; this data is ignored by the contract function</td></tr>
+<tr><td style="text-align: left"><code>extraData</code></td><td style="text-align: left">bytes</td><td style="text-align: left">data to be stored in calldata; this data is ignored by the contract function</td></tr>
 </tbody></table>
 <hr />
 <h2 id="submitcapeblock"><a class="header" href="#submitcapeblock">submitCapeBlock</a></h2>
@@ -359,7 +359,7 @@ A block creator must not submit notes with duplicate nullifiers.</p>
 <hr />
 <h2 id="getrootvalue"><a class="header" href="#getrootvalue">getRootValue</a></h2>
 <pre><code class="language-solidity">  function getRootValue(
-  ) public returns (uint256)
+  ) external returns (uint256)
 </code></pre>
 <hr />
 <h1 id="events"><a class="header" href="#events">Events</a></h1>

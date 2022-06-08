@@ -172,13 +172,6 @@
               pass_filenames = false;
               types = [ "solidity" ];
             };
-            slither = {
-              enable = true;
-              description = "Solidity static analysis";
-              entry = "slither ./contracts";
-              pass_filenames = false;
-              types = [ "solidity" ];
-            };
           };
         };
       };

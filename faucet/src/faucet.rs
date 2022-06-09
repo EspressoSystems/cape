@@ -542,26 +542,20 @@ pub async fn init_web_server(
     } else {
         None
     };
-    if let Some(key) = new_key {
-        // Wait until we have scanned the ledger for records belonging to this key.
-        wallet.await_key_scan(&key.address()).await.unwrap();
-    }
 
-    let bal = wallet.balance(&AssetCode::native()).await;
-    tracing::info!("Wallet balance before init: {}", bal);
-    // We use the total number of records to maintain as a conservative upper bound on how backed up
-    // the message channel can get.
+    // Start the app before we wait for the key scan to complete. If we have to restart the faucet
+    // service from scratch (for example, if the wallet storage format changes and we need to
+    // recreate our files from a mnemonic) the key scan could take a very long time. We want the
+    // healthcheck endpoint to be available and returning "initializing" during that time, so the
+    // load balancer doesn't kill the service before it has a chance to start up. Other endpoints
+    // will fail while the app is initializing. Once initialization is complete, the healthcheck
+    // state will change to "available" and the other endpoints will start to work.
+    //
+    // The app state includes a bounded channel used to signal the record breaking thread when we
+    // need it to break large records into smaller ones. We use the total number of records to
+    // maintain as a conservative upper bound on how backed up the message channel can get.
     let signal_breaker_thread = mpsc::channel(opt.num_records);
     let state = FaucetState::new(wallet, signal_breaker_thread.0, opt);
-
-    // Spawn a thread to break records into smaller records to maintain `opt.num_records` at a time.
-    spawn(break_up_records(state.clone(), signal_breaker_thread.1));
-
-    // Start the app before we wait for our records to be broken up into smaller records. This can
-    // take a long time, and we want the healthcheck endpoint to be available and returning
-    // "initializing" until then. Other endpoints will fail while the app is initializing. Once the
-    // record initialization is complete, the healthcheck state will change to "available" and the
-    // other endpoints will start to work.
     let mut app = tide::with_state(state.clone());
     app.at("/healthcheck").get(healthcheck);
     app.with(
@@ -573,6 +567,28 @@ pub async fn init_web_server(
     app.at("/request_fee_assets").post(request_fee_assets);
     let address = format!("0.0.0.0:{}", opt.faucet_port);
     let handle = spawn(app.listen(address));
+
+    if let Some(key) = new_key {
+        // Wait until we have scanned the ledger for records belonging to this key.
+        state
+            .wallet
+            .lock()
+            .await
+            .await_key_scan(&key.address())
+            .await
+            .unwrap();
+    }
+
+    let bal = state
+        .wallet
+        .lock()
+        .await
+        .balance(&AssetCode::native())
+        .await;
+    tracing::info!("Wallet balance before init: {}", bal);
+
+    // Spawn a thread to break records into smaller records to maintain `opt.num_records` at a time.
+    spawn(break_up_records(state.clone(), signal_breaker_thread.1));
 
     // Wait for the thread to create at least `opt.num_records` if possible, before starting to
     // handle requests.

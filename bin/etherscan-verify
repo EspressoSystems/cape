@@ -26,11 +26,23 @@ set -euo pipefail
 
 NETWORK=$1
 
-VERIFYING_KEYS_ADDRESS=$(cat contracts/deployments/$1/VerifyingKeys.json | jq -r .address)
-RESCUE_LIB_ADDRESS=$(cat contracts/deployments/$1/RescueLib.json | jq -r .address)
+function get_addr() {
+    cat contracts/deployments/$NETWORK/$1.json | jq -r .address
+}
 
-CAPE_ADDRESS=$(cat contracts/deployments/$1/CAPE.json | jq -r .address)
-CONSTRUCTOR_ARGS="$(cat contracts/deployments/$1/CAPE.json | jq -r '.args| join(" ")')"
+function get_args() {
+    cat contracts/deployments/$NETWORK/$1.json | jq -r '.args| join(" ")'
+}
+
+VERIFYING_KEYS_ADDRESS=$(get_addr VerifyingKeys)
+RESCUE_LIB_ADDRESS=$(get_addr RescueLib)
+VERIFIER_ADDRESS=$(get_addr PlonkVerifier)
+
+RECORS_MERKLE_TREE_ADDRESS=$(get_addr RecordsMerkleTree)
+RECORS_MERKLE_TREE_ARGS=$(get_args RecordsMerkleTree)
+
+CAPE_ADDRESS=$(get_addr CAPE)
+CAPE_CONSTRUCTOR_ARGS=$(get_args CAPE)
 
 # Has to be a file with .js extension.
 LIBRARIES="$(mktemp -t "cape-libraries-XXXXXXXX.js")"
@@ -53,6 +65,8 @@ function ensure_verified() {
     elif echo "$output" | grep -q "Contract source code already verified"; then
         echo "Contract already verified."
     else
+        echo "$output"
+        echo
         echo "Something went wrong when running \"$@\."
         echo "Aborting."
         exit 1
@@ -65,8 +79,14 @@ ensure_verified hardhat verify --network $NETWORK $RESCUE_LIB_ADDRESS
 echo Verifying VerifyingKeys
 ensure_verified hardhat verify --network $NETWORK $VERIFYING_KEYS_ADDRESS
 
+echo Verifying PlonkVerifier
+ensure_verified hardhat verify --network $NETWORK $VERIFIER_ADDRESS
+
+echo Verifying RecordsMerkleTree
+ensure_verified hardhat verify --network $NETWORK $RECORS_MERKLE_TREE_ADDRESS $RECORS_MERKLE_TREE_ARGS
+
 echo Verifying CAPE
-ensure_verified hardhat verify --network $NETWORK --libraries $LIBRARIES $CAPE_ADDRESS $CONSTRUCTOR_ARGS
+ensure_verified hardhat verify --network $NETWORK --libraries $LIBRARIES $CAPE_ADDRESS $CAPE_CONSTRUCTOR_ARGS
 
 set -e
 

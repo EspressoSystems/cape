@@ -33,6 +33,7 @@ pub enum ApiRouteKey {
     get_transaction_by_hash,
     healthcheck,
     get_wrapped_erc20_address,
+    get_cape_contract_address,
 }
 
 /// Verify that every variant of enum ApiRouteKey is defined in api.toml
@@ -205,6 +206,18 @@ pub async fn healthcheck() -> Result<tide::Response, tide::Error> {
         .build())
 }
 
+/// Return the Ethereum address of the CAPE contract the EQS is connected to.
+pub async fn get_cape_contract_address(
+    query_result_state: &QueryResultState,
+) -> Result<Address, tide::Error> {
+    query_result_state.contract_address.ok_or_else(|| {
+        tide::Error::from_str(
+            tide::StatusCode::InternalServerError,
+            "EQS not connected to CAPE contract",
+        )
+    })
+}
+
 pub async fn dispatch_url(
     req: tide::Request<WebState>,
     route_pattern: &str,
@@ -234,5 +247,8 @@ pub async fn dispatch_url(
             &req,
             get_wrapped_erc20_address(bindings, query_state).await?,
         ),
+        ApiRouteKey::get_cape_contract_address => {
+            response(&req, get_cape_contract_address(query_state).await?)
+        }
     }
 }

@@ -73,3 +73,7 @@ DOC = "Responds with JSON {\"status\": \"available\"}."
 PATH = [ "get_wrapped_erc20_address/:asset" ]
 ":asset" = "TaggedBase64"
 DOC = "Returns contract address for wrapped asset, or None for domestic asset."
+
+[route.get_cape_contract_address]
+PATH = [ "get_cape_contract_address" ]
+DOC = "Returns the Ethereum address of the CAPE contract the EQS is connected to."

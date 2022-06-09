@@ -12,11 +12,12 @@ extern crate cape_wallet;
 
 use async_std::{
     sync::{Arc, Mutex, RwLock},
-    task::{spawn, JoinHandle},
+    task::{sleep, spawn, JoinHandle},
 };
 use cap_rust_sandbox::universal_param::UNIVERSAL_PARAM;
 use cape_wallet::{
     backend::{CapeBackend, CapeBackendConfig},
+    loader::CapeLoader,
     wallet::{CapeWallet, CapeWalletError},
 };
 use futures::{channel::mpsc, SinkExt, StreamExt};
@@ -30,7 +31,6 @@ use rand::distributions::{Alphanumeric, DistString};
 use reef::traits::Validator;
 use seahorse::{
     events::EventIndex,
-    loader::{Loader, LoaderMetadata},
     txn_builder::{RecordInfo, TransactionStatus},
     RecordAmount,
 };
@@ -133,7 +133,7 @@ pub enum FaucetStatus {
 
 #[derive(Clone)]
 struct FaucetState {
-    wallet: Arc<Mutex<CapeWallet<'static, CapeBackend<'static, LoaderMetadata>>>>,
+    wallet: Arc<Mutex<CapeWallet<'static, CapeBackend<'static>>>>,
     status: Arc<RwLock<FaucetStatus>>,
     grant_size: RecordAmount,
     num_grants: usize,
@@ -150,7 +150,7 @@ struct FaucetState {
 
 impl FaucetState {
     pub fn new(
-        wallet: CapeWallet<'static, CapeBackend<'static, LoaderMetadata>>,
+        wallet: CapeWallet<'static, CapeBackend<'static>>,
         signal_breaker_thread: mpsc::Sender<()>,
         opt: &FaucetOptions,
     ) -> Self {
@@ -309,7 +309,7 @@ async fn request_fee_assets(
 }
 
 async fn spendable_records(
-    wallet: &CapeWallet<'static, CapeBackend<'static, LoaderMetadata>>,
+    wallet: &CapeWallet<'static, CapeBackend<'static>>,
     grant_size: RecordAmount,
 ) -> impl Iterator<Item = RecordInfo> {
     let now = wallet.lock().await.state().txn_state.validator.now();
@@ -468,6 +468,22 @@ async fn wait_for_records(state: &FaucetState) -> usize {
     }
 }
 
+async fn wait_for_eqs(opt: &FaucetOptions) -> Result<(), CapeWalletError> {
+    let mut backoff = Duration::from_millis(500);
+    for _ in 0..8 {
+        if surf::connect(&opt.eqs_url).send().await.is_ok() {
+            return Ok(());
+        }
+        tracing::warn!("unable to connect to EQS; sleeping for {:?}", backoff);
+        sleep(backoff).await;
+        backoff *= 2;
+    }
+
+    let msg = format!("failed to connect to EQS after {:?}", backoff);
+    tracing::error!("{}", msg);
+    Err(CapeWalletError::Failed { msg })
+}
+
 /// `faucet_key_pair` - If provided, will be added to the faucet wallet.
 pub async fn init_web_server(
     opt: &FaucetOptions,
@@ -477,10 +493,14 @@ pub async fn init_web_server(
     if password.is_empty() {
         password = Alphanumeric.sample_string(&mut rand::thread_rng(), 16);
     }
-    let mut loader = Loader::recovery(
+    wait_for_eqs(opt).await.unwrap();
+    let mut loader = CapeLoader::recovery(
         opt.mnemonic.clone().replace('-', " "),
         password,
         opt.faucet_wallet_path.clone(),
+        CapeLoader::latest_contract(opt.eqs_url.clone())
+            .await
+            .unwrap(),
     );
     let backend = CapeBackend::new(
         &*UNIVERSAL_PARAM,
@@ -488,7 +508,7 @@ pub async fn init_web_server(
             // We're not going to do any direct-to-contract operations that would require a
             // connection to the CAPE contract or an ETH wallet. Everything we do will go through
             // the relayer.
-            cape_contract: None,
+            web3_provider: None,
             eth_mnemonic: None,
             eqs_url: opt.eqs_url.clone(),
             relayer_url: opt.relayer_url.clone(),
@@ -644,15 +664,16 @@ mod test {
 
         // Create a receiver wallet.
         let receiver_dir = TempDir::new("cape_wallet_receiver").unwrap();
-        let mut receiver_loader = Loader::from_literal(
+        let mut receiver_loader = CapeLoader::from_literal(
             Some(KeyTree::random(&mut rng).1.to_string().replace('-', " ")),
             Alphanumeric.sample_string(&mut rand::thread_rng(), 16),
             PathBuf::from(receiver_dir.path()),
+            contract_address.into(),
         );
         let receiver_backend = CapeBackend::new(
             universal_param,
             CapeBackendConfig {
-                cape_contract: Some((rpc_url_for_test(), contract_address)),
+                web3_provider: Some(rpc_url_for_test()),
                 eqs_url,
                 relayer_url,
                 address_book_url,

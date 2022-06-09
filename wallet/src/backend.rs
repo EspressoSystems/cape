@@ -8,7 +8,7 @@
 //! An implementation of [seahorse::WalletBackend] for CAPE.
 #![deny(warnings)]
 
-use crate::{CapeWalletBackend, CapeWalletError};
+use crate::{loader::CapeMetadata, CapeWalletBackend, CapeWalletError};
 use address_book::InsertPubKey;
 use async_std::{
     sync::{Arc, Mutex, MutexGuard},
@@ -22,7 +22,7 @@ use cap_rust_sandbox::{
     types::{GenericInto, CAPE, ERC20},
     universal_param::{SUPPORTED_FREEZE_SIZES, SUPPORTED_TRANSFER_SIZES},
 };
-use eqs::routes::CapState;
+use eqs::{errors::EQSNetError, routes::CapState};
 use ethers::{
     core::k256::ecdsa::SigningKey,
     prelude::{
@@ -52,7 +52,7 @@ use seahorse::{
     txn_builder::{RecordDatabase, TransactionInfo, TransactionState},
     WalletBackend, WalletState,
 };
-use serde::{de::DeserializeOwned, Serialize};
+use serde::de::DeserializeOwned;
 use std::cmp::min;
 use std::convert::{TryFrom, TryInto};
 use std::pin::Pin;
@@ -63,8 +63,8 @@ pub struct CapeBackendConfig {
     pub eqs_url: Url,
     pub relayer_url: Url,
     pub address_book_url: Url,
-    /// JSON-RPC endpoint and address of the CAPE contract.
-    pub cape_contract: Option<(Url, Address)>,
+    /// JSON-RPC endpoint
+    pub web3_provider: Option<Url>,
     pub eth_mnemonic: Option<String>,
     pub min_polling_delay: Duration,
 }
@@ -117,28 +117,28 @@ impl EthRpc {
     }
 }
 
-pub struct CapeBackend<'a, Meta: Serialize + DeserializeOwned> {
+pub struct CapeBackend<'a> {
     universal_param: &'a UniversalParam,
     eqs: surf::Client,
     relayer: surf::Client,
     address_book: surf::Client,
-    storage: Arc<Mutex<AtomicWalletStorage<'a, CapeLedger, Meta>>>,
+    storage: Arc<Mutex<AtomicWalletStorage<'a, CapeLedger, CapeMetadata>>>,
     key_stream: hd::KeyTree,
     min_polling_delay: Duration,
     eth: Option<EthRpc>,
 }
 
-impl<'a, Meta: Serialize + DeserializeOwned + Send + Clone + PartialEq> CapeBackend<'a, Meta> {
+impl<'a> CapeBackend<'a> {
     pub async fn new(
         universal_param: &'a UniversalParam,
         config: CapeBackendConfig,
-        loader: &mut impl WalletLoader<CapeLedger, Meta = Meta>,
-    ) -> Result<CapeBackend<'a, Meta>, CapeWalletError> {
+        loader: &mut impl WalletLoader<CapeLedger, Meta = CapeMetadata>,
+    ) -> Result<CapeBackend<'a>, CapeWalletError> {
         let eqs: surf::Client = surf::Config::default()
             .set_base_url(config.eqs_url)
             .try_into()
             .expect("Failed to configure EQS client");
-        let eqs = eqs.with(parse_error_body::<relayer::Error>);
+        let eqs = eqs.with(parse_error_body::<EQSNetError>);
         let relayer: surf::Client = surf::Config::default()
             .set_base_url(config.relayer_url)
             .try_into()
@@ -152,8 +152,15 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send + Clone + PartialEq> CapeBack
         let storage = AtomicWalletStorage::new(loader, 1024)?;
         let key_stream = storage.key_stream();
 
-        let eth = match config.cape_contract {
-            Some((url, address)) => Some(EthRpc::new(url, address, config.eth_mnemonic).await?),
+        let eth = match config.web3_provider {
+            Some(url) => Some(
+                EthRpc::new(
+                    url,
+                    storage.meta().contract.clone().into(),
+                    config.eth_mnemonic,
+                )
+                .await?,
+            ),
             None => None,
         };
 
@@ -170,7 +177,7 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send + Clone + PartialEq> CapeBack
     }
 }
 
-impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeBackend<'a, Meta> {
+impl<'a> CapeBackend<'a> {
     async fn get_eqs<T: DeserializeOwned>(
         &self,
         route: impl AsRef<str>,
@@ -221,10 +228,8 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeBackend<'a, Meta> {
 }
 
 #[async_trait]
-impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger>
-    for CapeBackend<'a, Meta>
-{
-    type Storage = AtomicWalletStorage<'a, CapeLedger, Meta>;
+impl<'a> WalletBackend<'a, CapeLedger> for CapeBackend<'a> {
+    type Storage = AtomicWalletStorage<'a, CapeLedger, CapeMetadata>;
     type EventStream = Pin<Box<dyn Stream<Item = (LedgerEvent<CapeLedger>, EventSource)> + Send>>;
 
     async fn storage<'l>(&'l mut self) -> MutexGuard<'l, Self::Storage> {
@@ -483,9 +488,7 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
 }
 
 #[async_trait]
-impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
-    for CapeBackend<'a, Meta>
-{
+impl<'a> CapeWalletBackend<'a> for CapeBackend<'a> {
     async fn register_erc20_asset(
         &mut self,
         asset: &AssetDefinition,
@@ -679,20 +682,20 @@ fn gen_proving_keys(srs: &UniversalParam) -> ProverKeySet<key_set::OrderByOutput
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{mocks::MockCapeWalletLoader, CapeWallet, CapeWalletExt};
     use crate::{
+        loader::CapeLoader,
         testing::{
             create_test_network, retry, rpc_url_for_test, spawn_eqs, sponsor_simple_token,
             transfer_token, wrap_simple_token,
         },
         ui::AssetInfo,
     };
+    use crate::{CapeWallet, CapeWalletExt};
     use cap_rust_sandbox::{deploy::deploy_erc20_token, universal_param::UNIVERSAL_PARAM};
     use ethers::types::{TransactionRequest, U256};
     use jf_cap::structs::AssetCode;
     use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
     use seahorse::testing::await_transaction;
-    use std::path::PathBuf;
     use std::str::FromStr;
     use std::time::Duration;
     use tempdir::TempDir;
@@ -707,14 +710,16 @@ mod test {
 
         // Create a sender wallet and add the key pair that owns the faucet record.
         let sender_dir = TempDir::new("cape_wallet_backend_test").unwrap();
-        let mut sender_loader = MockCapeWalletLoader {
-            path: PathBuf::from(sender_dir.path()),
-            key: hd::KeyTree::random(&mut rng).0,
-        };
+        let mut sender_loader = CapeLoader::from_literal(
+            Some(hd::KeyTree::random(&mut rng).1.into_phrase()),
+            "password".into(),
+            sender_dir.path().to_owned(),
+            contract_address.into(),
+        );
         let sender_backend = CapeBackend::new(
             universal_param,
             CapeBackendConfig {
-                cape_contract: None,
+                web3_provider: None,
                 eqs_url: eqs_url.clone(),
                 relayer_url: relayer_url.clone(),
                 address_book_url: address_book_url.clone(),
@@ -746,14 +751,16 @@ mod test {
 
         // Create an empty receiver wallet, and generating a receiving key.
         let receiver_dir = TempDir::new("cape_wallet_backend_test").unwrap();
-        let mut receiver_loader = MockCapeWalletLoader {
-            path: PathBuf::from(receiver_dir.path()),
-            key: hd::KeyTree::random(&mut rng).0,
-        };
+        let mut receiver_loader = CapeLoader::from_literal(
+            Some(hd::KeyTree::random(&mut rng).1.into_phrase()),
+            "password".into(),
+            receiver_dir.path().to_owned(),
+            contract_address.into(),
+        );
         let receiver_backend = CapeBackend::new(
             universal_param,
             CapeBackendConfig {
-                cape_contract: None,
+                web3_provider: None,
                 eqs_url: eqs_url.clone(),
                 relayer_url: relayer_url.clone(),
                 address_book_url: address_book_url.clone(),
@@ -832,14 +839,16 @@ mod test {
         // Create a wallet to sponsor an asset and a different wallet to deposit (we should be able
         // to deposit from an account other than the sponsor).
         let sponsor_dir = TempDir::new("cape_wallet_backend_test").unwrap();
-        let mut sponsor_loader = MockCapeWalletLoader {
-            path: PathBuf::from(sponsor_dir.path()),
-            key: hd::KeyTree::random(&mut rng).0,
-        };
+        let mut sponsor_loader = CapeLoader::from_literal(
+            Some(hd::KeyTree::random(&mut rng).1.into_phrase()),
+            "password".into(),
+            sponsor_dir.path().to_owned(),
+            contract_address.into(),
+        );
         let sponsor_backend = CapeBackend::new(
             universal_param,
             CapeBackendConfig {
-                cape_contract: Some((rpc_url_for_test(), contract_address)),
+                web3_provider: Some(rpc_url_for_test()),
                 eqs_url: eqs_url.clone(),
                 relayer_url: relayer_url.clone(),
                 address_book_url: address_book_url.clone(),
@@ -858,14 +867,16 @@ mod test {
         let sponsor_eth_addr = sponsor.eth_address().await.unwrap();
 
         let wrapper_dir = TempDir::new("cape_wallet_backend_test").unwrap();
-        let mut wrapper_loader = MockCapeWalletLoader {
-            path: PathBuf::from(wrapper_dir.path()),
-            key: hd::KeyTree::random(&mut rng).0,
-        };
+        let mut wrapper_loader = CapeLoader::from_literal(
+            Some(hd::KeyTree::random(&mut rng).1.into_phrase()),
+            "password".into(),
+            wrapper_dir.path().to_owned(),
+            contract_address.into(),
+        );
         let wrapper_backend = CapeBackend::new(
             universal_param,
             CapeBackendConfig {
-                cape_contract: Some((rpc_url_for_test(), contract_address)),
+                web3_provider: Some(rpc_url_for_test()),
                 eqs_url: eqs_url.clone(),
                 relayer_url: relayer_url.clone(),
                 address_book_url: address_book_url.clone(),

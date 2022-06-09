@@ -14,7 +14,7 @@ use cape_wallet::{
 use ethers::{prelude::Address, providers::Middleware};
 use jf_cap::{
     keys::{AuditorPubKey, FreezerPubKey, UserPubKey},
-    structs::{AssetCode, AssetPolicy},
+    structs::{AssetCode, AssetDefinition, AssetPolicy},
     KeyPair, VerKey,
 };
 use rand::distributions::{Alphanumeric, DistString};
@@ -55,8 +55,8 @@ impl AssetLibrarySpec {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 struct Asset {
     symbol: String,
-    description: String,
-    icon: PathBuf,
+    description: Option<String>,
+    icon: Option<PathBuf>,
     viewing_key: Option<AuditorPubKey>,
     freezing_key: Option<FreezerPubKey>,
     #[serde(flatten)]
@@ -64,15 +64,21 @@ struct Asset {
 }
 
 impl Asset {
-    fn load_icon(&self, icon_dir: &Path) -> io::Result<Icon> {
-        let icon_path = [icon_dir, &self.icon].iter().collect::<PathBuf>();
-        let icon_file = File::open(&icon_path)?;
-        Icon::load_png(BufReader::new(icon_file)).map_err(|err| {
-            io::Error::new(
-                ErrorKind::Other,
-                format!("failed to load icon {}: {}", icon_path.display(), err),
-            )
-        })
+    fn load_icon(&self, icon_dir: &Path) -> io::Result<Option<Icon>> {
+        if let Some(icon) = &self.icon {
+            let icon_path = [icon_dir, icon].iter().collect::<PathBuf>();
+            let icon_file = File::open(&icon_path)?;
+            Icon::load_png(BufReader::new(icon_file))
+                .map_err(|err| {
+                    io::Error::new(
+                        ErrorKind::Other,
+                        format!("failed to load icon {}: {}", icon_path.display(), err),
+                    )
+                })
+                .map(Some)
+        } else {
+            Ok(None)
+        }
     }
 
     async fn create<'a>(
@@ -177,13 +183,20 @@ impl Asset {
                     )
                     .await?
             }
+            AssetKind::Native => {
+                info!("adding native asset to library");
+                AssetDefinition::native()
+            }
         };
 
         // Update asset metadata.
-        let info = AssetInfo::from(asset)
-            .with_name(self.symbol)
-            .with_description(self.description)
-            .with_icon(icon);
+        let mut info = AssetInfo::from(asset).with_name(self.symbol);
+        if let Some(description) = self.description {
+            info = info.with_description(description);
+        }
+        if let Some(icon) = icon {
+            info = info.with_icon(icon);
+        }
         wallet.import_asset(info.clone()).await?;
 
         Ok(info)
@@ -196,6 +209,7 @@ impl Asset {
 enum AssetKind {
     Domestic { amount: u64 },
     Wrapped { contract: Address },
+    Native,
 }
 
 fn write_library(
@@ -229,7 +243,7 @@ fn write_library(
 ///     symbol = 'string'
 ///     description = 'string'
 ///     icon = 'path'
-///     type = 'wrapped|domestic'
+///     type = 'wrapped|domestic|native'
 /// `icon` is a path to an image to use as the icon for this asset. It is interpreted relative to
 /// the directory containing the TOML file. If `type` is `wrapped`, the specification must also
 /// include the key:
@@ -547,10 +561,14 @@ impl UpdateCommand {
 
                 // Update the off-chain metadata according to the spec.
                 let icon = spec.load_icon(self.assets.parent().unwrap())?;
-                Ok(asset
-                    .with_name(spec.symbol)
-                    .with_description(spec.description)
-                    .with_icon(icon))
+                let mut asset = asset.with_name(spec.symbol);
+                if let Some(description) = spec.description {
+                    asset = asset.with_description(description);
+                }
+                if let Some(icon) = icon {
+                    asset = asset.with_icon(icon);
+                }
+                Ok(asset)
             })
             .collect::<Result<Vec<AssetInfo>, io::Error>>()?;
 

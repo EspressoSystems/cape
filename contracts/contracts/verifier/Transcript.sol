@@ -9,7 +9,7 @@
 //
 // There is currently a bug in solidity that may affect the security of the contract.
 // An patch is available for Jellyfish https://github.com/EspressoSystems/jellyfish/pull/70
-// Correponding changes are to be made to the solidity code here.
+// Corresponding changes are to be made to the solidity code here.
 
 pragma solidity ^0.8.0;
 

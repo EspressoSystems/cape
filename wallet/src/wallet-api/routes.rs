@@ -590,6 +590,11 @@ async fn getinfo(wallet: &mut Option<Wallet>) -> Result<WalletSummary, tide::Err
         assets: known_assets(wallet).await.into_values().collect(),
         sync_time: sync_time.index(EventSource::QueryService),
         real_time: real_time.index(EventSource::QueryService),
+        wallet_contract: format!("{:#x}", Address::from(wallet.contract_address().await?)),
+        latest_contract: format!(
+            "{:#x}",
+            Address::from(wallet.latest_contract_address().await?)
+        ),
     })
 }
 

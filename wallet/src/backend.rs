@@ -651,6 +651,15 @@ impl<'a> CapeWalletBackend<'a> for CapeBackend<'a> {
     async fn wait_for_eqs(&self) -> Result<(), CapeWalletError> {
         self.wait_for_eqs().await
     }
+
+    async fn contract_address(&self) -> Result<Erc20Code, CapeWalletError> {
+        Ok(self.storage.lock().await.meta().contract.clone())
+    }
+
+    async fn latest_contract_address(&self) -> Result<Erc20Code, CapeWalletError> {
+        let address: Address = self.get_eqs("get_cape_contract_address").await?;
+        Ok(address.into())
+    }
 }
 
 fn gen_proving_keys(srs: &UniversalParam) -> ProverKeySet<key_set::OrderByOutputs> {

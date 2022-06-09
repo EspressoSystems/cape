@@ -416,6 +416,10 @@ pub struct WalletSummary {
     pub sync_time: usize,
     /// The real-world time (as an event index) according to the EQS.
     pub real_time: usize,
+    /// The contract for which this wallet was created.
+    pub wallet_contract: String,
+    /// The latest contract, in use by the EQS.
+    pub latest_contract: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]

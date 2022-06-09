@@ -744,6 +744,16 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> CapeWalletBackend<'a>
         // No need to wait for the mock EQS.
         Ok(())
     }
+
+    async fn contract_address(&self) -> Result<Erc20Code, CapeWalletError> {
+        // We're mocking a deployment of the CAPE contract, so the address can be anything we want.
+        Ok(Erc20Code::default())
+    }
+
+    async fn latest_contract_address(&self) -> Result<Erc20Code, CapeWalletError> {
+        // This just has to match `contract_address`, so that the contract appears up to date.
+        Ok(Erc20Code::default())
+    }
 }
 
 fn cape_to_wallet_err(err: CapeValidationError) -> WalletError<CapeLedger> {

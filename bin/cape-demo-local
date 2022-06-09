@@ -121,6 +121,11 @@ wait-port $CAPE_ADDRESS_BOOK_PORT
 wait-port $CAPE_EQS_PORT
 wait-port $CAPE_RELAYER_PORT
 wait-port $CAPE_FAUCET_PORT
+# Wait for the faucet to become available.
+while [ "$(curl -s "$CAPE_FAUCET_URL/healthcheck")" != '{"status":"available"}' ]; do
+    echo "Waiting for faucet to become available, sleeping for 5 seconds"
+    sleep 5
+done
 
 # Deploy the official asset library.
 mkdir -p "$CAPE_WALLET_STORAGE_ALICE"

@@ -8,30 +8,18 @@
 # The official asset library for CAPE v1 on Goerli
 
 [[assets]]
-symbol = 'CAPEDAO'
-description = 'Private CAPE DAO token'
-icon = 'icons/CAPEDAO.png'
-type = 'domestic'
-amount = 1000000
+symbol = 'CAPE'
+type = 'native'
 
 [[assets]]
-symbol = 'WGMI'
-description = 'WGMI DAO token'
-icon = 'icons/WGMI.png'
-type = 'domestic'
-amount = 1000000
-# The viewing key represents a hypothetical DAO admin.
-viewing_key = 'AUDPUBKEY~pqwRF_LGHH6obb4iX72qo6PWy2Fo3D9wmfqgRnYjmakB'
-
-[[assets]]
-symbol = 'CapeWGTH'
+symbol = 'capedWETH'
 description = 'Wrapped WETH on Goerli'
 icon = 'icons/WGTH.png'
 type = 'wrapped'
 contract = '0xb4fbf271143f4fbf7b91a5ded31805e42b2208d6'
 
 [[assets]]
-symbol = 'CapeDAI'
+symbol = 'capedDAI'
 description = 'Wrapped DAI'
 icon = 'icons/DAI.png'
 type = 'wrapped'
@@ -40,7 +28,7 @@ contract = '0x11fE4B6AE13d2a6055C8D9cF65c55bac32B5d844'
 viewing_key = 'AUDPUBKEY~z1xFfj2B6dTdUn1tcyexZd8v8foMPDJibT8hrmXXkAhx'
 
 [[assets]]
-symbol = 'CapeUSDC'
+symbol = 'capedUSDC'
 description = 'Wrapped USDC'
 icon = 'icons/USDC.png'
 type = 'wrapped'
@@ -49,14 +37,3 @@ contract = '0x07865c6e87b9f70255377e024ace6630c1eaa37f'
 viewing_key = 'AUDPUBKEY~A1EVmqt8rZc6ibPolJ0gVI-cUxTOark5L9e9TTEDt6G-'
 # The freezing key is maintained by Espresso, but would belong to Circle in a real deployment
 freezing_key = 'FREEZEPUBKEY~iCR07O3hlKc25lFd467Eqs3ZAF1ME1wT5aW9VqHa14e2'
-
-[[assets]]
-symbol = 'CapeUSDT'
-description = 'Wrapped USDT'
-icon = 'icons/USDT.png'
-type = 'wrapped'
-contract = '0xe583769738b6dd4E7CAF8451050d1948BE717679'
-# The viewing key is maintained by Espresso, but would belong to Tether in a real deployment
-viewing_key = 'AUDPUBKEY~X9pSGwzBa5nXitbGypHOnsQTA1Ddr61yDxcv4HQ0AIG5'
-# The freezing key is maintained by Espresso, but would belong to Tether in a real deployment
-freezing_key = 'FREEZEPUBKEY~EIvoqtawXbXQnDn2IzZNQGbMi97xZI_NLbDo6I4AKIDL'

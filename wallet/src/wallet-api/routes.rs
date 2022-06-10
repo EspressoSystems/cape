@@ -9,9 +9,10 @@
 
 use crate::web::{NodeOpt, WebState};
 use async_std::fs::{read_dir, File};
-use cap_rust_sandbox::ledger::CapeLedger;
+use cap_rust_sandbox::{ledger::CapeLedger, model::Erc20Code};
 use cape_wallet::{
     disco::{ApiRouteKey, UrlSegmentType},
+    loader::CapeLoader,
     ui::*,
     wallet::{CapeWalletError, CapeWalletExt},
 };
@@ -33,7 +34,6 @@ use seahorse::{
     asset_library::Icon,
     events::{EventIndex, EventSource},
     hd::KeyTree,
-    loader::{Loader, LoaderMetadata},
     txn_builder::{RecordInfo, TransactionReceipt},
     WalletBackend, WalletStorage,
 };
@@ -99,7 +99,10 @@ mod backend {
     use super::*;
     use async_std::sync::{Arc, Mutex};
     use cap_rust_sandbox::universal_param::verifier_keys;
-    use cape_wallet::mocks::{MockCapeBackend, MockCapeNetwork};
+    use cape_wallet::{
+        loader::CapeMetadata,
+        mocks::{MockCapeBackend, MockCapeNetwork},
+    };
     use jf_cap::{
         structs::{FreezeFlag, ReceiverMemo, RecordCommitment, RecordOpening},
         MerkleTree,
@@ -107,13 +110,13 @@ mod backend {
     use reef::traits::Ledger;
     use seahorse::testing::MockLedger;
 
-    pub type Backend = MockCapeBackend<'static, LoaderMetadata>;
+    pub type Backend = MockCapeBackend<'static, CapeMetadata>;
 
     pub async fn new(
         _options: &NodeOpt,
         rng: &mut ChaChaRng,
         faucet_pub_key: UserPubKey,
-        loader: &mut Loader,
+        loader: &mut CapeLoader,
     ) -> Result<Backend, CapeWalletError> {
         let verif_crs = verifier_keys();
 
@@ -137,6 +140,13 @@ mod backend {
 
         MockCapeBackend::new(Arc::new(Mutex::new(ledger)), loader)
     }
+
+    pub async fn latest_contract(_options: &NodeOpt) -> Result<Erc20Code, CapeWalletError> {
+        // The contract address is only used to check if the keystore is current. In testing, the
+        // mock contract is never updated or moved, so any keystore is always current, and it
+        // doesn't matter what we return here.
+        Ok(Erc20Code::default())
+    }
 }
 
 #[cfg(not(test))]
@@ -145,18 +155,18 @@ mod backend {
     use cap_rust_sandbox::universal_param::UNIVERSAL_PARAM;
     use cape_wallet::backend::{CapeBackend, CapeBackendConfig};
 
-    pub type Backend = CapeBackend<'static, LoaderMetadata>;
+    pub type Backend = CapeBackend<'static>;
 
     pub async fn new(
         options: &NodeOpt,
         _rng: &mut ChaChaRng,
         _faucet_pub_key: UserPubKey,
-        loader: &mut Loader,
+        loader: &mut CapeLoader,
     ) -> Result<Backend, CapeWalletError> {
         CapeBackend::new(
             &*UNIVERSAL_PARAM,
             CapeBackendConfig {
-                cape_contract: options.cape_contract(),
+                web3_provider: options.web3_provider(),
                 eqs_url: options.eqs_url(),
                 relayer_url: options.relayer_url(),
                 address_book_url: options.address_book_url(),
@@ -166,6 +176,10 @@ mod backend {
             loader,
         )
         .await
+    }
+
+    pub async fn latest_contract(options: &NodeOpt) -> Result<Erc20Code, CapeWalletError> {
+        CapeLoader::latest_contract(options.eqs_url()).await
     }
 }
 
@@ -374,7 +388,7 @@ pub async fn init_wallet(
     options: &NodeOpt,
     rng: &mut ChaChaRng,
     faucet_pub_key: UserPubKey,
-    mut loader: Loader,
+    mut loader: CapeLoader,
     existing: bool,
 ) -> Result<Wallet, tide::Error> {
     // Store the path so we can have a getlastkeystore endpoint
@@ -466,7 +480,12 @@ pub async fn newwallet(
     };
     let mnemonic = bindings[":mnemonic"].value.as_string()?;
     let password = bindings[":password"].value.as_string()?;
-    let loader = Loader::from_literal(Some(mnemonic.replace('-', " ")), password, path);
+    let loader = CapeLoader::from_literal(
+        Some(mnemonic.replace('-', " ")),
+        password,
+        path,
+        backend::latest_contract(options).await?,
+    );
 
     // If we already have a wallet open, close it before opening a new one, otherwise we can end up
     // with two wallets using the same file at the same time.
@@ -491,7 +510,12 @@ pub async fn openwallet(
         },
     };
     let password = bindings[":password"].value.as_string()?;
-    let loader = Loader::from_literal(None, password, path);
+    let loader = CapeLoader::from_literal(
+        None,
+        password,
+        path,
+        backend::latest_contract(options).await?,
+    );
 
     // If we already have a wallet open, close it before opening a new one, otherwise we can end up
     // with two wallets using the same file at the same time.
@@ -517,7 +541,12 @@ pub async fn resetpassword(
     };
     let mnemonic = bindings[":mnemonic"].value.as_string()?;
     let password = bindings[":password"].value.as_string()?;
-    let loader = Loader::recovery(mnemonic.replace('-', " "), password, path);
+    let loader = CapeLoader::recovery(
+        mnemonic.replace('-', " "),
+        password,
+        path,
+        backend::latest_contract(options).await?,
+    );
 
     // If we already have a wallet open, close it before opening a new one, otherwise we can end up
     // with two wallets using the same file at the same time.
@@ -561,6 +590,11 @@ async fn getinfo(wallet: &mut Option<Wallet>) -> Result<WalletSummary, tide::Err
         assets: known_assets(wallet).await.into_values().collect(),
         sync_time: sync_time.index(EventSource::QueryService),
         real_time: real_time.index(EventSource::QueryService),
+        wallet_contract: format!("{:#x}", Address::from(wallet.contract_address().await?)),
+        latest_contract: format!(
+            "{:#x}",
+            Address::from(wallet.latest_contract_address().await?)
+        ),
     })
 }
 

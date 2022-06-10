@@ -85,10 +85,6 @@ pub struct NodeOpt {
     )]
     pub address_book_url: Url,
 
-    /// Address of the CAPE smart contract.
-    #[structopt(long, env = "CAPE_CONTRACT_ADDRESS")]
-    pub contract_address: Option<Address>,
-
     /// URL for Ethers HTTP Provider
     #[structopt(long, env = "CAPE_WEB3_PROVIDER_URL")]
     pub rpc_url: Option<Url>,
@@ -118,7 +114,6 @@ impl Default for NodeOpt {
             address_book_url: "http://localhost:50078"
                 .parse()
                 .expect("Default address book url couldn't be parsed"),
-            contract_address: None,
             rpc_url: None,
             eth_mnemonic: None,
             min_polling_delay_ms: 500,
@@ -186,12 +181,8 @@ impl NodeOpt {
             .collect()
     }
 
-    pub fn cape_contract(&self) -> Option<(Url, Address)> {
-        match (self.rpc_url.clone(), self.contract_address) {
-            (Some(url), Some(address)) => Some((url, address)),
-            (None, None) => None,
-            _ => panic!("--rpc-url and --contract-address must be given together or not at all"),
-        }
+    pub fn web3_provider(&self) -> Option<Url> {
+        self.rpc_url.clone()
     }
 
     pub fn eqs_url(&self) -> Url {

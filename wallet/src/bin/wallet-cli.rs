@@ -35,21 +35,16 @@ use cap_rust_sandbox::{
 };
 use cape_wallet::{
     backend::{CapeBackend, CapeBackendConfig},
+    loader::CapeLoader,
     wallet::{CapeWalletBackend, CapeWalletExt},
 };
-use ethers::prelude::Address;
 use jf_cap::{
     keys::{AuditorPubKey, FreezerPubKey},
     proof::UniversalParam,
     structs::{Amount, AssetCode, AssetDefinition, AssetPolicy},
 };
 use net::UserAddress;
-use seahorse::{
-    cli::*,
-    io::SharedIO,
-    loader::{LoaderMetadata, WalletLoader},
-    RecordAmount, WalletError,
-};
+use seahorse::{cli::*, io::SharedIO, reader::Reader, RecordAmount, WalletError};
 use std::any::type_name;
 use std::io::Write;
 use std::path::PathBuf;
@@ -64,31 +59,35 @@ pub struct CapeCli;
 
 impl<'a> CLI<'a> for CapeCli {
     type Ledger = CapeLedger;
-    type Backend = CapeBackend<'a, LoaderMetadata>;
+    type Backend = CapeBackend<'a>;
     type Args = CapeArgs;
 
     fn init_backend(
         univ_param: &'a UniversalParam,
         args: Self::Args,
-        loader: &mut impl WalletLoader<CapeLedger, Meta = LoaderMetadata>,
+        storage: PathBuf,
+        input: Reader,
     ) -> Result<Self::Backend, WalletError<CapeLedger>> {
-        let cape_contract = match (args.rpc_url, args.contract_address) {
-            (Some(url), Some(address)) => Some((url, address)),
-            (None, None) => None,
-            _ => panic!("--rpc-url and --contract-address must be given together or not at all"),
-        };
-        block_on(CapeBackend::new(
-            univ_param,
-            CapeBackendConfig {
-                cape_contract,
-                eqs_url: args.eqs_url,
-                relayer_url: args.relayer_url,
-                address_book_url: args.address_book_url,
-                eth_mnemonic: args.eth_mnemonic,
-                min_polling_delay: Duration::from_millis(args.min_polling_delay_ms),
-            },
-            loader,
-        ))
+        block_on(async {
+            let mut loader = CapeLoader::new(
+                storage,
+                input,
+                CapeLoader::latest_contract(args.eqs_url.clone()).await?,
+            );
+            CapeBackend::new(
+                univ_param,
+                CapeBackendConfig {
+                    web3_provider: args.rpc_url,
+                    eqs_url: args.eqs_url,
+                    relayer_url: args.relayer_url,
+                    address_book_url: args.address_book_url,
+                    eth_mnemonic: args.eth_mnemonic,
+                    min_polling_delay: Duration::from_millis(args.min_polling_delay_ms),
+                },
+                &mut loader,
+            )
+            .await
+        })
     }
 
     fn extra_commands() -> Vec<Command<'a, Self>> {
@@ -351,10 +350,6 @@ pub struct CapeArgs {
     )]
     pub address_book_url: Url,
 
-    /// Address of the CAPE smart contract.
-    #[structopt(long, env = "CAPE_CONTRACT_ADDRESS")]
-    pub contract_address: Option<Address>,
-
     /// URL for Ethers HTTP Provider
     #[structopt(long, env = "CAPE_WEB3_PROVIDER_URL")]
     pub rpc_url: Option<Url>,
@@ -417,6 +412,7 @@ mod tests {
     };
     use cape_wallet::{
         cli_client::CliClient,
+        loader::CapeMetadata,
         mocks::{CapeTest, MockCapeBackend, MockCapeLedger},
     };
     use futures::stream::{iter, StreamExt};
@@ -432,17 +428,19 @@ mod tests {
 
     impl<'a> CLI<'a> for MockCapeCli {
         type Ledger = CapeLedger;
-        type Backend = MockCapeBackend<'a, LoaderMetadata>;
+        type Backend = MockCapeBackend<'a, CapeMetadata>;
         type Args = MockCapeArgs<'a>;
 
         fn init_backend(
             _univ_param: &'a UniversalParam,
             args: Self::Args,
-            loader: &mut impl WalletLoader<CapeLedger, Meta = LoaderMetadata>,
+            storage: PathBuf,
+            input: Reader,
         ) -> Result<Self::Backend, WalletError<CapeLedger>> {
+            let mut loader = CapeLoader::new(storage, input, Erc20Code::default());
             MockCapeBackend::new_for_test(
                 args.ledger.clone(),
-                Arc::new(Mutex::new(AtomicWalletStorage::new(loader, 128)?)),
+                Arc::new(Mutex::new(AtomicWalletStorage::new(&mut loader, 128)?)),
                 args.key_stream,
             )
         }

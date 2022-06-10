@@ -12,11 +12,12 @@ extern crate cape_wallet;
 
 use async_std::{
     sync::{Arc, Mutex, RwLock},
-    task::{spawn, JoinHandle},
+    task::{sleep, spawn, JoinHandle},
 };
 use cap_rust_sandbox::universal_param::UNIVERSAL_PARAM;
 use cape_wallet::{
     backend::{CapeBackend, CapeBackendConfig},
+    loader::CapeLoader,
     wallet::{CapeWallet, CapeWalletError},
 };
 use futures::{channel::mpsc, SinkExt, StreamExt};
@@ -30,7 +31,6 @@ use rand::distributions::{Alphanumeric, DistString};
 use reef::traits::Validator;
 use seahorse::{
     events::EventIndex,
-    loader::{Loader, LoaderMetadata},
     txn_builder::{RecordInfo, TransactionStatus},
     RecordAmount,
 };
@@ -133,7 +133,7 @@ pub enum FaucetStatus {
 
 #[derive(Clone)]
 struct FaucetState {
-    wallet: Arc<Mutex<CapeWallet<'static, CapeBackend<'static, LoaderMetadata>>>>,
+    wallet: Arc<Mutex<CapeWallet<'static, CapeBackend<'static>>>>,
     status: Arc<RwLock<FaucetStatus>>,
     grant_size: RecordAmount,
     num_grants: usize,
@@ -150,7 +150,7 @@ struct FaucetState {
 
 impl FaucetState {
     pub fn new(
-        wallet: CapeWallet<'static, CapeBackend<'static, LoaderMetadata>>,
+        wallet: CapeWallet<'static, CapeBackend<'static>>,
         signal_breaker_thread: mpsc::Sender<()>,
         opt: &FaucetOptions,
     ) -> Self {
@@ -309,7 +309,7 @@ async fn request_fee_assets(
 }
 
 async fn spendable_records(
-    wallet: &CapeWallet<'static, CapeBackend<'static, LoaderMetadata>>,
+    wallet: &CapeWallet<'static, CapeBackend<'static>>,
     grant_size: RecordAmount,
 ) -> impl Iterator<Item = RecordInfo> {
     let now = wallet.lock().await.state().txn_state.validator.now();
@@ -468,6 +468,22 @@ async fn wait_for_records(state: &FaucetState) -> usize {
     }
 }
 
+async fn wait_for_eqs(opt: &FaucetOptions) -> Result<(), CapeWalletError> {
+    let mut backoff = Duration::from_millis(500);
+    for _ in 0..8 {
+        if surf::connect(&opt.eqs_url).send().await.is_ok() {
+            return Ok(());
+        }
+        tracing::warn!("unable to connect to EQS; sleeping for {:?}", backoff);
+        sleep(backoff).await;
+        backoff *= 2;
+    }
+
+    let msg = format!("failed to connect to EQS after {:?}", backoff);
+    tracing::error!("{}", msg);
+    Err(CapeWalletError::Failed { msg })
+}
+
 /// `faucet_key_pair` - If provided, will be added to the faucet wallet.
 pub async fn init_web_server(
     opt: &FaucetOptions,
@@ -477,10 +493,14 @@ pub async fn init_web_server(
     if password.is_empty() {
         password = Alphanumeric.sample_string(&mut rand::thread_rng(), 16);
     }
-    let mut loader = Loader::recovery(
+    wait_for_eqs(opt).await.unwrap();
+    let mut loader = CapeLoader::recovery(
         opt.mnemonic.clone().replace('-', " "),
         password,
         opt.faucet_wallet_path.clone(),
+        CapeLoader::latest_contract(opt.eqs_url.clone())
+            .await
+            .unwrap(),
     );
     let backend = CapeBackend::new(
         &*UNIVERSAL_PARAM,
@@ -488,7 +508,7 @@ pub async fn init_web_server(
             // We're not going to do any direct-to-contract operations that would require a
             // connection to the CAPE contract or an ETH wallet. Everything we do will go through
             // the relayer.
-            cape_contract: None,
+            web3_provider: None,
             eth_mnemonic: None,
             eqs_url: opt.eqs_url.clone(),
             relayer_url: opt.relayer_url.clone(),
@@ -522,26 +542,20 @@ pub async fn init_web_server(
     } else {
         None
     };
-    if let Some(key) = new_key {
-        // Wait until we have scanned the ledger for records belonging to this key.
-        wallet.await_key_scan(&key.address()).await.unwrap();
-    }
 
-    let bal = wallet.balance(&AssetCode::native()).await;
-    tracing::info!("Wallet balance before init: {}", bal);
-    // We use the total number of records to maintain as a conservative upper bound on how backed up
-    // the message channel can get.
+    // Start the app before we wait for the key scan to complete. If we have to restart the faucet
+    // service from scratch (for example, if the wallet storage format changes and we need to
+    // recreate our files from a mnemonic) the key scan could take a very long time. We want the
+    // healthcheck endpoint to be available and returning "initializing" during that time, so the
+    // load balancer doesn't kill the service before it has a chance to start up. Other endpoints
+    // will fail while the app is initializing. Once initialization is complete, the healthcheck
+    // state will change to "available" and the other endpoints will start to work.
+    //
+    // The app state includes a bounded channel used to signal the record breaking thread when we
+    // need it to break large records into smaller ones. We use the total number of records to
+    // maintain as a conservative upper bound on how backed up the message channel can get.
     let signal_breaker_thread = mpsc::channel(opt.num_records);
     let state = FaucetState::new(wallet, signal_breaker_thread.0, opt);
-
-    // Spawn a thread to break records into smaller records to maintain `opt.num_records` at a time.
-    spawn(break_up_records(state.clone(), signal_breaker_thread.1));
-
-    // Start the app before we wait for our records to be broken up into smaller records. This can
-    // take a long time, and we want the healthcheck endpoint to be available and returning
-    // "initializing" until then. Other endpoints will fail while the app is initializing. Once the
-    // record initialization is complete, the healthcheck state will change to "available" and the
-    // other endpoints will start to work.
     let mut app = tide::with_state(state.clone());
     app.at("/healthcheck").get(healthcheck);
     app.with(
@@ -553,6 +567,28 @@ pub async fn init_web_server(
     app.at("/request_fee_assets").post(request_fee_assets);
     let address = format!("0.0.0.0:{}", opt.faucet_port);
     let handle = spawn(app.listen(address));
+
+    if let Some(key) = new_key {
+        // Wait until we have scanned the ledger for records belonging to this key.
+        state
+            .wallet
+            .lock()
+            .await
+            .await_key_scan(&key.address())
+            .await
+            .unwrap();
+    }
+
+    let bal = state
+        .wallet
+        .lock()
+        .await
+        .balance(&AssetCode::native())
+        .await;
+    tracing::info!("Wallet balance before init: {}", bal);
+
+    // Spawn a thread to break records into smaller records to maintain `opt.num_records` at a time.
+    spawn(break_up_records(state.clone(), signal_breaker_thread.1));
 
     // Wait for the thread to create at least `opt.num_records` if possible, before starting to
     // handle requests.
@@ -644,15 +680,16 @@ mod test {
 
         // Create a receiver wallet.
         let receiver_dir = TempDir::new("cape_wallet_receiver").unwrap();
-        let mut receiver_loader = Loader::from_literal(
+        let mut receiver_loader = CapeLoader::from_literal(
             Some(KeyTree::random(&mut rng).1.to_string().replace('-', " ")),
             Alphanumeric.sample_string(&mut rand::thread_rng(), 16),
             PathBuf::from(receiver_dir.path()),
+            contract_address.into(),
         );
         let receiver_backend = CapeBackend::new(
             universal_param,
             CapeBackendConfig {
-                cape_contract: Some((rpc_url_for_test(), contract_address)),
+                web3_provider: Some(rpc_url_for_test()),
                 eqs_url,
                 relayer_url,
                 address_book_url,

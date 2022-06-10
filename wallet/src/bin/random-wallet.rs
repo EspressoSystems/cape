@@ -13,7 +13,7 @@
 use async_std::task::sleep;
 use cap_rust_sandbox::{deploy::deploy_erc20_token, universal_param::UNIVERSAL_PARAM};
 use cape_wallet::backend::{CapeBackend, CapeBackendConfig};
-use cape_wallet::mocks::*;
+use cape_wallet::loader::CapeLoader;
 use cape_wallet::testing::create_test_network;
 use cape_wallet::testing::get_burn_amount;
 use cape_wallet::testing::OperationType;
@@ -111,10 +111,6 @@ async fn main() {
     let mut rng = ChaChaRng::seed_from_u64(args.seed.unwrap_or(0));
 
     let universal_param = &*UNIVERSAL_PARAM;
-    let mut loader = MockCapeWalletLoader {
-        path: args.storage,
-        key: KeyTree::random(&mut rng).0,
-    };
 
     // Everyone creates own relayer and EQS, not sure it works without EQS
     let (sender_key, relayer_url, address_book_url, contract_address, _) =
@@ -123,10 +119,16 @@ async fn main() {
     // TODO connect to an existing EQS.
     let (eqs_url, _eqs_dir, _join_eqs) = spawn_eqs(contract_address).await;
     println!("Ledger Created");
+    let mut loader = CapeLoader::from_literal(
+        Some(KeyTree::random(&mut rng).1.into_phrase()),
+        "password".into(),
+        args.storage,
+        contract_address.into(),
+    );
     let backend = CapeBackend::new(
         universal_param,
         CapeBackendConfig {
-            cape_contract: Some((rpc_url_for_test(), contract_address)),
+            web3_provider: Some(rpc_url_for_test()),
             eqs_url,
             relayer_url: relayer_url.clone(),
             address_book_url,

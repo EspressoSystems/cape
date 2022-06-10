@@ -83,6 +83,12 @@ pub trait CapeWalletBackend<'a>: WalletBackend<'a, CapeLedger> {
 
     /// Wait until the EQS is running.
     async fn wait_for_eqs(&self) -> Result<(), CapeWalletError>;
+
+    /// The contract for which this wallet was created.
+    async fn contract_address(&self) -> Result<Erc20Code, CapeWalletError>;
+
+    /// The latest contract, in use by the EQS.
+    async fn latest_contract_address(&self) -> Result<Erc20Code, CapeWalletError>;
 }
 
 pub type CapeWallet<'a, Backend> = Wallet<'a, Backend, CapeLedger>;
@@ -228,6 +234,12 @@ pub trait CapeWalletExt<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> {
     /// wallet has observed, and `eqs_time` is the total number of events reported by the EQS. It is
     /// guaranteed that `sync_time <= eqs_time`.
     async fn scan_status(&self) -> Result<(EventIndex, EventIndex), CapeWalletError>;
+
+    /// The contract for which this wallet was created.
+    async fn contract_address(&self) -> Result<Erc20Code, CapeWalletError>;
+
+    /// The latest contract, in use by the EQS.
+    async fn latest_contract_address(&self) -> Result<Erc20Code, CapeWalletError>;
 }
 
 #[async_trait]
@@ -476,5 +488,13 @@ impl<'a, Backend: CapeWalletBackend<'a> + Sync + 'a> CapeWalletExt<'a, Backend>
         let eqs_time = self.lock().await.backend().eqs_time().await?;
         let sync_time = self.now().await;
         Ok((sync_time, eqs_time))
+    }
+
+    async fn contract_address(&self) -> Result<Erc20Code, CapeWalletError> {
+        self.lock().await.backend().contract_address().await
+    }
+
+    async fn latest_contract_address(&self) -> Result<Erc20Code, CapeWalletError> {
+        self.lock().await.backend().latest_contract_address().await
     }
 }

@@ -9,6 +9,7 @@ use async_std::task::sleep;
 use cap_rust_sandbox::universal_param::UNIVERSAL_PARAM;
 use cape_wallet::{
     backend::{CapeBackend, CapeBackendConfig},
+    loader::CapeLoader,
     CapeWallet, CapeWalletError, CapeWalletExt,
 };
 use ethers::{prelude::Address, providers::Middleware};
@@ -22,7 +23,6 @@ use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
 use seahorse::{
     asset_library::{Icon, VerifiedAssetLibrary},
     hd::{KeyTree, Mnemonic},
-    loader::{Loader, LoaderMetadata},
     txn_builder::TransactionStatus,
     AssetInfo,
 };
@@ -83,7 +83,7 @@ impl Asset {
 
     async fn create<'a>(
         self,
-        wallet: &mut CapeWallet<'a, CapeBackend<'a, LoaderMetadata>>,
+        wallet: &mut CapeWallet<'a, CapeBackend<'a>>,
         pub_key: &UserPubKey,
         icon_dir: &Path,
         faucet_url: &Url,
@@ -291,7 +291,6 @@ enum Command {
 ///     CAPE_RELAYER_URL
 ///     CAPE_ADDRESS_BOOK_URL
 ///     CAPE_FAUCET_URL
-///     CAPE_CONTRACT_ADDRESS
 ///     CAPE_WEB3_PROVIDER_URL
 #[derive(StructOpt)]
 struct GenerateCommand {
@@ -348,10 +347,6 @@ struct GenerateCommand {
     )]
     faucet_url: Url,
 
-    /// Address of the CAPE smart contract.
-    #[structopt(long, env = "CAPE_CONTRACT_ADDRESS")]
-    contract_address: Address,
-
     /// URL for Ethers HTTP Provider
     #[structopt(long, env = "CAPE_WEB3_PROVIDER_URL")]
     rpc_url: Url,
@@ -366,15 +361,18 @@ impl GenerateCommand {
         // we use a random password and storage location.
         let dir = TempDir::new("asset-library-wallet").unwrap();
         let mut rng = ChaChaRng::from_entropy();
-        let mut loader = Loader::from_literal(
+        let mut loader = CapeLoader::from_literal(
             Some(self.cape_mnemonic.to_string()),
             Alphanumeric.sample_string(&mut rng, 16),
             dir.path().to_owned(),
+            CapeLoader::latest_contract(self.eqs_url.clone())
+                .await
+                .map_err(wallet_error)?,
         );
         let backend = CapeBackend::new(
             &*UNIVERSAL_PARAM,
             CapeBackendConfig {
-                cape_contract: Some((self.rpc_url, self.contract_address)),
+                web3_provider: Some(self.rpc_url),
                 eth_mnemonic: Some(self.eth_mnemonic.to_string()),
                 eqs_url: self.eqs_url,
                 relayer_url: self.relayer_url,

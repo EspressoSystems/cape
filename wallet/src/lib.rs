@@ -17,6 +17,7 @@
 
 pub mod backend;
 pub mod disco;
+pub mod loader;
 pub mod ui;
 pub mod wallet;
 

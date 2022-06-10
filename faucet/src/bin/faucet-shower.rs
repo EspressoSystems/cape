@@ -13,6 +13,7 @@
 use cap_rust_sandbox::universal_param::UNIVERSAL_PARAM;
 use cape_wallet::{
     backend::{CapeBackend, CapeBackendConfig},
+    loader::CapeLoader,
     wallet::{CapeWallet, CapeWalletError},
 };
 use ethers::prelude::U256;
@@ -22,11 +23,7 @@ use rand_chacha::{
     rand_core::{RngCore, SeedableRng},
     ChaChaRng,
 };
-use seahorse::{
-    hd::KeyTree,
-    loader::{Loader, LoaderMetadata},
-    txn_builder::TransactionStatus,
-};
+use seahorse::{hd::KeyTree, txn_builder::TransactionStatus};
 use std::path::{Path, PathBuf};
 use std::process::exit;
 use std::time::Duration;
@@ -82,19 +79,24 @@ async fn create_wallet(
     rng: &mut ChaChaRng,
     mnemonic: String,
     dir: PathBuf,
-) -> Result<CapeWallet<'static, CapeBackend<'static, LoaderMetadata>>, CapeWalletError> {
+) -> Result<CapeWallet<'static, CapeBackend<'static>>, CapeWalletError> {
     // We are never going to re-open this wallet once it's created, so we don't really need a
     // password. Just make it random bytes.
     let mut password = [0; 32];
     rng.fill_bytes(&mut password);
-    let mut loader = Loader::from_literal(Some(mnemonic), hex::encode(password), dir);
+    let mut loader = CapeLoader::from_literal(
+        Some(mnemonic),
+        hex::encode(password),
+        dir,
+        CapeLoader::latest_contract(opt.eqs_url.clone()).await?,
+    );
     let backend = CapeBackend::new(
         &*UNIVERSAL_PARAM,
         CapeBackendConfig {
             // We're not going to do any direct-to-contract operations that
             // would require a connection to the CAPE contract or an ETH
             // wallet. Everything we do will go through the relayer.
-            cape_contract: None,
+            web3_provider: None,
             eth_mnemonic: None,
             eqs_url: opt.eqs_url.clone(),
             relayer_url: opt.relayer_url.clone(),

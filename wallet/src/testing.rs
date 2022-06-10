@@ -135,7 +135,7 @@ pub async fn create_test_network<'a>(
     )
 }
 
-pub async fn fund_eth_wallet<'a>(wallet: &mut CapeWallet<'a, CapeBackend<'a, ()>>) {
+pub async fn fund_eth_wallet<'a>(wallet: &mut CapeWallet<'a, CapeBackend<'a>>) {
     // Fund the Ethereum wallets for contract calls.
     let provider = get_provider().interval(Duration::from_millis(100u64));
     let accounts = provider.get_accounts().await.unwrap();
@@ -154,7 +154,7 @@ pub async fn fund_eth_wallet<'a>(wallet: &mut CapeWallet<'a, CapeBackend<'a, ()>
 }
 
 pub async fn get_burn_amount<'a>(
-    wallet: &CapeWallet<'a, CapeBackend<'a, ()>>,
+    wallet: &CapeWallet<'a, CapeBackend<'a>>,
     asset: AssetCode,
 ) -> RecordAmount {
     // get records for this this asset type
@@ -235,7 +235,7 @@ impl Distribution<OperationType> for Standard {
 /// Mint a new token with the given wallet and add it's freezer and audit keys to
 /// to the Asset Policy
 pub async fn mint_token<'a>(
-    wallet: &mut CapeWallet<'a, CapeBackend<'a, ()>>,
+    wallet: &mut CapeWallet<'a, CapeBackend<'a>>,
 ) -> Result<(AssetDefinition, Option<TransactionReceipt<CapeLedger>>), CapeWalletError> {
     let freeze_key = &wallet.freezer_pub_keys().await[0];
     let audit_key = &wallet.auditor_pub_keys().await[0];
@@ -272,7 +272,7 @@ pub async fn mint_token<'a>(
 /// Return records the freezer has access to freeze or unfreeze but does not own.
 /// Will only return records with freeze_flag the same as the frozen arg.
 pub async fn find_freezable_records<'a>(
-    freezer: &CapeWallet<'a, CapeBackend<'a, ()>>,
+    freezer: &CapeWallet<'a, CapeBackend<'a>>,
     frozen: FreezeFlag,
 ) -> Vec<RecordInfo> {
     let pks: HashSet<UserPubKey> = freezer.pub_keys().await.into_iter().collect();
@@ -296,7 +296,7 @@ pub async fn find_freezable_records<'a>(
 }
 
 pub async fn freeze_token<'a>(
-    freezer: &mut CapeWallet<'a, CapeBackend<'a, ()>>,
+    freezer: &mut CapeWallet<'a, CapeBackend<'a>>,
     asset: &AssetCode,
     amount: impl Into<U256>,
     owner_address: UserAddress,
@@ -308,7 +308,7 @@ pub async fn freeze_token<'a>(
 }
 
 pub async fn unfreeze_token<'a>(
-    freezer: &mut CapeWallet<'a, CapeBackend<'a, ()>>,
+    freezer: &mut CapeWallet<'a, CapeBackend<'a>>,
     asset: &AssetCode,
     amount: impl Into<U256>,
     owner_address: UserAddress,
@@ -320,7 +320,7 @@ pub async fn unfreeze_token<'a>(
 }
 
 pub async fn wrap_simple_token<'a>(
-    wrapper: &mut CapeWallet<'a, CapeBackend<'a, ()>>,
+    wrapper: &mut CapeWallet<'a, CapeBackend<'a>>,
     wrapper_addr: &UserAddress,
     cape_asset: AssetDefinition,
     erc20_contract: &SimpleToken<EthMiddleware>,
@@ -351,7 +351,7 @@ pub async fn wrap_simple_token<'a>(
 }
 
 pub async fn sponsor_simple_token<'a>(
-    sponsor: &mut CapeWallet<'a, CapeBackend<'a, ()>>,
+    sponsor: &mut CapeWallet<'a, CapeBackend<'a>>,
     erc20_contract: &SimpleToken<EthMiddleware>,
 ) -> Result<AssetDefinition, CapeWalletError> {
     let sponsor_eth_addr = sponsor.eth_address().await.unwrap();
@@ -366,7 +366,7 @@ pub async fn sponsor_simple_token<'a>(
 }
 
 pub async fn burn_token<'a>(
-    burner: &mut CapeWallet<'a, CapeBackend<'a, ()>>,
+    burner: &mut CapeWallet<'a, CapeBackend<'a>>,
     cape_asset: AssetDefinition,
     amount: impl Into<RecordAmount> + Send + 'static,
 ) -> Result<TransactionReceipt<CapeLedger>, CapeWalletError> {
@@ -383,7 +383,7 @@ pub async fn burn_token<'a>(
 }
 
 pub async fn transfer_token<'a>(
-    sender: &mut CapeWallet<'a, CapeBackend<'a, ()>>,
+    sender: &mut CapeWallet<'a, CapeBackend<'a>>,
     receiver_address: UserAddress,
     amount: impl Into<RecordAmount>,
     asset_code: AssetCode,

@@ -15,7 +15,7 @@
 
 use cap_rust_sandbox::{deploy::deploy_erc20_token, universal_param::UNIVERSAL_PARAM};
 use cape_wallet::backend::{CapeBackend, CapeBackendConfig};
-use cape_wallet::mocks::*;
+use cape_wallet::loader::CapeLoader;
 use cape_wallet::testing::get_burn_amount;
 use cape_wallet::testing::{
     burn_token, create_test_network, find_freezable_records, freeze_token, fund_eth_wallet,
@@ -24,7 +24,6 @@ use cape_wallet::testing::{
 };
 use cape_wallet::CapeWallet;
 use cape_wallet::CapeWalletExt;
-use ethers::prelude::Address;
 use futures::stream::{iter, StreamExt};
 use jf_cap::keys::UserAddress;
 use jf_cap::keys::UserKeyPair;
@@ -68,9 +67,6 @@ struct Args {
 
     #[structopt(long)]
     faucet_url: Option<Url>,
-
-    #[structopt(long)]
-    contract_address: Option<Address>,
 }
 
 struct NetworkInfo {
@@ -78,7 +74,6 @@ struct NetworkInfo {
     eqs_url: Url,
     relayer_url: Url,
     address_book_url: Url,
-    contract_address: Address,
     _eqs_dir: Option<TempDir>,
 }
 
@@ -88,7 +83,6 @@ fn get_network_from_args(args: &Args) -> NetworkInfo {
         eqs_url: args.eqs_url.as_ref().unwrap().clone(),
         relayer_url: args.relayer_url.as_ref().unwrap().clone(),
         address_book_url: args.address_book_url.as_ref().unwrap().clone(),
-        contract_address: *args.contract_address.as_ref().unwrap(),
         _eqs_dir: None,
     }
 }
@@ -100,15 +94,19 @@ async fn connect_to_demo_backend<'a>(
     universal_param: &'a UniversalParam,
     rng: &mut ChaChaRng,
     storage: &Path,
-) -> CapeWallet<'a, CapeBackend<'a, ()>> {
-    let mut loader = MockCapeWalletLoader {
-        path: storage.to_path_buf(),
-        key: KeyTree::random(rng).0,
-    };
+) -> CapeWallet<'a, CapeBackend<'a>> {
+    let mut loader = CapeLoader::from_literal(
+        Some(KeyTree::random(rng).1.into_phrase()),
+        "password".into(),
+        storage.to_path_buf(),
+        CapeLoader::latest_contract(network.eqs_url.clone())
+            .await
+            .unwrap(),
+    );
     let backend = CapeBackend::new(
         universal_param,
         CapeBackendConfig {
-            cape_contract: Some((rpc_url_for_test(), network.contract_address)),
+            web3_provider: Some(rpc_url_for_test()),
             eqs_url: network.eqs_url.clone(),
             relayer_url: network.relayer_url.clone(),
             address_book_url: network.address_book_url.clone(),
@@ -128,7 +126,7 @@ async fn create_backend_and_sender_wallet<'a>(
     rng: &mut ChaChaRng,
     universal_param: &'a UniversalParam,
     storage: &Path,
-) -> (NetworkInfo, CapeWallet<'a, CapeBackend<'a, ()>>) {
+) -> (NetworkInfo, CapeWallet<'a, CapeBackend<'a>>) {
     let network_tuple = create_test_network(rng, universal_param, None).await;
     let (eqs_url, eqs_dir, _join_eqs) = spawn_eqs(network_tuple.3).await;
     let network = NetworkInfo {
@@ -136,19 +134,22 @@ async fn create_backend_and_sender_wallet<'a>(
         eqs_url,
         relayer_url: network_tuple.1,
         address_book_url: network_tuple.2,
-        contract_address: network_tuple.3,
         _eqs_dir: Some(eqs_dir),
     };
 
-    let mut loader = MockCapeWalletLoader {
-        path: storage.to_path_buf(),
-        key: KeyTree::random(rng).0,
-    };
+    let mut loader = CapeLoader::from_literal(
+        Some(KeyTree::random(rng).1.into_phrase()),
+        "password".into(),
+        storage.to_path_buf(),
+        CapeLoader::latest_contract(network.eqs_url.clone())
+            .await
+            .unwrap(),
+    );
 
     let backend = CapeBackend::new(
         universal_param,
         CapeBackendConfig {
-            cape_contract: Some((rpc_url_for_test(), network.contract_address)),
+            web3_provider: Some(rpc_url_for_test()),
             eqs_url: network.eqs_url.clone(),
             relayer_url: network.relayer_url.clone(),
             address_book_url: network.address_book_url.clone(),
@@ -202,16 +203,20 @@ async fn create_wallet<'a>(
     universal_param: &'a UniversalParam,
     network: &NetworkInfo,
     storage: &Path,
-) -> (UserPubKey, CapeWallet<'a, CapeBackend<'a, ()>>) {
-    let mut loader = MockCapeWalletLoader {
-        path: storage.to_path_buf(),
-        key: KeyTree::random(rng).0,
-    };
+) -> (UserPubKey, CapeWallet<'a, CapeBackend<'a>>) {
+    let mut loader = CapeLoader::from_literal(
+        Some(KeyTree::random(rng).1.into_phrase()),
+        "password".into(),
+        storage.to_path_buf(),
+        CapeLoader::latest_contract(network.eqs_url.clone())
+            .await
+            .unwrap(),
+    );
 
     let backend = CapeBackend::new(
         universal_param,
         CapeBackendConfig {
-            cape_contract: Some((rpc_url_for_test(), network.contract_address)),
+            web3_provider: Some(rpc_url_for_test()),
             eqs_url: network.eqs_url.clone(),
             relayer_url: network.relayer_url.clone(),
             address_book_url: network.address_book_url.clone(),

@@ -17,7 +17,7 @@ use cap_rust_sandbox::{
     deploy::EthMiddleware, ledger::*, model::*, universal_param::UNIVERSAL_PARAM,
 };
 use commit::Committable;
-use futures::stream::Stream;
+use futures::stream::{iter, pending, Stream, StreamExt};
 use itertools::izip;
 use jf_cap::{
     keys::{UserAddress, UserKeyPair, UserPubKey},
@@ -761,6 +761,165 @@ fn cape_to_wallet_err(err: CapeValidationError) -> WalletError<CapeLedger> {
     // parameterized on the ledger type and there should be a ledger trait ValidationError.
     WalletError::Failed {
         msg: err.to_string(),
+    }
+}
+
+/// A mock CAPE wallet backend that can be used to replay a given list of events.
+pub struct ReplayBackend<'a, Meta: Send + DeserializeOwned + Serialize> {
+    events: Vec<LedgerEvent<CapeLedger>>,
+    storage: Arc<Mutex<AtomicWalletStorage<'a, CapeLedger, Meta>>>,
+    key_stream: KeyTree,
+}
+
+impl<'a, Meta: Clone + PartialEq + Send + DeserializeOwned + Serialize> ReplayBackend<'a, Meta> {
+    pub fn new(
+        events: Vec<LedgerEvent<CapeLedger>>,
+        loader: &mut impl WalletLoader<CapeLedger, Meta = Meta>,
+    ) -> Self {
+        let storage = AtomicWalletStorage::new(loader, 1024).unwrap();
+        let key_stream = storage.key_stream();
+        Self {
+            events,
+            storage: Arc::new(Mutex::new(storage)),
+            key_stream,
+        }
+    }
+}
+
+#[async_trait]
+impl<'a, Meta: Send + DeserializeOwned + Serialize> WalletBackend<'a, CapeLedger>
+    for ReplayBackend<'a, Meta>
+{
+    type EventStream = Pin<Box<dyn Stream<Item = (LedgerEvent<CapeLedger>, EventSource)> + Send>>;
+    type Storage = AtomicWalletStorage<'a, CapeLedger, Meta>;
+
+    async fn storage<'l>(&'l mut self) -> MutexGuard<'l, Self::Storage> {
+        self.storage.lock().await
+    }
+
+    async fn create(&mut self) -> Result<WalletState<'a, CapeLedger>, WalletError<CapeLedger>> {
+        // Get the state from the snapshotted time (i.e. after replaying all the events).
+        let mut record_mt = MerkleTree::new(CAPE_MERKLE_HEIGHT).unwrap();
+        let mut block_height = 0;
+        for event in &self.events {
+            if let LedgerEvent::Commit { block, .. } = event {
+                for txn in block.txns() {
+                    for comm in txn.output_commitments() {
+                        record_mt.push(comm.to_field_element());
+                    }
+                }
+                block_height += 1;
+            }
+        }
+
+        // `record_mt` should be completely sparse.
+        for uid in 0..record_mt.num_leaves() - 1 {
+            record_mt.forget(uid);
+        }
+        let merkle_leaf_to_forget = if record_mt.num_leaves() > 0 {
+            Some(record_mt.num_leaves() - 1)
+        } else {
+            None
+        };
+
+        Ok(WalletState {
+            proving_keys: Arc::new(crate::backend::gen_proving_keys(&*UNIVERSAL_PARAM)),
+            txn_state: TransactionState {
+                validator: CapeTruster::new(block_height, record_mt.num_leaves()),
+                now: EventIndex::from_source(EventSource::QueryService, self.events.len()),
+                // Completely sparse nullifier set.
+                nullifiers: Default::default(),
+                record_mt,
+                records: RecordDatabase::default(),
+                merkle_leaf_to_forget,
+                transactions: Default::default(),
+            },
+            key_state: Default::default(),
+            assets: Default::default(),
+            viewing_accounts: Default::default(),
+            freezing_accounts: Default::default(),
+            sending_accounts: Default::default(),
+        })
+    }
+
+    async fn subscribe(&self, from: EventIndex, to: Option<EventIndex>) -> Self::EventStream {
+        let from = from.index(EventSource::QueryService);
+        let to = to.map(|to| to.index(EventSource::QueryService));
+
+        println!(
+            "playing back {} events from {} to {:?}",
+            self.events.len(),
+            from,
+            to
+        );
+        let events = iter(self.events.clone())
+            .enumerate()
+            .map(|(i, event)| {
+                println!("replaying event {} {:?}", i, event);
+                (event, EventSource::QueryService)
+            })
+            .skip(from);
+        let events: Self::EventStream = if let Some(to) = to {
+            Box::pin(events.take(to - from))
+        } else {
+            Box::pin(events)
+        };
+        // Append a stream which blocks forever, since the event stream is not supposed to terminate.
+        Box::pin(events.chain(pending()))
+    }
+
+    async fn get_public_key(
+        &self,
+        _address: &UserAddress,
+    ) -> Result<UserPubKey, WalletError<CapeLedger>> {
+        // Since we're not generating transactions, we don't need to support address book queries.
+        Err(WalletError::Failed {
+            msg: "address book not supported".into(),
+        })
+    }
+
+    async fn register_user_key(
+        &mut self,
+        _key_pair: &UserKeyPair,
+    ) -> Result<(), WalletError<CapeLedger>> {
+        // The wallet calls this function when it generates a key, so it has to succeed, but since
+        // we don't support querying the address book, it doesn't have to do anything.
+        Ok(())
+    }
+
+    async fn get_initial_scan_state(
+        &self,
+        _from: EventIndex,
+    ) -> Result<(MerkleTree, EventIndex), CapeWalletError> {
+        Ok((
+            MerkleTree::new(CAPE_MERKLE_HEIGHT).unwrap(),
+            EventIndex::default(),
+        ))
+    }
+
+    async fn get_nullifier_proof(
+        &self,
+        _nullifiers: &mut CapeNullifierSet,
+        _nullifier: Nullifier,
+    ) -> Result<(bool, ()), WalletError<CapeLedger>> {
+        // Nullifier queries are not needed for event playback.
+        Err(WalletError::Failed {
+            msg: "nullifier queries not supported".into(),
+        })
+    }
+
+    fn key_stream(&self) -> KeyTree {
+        self.key_stream.clone()
+    }
+
+    async fn submit(
+        &mut self,
+        _txn: CapeTransition,
+        _info: TransactionInfo<CapeLedger>,
+    ) -> Result<(), WalletError<CapeLedger>> {
+        Err(WalletError::Failed {
+            msg: "transacting not supported".into(),
+        })
     }
 }
 

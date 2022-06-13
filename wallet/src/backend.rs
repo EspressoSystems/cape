@@ -662,7 +662,7 @@ impl<'a> CapeWalletBackend<'a> for CapeBackend<'a> {
     }
 }
 
-fn gen_proving_keys(srs: &UniversalParam) -> ProverKeySet<key_set::OrderByOutputs> {
+pub fn gen_proving_keys(srs: &UniversalParam) -> ProverKeySet<key_set::OrderByOutputs> {
     use jf_cap::proof::{freeze, mint, transfer};
 
     ProverKeySet {

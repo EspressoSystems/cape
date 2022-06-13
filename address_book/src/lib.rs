@@ -65,11 +65,16 @@ impl FileStore {
 impl Store for FileStore {
     fn save(&self, address: &UserAddress, pub_key: &UserPubKey) -> Result<(), std::io::Error> {
         let tmp_path = self.tmp_path(address);
-        fs::write(
+        match fs::write(
             &tmp_path,
             bincode::serialize(&pub_key).expect("Failed to serialize public key."),
-        )?;
-        fs::rename(&tmp_path, self.path(address))
+        ) {
+            Ok(_) => fs::rename(&tmp_path, self.path(address)),
+            Err(e) => {
+                tracing::error!("Failed to write pubkey {}", e);
+                Err(e)
+            }
+        }
     }
     fn load(&self, address: &UserAddress) -> Result<Option<UserPubKey>, std::io::Error> {
         let path = self.path(address);
@@ -247,9 +252,14 @@ async fn request_pubkey<T: Store>(
 /// normally, a response with status 503 and payload {"status":
 /// "unavailable"} should be added.
 async fn healthcheck<T: Store>(
-    mut _req: tide::Request<ServerState<T>>,
+    req: tide::Request<ServerState<T>>,
 ) -> Result<tide::Response, tide::Error> {
-    Ok(tide::Response::builder(200)
+    // Ensure we can write to storage.
+    req.state()
+        .store
+        .save(&UserAddress::default(), &UserPubKey::default())?;
+
+    Ok(tide::Response::builder(StatusCode::Ok)
         .content_type(tide::http::mime::JSON)
         .body(json!({"status": "available"}))
         .build())

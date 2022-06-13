@@ -88,7 +88,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   if (rmtOwner != CAPE.address) {
     await execute("RecordsMerkleTree", opts, "transferOwnership", CAPE.address);
   } else {
-    log("The CAPE already owns the RecordsMerkleTree contract.");
+    log("The CAPE contract already owns the RecordsMerkleTree contract.");
   }
 
   log("Ensuring the CAPE faucet is initialized.");

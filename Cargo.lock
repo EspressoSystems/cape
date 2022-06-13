@@ -5277,8 +5277,8 @@ dependencies = [
 
 [[package]]
 name = "seahorse"
-version = "0.2.4"
-source = "git+https://github.com/EspressoSystems/seahorse.git?branch=release-0.2#a8a8d2c2ad9b62e4ef007f477f5feb62cd4222d5"
+version = "0.2.5"
+source = "git+https://github.com/EspressoSystems/seahorse.git?tag=0.2.5#613d1e6274a77ab2c003b2d793cd5de199879cea"
 dependencies = [
  "arbitrary",
  "arbitrary-wrappers",
@@ -5328,6 +5328,7 @@ dependencies = [
  "surf",
  "tagged-base64 0.2.0 (git+https://github.com/EspressoSystems/tagged-base64.git?tag=0.2.0)",
  "tempdir",
+ "tracing",
  "zeroize",
 ]
 

@@ -6,7 +6,7 @@
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { DeployFunction } from "hardhat-deploy/types";
+import { DeployFunction, DeployOptions } from "hardhat-deploy/types";
 import { BigNumber } from "ethers";
 
 const treeDepth = 24;
@@ -17,34 +17,30 @@ const nRoots = 40;
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
-  const { deploy, execute } = deployments;
+  const { deploy, execute, read, log } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  let rescueLib = await deploy("RescueLib", {
-    from: deployer,
-    args: [],
-    log: true,
-  });
+  log(`Deploying to ${hre.network.name}.`);
 
-  let verifyingKeys = await deploy("VerifyingKeys", {
-    from: deployer,
-    args: [],
+  const opts: DeployOptions = {
     log: true,
-  });
+    from: deployer,
+    // Wait for 2 confirmations on public networks.
+    waitConfirmations: hre.network.tags.public ? 2 : 1,
+    // Avoid deployment failures due to potentially failing `estimateGas` calls.
+    gasLimit: 10_000_000,
+  };
 
-  let plonkVerifierContract = await deploy("PlonkVerifier", {
-    from: deployer,
-    args: [],
-    log: true,
-  });
+  log("Deploy options:", opts);
+
+  let rescueLib = await deploy("RescueLib", opts);
+  let verifyingKeys = await deploy("VerifyingKeys", opts);
+  let plonkVerifierContract = await deploy("PlonkVerifier", opts);
 
   let recordsMerkleTreeContract = await deploy("RecordsMerkleTree", {
-    from: deployer,
     args: [treeDepth],
-    log: true,
-    libraries: {
-      RescueLib: rescueLib.address,
-    },
+    libraries: { RescueLib: rescueLib.address },
+    ...opts,
   });
 
   // To change, update change FAUCET_MANAGER_ENCRYPTION_KEY in rust/src/cape/faucet.rs
@@ -63,15 +59,15 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   // Override values with environment variable if set.
   const env_enc_key = process.env["CAPE_FAUCET_MANAGER_ENC_KEY"];
   if (env_enc_key) {
-    console.log(`Using CAPE_FAUCET_MANAGER_ENC_KEY=${env_enc_key}`);
+    log(`Using CAPE_FAUCET_MANAGER_ENC_KEY=${env_enc_key}`);
     faucetManagerEncKey = env_enc_key;
   }
 
   const env_address_x = process.env["CAPE_FAUCET_MANAGER_ADDRESS_X"];
   const env_address_y = process.env["CAPE_FAUCET_MANAGER_ADDRESS_Y"];
   if (env_address_x && env_address_y) {
-    console.log(`Using CAPE_FAUCET_MANAGER_ADDRESS_X=${env_address_x}`);
-    console.log(`Using CAPE_FAUCET_MANAGER_ADDRESS_Y=${env_address_y}`);
+    log(`Using CAPE_FAUCET_MANAGER_ADDRESS_X=${env_address_x}`);
+    log(`Using CAPE_FAUCET_MANAGER_ADDRESS_Y=${env_address_y}`);
     faucetManagerAddress = {
       x: BigNumber.from(env_address_x),
       y: BigNumber.from(env_address_y),
@@ -79,35 +75,35 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   }
 
   const CAPE = await deploy("CAPE", {
-    from: deployer,
     args: [nRoots, plonkVerifierContract.address, recordsMerkleTreeContract.address],
-    log: true,
     libraries: {
       RescueLib: rescueLib.address,
       VerifyingKeys: verifyingKeys.address,
     },
+    ...opts,
   });
 
-  await execute(
-    "RecordsMerkleTree",
-    {
-      log: true,
-      from: deployer,
-    },
-    "transferOwnership",
-    CAPE.address
-  );
+  log("Ensuring the records merkle tree is owned by CAPE.");
+  const rmtOwner = await read("RecordsMerkleTree", "owner");
+  if (rmtOwner != CAPE.address) {
+    await execute("RecordsMerkleTree", opts, "transferOwnership", CAPE.address);
+  } else {
+    log("The CAPE contract already owns the RecordsMerkleTree contract.");
+  }
 
-  await execute(
-    "CAPE",
-    {
-      log: true,
-      from: deployer,
-    },
-    "faucetSetupForTestnet",
-    faucetManagerAddress,
-    faucetManagerEncKey
-  );
+  log("Ensuring the CAPE faucet is initialized.");
+  const isFaucetInitialized = await read("CAPE", "faucetInitialized");
+  if (!isFaucetInitialized) {
+    await execute(
+      "CAPE",
+      opts,
+      "faucetSetupForTestnet",
+      faucetManagerAddress,
+      faucetManagerEncKey
+    );
+  } else {
+    log("The CAPE faucet is already initialized.");
+  }
 };
 
 export default func;

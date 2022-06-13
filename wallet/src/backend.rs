@@ -146,6 +146,10 @@ impl<'a> CapeBackend<'a> {
         let relayer = relayer.with(parse_error_body::<relayer::Error>);
         let address_book: surf::Client = surf::Config::default()
             .set_base_url(config.address_book_url)
+            // The address book service is usually very fast, but occasionally suffers severe spikes
+            // in latency. Set a high timeout so these high latency periods don't propagate as
+            // timeout errors to the client.
+            .set_timeout(Some(Duration::from_secs(3*60)))
             .try_into()
             .expect("Failed to configure Address Book client");
 

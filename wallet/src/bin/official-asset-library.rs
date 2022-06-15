@@ -87,6 +87,7 @@ impl Asset {
         pub_key: &UserPubKey,
         icon_dir: &Path,
         faucet_url: &Url,
+        deploy: bool,
     ) -> Result<AssetInfo, CapeWalletError> {
         info!("creating asset {}", self.symbol);
 
@@ -151,17 +152,19 @@ impl Asset {
                     }
                 }
 
-                info!("minting {} of domestic asset {}", amount, self.symbol);
                 let asset = wallet
                     .define_asset(self.symbol.clone(), self.symbol.as_bytes(), policy)
                     .await?;
-                let txn = wallet
-                    .mint(None, 0, &asset.code, amount, pub_key.address())
-                    .await?;
-                if wallet.await_transaction(&txn).await? != TransactionStatus::Retired {
-                    return Err(CapeWalletError::Failed {
-                        msg: format!("failed to mint {}", self.symbol),
-                    });
+                if deploy {
+                    info!("minting {} of domestic asset {}", amount, self.symbol);
+                    let txn = wallet
+                        .mint(None, 0, &asset.code, amount, pub_key.address())
+                        .await?;
+                    if wallet.await_transaction(&txn).await? != TransactionStatus::Retired {
+                        return Err(CapeWalletError::Failed {
+                            msg: format!("failed to mint {}", self.symbol),
+                        });
+                    }
                 }
                 asset
             }
@@ -174,14 +177,15 @@ impl Asset {
                     eth_addr,
                     client.get_balance(eth_addr, None).await.unwrap()
                 );
-                wallet
-                    .sponsor(
-                        self.symbol.clone(),
-                        contract.into(),
-                        eth_addr.into(),
-                        policy,
-                    )
-                    .await?
+                let asset = wallet
+                    .build_sponsor(contract.into(), eth_addr.into(), policy)
+                    .await?;
+                if deploy {
+                    wallet
+                        .submit_sponsor(contract.into(), eth_addr.into(), &asset)
+                        .await?;
+                }
+                asset
             }
             AssetKind::Native => {
                 info!("adding native asset to library");
@@ -350,6 +354,17 @@ struct GenerateCommand {
     /// URL for Ethers HTTP Provider
     #[structopt(long, env = "CAPE_WEB3_PROVIDER_URL")]
     rpc_url: Url,
+
+    /// Treat the given asset as if it has already been deployed.
+    ///
+    /// This is useful if you just want to update the metadata of a sponsored asset, since
+    /// redeploying a sponsored asset without changing the policy causes an error. Also useful for
+    /// updating just a single asset, removing assets, or adding new ones. Use `--no-deploy` to
+    /// skip over assets that are already in the library and unchanged.
+    ///
+    /// This option can be passed more than once.
+    #[structopt(long)]
+    no_deploy: Vec<String>,
 }
 
 impl GenerateCommand {
@@ -395,6 +410,7 @@ impl GenerateCommand {
         // Create assets.
         let mut assets = Vec::new();
         for asset in spec.assets {
+            let deploy = !self.no_deploy.contains(&asset.symbol);
             assets.push(
                 asset
                     .create(
@@ -402,6 +418,7 @@ impl GenerateCommand {
                         &pub_key,
                         self.assets.parent().unwrap(),
                         &self.faucet_url,
+                        deploy,
                     )
                     .await
                     .map_err(wallet_error)?,
@@ -627,10 +644,10 @@ impl ShowCommand {
 ///     official-asset-library key-gen
 ///
 /// Randomly generates a mnemonic phrase for an Ethereum wallet, a mnemonic phrase for a CAPE
-/// wallet, and a signing key pair. Prints out all of the secret keys and the public verifying key
-/// associated with the secret signing key. The keys are printed in a format that can be sourced as
-/// environment variables, using the names of the environment variables required to use them with
-/// this program and with the CAPE wallet.
+/// wallet, a signing key pair, and viewing and freezing keys generated from the mnemonic. Prints
+/// out all of the secret keys and the public verifying key associated with the secret signing key.
+/// The keys are printed in a format that can be sourced as environment variables, using the names
+/// of the environment variables required to use them with this program and with the CAPE wallet.
 #[derive(StructOpt)]
 struct KeyGenCommand {}
 
@@ -639,7 +656,14 @@ impl KeyGenCommand {
         let mut rng = ChaChaRng::from_entropy();
         let sign_key = KeyPair::generate(&mut rng);
         let eth_mnemonic = KeyTree::random(&mut rng).1;
-        let cape_mnemonic = KeyTree::random(&mut rng).1;
+        let (cape_key, cape_mnemonic) = KeyTree::random(&mut rng);
+
+        let viewing_key = cape_key
+            .viewing_key_stream()
+            .derive_auditor_key_pair(&0u64.to_le_bytes());
+        let freezing_key = cape_key
+            .freezing_key_stream()
+            .derive_freezer_key_pair(&0u64.to_le_bytes());
 
         println!(
             "CAPE_ASSET_LIBRARY_ETH_MNEMONIC=\"{}\"",
@@ -654,6 +678,11 @@ impl KeyGenCommand {
             "CAPE_WALLET_ASSET_LIBRARY_VERIFIER_KEY=\"{}\"",
             sign_key.ver_key()
         );
+
+        println!("Viewing public key: {}", viewing_key.pub_key());
+        println!("Viewing private key: {}", viewing_key);
+        println!("Freezing public key: {}", freezing_key.pub_key());
+        println!("Freezing private key: {}", freezing_key);
     }
 }
 

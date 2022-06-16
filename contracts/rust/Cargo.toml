@@ -40,6 +40,7 @@ async-trait = "0.1.51"
 bincode = "1.3.3"
 commit = { git = "https://github.com/EspressoSystems/commit.git", tag = "0.1.0" }
 espresso-macros = { git = "https://github.com/EspressoSystems/espresso-macros.git" }
+espresso-systems-common = { git = "https://github.com/EspressoSystems/espresso-systems-common.git", tag = "0.1.0" }
 
 # We need the legacy feature in order to avoid gas estimation issues. See https://github.com/gakonst/ethers-rs/issues/825
 ethers = { features = ["legacy"], git = "https://github.com/gakonst/ethers-rs" }

@@ -1098,6 +1098,7 @@ dependencies = [
  "bincode",
  "commit",
  "espresso-macros 0.1.0 (git+https://github.com/EspressoSystems/espresso-macros.git)",
+ "espresso-systems-common",
  "ethers",
  "ethers-contract",
  "ethers-contract-abigen",
@@ -2233,6 +2234,11 @@ dependencies = [
  "quote",
  "syn",
 ]
+
+[[package]]
+name = "espresso-systems-common"
+version = "0.1.0"
+source = "git+https://github.com/EspressoSystems/espresso-systems-common.git?tag=0.1.0#0f89e27b283b499beb1b094d6513aa94ead40b29"
 
 [[package]]
 name = "eth-keystore"

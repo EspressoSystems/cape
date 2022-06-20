@@ -620,7 +620,7 @@ container is built.
 ### Goerli
 
 - Faucets to get Goerli Ether: [Simple](https://goerli-faucet.slock.it),
-  [Social](https://faucet.goerli.mudit.blog/).
+  [Social](https://faucet.goerli.mudit.blog/),[Goerli PoW Faucet](https://goerli-faucet.pk910.de/).
 - Set the GOERLI_URL in the .env file. A project can be created at
   https://infura.io/dashboard/ethereum.
 - Set the GOERLI_MNEMONIC (the Ethereum mnenmonic for your goerli wallet) in the

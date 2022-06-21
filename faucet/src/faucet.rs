@@ -10,6 +10,7 @@
 
 extern crate cape_wallet;
 
+use async_channel as mpmc;
 use async_std::{
     sync::{Arc, Mutex, RwLock},
     task::{sleep, spawn, JoinHandle},
@@ -21,7 +22,6 @@ use cape_wallet::{
     wallet::{CapeWallet, CapeWalletError},
 };
 use futures::{channel::mpsc, SinkExt, StreamExt};
-use itertools::Itertools;
 use jf_cap::{
     keys::{UserKeyPair, UserPubKey},
     structs::{AssetCode, FreezeFlag},
@@ -36,6 +36,7 @@ use seahorse::{
 };
 use serde::{Deserialize, Serialize};
 use snafu::Snafu;
+use std::collections::HashSet;
 use std::path::PathBuf;
 use std::time::Duration;
 use structopt::StructOpt;
@@ -122,6 +123,19 @@ pub struct FaucetOptions {
     /// Minimum amount of time to wait between polling requests to EQS.
     #[structopt(long, env = "CAPE_WALLET_MIN_POLLING_DELAY", default_value = "500")]
     pub min_polling_delay_ms: u64,
+
+    /// Maximum number of outstanding requests to allow in the queue.
+    ///
+    /// If not provided, the queue can grow arbitrarily large.
+    #[structopt(long, env = "CAPE_FAUCET_MAX_QUEUE_LENGTH")]
+    pub max_queue_len: Option<usize>,
+
+    /// Number of worker threads.
+    ///
+    /// It is a good idea to configure the faucet so that this is the same as
+    /// `num_records / num_grants`.
+    #[structopt(long, env = "CAPE_FAUCET_NUM_WORKERS", default_value = "5")]
+    pub num_workers: usize,
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -135,6 +149,7 @@ pub enum FaucetStatus {
 struct FaucetState {
     wallet: Arc<Mutex<CapeWallet<'static, CapeBackend<'static>>>>,
     status: Arc<RwLock<FaucetStatus>>,
+    queue: FaucetQueue,
     grant_size: RecordAmount,
     num_grants: usize,
     fee_size: RecordAmount,
@@ -157,6 +172,7 @@ impl FaucetState {
         Self {
             wallet: Arc::new(Mutex::new(wallet)),
             status: Arc::new(RwLock::new(FaucetStatus::Initializing)),
+            queue: FaucetQueue::new(opt.max_queue_len),
             grant_size: opt.grant_size,
             num_grants: opt.num_grants,
             fee_size: opt.fee_size,
@@ -175,6 +191,15 @@ pub enum FaucetError {
     #[snafu(display("internal server error: {}", msg))]
     Internal { msg: String },
 
+    #[snafu(display("the queue is full with {} requests, try again later", max_len))]
+    QueueFull { max_len: usize },
+
+    #[snafu(display(
+        "there is a pending request with key {}, you can only request once at a time",
+        key
+    ))]
+    AlreadyInQueue { key: UserPubKey },
+
     #[snafu(display("faucet service temporarily unavailable"))]
     Unavailable,
 }
@@ -187,6 +212,8 @@ impl net::Error for FaucetError {
         match self {
             Self::Transfer { .. } => StatusCode::BadRequest,
             Self::Internal { .. } => StatusCode::InternalServerError,
+            Self::AlreadyInQueue { .. } => StatusCode::BadRequest,
+            Self::QueueFull { .. } => StatusCode::InternalServerError,
             Self::Unavailable => StatusCode::ServiceUnavailable,
         }
     }
@@ -200,6 +227,72 @@ pub fn faucet_error(source: CapeWalletError) -> tide::Error {
     faucet_server_error(FaucetError::Transfer {
         msg: source.to_string(),
     })
+}
+
+/// A shared, asynchronous queue of requests.
+///
+/// The queue consists of an in-memory message channel, with send and receive ends. This channel is
+/// shared across instances of a given queue (created with [Clone]). A thread can add a request to
+/// the queue by calling [FaucetQueue::push], which sends a message on the channel containing the
+/// address requesting assets. A worker task can then dequeue the request by calling
+/// [FaucetQueue::pop]. The queue supports multiple simultaneous receivers and is internallyl
+/// thread-safe.
+///
+/// The queue also contains an index, which is an unordered set of all addresses currently in the
+/// queue, as well as an optional maximum length. Pushing will fail if the address being pushed is
+/// already in the queue, or if pushing the address would exceed the maximum length of the queue.
+/// The index is not synchronized with respect to the message channel, but addresses are always
+/// added to the index _before_ being pushed into the channel and removed from the index _after_
+/// being removed. This means that an address is considered "in the queue" as long as it is in the
+/// index, and it may be possible, for a brief time, for an address to appear in the index but not
+/// be returned by [FaucetQueue::pop]. The index is managed internally and not exposed, and the
+/// consistency of the queue accounts for this restriction.
+#[derive(Clone, Debug)]
+struct FaucetQueue {
+    sender: mpmc::Sender<UserPubKey>,
+    receiver: mpmc::Receiver<UserPubKey>,
+    index: Arc<Mutex<HashSet<UserPubKey>>>,
+    max_len: Option<usize>,
+}
+
+impl FaucetQueue {
+    fn new(max_len: Option<usize>) -> Self {
+        let (sender, receiver) = mpmc::unbounded();
+        Self {
+            sender,
+            receiver,
+            index: Default::default(),
+            max_len,
+        }
+    }
+
+    async fn push(&self, key: UserPubKey) -> Result<(), FaucetError> {
+        {
+            // Try to insert this key into the index.
+            let mut index = self.index.lock().await;
+            if let Some(max_len) = self.max_len {
+                if index.len() >= max_len {
+                    return Err(FaucetError::QueueFull { max_len });
+                }
+            }
+            if !index.insert(key.clone()) {
+                return Err(FaucetError::AlreadyInQueue { key });
+            }
+        }
+        // If we successfully added the key to the index, we can send it to a receiver.
+        if self.sender.send(key).await.is_err() {
+            tracing::warn!("failed to add request to the queue: channel is closed");
+        }
+        Ok(())
+    }
+
+    async fn pop(&mut self) -> Option<UserPubKey> {
+        let key = self.receiver.next().await?;
+        // A key that we received from the channel is guaranteed to be in the index. Since we have
+        // dequeued it, we can now safely remove it from the index.
+        self.index.lock().await.remove(&key);
+        Some(key)
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
@@ -237,75 +330,67 @@ async fn request_fee_assets(
     mut req: tide::Request<FaucetState>,
 ) -> Result<tide::Response, tide::Error> {
     check_service_available(req.state()).await?;
-
     let pub_key: UserPubKey = net::server::request_body(&mut req).await?;
-    let mut wallet = req.state().wallet.lock().await;
-    let faucet_addr = wallet.pub_keys().await[0].address();
+    response(&req, &req.state().queue.push(pub_key).await?)
+}
 
-    let mut txns = Vec::new();
-    let mut errs = Vec::new();
-    for _ in 0..req.state().num_grants {
-        tracing::info!(
-            "transferring {} tokens from {} to {}",
-            req.state().grant_size,
-            net::UserAddress(faucet_addr.clone()),
-            net::UserAddress(pub_key.address())
-        );
-        let balance = wallet.balance(&AssetCode::native()).await;
-        let records = spendable_records(&wallet, req.state().grant_size)
-            .await
-            .count();
-        tracing::info!(
-            "Wallet balance before transfer: {} across {} records",
-            balance,
-            records
-        );
-        match wallet
-            .transfer(
-                Some(&faucet_addr),
-                &AssetCode::native(),
-                &[(pub_key.address(), req.state().grant_size)],
-                req.state().fee_size,
-            )
-            .await
-        {
-            Ok(receipt) => {
-                txns.push(receipt);
+async fn worker(id: usize, mut state: FaucetState) {
+    'wait_for_requests: while let Some(pub_key) = state.queue.pop().await {
+        let mut wallet = state.wallet.lock().await;
+        let faucet_addr = wallet.pub_keys().await[0].address();
+
+        for _ in 0..state.num_grants {
+            tracing::info!(
+                "worker {}: transferring {} tokens from {} to {}",
+                id,
+                state.grant_size,
+                net::UserAddress(faucet_addr.clone()),
+                net::UserAddress(pub_key.address())
+            );
+            let balance = wallet.balance(&AssetCode::native()).await;
+            let records = spendable_records(&wallet, state.grant_size).await.count();
+            tracing::info!(
+                "worker {}: wallet balance before transfer: {} across {} records",
+                id,
+                balance,
+                records
+            );
+            if let Err(err) = wallet
+                .transfer(
+                    Some(&faucet_addr),
+                    &AssetCode::native(),
+                    &[(pub_key.address(), state.grant_size)],
+                    state.fee_size,
+                )
+                .await
+            {
+                tracing::error!("worker {}: failed to transfer: {}", id, err);
+                // If we failed, place the request back in the queue so we can come back to it; for
+                // example after we get more assets.
+                if let Err(err) = state.queue.push(pub_key).await {
+                    tracing::error!(
+                        "worker {}: failed to reinsert failed request, request will be dropped: {}",
+                        id,
+                        err
+                    );
+                }
+                continue 'wait_for_requests;
             }
-            Err(err) => {
-                tracing::warn!("Failed to transfer: {}", err);
-                errs.push(err);
-            }
+        }
+
+        // Signal the record breaking thread that we have spent some records, so that it can create
+        // more by breaking up larger records. Drop our handle to the wallet (which we no longer
+        // need) so that the thread can access it.
+        drop(wallet);
+        if state.signal_breaker_thread.clone().try_send(()).is_err() {
+            tracing::error!(
+                "worker {}: error signalling the breaker thread. Perhaps it has crashed?",
+                id
+            );
         }
     }
 
-    // Signal the record breaking thread that we have spent some records, so that it can create more
-    // by breaking up larger records. Drop our handle to the wallet (which we no longer need) so
-    // that the thread can access it.
-    drop(wallet);
-    if req
-        .state()
-        .signal_breaker_thread
-        .clone()
-        .try_send(())
-        .is_err()
-    {
-        tracing::error!("Error signalling the breaker thread. Perhaps it has crashed?");
-    }
-
-    if !txns.is_empty() {
-        // If we successfully transferred any assets, return success.
-        response(&req, txns)
-    } else {
-        // Otherwise, explain why the transactions failed.
-        let mut msgs = errs.into_iter().map(|err| format!("  - {}", err));
-        Err(faucet_server_error(FaucetError::Transfer {
-            msg: format!(
-                "All transfers failed for the following reasons:\n{}",
-                msgs.join("\n")
-            ),
-        }))
-    }
+    tracing::warn!("worker {}: exiting, request queue closed", id);
 }
 
 async fn spendable_records(
@@ -593,6 +678,12 @@ pub async fn init_web_server(
     // Wait for the thread to create at least `opt.num_records` if possible, before starting to
     // handle requests.
     wait_for_records(&state).await;
+
+    // Spawn the worker threads that will handle faucet requests.
+    for id in 0..opt.num_workers {
+        spawn(worker(id, state.clone()));
+    }
+
     *state.status.write().await = FaucetStatus::Available;
 
     Ok(handle)
@@ -617,19 +708,18 @@ async fn main() -> Result<(), std::io::Error> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use cap_rust_sandbox::{ledger::CapeLedger, universal_param::UNIVERSAL_PARAM};
+    use cap_rust_sandbox::universal_param::UNIVERSAL_PARAM;
     use cape_wallet::testing::{create_test_network, retry, rpc_url_for_test, spawn_eqs};
     use ethers::prelude::U256;
+    use futures::future::join_all;
     use jf_cap::structs::AssetDefinition;
     use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
-    use seahorse::{hd::KeyTree, txn_builder::TransactionReceipt};
+    use seahorse::hd::KeyTree;
     use std::path::PathBuf;
     use tempdir::TempDir;
     use tracing_test::traced_test;
 
-    #[async_std::test]
-    #[traced_test]
-    async fn test_faucet_transfer() {
+    async fn parallel_request(num_requests: usize) {
         let mut rng = ChaChaRng::from_seed([1u8; 32]);
         let universal_param = &*UNIVERSAL_PARAM;
 
@@ -655,12 +745,14 @@ mod test {
             faucet_port: faucet_port.clone(),
             grant_size,
             num_grants,
-            num_records: num_grants,
+            num_records: num_grants * num_requests,
             fee_size: 0u64.into(),
             eqs_url: eqs_url.clone(),
             relayer_url: relayer_url.clone(),
             address_book_url: address_book_url.clone(),
             min_polling_delay_ms: 500,
+            max_queue_len: Some(num_requests),
+            num_workers: num_requests,
         };
         init_web_server(&opt, Some(faucet_key_pair)).await.unwrap();
         println!("Faucet server initiated.");
@@ -678,63 +770,92 @@ mod test {
             res.body_json().await.unwrap(),
         );
 
-        // Create a receiver wallet.
-        let receiver_dir = TempDir::new("cape_wallet_receiver").unwrap();
-        let mut receiver_loader = CapeLoader::from_literal(
-            Some(KeyTree::random(&mut rng).1.to_string().replace('-', " ")),
-            Alphanumeric.sample_string(&mut rand::thread_rng(), 16),
-            PathBuf::from(receiver_dir.path()),
-            contract_address.into(),
-        );
-        let receiver_backend = CapeBackend::new(
-            universal_param,
-            CapeBackendConfig {
-                web3_provider: Some(rpc_url_for_test()),
-                eqs_url,
-                relayer_url,
-                address_book_url,
-                eth_mnemonic: None,
-                min_polling_delay: Duration::from_millis(500),
-            },
-            &mut receiver_loader,
-        )
-        .await
-        .unwrap();
-        let mut receiver = CapeWallet::new(receiver_backend).await.unwrap();
-        let receiver_key = receiver
-            .generate_user_key("receiver".into(), None)
+        // Create receiver wallets.
+        let mut wallets = Vec::new();
+        let mut keys = Vec::new();
+        let mut temp_dirs = Vec::new();
+        for i in 0..num_requests {
+            let receiver_dir = TempDir::new("cape_wallet_receiver").unwrap();
+            let mut receiver_loader = CapeLoader::from_literal(
+                Some(KeyTree::random(&mut rng).1.to_string().replace('-', " ")),
+                Alphanumeric.sample_string(&mut rand::thread_rng(), 16),
+                PathBuf::from(receiver_dir.path()),
+                contract_address.into(),
+            );
+            let receiver_backend = CapeBackend::new(
+                universal_param,
+                CapeBackendConfig {
+                    web3_provider: Some(rpc_url_for_test()),
+                    eqs_url: eqs_url.clone(),
+                    relayer_url: relayer_url.clone(),
+                    address_book_url: address_book_url.clone(),
+                    eth_mnemonic: None,
+                    min_polling_delay: Duration::from_millis(500),
+                },
+                &mut receiver_loader,
+            )
             .await
             .unwrap();
-        let receiver_key_bytes = bincode::serialize(&receiver_key).unwrap();
-        println!("Receiver wallet created.");
+            let mut receiver = CapeWallet::new(receiver_backend).await.unwrap();
+            let receiver_key = receiver
+                .generate_user_key("receiver".into(), None)
+                .await
+                .unwrap();
+            println!("Receiver wallet {} created.", i);
 
-        // Request native asset for the receiver.
-        let mut response = surf::post(format!(
-            "http://localhost:{}/request_fee_assets",
-            faucet_port
-        ))
-        .content_type(surf::http::mime::BYTE_STREAM)
-        .body_bytes(&receiver_key_bytes)
-        .await
-        .unwrap();
-        println!("Asset transferred.");
-
-        let receipts: Vec<TransactionReceipt<CapeLedger>> = response.body_json().await.unwrap();
-        assert_eq!(receipts.len(), 5);
-
-        // Check the balance.
-        retry(|| async {
-            receiver.balance(&AssetCode::native()).await == U256::from(grant_size) * num_grants
-        })
-        .await;
-
-        // We should have received `num_grants` records of `grant_size` each.
-        let records = receiver.records().await.collect::<Vec<_>>();
-        assert_eq!(records.len(), 5);
-        for record in records {
-            assert_eq!(record.ro.asset_def, AssetDefinition::native());
-            assert_eq!(record.ro.pub_key, receiver_key);
-            assert_eq!(record.amount(), grant_size);
+            temp_dirs.push(receiver_dir);
+            wallets.push(receiver);
+            keys.push(receiver_key);
         }
+
+        join_all(
+            wallets
+                .into_iter()
+                .zip(keys)
+                .map(|(wallet, key)| {
+                    let url = format!("http://localhost:{}/request_fee_assets", faucet_port);
+                    async move {
+                        // Request native asset for the receiver.
+                        let response = surf::post(url)
+                            .content_type(surf::http::mime::BYTE_STREAM)
+                            .body_bytes(&bincode::serialize(&key).unwrap())
+                            .await
+                            .unwrap();
+                        assert_eq!(response.status(), StatusCode::Ok);
+                        println!("Asset transferred.");
+
+                        // Check the balance.
+                        retry(|| async {
+                            wallet.balance(&AssetCode::native()).await
+                                == U256::from(grant_size) * num_grants
+                        })
+                        .await;
+
+                        // We should have received `num_grants` records of `grant_size` each.
+                        let records = wallet.records().await.collect::<Vec<_>>();
+                        assert_eq!(records.len(), 5);
+                        for record in records {
+                            assert_eq!(record.ro.asset_def, AssetDefinition::native());
+                            assert_eq!(record.ro.pub_key, key);
+                            assert_eq!(record.amount(), grant_size);
+                        }
+                    }
+                })
+                .collect::<Vec<_>>(),
+        )
+        .await;
+    }
+
+    #[async_std::test]
+    #[traced_test]
+    async fn test_faucet_transfer() {
+        parallel_request(1).await;
+    }
+
+    #[cfg(feature = "slow-tests")]
+    #[async_std::test]
+    #[traced_test]
+    async fn test_faucet_simultaneous_transfer() {
+        parallel_request(5).await;
     }
 }

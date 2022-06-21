@@ -2583,6 +2583,7 @@ name = "faucet"
 version = "0.1.0"
 dependencies = [
  "ark-std",
+ "async-channel",
  "async-std",
  "bincode",
  "cap-rust-sandbox",

@@ -15,6 +15,9 @@ use async_std::{
     sync::{Arc, Mutex, RwLock},
     task::{sleep, spawn, JoinHandle},
 };
+use atomic_store::{
+    load_store::BincodeLoadStore, AppendLog, AtomicStore, AtomicStoreLoader, PersistenceError,
+};
 use cap_rust_sandbox::universal_param::UNIVERSAL_PARAM;
 use cape_wallet::{
     backend::{CapeBackend, CapeBackendConfig},
@@ -36,8 +39,8 @@ use seahorse::{
 };
 use serde::{Deserialize, Serialize};
 use snafu::Snafu;
-use std::collections::HashSet;
-use std::path::PathBuf;
+use std::collections::{HashMap, HashSet};
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 use structopt::StructOpt;
 use surf::Url;
@@ -164,21 +167,21 @@ struct FaucetState {
 }
 
 impl FaucetState {
-    pub fn new(
+    pub async fn new(
         wallet: CapeWallet<'static, CapeBackend<'static>>,
         signal_breaker_thread: mpsc::Sender<()>,
         opt: &FaucetOptions,
-    ) -> Self {
-        Self {
+    ) -> Result<Self, FaucetError> {
+        Ok(Self {
             wallet: Arc::new(Mutex::new(wallet)),
             status: Arc::new(RwLock::new(FaucetStatus::Initializing)),
-            queue: FaucetQueue::new(opt.max_queue_len),
+            queue: FaucetQueue::load(&opt.faucet_wallet_path, opt.max_queue_len).await?,
             grant_size: opt.grant_size,
             num_grants: opt.num_grants,
             fee_size: opt.fee_size,
             num_records: opt.num_records,
             signal_breaker_thread,
-        }
+        })
     }
 }
 
@@ -200,6 +203,9 @@ pub enum FaucetError {
     ))]
     AlreadyInQueue { key: UserPubKey },
 
+    #[snafu(display("error with persistent storage: {}", msg))]
+    Persistence { msg: String },
+
     #[snafu(display("faucet service temporarily unavailable"))]
     Unavailable,
 }
@@ -214,7 +220,16 @@ impl net::Error for FaucetError {
             Self::Internal { .. } => StatusCode::InternalServerError,
             Self::AlreadyInQueue { .. } => StatusCode::BadRequest,
             Self::QueueFull { .. } => StatusCode::InternalServerError,
+            Self::Persistence { .. } => StatusCode::InternalServerError,
             Self::Unavailable => StatusCode::ServiceUnavailable,
+        }
+    }
+}
+
+impl From<PersistenceError> for FaucetError {
+    fn from(source: PersistenceError) -> Self {
+        Self::Persistence {
+            msg: source.to_string(),
         }
     }
 }
@@ -235,7 +250,7 @@ pub fn faucet_error(source: CapeWalletError) -> tide::Error {
 /// shared across instances of a given queue (created with [Clone]). A thread can add a request to
 /// the queue by calling [FaucetQueue::push], which sends a message on the channel containing the
 /// address requesting assets. A worker task can then dequeue the request by calling
-/// [FaucetQueue::pop]. The queue supports multiple simultaneous receivers and is internallyl
+/// [FaucetQueue::pop]. The queue supports multiple simultaneous receivers and is internally
 /// thread-safe.
 ///
 /// The queue also contains an index, which is an unordered set of all addresses currently in the
@@ -247,23 +262,124 @@ pub fn faucet_error(source: CapeWalletError) -> tide::Error {
 /// index, and it may be possible, for a brief time, for an address to appear in the index but not
 /// be returned by [FaucetQueue::pop]. The index is managed internally and not exposed, and the
 /// consistency of the queue accounts for this restriction.
-#[derive(Clone, Debug)]
+///
+/// The queue also supports persistence. If a request is successfully pushed onto the queue
+/// ([FaucetQueue::push] returns `Ok(())`) and has not been popped before the process is shut down
+/// or killed, the request will be saved in persistent storage and loaded back into the queue next
+/// time the queue is loaded from the same file location. The format of the persistent storage is an
+/// ordered set, represented as an `AppendLog` of `(UserPubKey, bool)` pairs. To recover the set,
+/// simply replay the log, inserting whenever a key has the value `true` and removing that key when
+/// it has the value `false`. In this way, we persist both the set of requests in the queue and the
+/// order in which they were added.
+///
+/// In order to avoid dropping requests, we do not remove elements from the index immediately after
+/// they are dequeued. If we did this, the server could crash after a request was dequeued but
+/// before it was processed, and we would lose that request, since the index is the part of the
+/// queue which is actually persisted. Instead, we keep the request in the index until its
+/// processing is complete. If the request was handled successfully, we finally remove it from the
+/// index. If the request failed but we want to retry it later, we keep it in the index and add it
+/// back to the message channel, so a worker will pick it up again.
+#[derive(Clone)]
 struct FaucetQueue {
     sender: mpmc::Sender<UserPubKey>,
     receiver: mpmc::Receiver<UserPubKey>,
-    index: Arc<Mutex<HashSet<UserPubKey>>>,
+    index: Arc<Mutex<FaucetQueueIndex>>,
     max_len: Option<usize>,
 }
 
+// A persistent ordered set.
+struct FaucetQueueIndex {
+    index: HashSet<UserPubKey>,
+    store: AtomicStore,
+    queue: AppendLog<BincodeLoadStore<(UserPubKey, bool)>>,
+}
+
+impl FaucetQueueIndex {
+    fn len(&self) -> usize {
+        self.index.len()
+    }
+
+    /// Add an element to the persistent set.
+    ///
+    /// Returns `true` if the element was inserted or `false` if it was already in the set.
+    fn insert(&mut self, key: UserPubKey) -> Result<bool, FaucetError> {
+        if self.index.contains(&key) {
+            // If the key is already in the set, we don't have to persist anything.
+            return Ok(false);
+        }
+
+        // Add the key to our persistent log.
+        self.queue.store_resource(&(key.clone(), true))?;
+        self.queue.commit_version().unwrap();
+        self.store.commit_version().unwrap();
+        // If successful, add it to our in-memory set.
+        self.index.insert(key);
+        Ok(true)
+    }
+
+    /// Remove an element from the persistent set.
+    fn remove(&mut self, key: &UserPubKey) -> Result<(), FaucetError> {
+        // Make a persistent note to remove the key.
+        self.queue.store_resource(&(key.clone(), false))?;
+        self.queue.commit_version().unwrap();
+        self.store.commit_version().unwrap();
+        // Update our in-memory set.
+        self.index.remove(key);
+        Ok(())
+    }
+}
+
 impl FaucetQueue {
-    fn new(max_len: Option<usize>) -> Self {
+    async fn load(store: &Path, max_len: Option<usize>) -> Result<Self, FaucetError> {
+        // Load from storage.
+        let mut loader = AtomicStoreLoader::load(store, "queue")?;
+        let persistent_queue = AppendLog::load(&mut loader, Default::default(), "requests", 1024)?;
+        let store = AtomicStore::open(loader)?;
+
+        // Traverse the persisted queue entries backwards. This ensures that we encounter the most
+        // recent value for each key first. If the most recent value for a given key is `true`, it
+        // gets added to the index and message channel. Otherwise, we just store `false` in `index`
+        // so that if we see this key again, we know we are not seeing the most recent value.
+        let mut index = HashMap::new();
+        // We are encountering requests in reverse order, so if we need to add them to the queue, we
+        // will add them to this [Vec] and then reverse it at the end before adding them to the
+        // message channel.
+        let mut queue = Vec::new();
+        let entries: Vec<(UserPubKey, bool)> = persistent_queue.iter().collect::<Result<_, _>>()?;
+        for (key, insert) in entries.into_iter().rev() {
+            if index.contains_key(&key) {
+                // This is an older value for `key`.
+                continue;
+            }
+            if insert {
+                // This is the most recent value for `key`, and it is an insert, which means `key`
+                // is in the queue. Go ahead and add it to the index and the message channel.
+                index.insert(key.clone(), true);
+                queue.push(key);
+            } else {
+                // This is the most recent value for `key`, and it is a delete, which means `key` is
+                // not in the queue. Remember this information in `index`.
+                index.insert(key, false);
+            }
+        }
+
         let (sender, receiver) = mpmc::unbounded();
-        Self {
+        for key in queue.into_iter().rev() {
+            // `send` only fails if the receiving end of the channel has been dropped, but we have
+            // the receiving end right now, so this `unwrap` will never fail.
+            sender.send(key).await.unwrap();
+        }
+
+        Ok(Self {
+            index: Arc::new(Mutex::new(FaucetQueueIndex {
+                index: index.into_keys().collect(),
+                queue: persistent_queue,
+                store,
+            })),
             sender,
             receiver,
-            index: Default::default(),
             max_len,
-        }
+        })
     }
 
     async fn push(&self, key: UserPubKey) -> Result<(), FaucetError> {
@@ -275,7 +391,7 @@ impl FaucetQueue {
                     return Err(FaucetError::QueueFull { max_len });
                 }
             }
-            if !index.insert(key.clone()) {
+            if !index.insert(key.clone())? {
                 return Err(FaucetError::AlreadyInQueue { key });
             }
         }
@@ -288,10 +404,21 @@ impl FaucetQueue {
 
     async fn pop(&mut self) -> Option<UserPubKey> {
         let key = self.receiver.next().await?;
-        // A key that we received from the channel is guaranteed to be in the index. Since we have
-        // dequeued it, we can now safely remove it from the index.
-        self.index.lock().await.remove(&key);
         Some(key)
+    }
+
+    async fn finalize(&mut self, request: UserPubKey, success: bool) {
+        let mut index = self.index.lock().await;
+        if success {
+            if let Err(err) = index.remove(&request) {
+                tracing::error!("error removing request {} from index: {}.", request, err);
+            }
+        } else if let Err(err) = self.sender.send(request).await {
+            tracing::error!(
+                "error re-adding failed request; request will be dropped. {}",
+                err
+            );
+        }
     }
 }
 
@@ -365,23 +492,20 @@ async fn worker(id: usize, mut state: FaucetState) {
                 .await
             {
                 tracing::error!("worker {}: failed to transfer: {}", id, err);
-                // If we failed, place the request back in the queue so we can come back to it; for
-                // example after we get more assets.
-                if let Err(err) = state.queue.push(pub_key).await {
-                    tracing::error!(
-                        "worker {}: failed to reinsert failed request, request will be dropped: {}",
-                        id,
-                        err
-                    );
-                }
+                // If we failed, finalize the request as failed in the queue so it can be retried
+                // later.
+                state.queue.finalize(pub_key, false).await;
                 continue 'wait_for_requests;
             }
         }
+        drop(wallet);
+
+        // Delete this request from the queue, as we have satisfied it.
+        state.queue.finalize(pub_key, true).await;
 
         // Signal the record breaking thread that we have spent some records, so that it can create
         // more by breaking up larger records. Drop our handle to the wallet (which we no longer
         // need) so that the thread can access it.
-        drop(wallet);
         if state.signal_breaker_thread.clone().try_send(()).is_err() {
             tracing::error!(
                 "worker {}: error signalling the breaker thread. Perhaps it has crashed?",
@@ -640,7 +764,9 @@ pub async fn init_web_server(
     // need it to break large records into smaller ones. We use the total number of records to
     // maintain as a conservative upper bound on how backed up the message channel can get.
     let signal_breaker_thread = mpsc::channel(opt.num_records);
-    let state = FaucetState::new(wallet, signal_breaker_thread.0, opt);
+    let state = FaucetState::new(wallet, signal_breaker_thread.0, opt)
+        .await
+        .unwrap();
     let mut app = tide::with_state(state.clone());
     app.at("/healthcheck").get(healthcheck);
     app.with(

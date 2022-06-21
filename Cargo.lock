@@ -2585,6 +2585,7 @@ dependencies = [
  "ark-std",
  "async-channel",
  "async-std",
+ "atomic_store 0.1.2",
  "bincode",
  "cap-rust-sandbox",
  "cape_wallet",

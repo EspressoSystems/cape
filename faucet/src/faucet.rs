@@ -246,39 +246,30 @@ pub fn faucet_error(source: CapeWalletError) -> tide::Error {
 
 /// A shared, asynchronous queue of requests.
 ///
-/// The queue consists of an in-memory message channel, with send and receive ends. This channel is
-/// shared across instances of a given queue (created with [Clone]). A thread can add a request to
-/// the queue by calling [FaucetQueue::push], which sends a message on the channel containing the
-/// address requesting assets. A worker task can then dequeue the request by calling
-/// [FaucetQueue::pop]. The queue supports multiple simultaneous receivers and is internally
-/// thread-safe.
+/// The queue is a model of an ordered map from public keys requesting assets to the number of
+/// record grants they have received. It is represented as an explicit `HashMap`, which is the
+/// authoritative data structure, as well as an auxiliary, implicit queue in the form of an
+/// unbounded multi-producer, multi-consumer channel.
 ///
-/// The queue also contains an index, which is an unordered set of all addresses currently in the
-/// queue, as well as an optional maximum length. Pushing will fail if the address being pushed is
-/// already in the queue, or if pushing the address would exceed the maximum length of the queue.
-/// The index is not synchronized with respect to the message channel, but addresses are always
-/// added to the index _before_ being pushed into the channel and removed from the index _after_
-/// being removed. This means that an address is considered "in the queue" as long as it is in the
-/// index, and it may be possible, for a brief time, for an address to appear in the index but not
-/// be returned by [FaucetQueue::pop]. The index is managed internally and not exposed, and the
-/// consistency of the queue accounts for this restriction.
+/// When a new request comes in, it can be added to the queue with [FaucetQueue::push]. This will
+/// perform validity checks and then add a new entry mapping the public key to 0. It will also send
+/// the public key as a message on the channel. A worker thread will then pick the message off the
+/// channel using [FaucetQueue::pop], and start generating transfers to it. Each time the worker
+/// completes a transfer to the public key, it will call [FaucetQueue::grant], which increments the
+/// counter associated with that public key, persists the change, and instructs the worker to
+/// either continue transferring to the same key or to move on to the next key.
 ///
-/// The queue also supports persistence. If a request is successfully pushed onto the queue
-/// ([FaucetQueue::push] returns `Ok(())`) and has not been popped before the process is shut down
-/// or killed, the request will be saved in persistent storage and loaded back into the queue next
-/// time the queue is loaded from the same file location. The format of the persistent storage is an
-/// ordered set, represented as an `AppendLog` of `(UserPubKey, bool)` pairs. To recover the set,
-/// simply replay the log, inserting whenever a key has the value `true` and removing that key when
-/// it has the value `false`. In this way, we persist both the set of requests in the queue and the
-/// order in which they were added.
+/// The queue is persistent, so that if the faucet crashes or gets restarted, it doesn't lose the
+/// queue of pending requests. The persistent queue is represented as a log of index entries, of the
+/// form `UserPubKey -> Option<usize>`. An entry `key -> Some(n)` corresponds to updating the
+/// counter associated with `key` to `n`. An entry `key -> None` corresponds to deleting the entry
+/// for `key`. We can recover the in-memory index by simply replaying each log entry and inserting
+/// or deleting into a `HashMap` as indicated.
 ///
-/// In order to avoid dropping requests, we do not remove elements from the index immediately after
-/// they are dequeued. If we did this, the server could crash after a request was dequeued but
-/// before it was processed, and we would lose that request, since the index is the part of the
-/// queue which is actually persisted. Instead, we keep the request in the index until its
-/// processing is complete. If the request was handled successfully, we finally remove it from the
-/// index. If the request failed but we want to retry it later, we keep it in the index and add it
-/// back to the message channel, so a worker will pick it up again.
+/// Note that the persistent data format also encodes the order in which requests were added to the
+/// queue. A new request being added to the queue corresponds to an entry `key -> Some(0)`, so the
+/// queue simply consists of the most recent `key -> Some(0)` entry for each key, in order,
+/// filtering out keys that have a more recent `key -> None` entry.
 #[derive(Clone)]
 struct FaucetQueue {
     sender: mpmc::Sender<UserPubKey>,
@@ -289,9 +280,9 @@ struct FaucetQueue {
 
 // A persistent ordered set.
 struct FaucetQueueIndex {
-    index: HashSet<UserPubKey>,
+    index: HashMap<UserPubKey, usize>,
     store: AtomicStore,
-    queue: AppendLog<BincodeLoadStore<(UserPubKey, bool)>>,
+    queue: AppendLog<BincodeLoadStore<(UserPubKey, Option<usize>)>>,
 }
 
 impl FaucetQueueIndex {
@@ -299,28 +290,52 @@ impl FaucetQueueIndex {
         self.index.len()
     }
 
-    /// Add an element to the persistent set.
+    /// Add an element to the persistent index.
     ///
-    /// Returns `true` if the element was inserted or `false` if it was already in the set.
+    /// Returns `true` if the element was inserted or `false` if it was already in the index.
     fn insert(&mut self, key: UserPubKey) -> Result<bool, FaucetError> {
-        if self.index.contains(&key) {
-            // If the key is already in the set, we don't have to persist anything.
+        if self.index.contains_key(&key) {
+            // If the key is already in the index, we don't have to persist anything.
             return Ok(false);
         }
 
         // Add the key to our persistent log.
-        self.queue.store_resource(&(key.clone(), true))?;
+        self.queue.store_resource(&(key.clone(), Some(0)))?;
         self.queue.commit_version().unwrap();
         self.store.commit_version().unwrap();
-        // If successful, add it to our in-memory set.
-        self.index.insert(key);
+        // If successful, add it to our in-memory index.
+        self.index.insert(key, 0);
         Ok(true)
+    }
+
+    /// Increment the number of grants received by an element in the index.
+    ///
+    /// If the new number of grants is at least `max_grants`, the entry is removed from the index.
+    /// Otherwise, the counter is simply updated.
+    ///
+    /// Returns `true` if this key needs more grants.
+    fn grant(&mut self, key: UserPubKey, max_grants: usize) -> Result<bool, FaucetError> {
+        let grants_given = self.index[&key] + 1;
+        if grants_given >= max_grants {
+            // If this is the last grant to this key, remove it from the index.
+            self.remove(&key)?;
+            Ok(false)
+        } else {
+            // Update the entry in our persistent log.
+            self.queue
+                .store_resource(&(key.clone(), Some(grants_given)))?;
+            self.queue.commit_version().unwrap();
+            self.store.commit_version().unwrap();
+            // If successful, update our in-memory index.
+            self.index.insert(key, grants_given);
+            Ok(true)
+        }
     }
 
     /// Remove an element from the persistent set.
     fn remove(&mut self, key: &UserPubKey) -> Result<(), FaucetError> {
         // Make a persistent note to remove the key.
-        self.queue.store_resource(&(key.clone(), false))?;
+        self.queue.store_resource(&(key.clone(), None))?;
         self.queue.commit_version().unwrap();
         self.store.commit_version().unwrap();
         // Update our in-memory set.
@@ -337,29 +352,47 @@ impl FaucetQueue {
         let store = AtomicStore::open(loader)?;
 
         // Traverse the persisted queue entries backwards. This ensures that we encounter the most
-        // recent value for each key first. If the most recent value for a given key is `true`, it
-        // gets added to the index and message channel. Otherwise, we just store `false` in `index`
-        // so that if we see this key again, we know we are not seeing the most recent value.
+        // recent value for each key first. If the most recent value for a given key is `Some(n)`,
+        // it gets added to the index. If it is `None`, we just store `None` in `index` so that if
+        // we see this key again, we know we are not seeing the most recent value.
         let mut index = HashMap::new();
+        // In addition, for the most recent `Some(0)` entry for each `key`, we also add that key to
+        // the message channel, as long as there is not a more recent `None` entry. We use the set
+        // `processed` to keep track of which elements have already been processed into the message
+        // channel if necessary. An element is `processed` if we have added it to the message
+        // channel, or if we have encountered a `None` entry for it and skipped it.
+        let mut processed = HashSet::new();
         // We are encountering requests in reverse order, so if we need to add them to the queue, we
         // will add them to this [Vec] and then reverse it at the end before adding them to the
         // message channel.
         let mut queue = Vec::new();
-        let entries: Vec<(UserPubKey, bool)> = persistent_queue.iter().collect::<Result<_, _>>()?;
-        for (key, insert) in entries.into_iter().rev() {
-            if index.contains_key(&key) {
-                // This is an older value for `key`.
-                continue;
+        let entries: Vec<(UserPubKey, Option<usize>)> =
+            persistent_queue.iter().collect::<Result<_, _>>()?;
+        for (key, val) in entries.into_iter().rev() {
+            if !index.contains_key(&key) {
+                if let Some(val) = val {
+                    // This is the most recent value for `key`, and it is an insert, which means
+                    // `key` is in the queue. Go ahead and add it to the index and the message
+                    // channel.
+                    index.insert(key.clone(), Some(val));
+                } else {
+                    // This is the most recent value for `key`, and it is a delete, which means
+                    // `key` is not in the queue. Remember this information in `index`.
+                    index.insert(key.clone(), None);
+                }
             }
-            if insert {
-                // This is the most recent value for `key`, and it is an insert, which means `key`
-                // is in the queue. Go ahead and add it to the index and the message channel.
-                index.insert(key.clone(), true);
-                queue.push(key);
-            } else {
-                // This is the most recent value for `key`, and it is a delete, which means `key` is
-                // not in the queue. Remember this information in `index`.
-                index.insert(key, false);
+
+            if !processed.contains(&key) {
+                // We have seen neither a `Some(0)` or `None` entry for this element.
+                if val == Some(0) {
+                    // In the case of a `Some(0)` entry, the element should be in the queue.
+                    queue.push(key.clone());
+                    processed.insert(key);
+                } else if val == None {
+                    // In the case of a `None` entry, just add the element to `processed` so that it
+                    // will not be added to the queue later.
+                    processed.insert(key);
+                }
             }
         }
 
@@ -372,7 +405,10 @@ impl FaucetQueue {
 
         Ok(Self {
             index: Arc::new(Mutex::new(FaucetQueueIndex {
-                index: index.into_keys().collect(),
+                index: index
+                    .into_iter()
+                    .filter_map(|(key, val)| val.map(|val| (key, val)))
+                    .collect(),
                 queue: persistent_queue,
                 store,
             })),
@@ -407,13 +443,18 @@ impl FaucetQueue {
         Some(key)
     }
 
-    async fn finalize(&mut self, request: UserPubKey, success: bool) {
-        let mut index = self.index.lock().await;
-        if success {
-            if let Err(err) = index.remove(&request) {
-                tracing::error!("error removing request {} from index: {}.", request, err);
+    async fn grant(&mut self, request: UserPubKey, max_grants: usize) -> bool {
+        match self.index.lock().await.grant(request, max_grants) {
+            Ok(more) => more,
+            Err(err) => {
+                tracing::error!("error updating request: {}", err);
+                false
             }
-        } else if let Err(err) = self.sender.send(request).await {
+        }
+    }
+
+    async fn fail(&mut self, request: UserPubKey) {
+        if let Err(err) = self.sender.send(request).await {
             tracing::error!(
                 "error re-adding failed request; request will be dropped. {}",
                 err
@@ -466,7 +507,7 @@ async fn worker(id: usize, mut state: FaucetState) {
         let mut wallet = state.wallet.lock().await;
         let faucet_addr = wallet.pub_keys().await[0].address();
 
-        for _ in 0..state.num_grants {
+        loop {
             tracing::info!(
                 "worker {}: transferring {} tokens from {} to {}",
                 id,
@@ -492,16 +533,19 @@ async fn worker(id: usize, mut state: FaucetState) {
                 .await
             {
                 tracing::error!("worker {}: failed to transfer: {}", id, err);
-                // If we failed, finalize the request as failed in the queue so it can be retried
+                // If we failed, mark the request as failed in the queue so it can be retried
                 // later.
-                state.queue.finalize(pub_key, false).await;
+                state.queue.fail(pub_key).await;
                 continue 'wait_for_requests;
+            }
+
+            // Update the queue with the results of this grant; find out if the key needs more
+            // grants or not.
+            if !state.queue.grant(pub_key.clone(), state.num_grants).await {
+                break;
             }
         }
         drop(wallet);
-
-        // Delete this request from the queue, as we have satisfied it.
-        state.queue.finalize(pub_key, true).await;
 
         // Signal the record breaking thread that we have spent some records, so that it can create
         // more by breaking up larger records. Drop our handle to the wallet (which we no longer
@@ -843,6 +887,7 @@ mod test {
     use jf_cap::structs::AssetDefinition;
     use net::client::response_body;
     use portpicker::pick_unused_port;
+    use rand::Rng;
     use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
     use seahorse::{
         hd::{KeyTree, Mnemonic},
@@ -1047,8 +1092,11 @@ mod test {
         }))
         .await;
 
-        // After submitting all of the requests, kill and restart the faucet, so that it has to
-        // reload from storage.
+        // After submitting all of the requests, wait a random amount of time, and then kill and
+        // restart the faucet, so that it has to reload from storage.
+        let delay = ChaChaRng::from_entropy().gen_range(0..30);
+        tracing::info!("Waiting {} seconds, then killing faucet", delay);
+        sleep(Duration::from_secs(delay)).await;
         faucet.restart().await;
 
         // Check the balances for each wallet.

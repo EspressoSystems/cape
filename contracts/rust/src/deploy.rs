@@ -56,7 +56,7 @@ pub async fn deploy_test_cape_with_deployer(
         deployer.clone(),
         &contract_abi_path("mocks/TestCAPE.sol/TestCAPE"),
         CAPEConstructorArgs::new(
-            CAPE_NUM_ROOTS,
+            CAPE_NUM_ROOTS as u64,
             verifier.address(),
             records_merkle_tree.address(),
         )
@@ -100,7 +100,7 @@ pub async fn deploy_cape_with_deployer(deployer: Arc<EthMiddleware>) -> CAPE<Eth
         deployer.clone(),
         &contract_abi_path("CAPE.sol/CAPE"),
         CAPEConstructorArgs::new(
-            CAPE_NUM_ROOTS,
+            CAPE_NUM_ROOTS as u64,
             verifier.address(),
             records_merkle_tree.address(),
         )

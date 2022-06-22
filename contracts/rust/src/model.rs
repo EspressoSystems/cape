@@ -31,7 +31,7 @@ use std::sync::Arc;
 // can be changed later.
 pub const CAPE_MERKLE_HEIGHT: u8 = 24 /*H*/;
 pub const CAPE_BURN_MAGIC_BYTES: &str = "EsSCAPE burn";
-pub const CAPE_NUM_ROOTS: u64 = 40;
+pub const CAPE_NUM_ROOTS: usize = 40;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum CapeModelTxn {
@@ -347,9 +347,6 @@ fn extract_burn_dst(xfr: &TransferNote) -> Option<Option<EthereumAddr>> {
 }
 
 impl CapeContractState {
-    // How many previous record Merkle tree root hashes the validator should remember.
-    pub const RECORD_ROOT_HISTORY_SIZE: usize = 1000;
-
     pub fn new(verif_crs: VerifierKeySet, record_merkle_frontier: MerkleTree) -> Self {
         Self {
             ledger: CapeLedgerState {
@@ -357,7 +354,7 @@ impl CapeContractState {
                 record_merkle_commitment: record_merkle_frontier.commitment(),
                 record_merkle_frontier: record_merkle_frontier.frontier(),
                 past_record_merkle_roots: CapeRecordMerkleHistory(VecDeque::with_capacity(
-                    Self::RECORD_ROOT_HISTORY_SIZE,
+                    CAPE_NUM_ROOTS,
                 )),
             },
             verif_crs,
@@ -665,9 +662,7 @@ impl CapeContractState {
                         builder.into_frontier_and_commitment()
                     };
 
-                    if new_state.ledger.past_record_merkle_roots.0.len()
-                        >= Self::RECORD_ROOT_HISTORY_SIZE
-                    {
+                    if new_state.ledger.past_record_merkle_roots.0.len() >= CAPE_NUM_ROOTS {
                         new_state.ledger.past_record_merkle_roots.0.pop_back();
                     }
                     new_state

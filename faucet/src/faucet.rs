@@ -834,16 +834,118 @@ async fn main() -> Result<(), std::io::Error> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use async_std::task::spawn_blocking;
     use cap_rust_sandbox::universal_param::UNIVERSAL_PARAM;
     use cape_wallet::testing::{create_test_network, retry, rpc_url_for_test, spawn_eqs};
+    use escargot::CargoBuild;
     use ethers::prelude::U256;
     use futures::future::join_all;
     use jf_cap::structs::AssetDefinition;
+    use net::client::response_body;
+    use portpicker::pick_unused_port;
     use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
-    use seahorse::hd::KeyTree;
+    use seahorse::{
+        hd::{KeyTree, Mnemonic},
+        RecordAmount,
+    };
     use std::path::PathBuf;
+    use std::process::Child;
     use tempdir::TempDir;
     use tracing_test::traced_test;
+
+    struct Faucet {
+        eqs_url: Url,
+        relayer_url: Url,
+        address_book_url: Url,
+        mnemonic: Mnemonic,
+        dir: PathBuf,
+        port: u16,
+        grant_size: RecordAmount,
+        num_grants: usize,
+        num_requests: usize,
+        process: Option<Child>,
+    }
+
+    impl Faucet {
+        async fn start(&mut self) {
+            let eqs_url = self.eqs_url.to_string();
+            let relayer_url = self.relayer_url.to_string();
+            let address_book_url = self.address_book_url.to_string();
+            let mnemonic = self.mnemonic.to_string();
+            let dir = self.dir.display().to_string();
+            let port = self.port.to_string();
+            let grant_size = self.grant_size.to_string();
+            let num_grants = self.num_grants.to_string();
+            let num_requests = self.num_requests.to_string();
+            let num_records = (self.num_grants * self.num_requests).to_string();
+
+            self.process = Some(
+                CargoBuild::new()
+                    .current_release()
+                    .current_target()
+                    .bin("faucet")
+                    .run()
+                    .unwrap()
+                    .command()
+                    .args([
+                        "--eqs-url",
+                        &eqs_url,
+                        "--relayer-url",
+                        &relayer_url,
+                        "--address-book-url",
+                        &address_book_url,
+                        "--mnemonic",
+                        &mnemonic,
+                        "--wallet-path",
+                        &dir,
+                        "--faucet-port",
+                        &port,
+                        "--grant-size",
+                        &grant_size,
+                        "--num-grants",
+                        &num_grants,
+                        "--num-records",
+                        &num_records,
+                        "--max-queue-len",
+                        &num_requests,
+                        "--num-workers",
+                        &num_requests,
+                    ])
+                    .spawn()
+                    .unwrap(),
+            );
+
+            // Wait for the service to become available.
+            loop {
+                if let Ok(mut res) = surf::get(format!("http://localhost:{}/healthcheck", port))
+                    .send()
+                    .await
+                {
+                    let health: HealthCheck = response_body(&mut res).await.unwrap();
+                    if health.status == FaucetStatus::Available {
+                        break;
+                    }
+                }
+
+                sleep(Duration::from_secs(30)).await;
+            }
+        }
+
+        async fn stop(&mut self) {
+            if let Some(mut process) = self.process.take() {
+                spawn_blocking(move || {
+                    process.kill().unwrap();
+                    process.wait().unwrap();
+                })
+                .await;
+            }
+        }
+
+        async fn restart(&mut self) {
+            self.stop().await;
+            self.start().await;
+        }
+    }
 
     async fn parallel_request(num_requests: usize) {
         let mut rng = ChaChaRng::from_seed([1u8; 32]);
@@ -861,26 +963,22 @@ mod test {
 
         // Initiate a faucet server with the mnemonic associated with the faucet key pair.
         let faucet_dir = TempDir::new("cape_wallet_faucet").unwrap();
-        let faucet_port = "50079".to_string();
+        let faucet_port = pick_unused_port().unwrap();
         let grant_size = RecordAmount::from(1000u64);
         let num_grants = 5;
-        let opt = FaucetOptions {
-            mnemonic: mnemonic.to_string(),
-            faucet_wallet_path: PathBuf::from(faucet_dir.path()),
-            faucet_password: "".to_string(),
-            faucet_port: faucet_port.clone(),
-            grant_size,
-            num_grants,
-            num_records: num_grants * num_requests,
-            fee_size: 0u64.into(),
+        let mut faucet = Faucet {
             eqs_url: eqs_url.clone(),
             relayer_url: relayer_url.clone(),
             address_book_url: address_book_url.clone(),
-            min_polling_delay_ms: 500,
-            max_queue_len: Some(num_requests),
-            num_workers: num_requests,
+            mnemonic,
+            dir: faucet_dir.path().to_owned(),
+            port: faucet_port,
+            grant_size,
+            num_grants,
+            num_requests,
+            process: None,
         };
-        init_web_server(&opt, Some(faucet_key_pair)).await.unwrap();
+        faucet.start().await;
         println!("Faucet server initiated.");
 
         // Check the status is "available".
@@ -934,37 +1032,44 @@ mod test {
             keys.push(receiver_key);
         }
 
+        join_all(keys.iter().map(|key| {
+            let url = format!("http://localhost:{}/request_fee_assets", faucet_port);
+            async move {
+                // Request native asset for the receiver.
+                let response = surf::post(url)
+                    .content_type(surf::http::mime::BYTE_STREAM)
+                    .body_bytes(&bincode::serialize(key).unwrap())
+                    .await
+                    .unwrap();
+                assert_eq!(response.status(), StatusCode::Ok);
+                println!("Asset transferred.");
+            }
+        }))
+        .await;
+
+        // After submitting all of the requests, kill and restart the faucet, so that it has to
+        // reload from storage.
+        faucet.restart().await;
+
+        // Check the balances for each wallet.
         join_all(
             wallets
                 .into_iter()
                 .zip(keys)
-                .map(|(wallet, key)| {
-                    let url = format!("http://localhost:{}/request_fee_assets", faucet_port);
-                    async move {
-                        // Request native asset for the receiver.
-                        let response = surf::post(url)
-                            .content_type(surf::http::mime::BYTE_STREAM)
-                            .body_bytes(&bincode::serialize(&key).unwrap())
-                            .await
-                            .unwrap();
-                        assert_eq!(response.status(), StatusCode::Ok);
-                        println!("Asset transferred.");
+                .map(|(wallet, key)| async move {
+                    retry(|| async {
+                        wallet.balance(&AssetCode::native()).await
+                            == U256::from(grant_size) * num_grants
+                    })
+                    .await;
 
-                        // Check the balance.
-                        retry(|| async {
-                            wallet.balance(&AssetCode::native()).await
-                                == U256::from(grant_size) * num_grants
-                        })
-                        .await;
-
-                        // We should have received `num_grants` records of `grant_size` each.
-                        let records = wallet.records().await.collect::<Vec<_>>();
-                        assert_eq!(records.len(), 5);
-                        for record in records {
-                            assert_eq!(record.ro.asset_def, AssetDefinition::native());
-                            assert_eq!(record.ro.pub_key, key);
-                            assert_eq!(record.amount(), grant_size);
-                        }
+                    // We should have received `num_grants` records of `grant_size` each.
+                    let records = wallet.records().await.collect::<Vec<_>>();
+                    assert_eq!(records.len(), 5);
+                    for record in records {
+                        assert_eq!(record.ro.asset_def, AssetDefinition::native());
+                        assert_eq!(record.ro.pub_key, key);
+                        assert_eq!(record.amount(), grant_size);
                     }
                 })
                 .collect::<Vec<_>>(),

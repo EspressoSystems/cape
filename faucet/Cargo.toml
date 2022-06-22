@@ -67,4 +67,6 @@ tracing-log = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 [dev-dependencies]
+escargot = "0.5"
+portpicker = "0.1"
 tracing-test = "0.2.1"

@@ -2583,10 +2583,13 @@ name = "faucet"
 version = "0.1.0"
 dependencies = [
  "ark-std",
+ "async-channel",
  "async-std",
+ "atomic_store 0.1.2",
  "bincode",
  "cap-rust-sandbox",
  "cape_wallet",
+ "escargot",
  "ethers",
  "futures",
  "hex",
@@ -2594,6 +2597,7 @@ dependencies = [
  "jf-cap",
  "key-set",
  "net",
+ "portpicker",
  "rand 0.8.5",
  "rand_chacha 0.3.1",
  "reef",
@@ -4570,6 +4574,15 @@ dependencies = [
  "cpuid-bool",
  "opaque-debug 0.3.0",
  "universal-hash",
+]
+
+[[package]]
+name = "portpicker"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "be97d76faf1bfab666e1375477b23fde79eccf0276e9b63b92a39d676a889ba9"
+dependencies = [
+ "rand 0.8.5",
 ]
 
 [[package]]

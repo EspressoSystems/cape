@@ -334,8 +334,8 @@ impl<'a> WalletBackend<'a, CapeLedger> for CapeBackend<'a> {
 
     async fn subscribe(&self, from: EventIndex, to: Option<EventIndex>) -> Self::EventStream {
         // To avoid overloading the EQS with spurious network traffic, we will increase the backoff
-        // time as long as we are not getting any new events, up to a maximum of 1 minute.
-        let max_backoff = Duration::from_secs(60);
+        // time as long as we are not getting any new events, up to a maximum of 10 seconds.
+        let max_backoff = Duration::from_secs(10);
 
         struct StreamState {
             from: usize,

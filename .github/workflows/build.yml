@@ -132,7 +132,9 @@ jobs:
           path: wallet-checkout/target/release/
 
       - name: Set linker/loader to not be nix
-        run: patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 ./wallet-checkout/target/release/wallet-api
+        run: |
+          patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 ./wallet-checkout/target/release/wallet-api
+          patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 ./wallet-checkout/target/release/wallet-cli
 
       - uses: docker/setup-buildx-action@v1
         name: Setup Docker BuildKit (buildx)

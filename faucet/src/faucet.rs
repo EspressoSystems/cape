@@ -625,44 +625,54 @@ async fn break_up_records(state: FaucetState, mut wakeup: mpsc::Receiver<()>) {
             let records = spendable_records(&*wallet, state.grant_size)
                 .await
                 .collect::<Vec<_>>();
+
             if records.len() >= state.num_records {
                 // We have enough records again.
                 break;
             }
 
-            // Find a record which can be broken down into two smaller `grant_size` records.
-            let record = match records
+            let largest_record = match records
                 .into_iter()
-                .find(|record| record.amount() > state.grant_size * 2u64)
+                .max_by(|x, y| x.amount().cmp(&y.amount()))
             {
                 Some(record) => record,
                 None => {
-                    // There are no big records to break up, so there's nothing for us to do. Exit
-                    // the inner loop and wait for a notification that the record distribution has
-                    // changed.
+                    tracing::warn!("No spendable records");
                     break;
                 }
             };
 
+            if largest_record.amount() < state.grant_size * 2u64 {
+                // There are no big records to break up, so there's nothing for us to do. Exit
+                // the inner loop and wait for a notification that the record distribution has
+                // changed.
+                tracing::warn!("No large records to break up");
+                break;
+            };
+
+            let split_amount = largest_record.amount() / 2;
+            let change_amount = largest_record.amount() - split_amount;
+
             tracing::info!(
                 "breaking up a record of size {} into records of size {} and {}",
-                record.amount(),
-                state.grant_size,
-                record.amount() - state.grant_size
+                largest_record.amount(),
+                split_amount,
+                change_amount,
             );
 
             // There is not yet an interface for transferring a specific record, so we just have to
             // specify the appropriate amounts and trust that Seahorse will use the largest record
-            // available (it should). Just to be extra safe, we specify the larger of the two
-            // amounts -- record.amount() - state.grant_size -- as the output amount, which should
-            // create a change record of size `state.grant_size`. This makes it impossible for
-            // Seahorse to choose a record of exactly `state.grant_size` with no change, which would
-            // prevent this loop from making progress.
+            // available (it should). We specify two outputs so that if an existing record with
+            // `change_amount` exists it won't be used "as is", which would prevent this loop
+            // from making progress.
             let receipt = match wallet
                 .transfer(
                     None,
                     &AssetCode::native(),
-                    &[(address.clone(), record.amount() - state.grant_size)],
+                    &[
+                        (address.clone(), change_amount),
+                        (address.clone(), split_amount),
+                    ],
                     0u64,
                 )
                 .await

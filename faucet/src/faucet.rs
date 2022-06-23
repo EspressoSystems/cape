@@ -992,7 +992,7 @@ mod test {
         }
     }
 
-    async fn parallel_request(num_requests: usize) {
+    async fn parallel_request(num_requests: usize, restart: bool) {
         let mut rng = ChaChaRng::from_seed([1u8; 32]);
         let universal_param = &*UNIVERSAL_PARAM;
 
@@ -1092,28 +1092,48 @@ mod test {
         }))
         .await;
 
-        // After submitting all of the requests, wait a random amount of time, and then kill and
-        // restart the faucet, so that it has to reload from storage.
-        let delay = ChaChaRng::from_entropy().gen_range(0..30);
-        tracing::info!("Waiting {} seconds, then killing faucet", delay);
-        sleep(Duration::from_secs(delay)).await;
-        faucet.restart().await;
+        if restart {
+            // After submitting all of the requests, wait a random amount of time, and then kill and
+            // restart the faucet, so that it has to reload from storage.
+            let delay = ChaChaRng::from_entropy().gen_range(0..30);
+            tracing::info!("Waiting {} seconds, then killing faucet", delay);
+            sleep(Duration::from_secs(delay)).await;
+            faucet.restart().await;
+        }
 
         // Check the balances for each wallet.
         join_all(
             wallets
                 .into_iter()
                 .zip(keys)
-                .map(|(wallet, key)| async move {
+                .enumerate()
+                .map(|(i, (wallet, key))| async move {
                     retry(|| async {
-                        wallet.balance(&AssetCode::native()).await
-                            == U256::from(grant_size) * num_grants
+                        let balance = wallet.balance(&AssetCode::native()).await;
+                        let desired = U256::from(grant_size) * num_grants;
+                        println!("wallet {}: balance is {}/{}", i, balance, desired);
+                        if restart {
+                            // It is possible to get an extra record, if we shut down the faucet at
+                            // just the right time.
+                            balance >= desired
+                        } else {
+                            balance == desired
+                        }
                     })
                     .await;
 
-                    // We should have received `num_grants` records of `grant_size` each.
+                    // We should have received at least `num_grants` records of `grant_size` each.
                     let records = wallet.records().await.collect::<Vec<_>>();
-                    assert_eq!(records.len(), 5);
+                    if restart {
+                        assert!(
+                            records.len() >= num_grants,
+                            "received {}/{}",
+                            records.len(),
+                            num_grants
+                        );
+                    } else {
+                        assert_eq!(records.len(), num_grants);
+                    }
                     for record in records {
                         assert_eq!(record.ro.asset_def, AssetDefinition::native());
                         assert_eq!(record.ro.pub_key, key);
@@ -1123,18 +1143,27 @@ mod test {
                 .collect::<Vec<_>>(),
         )
         .await;
+
+        faucet.stop().await;
     }
 
     #[async_std::test]
     #[traced_test]
     async fn test_faucet_transfer() {
-        parallel_request(1).await;
+        parallel_request(1, false).await;
     }
 
     #[cfg(feature = "slow-tests")]
     #[async_std::test]
     #[traced_test]
-    async fn test_faucet_simultaneous_transfer() {
-        parallel_request(5).await;
+    async fn test_faucet_transfer_restart() {
+        parallel_request(1, true).await;
+    }
+
+    #[cfg(feature = "slow-tests")]
+    #[async_std::test]
+    #[traced_test]
+    async fn test_faucet_simultaneous_transfer_restart() {
+        parallel_request(5, true).await;
     }
 }

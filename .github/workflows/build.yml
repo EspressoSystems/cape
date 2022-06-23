@@ -93,6 +93,12 @@ jobs:
 
       - uses: actions/upload-artifact@v2
         with:
+          name: wallet-cli
+          path: |
+            target/release/wallet-cli
+
+      - uses: actions/upload-artifact@v2
+        with:
           name: services-executables
           path: |
             target/release/address-book
@@ -118,6 +124,11 @@ jobs:
       - uses: actions/download-artifact@v2
         with:
           name: wallet-webserver
+          path: wallet-checkout/target/release/
+
+      - uses: actions/download-artifact@v2
+        with:
+          name: wallet-cli
           path: wallet-checkout/target/release/
 
       - name: Set linker/loader to not be nix

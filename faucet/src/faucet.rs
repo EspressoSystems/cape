@@ -18,13 +18,13 @@ use async_std::{
 use atomic_store::{
     load_store::BincodeLoadStore, AppendLog, AtomicStore, AtomicStoreLoader, PersistenceError,
 };
-use cap_rust_sandbox::universal_param::UNIVERSAL_PARAM;
+use cap_rust_sandbox::{ledger::CapeLedger, universal_param::UNIVERSAL_PARAM};
 use cape_wallet::{
     backend::{CapeBackend, CapeBackendConfig},
     loader::CapeLoader,
     wallet::{CapeWallet, CapeWalletError},
 };
-use futures::{channel::mpsc, SinkExt, StreamExt};
+use futures::{channel::mpsc, future::join_all, StreamExt};
 use jf_cap::{
     keys::{UserKeyPair, UserPubKey},
     structs::{AssetCode, FreezeFlag},
@@ -34,7 +34,7 @@ use rand::distributions::{Alphanumeric, DistString};
 use reef::traits::Validator;
 use seahorse::{
     events::EventIndex,
-    txn_builder::{RecordInfo, TransactionStatus},
+    txn_builder::{RecordInfo, TransactionReceipt, TransactionStatus},
     RecordAmount,
 };
 use serde::{Deserialize, Serialize};
@@ -504,28 +504,40 @@ async fn request_fee_assets(
 
 async fn worker(id: usize, mut state: FaucetState) {
     'wait_for_requests: while let Some(pub_key) = state.queue.pop().await {
-        let mut wallet = state.wallet.lock().await;
-        let faucet_addr = wallet.pub_keys().await[0].address();
-
         loop {
-            tracing::info!(
-                "worker {}: transferring {} tokens from {} to {}",
-                id,
-                state.grant_size,
-                net::UserAddress(faucet_addr.clone()),
-                net::UserAddress(pub_key.address())
-            );
-            let balance = wallet.balance(&AssetCode::native()).await;
-            let records = spendable_records(&wallet, state.grant_size).await.count();
-            tracing::info!(
-                "worker {}: wallet balance before transfer: {} across {} records",
-                id,
-                balance,
-                records
-            );
+            // If we don't have a sufficient balance, to transfer, it is probably only because some
+            // transactions are in flight. We are likely to get change back when the transactions
+            // complete, so wait until we have a sufficient balance to do our job.
+            let mut wallet = loop {
+                let wallet = state.wallet.lock().await;
+                let balance = wallet.balance(&AssetCode::native()).await;
+                if balance < state.grant_size.into() {
+                    tracing::warn!(
+                        "worker {}: insufficient balance for transfer, sleeping for 30s",
+                        id
+                    );
+                    drop(wallet);
+                    sleep(Duration::from_secs(30)).await;
+                } else {
+                    let records = spendable_records(&wallet, state.grant_size).await.count();
+                    tracing::info!(
+                        "worker {}: transferring {} tokens to {}",
+                        id,
+                        state.grant_size,
+                        net::UserAddress(pub_key.address())
+                    );
+                    tracing::info!(
+                        "worker {}: wallet balance before transfer: {} across {} records",
+                        id,
+                        balance,
+                        records
+                    );
+                    break wallet;
+                }
+            };
             if let Err(err) = wallet
                 .transfer(
-                    Some(&faucet_addr),
+                    None,
                     &AssetCode::native(),
                     &[(pub_key.address(), state.grant_size)],
                     state.fee_size,
@@ -545,11 +557,9 @@ async fn worker(id: usize, mut state: FaucetState) {
                 break;
             }
         }
-        drop(wallet);
 
         // Signal the record breaking thread that we have spent some records, so that it can create
-        // more by breaking up larger records. Drop our handle to the wallet (which we no longer
-        // need) so that the thread can access it.
+        // more by breaking up larger records.
         if state.signal_breaker_thread.clone().try_send(()).is_err() {
             tracing::error!(
                 "worker {}: error signalling the breaker thread. Perhaps it has crashed?",
@@ -574,11 +584,11 @@ async fn spendable_records(
     })
 }
 
-/// Break large records into smaller records.
+/// Worker task to maintain at least `state.num_records` in the faucet wallet.
 ///
 /// When signalled on `wakeup`, this thread will break large records into small records of size
 /// `state.grant_size`, until there are at least `state.num_records` distinct records in the wallet.
-async fn break_up_records(state: FaucetState, mut wakeup: mpsc::Receiver<()>) {
+async fn maintain_enough_records(state: FaucetState, mut wakeup: mpsc::Receiver<()>) {
     loop {
         // Wait until we have few enough records that we need to break them up, and we have a big
         // enough record to break up.
@@ -616,7 +626,31 @@ async fn break_up_records(state: FaucetState, mut wakeup: mpsc::Receiver<()>) {
             wakeup.next().await;
         }
 
-        // Start breaking up records until we have enough again.
+        if let Some(transactions) = break_up_records(&state).await {
+            // If we succeeded, wait until we are signalled again. Even though we may not have
+            // enough records just yet, we will when the transactions submitted by
+            // `break_up_records` finalize. Returning to the previous loop and checking if we have
+            // enough records might spuriously lead us to call `break_up_records` again, which would
+            // be an unnecessary waste of time.
+            tracing::info!(
+                "will have sufficient records after {} transactions, waiting for a change",
+                transactions.len()
+            );
+            wakeup.next().await;
+        }
+    }
+}
+
+/// Break records into smaller pieces to create at least `state.num_records` total.
+///
+/// If successful, returns a list of transaction receipts which will give at least
+/// `state.num_records` when they are finalized. If there were not enough large records to break up
+/// to obtain the desired number of records, returns [None].
+async fn break_up_records(state: &FaucetState) -> Option<Vec<TransactionReceipt<CapeLedger>>> {
+    // Break up records until we have enough again.
+    loop {
+        // Generate as many transactions as we can simultaneously.
+        let mut transactions = Vec::new();
         loop {
             // Acquire the wallet lock inside the loop, so we release it after each transfer.
             // Holding the lock for too long can unneccessarily slow down faucet requests.
@@ -626,28 +660,29 @@ async fn break_up_records(state: FaucetState, mut wakeup: mpsc::Receiver<()>) {
                 .await
                 .collect::<Vec<_>>();
 
-            if records.len() >= state.num_records {
-                // We have enough records again.
-                break;
+            if records.len() + 2 * transactions.len() >= state.num_records {
+                // We will have enough records again once the pending transactions finish. Return
+                // _without_ waiting for pending transactions to finish: if we know we are going to
+                // have enough records once they finish, there is no point in holding the wallet
+                // lock and just waiting. Perhaps a faucet request can be filled using the records
+                // we already have while the last few transactions are pending.
+                //
+                // Return the list of transaction receipts so the caller can wait on them if they
+                // want.
+                return Some(transactions);
             }
 
             let largest_record = match records
                 .into_iter()
                 .max_by(|x, y| x.amount().cmp(&y.amount()))
             {
-                Some(record) => record,
-                None => {
-                    tracing::warn!("No spendable records");
+                Some(record) if record.amount() >= state.grant_size * 2u64 => record,
+                _ => {
+                    // There are no records large enough to break up. Break out of the loop and wait
+                    // for the transactions we have already initiated to finish. The change from
+                    // those transactions will give us more records to break up.
                     break;
                 }
-            };
-
-            if largest_record.amount() < state.grant_size * 2u64 {
-                // There are no big records to break up, so there's nothing for us to do. Exit
-                // the inner loop and wait for a notification that the record distribution has
-                // changed.
-                tracing::warn!("No large records to break up");
-                break;
             };
 
             let split_amount = largest_record.amount() / 2;
@@ -681,52 +716,46 @@ async fn break_up_records(state: FaucetState, mut wakeup: mpsc::Receiver<()>) {
                 Err(err) => {
                     // If our transfers start failing, we will assume there is something wrong and
                     // try not to put extra stress on the system. Break out of the inner loop and
-                    // wait for a notification that something has changed.
+                    // wait for the transactions we did initiate to finish.
                     tracing::error!("record breakup transfer failed: {}", err);
                     break;
                 }
             };
-
-            // Wait for the transaction to complete so we get the change record before continuing.
-            match wallet.await_transaction(&receipt).await {
-                Ok(TransactionStatus::Retired) => continue,
-                _ => {
-                    tracing::error!("record breakup transfer did not complete successfully");
-                    break;
-                }
-            }
-        }
-    }
-}
-
-/// Wait until the record breaker thread has created as many records as it can.
-///
-/// Repeatedly signals the thread until either `state.num_records` have been created, or there are
-/// no more big records to create. Returns the total number of records now in the wallet.
-async fn wait_for_records(state: &FaucetState) -> usize {
-    loop {
-        let wallet = state.wallet.lock().await;
-
-        // Break if we already have enough records, or if there are no big records to break up.
-        let num_records = spendable_records(&*wallet, state.grant_size).await.count();
-        if num_records >= state.num_records
-            || !spendable_records(&*wallet, state.grant_size)
-                .await
-                .any(|record| record.amount() > state.grant_size * 2u64)
-        {
-            return num_records;
+            transactions.push(receipt);
         }
 
+        if transactions.is_empty() {
+            // We did not have sufficient records to generate any break-up transactions. Give up
+            // early and return with fewer-than-desired records. When the allocation of records
+            // changes, the record breaker thread will be notified and we will get to try again.
+            tracing::warn!("No large records to break up");
+            return None;
+        }
+
+        // If we get here, it means we generated some transactions, but it was not enough to give us
+        // the desired number of records. Wait until those transactions finish, then repeat the
+        // process, splitting up the outputs of those transactions.
+        //
+        // Note we have to reacquire the lock, since we released it at the end of the previous loop.
+        // This is good: it potentially allows another thread to grab the lock and make a transfer
+        // before we acquire it, during time where we would just be idly waiting. If this happens,
+        // it only means we spend less time waiting for our transactions once we are able to
+        // reacquire the lock.
         tracing::info!(
-            "have {} records, waiting for {} more",
-            num_records,
-            state.num_records - num_records
+            "waiting for {} transactions before breaking more records",
+            transactions.len()
         );
-
-        drop(wallet);
-        if state.signal_breaker_thread.clone().send(()).await.is_err() {
-            tracing::error!("Error signalling the breaker thread. Perhaps it has crashed?");
-            return num_records;
+        let wallet = state.wallet.lock().await;
+        for result in join_all(
+            transactions
+                .iter()
+                .map(|receipt| wallet.await_transaction(receipt)),
+        )
+        .await
+        {
+            if !matches!(result, Ok(TransactionStatus::Retired)) {
+                tracing::error!("record breakup transfer did not complete successfully");
+            }
         }
     }
 }
@@ -852,12 +881,23 @@ pub async fn init_web_server(
         .await;
     tracing::info!("Wallet balance before init: {}", bal);
 
-    // Spawn a thread to break records into smaller records to maintain `opt.num_records` at a time.
-    spawn(break_up_records(state.clone(), signal_breaker_thread.1));
+    // Create at least `opt.num_records` if possible, before starting to handle requests.
+    if let Some(transactions) = break_up_records(&state).await {
+        let wallet = state.wallet.lock().await;
+        join_all(
+            transactions
+                .iter()
+                .map(|receipt| wallet.await_transaction(receipt)),
+        )
+        .await;
+    }
 
-    // Wait for the thread to create at least `opt.num_records` if possible, before starting to
-    // handle requests.
-    wait_for_records(&state).await;
+    // Spawn a thread to continuously break records into smaller records to maintain
+    // `opt.num_records` at a time.
+    spawn(maintain_enough_records(
+        state.clone(),
+        signal_breaker_thread.1,
+    ));
 
     // Spawn the worker threads that will handle faucet requests.
     for id in 0..opt.num_workers {
@@ -982,7 +1022,7 @@ mod test {
                     }
                 }
 
-                sleep(Duration::from_secs(30)).await;
+                sleep(Duration::from_secs(10)).await;
             }
         }
 

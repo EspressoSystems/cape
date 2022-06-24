@@ -584,11 +584,11 @@ async fn spendable_records(
     })
 }
 
-/// Break large records into smaller records.
+/// Worker task to maintain at least `state.num_records` in the faucet wallet.
 ///
 /// When signalled on `wakeup`, this thread will break large records into small records of size
 /// `state.grant_size`, until there are at least `state.num_records` distinct records in the wallet.
-async fn break_up_records(state: FaucetState, mut wakeup: mpsc::Receiver<()>) {
+async fn maintain_enough_records(state: FaucetState, mut wakeup: mpsc::Receiver<()>) {
     loop {
         // Wait until we have few enough records that we need to break them up, and we have a big
         // enough record to break up.
@@ -626,11 +626,11 @@ async fn break_up_records(state: FaucetState, mut wakeup: mpsc::Receiver<()>) {
             wakeup.next().await;
         }
 
-        if let Some(transactions) = get_more_records(&state).await {
+        if let Some(transactions) = break_up_records(&state).await {
             // If we succeeded, wait until we are signalled again. Even though we may not have
             // enough records just yet, we will when the transactions submitted by
-            // `get_more_records` finalize. Returning to the previous loop and checking if we have
-            // enough records might spuriously lead us to call `get_more_records` again, which would
+            // `break_up_records` finalize. Returning to the previous loop and checking if we have
+            // enough records might spuriously lead us to call `break_up_records` again, which would
             // be an unnecessary waste of time.
             tracing::info!(
                 "will have sufficient records after {} transactions, waiting for a change",
@@ -646,7 +646,7 @@ async fn break_up_records(state: FaucetState, mut wakeup: mpsc::Receiver<()>) {
 /// If successful, returns a list of transaction receipts which will give at least
 /// `state.num_records` when they are finalized. If there were not enough large records to break up
 /// to obtain the desired number of records, returns [None].
-async fn get_more_records(state: &FaucetState) -> Option<Vec<TransactionReceipt<CapeLedger>>> {
+async fn break_up_records(state: &FaucetState) -> Option<Vec<TransactionReceipt<CapeLedger>>> {
     // Break up records until we have enough again.
     loop {
         // Generate as many transactions as we can simultaneously.
@@ -882,7 +882,7 @@ pub async fn init_web_server(
     tracing::info!("Wallet balance before init: {}", bal);
 
     // Create at least `opt.num_records` if possible, before starting to handle requests.
-    if let Some(transactions) = get_more_records(&state).await {
+    if let Some(transactions) = break_up_records(&state).await {
         let wallet = state.wallet.lock().await;
         join_all(
             transactions
@@ -894,7 +894,10 @@ pub async fn init_web_server(
 
     // Spawn a thread to continuously break records into smaller records to maintain
     // `opt.num_records` at a time.
-    spawn(break_up_records(state.clone(), signal_breaker_thread.1));
+    spawn(maintain_enough_records(
+        state.clone(),
+        signal_breaker_thread.1,
+    ));
 
     // Spawn the worker threads that will handle faucet requests.
     for id in 0..opt.num_workers {

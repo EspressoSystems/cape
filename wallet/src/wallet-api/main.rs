@@ -43,6 +43,7 @@ mod routes;
 mod web;
 
 use crate::web::{init_server, NodeOpt};
+use cap_rust_sandbox::universal_param::UNIVERSAL_PARAM;
 use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
 use structopt::StructOpt;
 
@@ -52,6 +53,11 @@ async fn main() -> Result<(), std::io::Error> {
         .pretty()
         .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
         .init();
+
+    // It can take a little while to unpack the universal params. Start doing this in the background
+    // while the server is starting and the user is going through the login process.
+    async_std::task::spawn(async { &*UNIVERSAL_PARAM });
+
     init_server(ChaChaRng::from_entropy(), &NodeOpt::from_args())?.await?;
     Ok(())
 }

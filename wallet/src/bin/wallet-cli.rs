@@ -32,6 +32,7 @@ use async_std::task::block_on;
 use cap_rust_sandbox::{
     ledger::CapeLedger,
     model::{Erc20Code, EthereumAddr},
+    universal_param::UNIVERSAL_PARAM,
 };
 use cape_wallet::{
     backend::{CapeBackend, CapeBackendConfig},
@@ -391,6 +392,10 @@ async fn main() -> Result<(), std::io::Error> {
         .pretty()
         .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
         .init();
+
+    // It can take a little while to unpack the universal params. Start doing this in the background
+    // while the CLI is starting and the user is going through the login process.
+    async_std::task::spawn(async { &*UNIVERSAL_PARAM });
 
     // Initialize the wallet CLI.
     if let Err(err) = cli_main::<CapeLedger, CapeCli>(CapeArgs::from_args()).await {

@@ -32,7 +32,10 @@ use ethers::{
     providers::Middleware,
     signers::Signer,
 };
-use futures::stream::{self, Stream, StreamExt};
+use futures::{
+    future::TryFutureExt,
+    stream::{self, Stream, StreamExt},
+};
 use jf_cap::{
     keys::{UserAddress, UserKeyPair, UserPubKey},
     proof::UniversalParam,
@@ -373,21 +376,23 @@ impl<'a> WalletBackend<'a, CapeLedger> for CapeBackend<'a> {
                 } else {
                     state.eqs.get(&format!("get_events_since/{}", state.from))
                 };
-                let mut res = if let Ok(res) = req.send().await {
-                    res
-                } else {
-                    // Could not connect to EQS. Continue without updating state or yielding
-                    // any events, and retry with a backoff.
-                    sleep(state.backoff).await;
-                    state.backoff = min(state.backoff * 2, state.max_backoff);
-                    return Some((stream::iter(vec![]), state));
-                };
-                // Get events from the response. Panic if the response body does not
-                // deserialize properly, as this should never happen as long as the EQS is
-                // correct/honest.
-                let events = response_body::<Vec<LedgerEvent<CapeLedger>>>(&mut res)
+                let events: Vec<_> = match req
+                    .send()
+                    .and_then(|mut res| async move { response_body(&mut res).await })
                     .await
-                    .expect("Failed to deserialize EQS response");
+                {
+                    Ok(events) => events,
+                    Err(err) => {
+                        // Could not connect to EQS, or the EQS sent us a response whose body
+                        // could not be parsed as events (this has been known to happen during
+                        // transient disruptions of the EQS). Continue without updating state or
+                        // yielding any events, and retry with a backoff.
+                        tracing::error!("error polling EQS: {}", err);
+                        sleep(state.backoff).await;
+                        state.backoff = min(state.backoff * 2, state.max_backoff);
+                        return Some((stream::iter(vec![]), state));
+                    }
+                };
                 if events.is_empty() {
                     // If there were no new events, increase the backoff before retrying.
                     sleep(state.backoff).await;

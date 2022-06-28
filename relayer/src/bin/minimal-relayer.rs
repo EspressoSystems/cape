@@ -76,13 +76,13 @@ struct MinimalRelayerOptions {
     #[structopt(long, env = "CAPE_RELAYER_GAS_LIMIT", default_value = DEFAULT_RELAYER_GAS_LIMIT)]
     gas_limit: NonZeroU64,
 
-    /// Maximum number of times to retry transaction submission
+    /// Maximum number of times to retry transaction submission.
     ///
     /// We roughly have an Ethereum block every 12 seconds, and we can put a
-    /// maximum of 3 to 4 transactions into an Ethereum block.The number of
+    /// maximum of 3 to 4 transactions into an Ethereum block. The number of
     /// retries times the retry interval should not significantly exceed 3
     /// seconds to avoid creating a new bottleneck for the relayer. Although in
-    /// practice these nonce errors have so far been rare (about 1 per hour).
+    /// practice nonce errors have so far been rare (about 1 per hour).
     #[structopt(long, env = "CAPE_RELAYER_MAX_RETRIES", default_value = DEFAULT_RELAYER_MAX_RETRIES)]
     max_retries: u64,
 

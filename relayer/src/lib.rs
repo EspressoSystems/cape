@@ -588,13 +588,15 @@ mod test {
         let provider = contract.client().provider().clone();
         let (transaction, memos, signature) =
             generate_transfer(&mut rng, &faucet, faucet_rec, user.pub_key(), &records);
+        let submit_body = SubmitBody {
+            transaction,
+            memos,
+            signature,
+        };
+
         let mut res = client
             .post("/submit")
-            .body_json(&SubmitBody {
-                transaction: transaction.clone(),
-                memos: memos.clone(),
-                signature: signature.clone(),
-            })
+            .body_json(&submit_body)
             .unwrap()
             .send()
             .await
@@ -604,13 +606,22 @@ mod test {
         receipt.await.unwrap().ensure_mined();
         assert_eq!(contract.get_num_leaves().call().await.unwrap(), 3u64.into());
 
-        // TODO (mathis) check validity of comment below. Should we update test
-        // to do a sucessful txn? Or is it no longer useful?
-        //
-        // Test with the non-mock CAPE contract. We can't generate any valid transactions for this
-        // contract, since there's no faucet yet and it doesn't have the
-        // `set_initial_record_commitments` method, but we can at least check that our transaction
-        // is submitted correctly.
+        // Submit the same transaction again to trigger a Submission error.
+        match Error::from_client_error(
+            client
+                .post("/submit")
+                .body_json(&submit_body)
+                .unwrap()
+                .send()
+                .await
+                .expect_err("expected submission of invalid transaction to fail"),
+        ) {
+            Error::Submission { .. } => {}
+            err => panic!("expected Submission error, got {:?}", err),
+        };
+
+        // Deploy a new contract (without faucet setup) and submit the same
+        // transaction to trigger a "Root not found" error.
         let contract = {
             let deployer = get_funded_client().await.unwrap();
             let verifier = deploy(
@@ -654,18 +665,14 @@ mod test {
         match Error::from_client_error(
             client
                 .post("/submit")
-                .body_json(&SubmitBody {
-                    transaction,
-                    memos,
-                    signature,
-                })
+                .body_json(&submit_body)
                 .unwrap()
                 .send()
                 .await
                 .expect_err("expected submission of invalid transaction to fail"),
         ) {
-            Error::Submission { .. } => {}
-            err => panic!("expected submission error, got {:?}", err),
+            Error::RootNotFound { .. } => {}
+            err => panic!("expected 'Root not found' error, got {:?}", err),
         }
     }
 }

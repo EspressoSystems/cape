@@ -430,9 +430,9 @@ pysha3 = ">=1.0.2"
 
 [package.source]
 type = "git"
-url = "https://github.com/sveitser/slither"
-reference = "fix-sarif-empty-results"
-resolved_reference = "b24169ae45bce0e3c4656038258359392ba05e6b"
+url = "https://github.com/crytic/slither"
+reference = "6a2e1e0819f0dde932484b20bb0e0d3e39293adf"
+resolved_reference = "6a2e1e0819f0dde932484b20bb0e0d3e39293adf"
 
 [[package]]
 name = "tomli"
@@ -485,7 +485,7 @@ python-versions = "*"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "763ac70c840d91b12dc0bd19346d38ce326223e026df1f96c9635066bc0e8e0c"
+content-hash = "2e18bffdc4f89fc2727b32bcf4bc11d6725df8091034b99ed010c5dd90282250"
 
 [metadata.files]
 appnope = [

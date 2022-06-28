@@ -43,6 +43,9 @@ pub enum Error {
     #[snafu(display("error during transaction submission: {}", msg))]
     Submission { msg: String },
 
+    #[snafu(display("submitted root is outdated or invalid: {}", msg))]
+    RootNotFound { msg: String },
+
     #[snafu(display("internal server error: {}", msg))]
     Internal { msg: String },
 
@@ -57,7 +60,9 @@ impl net::Error for Error {
 
     fn status(&self) -> StatusCode {
         match self {
-            Self::Deserialize { .. } | Self::BadBlock { .. } => StatusCode::BadRequest,
+            Self::Deserialize { .. } | Self::BadBlock { .. } | Self::RootNotFound { .. } => {
+                StatusCode::BadRequest
+            }
             Self::Submission { .. } | Self::CallContract { .. } | Self::Internal { .. } => {
                 StatusCode::InternalServerError
             }
@@ -216,8 +221,13 @@ async fn submit_block(web_state: &WebState, block: BlockWithMemos) -> Result<H25
         web_state.gas_limit,
     )
     .await
-    .map_err(|err| Error::Submission {
-        msg: err.to_string(),
+    .map_err(|err| {
+        let msg = err.to_string();
+        if msg.contains("Root not found") {
+            Error::RootNotFound { msg }
+        } else {
+            Error::Submission { msg }
+        }
     })?;
 
     // The pending transaction itself doesn't serialize well, but all the relevant information is

@@ -165,13 +165,6 @@
               pass_filenames = false;
               types = [ "solidity" ];
             };
-            make-contracts-arch-diagram = {
-              enable = true;
-              description = "Ensure contract diagram is up to date";
-              entry = "make-contracts-arch-diagram";
-              pass_filenames = false;
-              types = [ "solidity" ];
-            };
           };
         };
       };

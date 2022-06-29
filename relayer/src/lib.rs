@@ -247,7 +247,11 @@ async fn submit_block(web_state: &WebState, block: BlockWithMemos) -> Result<H25
             }
         });
         if matches!(result, Err(Error::Nonce { .. })) && attempt < web_state.max_retries {
-            tracing::warn!("Submission failed, retrying");
+            tracing::info!(
+                "Nonce error, retry {} in {:?}",
+                attempt + 1,
+                web_state.retry_interval
+            );
             async_std::task::sleep(web_state.retry_interval).await;
             attempt += 1;
         } else {

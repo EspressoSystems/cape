@@ -478,6 +478,13 @@ pub struct HealthCheck {
 /// normally, a response with status 503 and payload {"status":
 /// "unavailable"} should be added.
 async fn healthcheck(req: tide::Request<FaucetState>) -> Result<tide::Response, tide::Error> {
+    // Ensure we can write to storage.
+    let mut index = req.state().queue.index.lock().await;
+    let default_user_pub_key = UserPubKey::default();
+    index.insert(default_user_pub_key.clone())?;
+    index.remove(&default_user_pub_key)?;
+
+    // Return healthcheck response
     response(
         &req,
         &HealthCheck {

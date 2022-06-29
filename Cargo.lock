@@ -699,12 +699,11 @@ checksum = "065374052e7df7ee4047b1160cca5e1467a12351a40b3da123c870ba0b8eda2a"
 
 [[package]]
 name = "atomic_store"
-version = "0.1.1"
-source = "git+https://github.com/EspressoSystems/atomicstore.git?tag=0.1.1#e116cea2de934fd315f690d07d45b3bb7a213654"
+version = "0.1.3"
+source = "git+https://github.com/EspressoSystems/atomicstore.git?tag=0.1.3#9da9998dd8d92f61c5b78a8f0676d415e6fafe92"
 dependencies = [
  "ark-serialize",
  "bincode",
- "chrono",
  "glob",
  "serde",
  "snafu",
@@ -712,8 +711,8 @@ dependencies = [
 
 [[package]]
 name = "atomic_store"
-version = "0.1.2"
-source = "git+https://github.com/EspressoSystems/atomicstore.git#55d9753e1fcb35c61566b8e056426e85e9e7eeeb"
+version = "0.1.3"
+source = "git+https://github.com/EspressoSystems/atomicstore.git#9da9998dd8d92f61c5b78a8f0676d415e6fafe92"
 dependencies = [
  "ark-serialize",
  "bincode",
@@ -2137,7 +2136,7 @@ name = "eqs"
 version = "0.0.2"
 dependencies = [
  "async-std",
- "atomic_store 0.1.2",
+ "atomic_store 0.1.3 (git+https://github.com/EspressoSystems/atomicstore.git)",
  "bincode",
  "cap-rust-sandbox",
  "commit",
@@ -2585,7 +2584,7 @@ dependencies = [
  "ark-std",
  "async-channel",
  "async-std",
- "atomic_store 0.1.2",
+ "atomic_store 0.1.3 (git+https://github.com/EspressoSystems/atomicstore.git)",
  "bincode",
  "cap-rust-sandbox",
  "cape_wallet",
@@ -5290,8 +5289,8 @@ dependencies = [
 
 [[package]]
 name = "seahorse"
-version = "0.2.5"
-source = "git+https://github.com/EspressoSystems/seahorse.git?tag=0.2.5#613d1e6274a77ab2c003b2d793cd5de199879cea"
+version = "0.2.6"
+source = "git+https://github.com/EspressoSystems/seahorse.git?branch=mathis-atomicstore-0.1.3#d30dfdb6f83cde030a3a01441a3a4beb793d9e99"
 dependencies = [
  "arbitrary",
  "arbitrary-wrappers",
@@ -5300,7 +5299,7 @@ dependencies = [
  "async-scoped",
  "async-std",
  "async-trait",
- "atomic_store 0.1.1",
+ "atomic_store 0.1.3 (git+https://github.com/EspressoSystems/atomicstore.git?tag=0.1.3)",
  "bincode",
  "bip0039",
  "chacha20",

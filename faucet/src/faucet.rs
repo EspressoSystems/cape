@@ -301,8 +301,8 @@ impl FaucetQueueIndex {
 
         // Add the key to our persistent log.
         self.queue.store_resource(&(key.clone(), Some(0)))?;
-        self.queue.commit_version().unwrap();
-        self.store.commit_version().unwrap();
+        self.queue.commit_version()?;
+        self.store.commit_version()?;
         // If successful, add it to our in-memory index.
         self.index.insert(key, 0);
         Ok(true)
@@ -324,8 +324,8 @@ impl FaucetQueueIndex {
             // Update the entry in our persistent log.
             self.queue
                 .store_resource(&(key.clone(), Some(grants_given)))?;
-            self.queue.commit_version().unwrap();
-            self.store.commit_version().unwrap();
+            self.queue.commit_version()?;
+            self.store.commit_version()?;
             // If successful, update our in-memory index.
             self.index.insert(key, grants_given);
             Ok(true)
@@ -336,8 +336,8 @@ impl FaucetQueueIndex {
     fn remove(&mut self, key: &UserPubKey) -> Result<(), FaucetError> {
         // Make a persistent note to remove the key.
         self.queue.store_resource(&(key.clone(), None))?;
-        self.queue.commit_version().unwrap();
-        self.store.commit_version().unwrap();
+        self.queue.commit_version()?;
+        self.store.commit_version()?;
         // Update our in-memory set.
         self.index.remove(key);
         Ok(())

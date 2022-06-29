@@ -7,16 +7,18 @@
 
 use crate::query_result_state::QueryResultState;
 use atomic_store::{
-    load_store::BincodeLoadStore, AppendLog, AtomicStore, AtomicStoreLoader, PersistenceError,
+    load_store::BincodeLoadStore, AtomicStore, AtomicStoreLoader, PersistenceError, RollingLog,
 };
 
 use std::path::{Path, PathBuf};
+
+const EQS_RETAINED_ENTRIES: u32 = 5;
 
 // hook up with atomic_store
 
 pub struct StatePersistence {
     atomic_store: AtomicStore,
-    state_snapshot: AppendLog<BincodeLoadStore<QueryResultState>>,
+    state_snapshot: RollingLog<BincodeLoadStore<QueryResultState>>,
 }
 
 impl StatePersistence {
@@ -25,8 +27,10 @@ impl StatePersistence {
         store_path.push("eqs");
         let mut loader = AtomicStoreLoader::create(&store_path, key_tag)?;
         let snapshot_tag = format!("{}_state", key_tag);
-        let state_snapshot =
-            AppendLog::create(&mut loader, Default::default(), &snapshot_tag, 1024)?;
+        let mut state_snapshot =
+            RollingLog::create(&mut loader, Default::default(), &snapshot_tag, 1024)?;
+        state_snapshot.set_retained_entries(EQS_RETAINED_ENTRIES);
+
         let atomic_store = AtomicStore::open(loader)?;
         Ok(StatePersistence {
             atomic_store,
@@ -39,7 +43,8 @@ impl StatePersistence {
         store_path.push("eqs");
         let mut loader = AtomicStoreLoader::load(&store_path, key_tag)?;
         let snapshot_tag = format!("{}_state", key_tag);
-        let state_snapshot = AppendLog::load(&mut loader, Default::default(), &snapshot_tag, 1024)?;
+        let state_snapshot =
+            RollingLog::load(&mut loader, Default::default(), &snapshot_tag, 1024)?;
         let atomic_store = AtomicStore::open(loader)?;
         Ok(StatePersistence {
             atomic_store,
@@ -51,6 +56,7 @@ impl StatePersistence {
         self.state_snapshot.store_resource(state).unwrap();
         self.state_snapshot.commit_version().unwrap();
         self.atomic_store.commit_version().unwrap();
+        self.state_snapshot.prune_file_entries().unwrap();
     }
 
     pub fn load_latest_state(&self) -> Result<QueryResultState, PersistenceError> {

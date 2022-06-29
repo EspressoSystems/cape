@@ -31,6 +31,8 @@ use tracing::{event, Level};
 
 pub const DEFAULT_RELAYER_PORT: &str = "50077";
 pub const DEFAULT_RELAYER_GAS_LIMIT: &str = "10000000"; // 10M
+pub const DEFAULT_RELAYER_RETRY_INTERVAL_MS: &str = "500";
+pub const DEFAULT_RELAYER_MAX_RETRIES: &str = "2";
 
 #[derive(Clone, Debug, Snafu, Serialize, Deserialize)]
 pub enum Error {
@@ -51,6 +53,9 @@ pub enum Error {
 
     #[snafu(display("error fetching info from the CAPE contract: {}", msg))]
     CallContract { msg: String },
+
+    #[snafu(display("submission failed with nonce error: {}", msg))]
+    Nonce { msg: String },
 }
 
 impl net::Error for Error {
@@ -63,9 +68,10 @@ impl net::Error for Error {
             Self::Deserialize { .. } | Self::BadBlock { .. } | Self::RootNotFound { .. } => {
                 StatusCode::BadRequest
             }
-            Self::Submission { .. } | Self::CallContract { .. } | Self::Internal { .. } => {
-                StatusCode::InternalServerError
-            }
+            Self::Submission { .. }
+            | Self::CallContract { .. }
+            | Self::Internal { .. }
+            | Self::Nonce { .. } => StatusCode::InternalServerError,
         }
     }
 }
@@ -79,6 +85,8 @@ pub struct WebState {
     contract: CAPE<EthMiddleware>,
     nonce_count_rule: NonceCountRule,
     gas_limit: u64,
+    max_retries: u64,
+    retry_interval: Duration,
     block_submission_mutex: Arc<Mutex<()>>,
 }
 
@@ -87,11 +95,15 @@ impl WebState {
         contract: CAPE<EthMiddleware>,
         nonce_count_rule: NonceCountRule,
         gas_limit: u64,
+        max_retries: u64,
+        retry_interval: Duration,
     ) -> Self {
         Self {
             contract,
             nonce_count_rule,
             gas_limit,
+            max_retries,
+            retry_interval,
             block_submission_mutex: Arc::new(Mutex::new(())),
         }
     }
@@ -214,21 +226,38 @@ async fn submit_empty_block(web_state: &WebState) -> Result<H256, Error> {
 
 async fn submit_block(web_state: &WebState, block: BlockWithMemos) -> Result<H256, Error> {
     let _guard = web_state.block_submission_mutex.lock().await;
-    let pending = submit_cape_block_with_memos(
-        &web_state.contract,
-        block,
-        web_state.nonce_count_rule.into(),
-        web_state.gas_limit,
-    )
-    .await
-    .map_err(|err| {
-        let msg = err.to_string();
-        if msg.contains("Root not found") {
-            Error::RootNotFound { msg }
+
+    let mut attempt = 0;
+    let pending = loop {
+        let result = submit_cape_block_with_memos(
+            &web_state.contract,
+            block.clone(),
+            web_state.nonce_count_rule.into(),
+            web_state.gas_limit,
+        )
+        .await
+        .map_err(|err| {
+            let msg = err.to_string();
+            if msg.contains("replacement transaction underpriced") {
+                Error::Nonce { msg }
+            } else if msg.contains("Root not found") {
+                Error::RootNotFound { msg }
+            } else {
+                Error::Submission { msg }
+            }
+        });
+        if matches!(result, Err(Error::Nonce { .. })) && attempt < web_state.max_retries {
+            tracing::info!(
+                "Nonce error, retry {} in {:?}",
+                attempt + 1,
+                web_state.retry_interval
+            );
+            async_std::task::sleep(web_state.retry_interval).await;
+            attempt += 1;
         } else {
-            Error::Submission { msg }
+            break result;
         }
-    })?;
+    }?;
 
     // The pending transaction itself doesn't serialize well, but all the relevant information is
     // contained in the transaction hash. The client can reconstruct the pending transaction from
@@ -314,6 +343,8 @@ pub mod testing {
                 upcast_test_cape_to_cape(contract.clone()),
                 NonceCountRule::Pending,
                 DEFAULT_RELAYER_GAS_LIMIT.parse().unwrap(),
+                DEFAULT_RELAYER_MAX_RETRIES.parse().unwrap(),
+                Duration::from_millis(DEFAULT_RELAYER_RETRY_INTERVAL_MS.parse().unwrap()),
             )
         }
     }
@@ -507,6 +538,8 @@ mod test {
             upcast_test_cape_to_cape(contract.clone()),
             nonce_count_rule,
             DEFAULT_RELAYER_GAS_LIMIT.parse().unwrap(),
+            DEFAULT_RELAYER_MAX_RETRIES.parse().unwrap(),
+            Duration::from_millis(DEFAULT_RELAYER_RETRY_INTERVAL_MS.parse().unwrap()),
         );
 
         // Submit a transaction and verify that the 2 output commitments get added to the contract's
@@ -542,6 +575,8 @@ mod test {
             upcast_test_cape_to_cape(contract.clone()),
             NonceCountRule::Pending,
             1_000_000, // gas limit
+            DEFAULT_RELAYER_MAX_RETRIES.parse().unwrap(),
+            Duration::from_millis(DEFAULT_RELAYER_RETRY_INTERVAL_MS.parse().unwrap()),
         );
         let hash = relay(&web_state, transaction.clone(), memos.clone(), sig.clone())
             .await
@@ -658,6 +693,8 @@ mod test {
             contract,
             NonceCountRule::Pending,
             DEFAULT_RELAYER_GAS_LIMIT.parse().unwrap(),
+            DEFAULT_RELAYER_MAX_RETRIES.parse().unwrap(),
+            Duration::from_millis(DEFAULT_RELAYER_RETRY_INTERVAL_MS.parse().unwrap()),
         );
         init_web_server(web_state, port);
         wait_for_server(port).await;

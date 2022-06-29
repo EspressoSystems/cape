@@ -15,7 +15,7 @@ use ethers::prelude::{
 };
 use relayer::{
     init_web_server, submit_empty_block_loop, NonceCountRule, WebState, DEFAULT_RELAYER_GAS_LIMIT,
-    DEFAULT_RELAYER_PORT,
+    DEFAULT_RELAYER_MAX_RETRIES, DEFAULT_RELAYER_PORT, DEFAULT_RELAYER_RETRY_INTERVAL_MS,
 };
 use std::{num::NonZeroU64, sync::Arc, time::Duration};
 use structopt::StructOpt;
@@ -75,6 +75,20 @@ struct MinimalRelayerOptions {
     /// and crediting up to 10 pending deposits in the smart contract.
     #[structopt(long, env = "CAPE_RELAYER_GAS_LIMIT", default_value = DEFAULT_RELAYER_GAS_LIMIT)]
     gas_limit: NonZeroU64,
+
+    /// Maximum number of times to retry transaction submission.
+    ///
+    /// We roughly have an Ethereum block every 12 seconds, and we can put a
+    /// maximum of 3 to 4 transactions into an Ethereum block. The number of
+    /// retries times the retry interval should not significantly exceed 3
+    /// seconds to avoid creating a new bottleneck for the relayer. Although in
+    /// practice nonce errors have so far been rare (about 1 per hour).
+    #[structopt(long, env = "CAPE_RELAYER_MAX_RETRIES", default_value = DEFAULT_RELAYER_MAX_RETRIES)]
+    max_retries: u64,
+
+    /// Amount of time to sleep (in ms) before retrying after a nonce error.
+    #[structopt(long, env = "CAPE_RELAYER_RETRY_INTERVAL_MS", default_value = DEFAULT_RELAYER_RETRY_INTERVAL_MS)]
+    retry_interval: u64,
 }
 
 #[async_std::main]
@@ -104,7 +118,13 @@ async fn main() -> std::io::Result<()> {
     // Connect to CAPE smart contract.
     let contract = CAPE::new(opt.cape_address, client);
 
-    let web_state = WebState::new(contract, opt.nonce_count_rule, opt.gas_limit.into());
+    let web_state = WebState::new(
+        contract,
+        opt.nonce_count_rule,
+        opt.gas_limit.into(),
+        opt.max_retries,
+        Duration::from_millis(opt.retry_interval),
+    );
     // Start serving CAPE transaction submissions.
     let periodic_block_submission = async_std::task::spawn(submit_empty_block_loop(
         web_state.clone(),

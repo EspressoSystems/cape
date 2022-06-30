@@ -9,16 +9,15 @@ on:
 
 jobs:
   slither:
-    runs-on: [self-hosted, X64]
-    container:
-      image: ghcr.io/espressosystems/nix:main
-      volumes:
-        - github_nix:/nix
+    runs-on: ubuntu-latest
     steps:
       - uses: styfle/cancel-workflow-action@0.9.1
         name: Cancel Outdated Builds
         with:
           access_token: ${{ github.token }}
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v17
 
       - uses: cachix/cachix-action@v10
         with:
@@ -39,4 +38,3 @@ jobs:
         uses: github/codeql-action/upload-sarif@v2
         with:
           sarif_file: slither.sarif
-

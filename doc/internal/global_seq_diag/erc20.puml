@@ -15,7 +15,7 @@ participant "Ethereum Wallet Eve" as ETH_WX
 group Conversion between ERC20 and CAP assets
 
     group Sponsor
-        W_A -> C: **sponsorCapeAsset**(USDC, asset_def)
+        W_A -> C: **sponsor_cape_asset**(USDC, asset_def)
         C -> C: **update_list_registered_assets**(USDC, asset_def)
     end group
 

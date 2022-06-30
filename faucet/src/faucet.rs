@@ -481,8 +481,23 @@ async fn healthcheck(req: tide::Request<FaucetState>) -> Result<tide::Response, 
     // Ensure we can write to storage.
     let mut index = req.state().queue.index.lock().await;
     let default_user_pub_key = UserPubKey::default();
-    index.insert(default_user_pub_key.clone())?;
-    index.remove(&default_user_pub_key)?;
+    let res = index.insert(default_user_pub_key.clone());
+    if res.is_err() {
+        tracing::error!(
+            "Insertion of dummy public key into faucet queue index failed. {:?}",
+            res
+        );
+        return Err(faucet_server_error(res.err().unwrap()));
+    }
+
+    let res = index.remove(&default_user_pub_key);
+    if res.is_err() {
+        tracing::error!(
+            "Removal of dummy public key from faucet queue index failed. {:?}",
+            res
+        );
+        return Err(faucet_server_error(res.err().unwrap()));
+    }
 
     // Return healthcheck response
     response(

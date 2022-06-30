@@ -11,6 +11,7 @@ use crate::types;
 use ark_serialize::*;
 use core::convert::TryFrom;
 use core::fmt::Debug;
+use espresso_systems_common::cape::{EADDR, ERC20};
 use ethers::abi::AbiEncode;
 use jf_cap::{
     errors::TxnApiError,
@@ -74,7 +75,7 @@ impl CapeModelTxn {
     }
 }
 
-#[tagged_blob("EADDR")]
+#[tagged_blob(EADDR)]
 #[derive(Debug, Default, Clone, PartialEq, Eq, Hash)]
 pub struct EthereumAddr(pub [u8; 20]);
 
@@ -118,7 +119,7 @@ impl EthereumAddr {
 
 // ERC20 assets are identified by the address of the smart contract
 // controlling them.
-#[tagged_blob("ERC20")]
+#[tagged_blob(ERC20)]
 #[derive(CanonicalSerialize, CanonicalDeserialize, Debug, Default, Clone, PartialEq, Eq, Hash)]
 pub struct Erc20Code(pub EthereumAddr);
 

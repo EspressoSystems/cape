@@ -11,6 +11,7 @@ use arbitrary_wrappers::*;
 use ark_serialize::*;
 use commit::{Commitment, Committable, RawCommitmentBuilder};
 use espresso_macros::ser_test;
+use espresso_systems_common::cape::CMTMNT_CAPE_TRNSTN;
 use jf_cap::{
     keys::{AuditorKeyPair, AuditorPubKey},
     proof::UniversalParam,
@@ -207,7 +208,7 @@ pub struct CommittedCapeTransition {
     pub transition: CapeTransition,
 }
 
-#[tagged_blob("CMTMNT_CAPE_TRNSTN")]
+#[tagged_blob(CMTMNT_CAPE_TRNSTN)]
 #[derive(CanonicalSerialize, CanonicalDeserialize, Debug, Clone)]
 pub struct CommitmentToCapeTransition(pub Commitment<CapeTransition>);
 

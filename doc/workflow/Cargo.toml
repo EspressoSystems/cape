@@ -18,8 +18,8 @@ cap-rust-sandbox = { path = "../../contracts/rust" }
 ethers = { git = "https://github.com/gakonst/ethers-rs", features = ["abigen"] }
 itertools = "0.10.3"
 jf-cap = { features = ["test_apis"], git = "https://github.com/EspressoSystems/cap.git", tag = "0.0.4" }
-jf-rescue = { features = ["std"], git = "https://github.com/EspressoSystems/jellyfish.git" }
-jf-utils = { features = ["std"], git = "https://github.com/EspressoSystems/jellyfish.git" }
+jf-rescue = { features = ["std"], git = "https://github.com/EspressoSystems/jellyfish.git", tag = "0.1.2" }
+jf-utils = { features = ["std"], git = "https://github.com/EspressoSystems/jellyfish.git", tag = "0.1.2" }
 rand = "0.8.4"
 serde = { version = "1.0.124", features = ["derive"] }
 

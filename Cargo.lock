@@ -5290,7 +5290,7 @@ dependencies = [
 [[package]]
 name = "seahorse"
 version = "0.2.6"
-source = "git+https://github.com/EspressoSystems/seahorse.git?branch=mathis-atomicstore-0.1.3#cc92f1d38c1907ce522183f3504fba2e715ae1f2"
+source = "git+https://github.com/EspressoSystems/seahorse.git?tag=0.2.6#9c99d795e3d31a576fdb6b8d7cc07efd3ec0b4ba"
 dependencies = [
  "arbitrary",
  "arbitrary-wrappers",

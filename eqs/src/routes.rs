@@ -21,6 +21,9 @@ use std::str::FromStr;
 use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, EnumIter, EnumString};
 
+/// Maximum number of events to return in a single response.
+const EQS_MAX_EVENT_COUNT: usize = 100;
+
 /// Index entries for documentation fragments
 #[allow(non_camel_case_types)]
 #[derive(AsRefStr, Copy, Clone, Debug, EnumIter, EnumString)]
@@ -135,11 +138,13 @@ pub async fn get_events_since(
     if first >= events_len {
         return Ok(Vec::new());
     }
-    let last = if let Some(max_count) = bindings.get(":max_count") {
-        std::cmp::min(first + max_count.value.as_u64()? as usize, events_len)
-    } else {
-        events_len
+    let max_count = match bindings.get(":max_count") {
+        Some(user_max_count) => {
+            std::cmp::min(user_max_count.value.as_u64()? as usize, EQS_MAX_EVENT_COUNT)
+        }
+        None => EQS_MAX_EVENT_COUNT,
     };
+    let last = std::cmp::min(first + max_count, events_len);
     Ok(query_result_state.events[first..last].to_vec())
 }
 

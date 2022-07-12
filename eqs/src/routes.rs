@@ -16,7 +16,7 @@ use jf_cap::structs::{AssetCode, Nullifier};
 use net::server::response;
 use seahorse::events::LedgerEvent;
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::str::FromStr;
 use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, EnumIter, EnumString};
@@ -29,7 +29,6 @@ const EQS_MAX_EVENT_COUNT: usize = 100;
 #[derive(AsRefStr, Copy, Clone, Debug, EnumIter, EnumString)]
 pub enum ApiRouteKey {
     get_cap_state,
-    get_all_nullifiers,
     check_nullifier,
     get_events_since,
     get_transaction,
@@ -105,13 +104,6 @@ pub async fn get_cap_state(query_result_state: &QueryResultState) -> Result<CapS
         ledger: query_result_state.ledger_state.clone(),
         num_events: query_result_state.events.len() as u64,
     })
-}
-
-/// Obtain all the nullifiers that have been published in the CAPE contract.
-pub async fn get_all_nullifiers(
-    query_result_state: &QueryResultState,
-) -> Result<HashSet<Nullifier>, tide::Error> {
-    Ok(query_result_state.nullifiers.clone())
 }
 
 /// Check if a nullifier has already been published.
@@ -234,7 +226,6 @@ pub async fn dispatch_url(
     let query_state = &*query_state_guard;
     match key {
         ApiRouteKey::get_cap_state => response(&req, get_cap_state(query_state).await?),
-        ApiRouteKey::get_all_nullifiers => response(&req, get_all_nullifiers(query_state).await?),
         ApiRouteKey::check_nullifier => {
             response(&req, check_nullifier(bindings, query_state).await?)
         }

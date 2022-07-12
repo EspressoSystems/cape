@@ -35,10 +35,6 @@ HEADING_DESCRIPTION = "Description"
 PATH = [ "get_cap_state" ]
 DOC = "Returns the current CAP blockchain state."
 
-[route.get_all_nullifiers]
-PATH = [ "get_all_nullifiers" ]
-DOC = "Returns the current set of nullifiers."
-
 [route.check_nullifier]
 PATH = [ "check_nullifier/:nullifier" ]
 ":nullifier" = "TaggedBase64"

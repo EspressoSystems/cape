@@ -56,7 +56,7 @@ use seahorse::{
     WalletBackend, WalletState,
 };
 use serde::de::DeserializeOwned;
-use std::cmp::min;
+use std::cmp::{max, min};
 use std::convert::{TryFrom, TryInto};
 use std::pin::Pin;
 use std::time::{Duration, Instant};
@@ -398,11 +398,8 @@ impl<'a> WalletBackend<'a, CapeLedger> for CapeBackend<'a> {
                     sleep(state.backoff).await;
                     state.backoff = min(state.backoff * 2, state.max_backoff);
                 } else {
-                    // If we succeeded in getting new events, reset the backoff.
-                    state.backoff = state.min_backoff;
-                    // Still sleep for the minimum duration, since we know there will not be
-                    // new events at least until the EQS polls again.
-                    sleep(state.backoff).await;
+                    // If we succeeded in getting new events, reduce the backoff.
+                    state.backoff = max(state.backoff / 2, state.min_backoff);
                 }
 
                 // Update state and yield the events we received.

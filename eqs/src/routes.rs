@@ -16,17 +16,19 @@ use jf_cap::structs::{AssetCode, Nullifier};
 use net::server::response;
 use seahorse::events::LedgerEvent;
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::str::FromStr;
 use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, EnumIter, EnumString};
+
+/// Maximum number of events to return in a single response.
+const EQS_MAX_EVENT_COUNT: usize = 100;
 
 /// Index entries for documentation fragments
 #[allow(non_camel_case_types)]
 #[derive(AsRefStr, Copy, Clone, Debug, EnumIter, EnumString)]
 pub enum ApiRouteKey {
     get_cap_state,
-    get_all_nullifiers,
     check_nullifier,
     get_events_since,
     get_transaction,
@@ -104,13 +106,6 @@ pub async fn get_cap_state(query_result_state: &QueryResultState) -> Result<CapS
     })
 }
 
-/// Obtain all the nullifiers that have been published in the CAPE contract.
-pub async fn get_all_nullifiers(
-    query_result_state: &QueryResultState,
-) -> Result<HashSet<Nullifier>, tide::Error> {
-    Ok(query_result_state.nullifiers.clone())
-}
-
 /// Check if a nullifier has already been published.
 pub async fn check_nullifier(
     bindings: &HashMap<String, RouteBinding>,
@@ -135,11 +130,13 @@ pub async fn get_events_since(
     if first >= events_len {
         return Ok(Vec::new());
     }
-    let last = if let Some(max_count) = bindings.get(":max_count") {
-        std::cmp::min(first + max_count.value.as_u64()? as usize, events_len)
-    } else {
-        events_len
+    let max_count = match bindings.get(":max_count") {
+        Some(user_max_count) => {
+            std::cmp::min(user_max_count.value.as_u64()? as usize, EQS_MAX_EVENT_COUNT)
+        }
+        None => EQS_MAX_EVENT_COUNT,
     };
+    let last = std::cmp::min(first + max_count, events_len);
     Ok(query_result_state.events[first..last].to_vec())
 }
 
@@ -229,7 +226,6 @@ pub async fn dispatch_url(
     let query_state = &*query_state_guard;
     match key {
         ApiRouteKey::get_cap_state => response(&req, get_cap_state(query_state).await?),
-        ApiRouteKey::get_all_nullifiers => response(&req, get_all_nullifiers(query_state).await?),
         ApiRouteKey::check_nullifier => {
             response(&req, check_nullifier(bindings, query_state).await?)
         }

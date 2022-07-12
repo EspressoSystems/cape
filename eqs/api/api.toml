@@ -35,10 +35,6 @@ HEADING_DESCRIPTION = "Description"
 PATH = [ "get_cap_state" ]
 DOC = "Returns the current CAP blockchain state."
 
-[route.get_all_nullifiers]
-PATH = [ "get_all_nullifiers" ]
-DOC = "Returns the current set of nullifiers."
-
 [route.check_nullifier]
 PATH = [ "check_nullifier/:nullifier" ]
 ":nullifier" = "TaggedBase64"
@@ -49,7 +45,10 @@ ERROR_nullifier = "A valid nullifier is required. Nullifiers begin with NUL~."
 PATH = [ "get_events_since/:first", "get_events_since/:first/:max_count" ]
 ":first" = "Integer"
 ":max_count" = "Integer"
-DOC = "Returns the array of [up to max_count] events since the specified index (inclusive)"
+DOC = """Returns the array of [up to max_count] events since the specified index (inclusive)
+
+If `:max_count` is larger than 100 or omitted at most the first 100 events are returned.
+"""
 ERROR_first = "The index must be a non-negative integer."
 ERROR_max_count = "The max_count must be a non-negative, non-zero integer."
 

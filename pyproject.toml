@@ -20,7 +20,7 @@ pre-commit-hooks = {git = "https://github.com/Lucas-C/pre-commit-hooks"}
 black = "*"
 hdwallet = "^1.3.2"
 ipython = "^7.28.0"
-slither-analyzer = {git = "https://github.com/crytic/slither", rev = "6a2e1e0819f0dde932484b20bb0e0d3e39293adf"}
+slither-analyzer = {git = "https://github.com/crytic/slither", branch = "dev"}
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

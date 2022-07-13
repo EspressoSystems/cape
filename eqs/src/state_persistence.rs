@@ -53,10 +53,13 @@ impl StatePersistence {
     }
 
     pub fn store_latest_state(&mut self, state: &QueryResultState) {
+        let tic = std::time::Instant::now();
         self.state_snapshot.store_resource(state).unwrap();
         self.state_snapshot.commit_version().unwrap();
         self.atomic_store.commit_version().unwrap();
         self.state_snapshot.prune_file_entries().unwrap();
+        let toc = std::time::Instant::now();
+        tracing::info!("Persisting state took {:?}", toc - tic);
     }
 
     pub fn load_latest_state(&self) -> Result<QueryResultState, PersistenceError> {

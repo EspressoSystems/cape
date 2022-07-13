@@ -170,6 +170,8 @@ impl EthPolling {
         // select cape events starting from the first block for which we do not have confirmed
         // completion of processing
 
+        tracing::info!("Fetching events from block {} to {}", from_block, to_block);
+
         let new_event_result = self
             .connection
             .contract
@@ -368,8 +370,11 @@ impl EthPolling {
                     updated_state.last_reported_index = Some(current_index);
                     self.last_event_index = Some(current_index);
 
+                    let state_for_write = updated_state.clone();
+                    drop(updated_state);
+
                     // persist the state block updates (will be more fine grained in r3)
-                    self.state_persistence.store_latest_state(&*updated_state);
+                    self.state_persistence.store_latest_state(&state_for_write);
                 }
                 CAPEEvents::Erc20TokensDepositedFilter(filter_data) => {
                     let ro_bytes = filter_data.ro_bytes.clone();
@@ -461,8 +466,11 @@ impl EthPolling {
                     updated_state.last_reported_index = Some(current_index);
                     self.last_event_index = Some(current_index);
 
+                    let state_for_write = updated_state.clone();
+                    drop(updated_state);
+
                     // persist the state block updates (will be more fine grained in r3)
-                    self.state_persistence.store_latest_state(&updated_state);
+                    self.state_persistence.store_latest_state(&state_for_write);
                 }
 
                 CAPEEvents::AssetSponsoredFilter(filter_data) => {
@@ -476,8 +484,11 @@ impl EthPolling {
                     updated_state.last_reported_index = Some(current_index);
                     self.last_event_index = Some(current_index);
 
+                    let state_for_write = updated_state.clone();
+                    drop(updated_state);
+
                     // persist the state block updates (will be more fine grained in r3)
-                    self.state_persistence.store_latest_state(&updated_state);
+                    self.state_persistence.store_latest_state(&state_for_write);
                 }
             }
         }

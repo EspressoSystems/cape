@@ -22,6 +22,8 @@ use cap_rust_sandbox::{
 };
 
 pub async fn run(opt: &EQSOptions) -> std::io::Result<()> {
+    tracing::info!("Starting EQS");
+
     if !opt.temp_test_run {
         let provider = get_provider_from_url(opt.rpc_url());
         ensure_connected_to_contract(&provider, opt.cape_address().unwrap())
@@ -35,6 +37,7 @@ pub async fn run(opt: &EQSOptions) -> std::io::Result<()> {
             Arc::new(RwLock::new(QueryResultState::new(verifier_keys()))),
         )
     } else {
+        let tic = std::time::Instant::now();
         let state_persistence = StatePersistence::load(&opt.store_path(), "eth_query").unwrap();
         let query_result_state = Arc::new(RwLock::new(
             state_persistence.load_latest_state().unwrap_or_else(|err| {
@@ -45,6 +48,8 @@ pub async fn run(opt: &EQSOptions) -> std::io::Result<()> {
                 }
             }),
         ));
+        let toc = std::time::Instant::now();
+        tracing::info!("Restored state in {:?}", toc - tic);
         (state_persistence, query_result_state)
     };
 

@@ -197,7 +197,7 @@ impl EthPolling {
             let current_log_index = meta.log_index.as_u64();
             let current_index = (current_block, current_log_index);
 
-            tracing::warn!(
+            tracing::info!(
                 "Processing block {} event {}",
                 current_block,
                 current_log_index,

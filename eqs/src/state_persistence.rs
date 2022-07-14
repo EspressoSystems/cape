@@ -59,7 +59,7 @@ impl StatePersistence {
         self.atomic_store.commit_version().unwrap();
         self.state_snapshot.prune_file_entries().unwrap();
         let toc = std::time::Instant::now();
-        tracing::info!("Persisting state took {:?}", toc - tic);
+        tracing::warn!("Persisting state took {:?}", toc - tic);
     }
 
     pub fn load_latest_state(&self) -> Result<QueryResultState, PersistenceError> {

@@ -22,7 +22,7 @@ use cap_rust_sandbox::{
 };
 
 pub async fn run(opt: &EQSOptions) -> std::io::Result<()> {
-    tracing::warn!("Starting EQS");
+    tracing::info!("Starting EQS");
 
     if !opt.temp_test_run {
         let provider = get_provider_from_url(opt.rpc_url());
@@ -49,7 +49,7 @@ pub async fn run(opt: &EQSOptions) -> std::io::Result<()> {
             }),
         ));
         let toc = std::time::Instant::now();
-        tracing::warn!("Restored state in {:?}", toc - tic);
+        tracing::info!("Restored state in {:?}", toc - tic);
         (state_persistence, query_result_state)
     };
 

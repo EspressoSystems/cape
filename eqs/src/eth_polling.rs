@@ -170,7 +170,7 @@ impl EthPolling {
         // select cape events starting from the first block for which we do not have confirmed
         // completion of processing
 
-        tracing::info!("Fetching events from block {} to {}", from_block, to_block);
+        tracing::warn!("Fetching events from block {} to {}", from_block, to_block);
 
         let new_event_result = self
             .connection
@@ -191,10 +191,18 @@ impl EthPolling {
             }
         };
 
+        let mut state_to_persist: Option<QueryResultState> = None;
+
         for (filter, meta) in new_event {
             let current_block = meta.block_number.as_u64();
             let current_log_index = meta.log_index.as_u64();
             let current_index = (current_block, current_log_index);
+
+            tracing::warn!(
+                "Processing block {} event {}",
+                current_block,
+                current_log_index
+            );
 
             // We sometimes see repeat events in spite of the `from_block(next_block_to_query)`
             // filter. This appears to be a hardhat bug. Skip this event if it does not come after
@@ -204,6 +212,7 @@ impl EthPolling {
                     continue;
                 }
             }
+
             match filter {
                 CAPEEvents::BlockCommittedFilter(filter_data) => {
                     let memos = fetch_cape_memos(&self.connection, meta.transaction_hash)
@@ -370,11 +379,8 @@ impl EthPolling {
                     updated_state.last_reported_index = Some(current_index);
                     self.last_event_index = Some(current_index);
 
-                    let state_for_write = updated_state.clone();
+                    state_to_persist = Some(updated_state.clone());
                     drop(updated_state);
-
-                    // persist the state block updates (will be more fine grained in r3)
-                    self.state_persistence.store_latest_state(&state_for_write);
                 }
                 CAPEEvents::Erc20TokensDepositedFilter(filter_data) => {
                     let ro_bytes = filter_data.ro_bytes.clone();
@@ -466,11 +472,8 @@ impl EthPolling {
                     updated_state.last_reported_index = Some(current_index);
                     self.last_event_index = Some(current_index);
 
-                    let state_for_write = updated_state.clone();
+                    state_to_persist = Some(updated_state.clone());
                     drop(updated_state);
-
-                    // persist the state block updates (will be more fine grained in r3)
-                    self.state_persistence.store_latest_state(&state_for_write);
                 }
 
                 CAPEEvents::AssetSponsoredFilter(filter_data) => {
@@ -484,13 +487,14 @@ impl EthPolling {
                     updated_state.last_reported_index = Some(current_index);
                     self.last_event_index = Some(current_index);
 
-                    let state_for_write = updated_state.clone();
+                    state_to_persist = Some(updated_state.clone());
                     drop(updated_state);
-
-                    // persist the state block updates (will be more fine grained in r3)
-                    self.state_persistence.store_latest_state(&state_for_write);
                 }
             }
+        }
+        // persist the state block updates (will be more fine grained in r3)
+        if let Some(state) = state_to_persist {
+            self.state_persistence.store_latest_state(&state);
         }
 
         // We won't ever get here if we haven't successfully processed all events up to and including any in `to_block` from the query range.

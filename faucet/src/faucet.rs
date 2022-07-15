@@ -35,7 +35,7 @@ use reef::traits::Validator;
 use seahorse::{
     events::EventIndex,
     txn_builder::{RecordInfo, TransactionReceipt, TransactionStatus},
-    RecordAmount,
+    RecordAmount, WalletBackend,
 };
 use serde::{Deserialize, Serialize};
 use snafu::Snafu;
@@ -208,6 +208,9 @@ pub enum FaucetError {
 
     #[snafu(display("faucet service temporarily unavailable"))]
     Unavailable,
+
+    #[snafu(display("Address not found in address book"))]
+    AddressNotFound,
 }
 
 impl net::Error for FaucetError {
@@ -222,6 +225,7 @@ impl net::Error for FaucetError {
             Self::QueueFull { .. } => StatusCode::InternalServerError,
             Self::Persistence { .. } => StatusCode::InternalServerError,
             Self::Unavailable => StatusCode::ServiceUnavailable,
+            Self::AddressNotFound { .. } => StatusCode::BadRequest,
         }
     }
 }
@@ -521,6 +525,23 @@ async fn request_fee_assets(
 ) -> Result<tide::Response, tide::Error> {
     check_service_available(req.state()).await?;
     let pub_key: UserPubKey = net::server::request_body(&mut req).await?;
+
+    // Check that this pub key is registered in the address book. Avoid
+    // transfers failing later if a public key is not registered in the address
+    // book, and therefore can't be looked up.
+    {
+        req.state()
+            .wallet
+            .lock()
+            .await
+            .lock()
+            .await
+            .backend()
+            .get_public_key(&pub_key.address())
+            .await
+            .map_err(|_| faucet_server_error(FaucetError::AddressNotFound))?;
+    }
+
     response(
         &req,
         &req.state()

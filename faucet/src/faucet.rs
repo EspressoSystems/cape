@@ -521,7 +521,14 @@ async fn request_fee_assets(
 ) -> Result<tide::Response, tide::Error> {
     check_service_available(req.state()).await?;
     let pub_key: UserPubKey = net::server::request_body(&mut req).await?;
-    response(&req, &req.state().queue.push(pub_key).await?)
+    response(
+        &req,
+        &req.state()
+            .queue
+            .push(pub_key)
+            .await
+            .map_err(faucet_server_error)?,
+    )
 }
 
 async fn worker(id: usize, mut state: FaucetState) {

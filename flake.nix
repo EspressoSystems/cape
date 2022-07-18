@@ -50,6 +50,7 @@
         pkgs.rust-bin.selectLatestNightlyWith (toolchain:
           toolchain.minimal.override {
             extensions = [ "rustfmt" "clippy" "llvm-tools-preview" "rust-src" ];
+            targets = [ "x86_64-unknown-linux-musl" ];
           });
 
       # glibc pkgs
@@ -63,7 +64,6 @@
         pkgs.rust-bin.selectLatestNightlyWith (toolchain:
           toolchain.minimal.override {
             extensions = [ "rustfmt" "clippy" "llvm-tools-preview" "rust-src" ];
-            targets = [ "x86_64-unknown-linux-musl" ];
           });
       rustDeps = with pkgs;
         [

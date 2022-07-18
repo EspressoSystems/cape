@@ -599,7 +599,7 @@ async fn worker(id: usize, mut state: FaucetState) {
                 .await
             {
                 tracing::error!("worker {}: failed to transfer: {}", id, err);
-                if let seahorse::WalletError::PubkeyNotFound { address } = err {
+                if let CapeWalletError::PubkeyNotFound { address } = err {
                     // If the address is missing in the address book we can't
                     // transfer. Drop the faucet grant.
                     tracing::warn!(

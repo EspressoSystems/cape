@@ -47,7 +47,7 @@ const CAPE_BURN_PREFIX_BYTES_LEN: usize = 12;
 fn is_burn_txn(txn: &TransactionNote) -> bool {
     match txn {
         TransactionNote::Transfer(tx) => {
-            (*tx).aux_info.extra_proof_bound_data[0..CAPE_BURN_PREFIX_BYTES_LEN]
+            tx.aux_info.extra_proof_bound_data[0..CAPE_BURN_PREFIX_BYTES_LEN]
                 == *CAPE_BURN_PREFIX_BYTES.as_bytes()
         }
         TransactionNote::Mint(_) => false,

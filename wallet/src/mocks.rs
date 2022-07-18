@@ -585,7 +585,7 @@ impl<'a, Meta: Serialize + DeserializeOwned + Send> WalletBackend<'a, CapeLedger
     }
 
     async fn create(&mut self) -> Result<WalletState<'a, CapeLedger>, WalletError<CapeLedger>> {
-        let univ_param = &*UNIVERSAL_PARAM;
+        let univ_param = &UNIVERSAL_PARAM;
         let state = self
             .ledger
             .lock()
@@ -823,7 +823,7 @@ impl<'a, Meta: Send + DeserializeOwned + Serialize> WalletBackend<'a, CapeLedger
         };
 
         Ok(WalletState {
-            proving_keys: Arc::new(crate::backend::gen_proving_keys(&*UNIVERSAL_PARAM)),
+            proving_keys: Arc::new(crate::backend::gen_proving_keys(&UNIVERSAL_PARAM)),
             txn_state: TransactionState {
                 validator: CapeTruster::new(block_height, record_mt.num_leaves()),
                 now: EventIndex::from_source(EventSource::QueryService, self.events.len()),

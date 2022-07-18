@@ -721,7 +721,7 @@ mod test {
     #[async_std::test]
     async fn test_transfer() {
         let mut rng = ChaChaRng::from_seed([1u8; 32]);
-        let universal_param = &*UNIVERSAL_PARAM;
+        let universal_param = &UNIVERSAL_PARAM;
         let (sender_key, relayer_url, address_book_url, contract_address, _) =
             create_test_network(&mut rng, universal_param, None).await;
         let (eqs_url, _eqs_dir, _join_eqs) = spawn_eqs(contract_address).await;
@@ -849,7 +849,7 @@ mod test {
     #[async_std::test]
     async fn test_anonymous_erc20_transfer() {
         let mut rng = ChaChaRng::from_seed([1u8; 32]);
-        let universal_param = &*UNIVERSAL_PARAM;
+        let universal_param = &UNIVERSAL_PARAM;
         let (wrapper_key, relayer_url, address_book_url, contract_address, _) =
             create_test_network(&mut rng, universal_param, None).await;
         let (eqs_url, _eqs_dir, _join_eqs) = spawn_eqs(contract_address).await;

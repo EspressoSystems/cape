@@ -325,7 +325,7 @@ pub struct UpdateAsset {
     pub icon: Option<String>,
 }
 
-#[derive(Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
 /// Public keys for spending, viewing and freezing assets.
 pub enum PubKey {
     Sending(UserPubKey),
@@ -371,7 +371,7 @@ pub enum PrivateKey {
     Freezing(FreezerKeyPair),
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Balances {
     /// The balance of a single asset, in a single account.
     One(U256),
@@ -405,7 +405,7 @@ pub struct BalanceInfo {
 }
 
 #[ser_test(ark(false))]
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WalletSummary {
     pub addresses: Vec<UserAddress>,
     pub sending_keys: Vec<UserPubKey>,
@@ -422,7 +422,7 @@ pub struct WalletSummary {
     pub latest_contract: String,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Record {
     pub address: UserAddress,
     pub asset: AssetCode,
@@ -471,7 +471,7 @@ impl Ui for FreezerPubKey {
 }
 
 #[ser_test(ark(false))]
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Account {
     pub pub_key: String,
     pub records: Vec<Record>,
@@ -531,7 +531,7 @@ impl Account {
 }
 
 #[ser_test(ark(false))]
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TransactionHistoryEntry {
     pub time: String,
     pub asset: AssetCode,
@@ -626,7 +626,7 @@ impl TransactionHistoryEntry {
 }
 
 #[ser_test(ark(false))]
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct KeyStoreLocation {
     pub path: PathBuf,
     pub name: Option<String>,
@@ -667,7 +667,7 @@ pub mod sol {
 
     // Primitive types like big integers and addresses just get serialized as hex strings.
     #[ser_test(ark(false))]
-    #[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
+    #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
     #[serde(into = "String", try_from = "String")]
     pub struct U256(ethers::prelude::U256);
 
@@ -710,7 +710,7 @@ pub mod sol {
     }
 
     #[ser_test(ark(false))]
-    #[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
+    #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
     #[serde(into = "String", try_from = "String")]
     pub struct Address(ethers::prelude::Address);
 
@@ -741,7 +741,7 @@ pub mod sol {
     }
 
     #[ser_test(ark(false))]
-    #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+    #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
     pub struct EdOnBN254Point {
         pub x: U256,
         pub y: U256,
@@ -790,7 +790,7 @@ pub mod sol {
     }
 
     #[ser_test(ark(false))]
-    #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+    #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
     pub struct AssetDefinition {
         pub code: U256,
         pub policy: AssetPolicy,
@@ -839,7 +839,7 @@ pub mod sol {
     }
 
     #[ser_test(ark(false))]
-    #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+    #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
     pub struct AssetPolicy {
         pub auditor_pk: EdOnBN254Point,
         pub cred_pk: EdOnBN254Point,
@@ -888,7 +888,7 @@ pub mod sol {
     }
 
     #[ser_test(ark(false))]
-    #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+    #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
     pub struct RecordOpening {
         pub amount: String,
         pub asset_def: AssetDefinition,

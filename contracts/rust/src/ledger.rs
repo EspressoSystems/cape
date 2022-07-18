@@ -31,7 +31,7 @@ use std::iter::repeat;
 //  * Some(false): definitely not in the set
 //  * None: outside the sparse domain of this set, query a full node for a definitive answer
 #[ser_test(arbitrary, ark(false))]
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CapeNullifierSet(HashMap<Nullifier, bool>);
 
 impl CapeNullifierSet {
@@ -328,7 +328,8 @@ impl Ledger for CapeLedger {
         CAPE_MERKLE_HEIGHT
     }
 
+    #[allow(clippy::explicit_auto_deref)]
     fn srs() -> &'static UniversalParam {
-        &*UNIVERSAL_PARAM
+        &UNIVERSAL_PARAM
     }
 }

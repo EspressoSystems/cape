@@ -132,11 +132,11 @@ impl CliClient {
             }
         }
 
-        return Err(format!(
+        Err(format!(
             "regex \"{}\" did not match output:\n{}",
             regex,
             self.prev_output.join("\n")
-        ));
+        ))
     }
 
     pub fn last_output(&self) -> impl Iterator<Item = &String> {

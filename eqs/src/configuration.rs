@@ -17,7 +17,7 @@ use std::{
 };
 use structopt::StructOpt;
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd)]
 pub struct Confirmations(u64);
 
 /// A number of Ethereum block confirmations. The minimum value is 1 which

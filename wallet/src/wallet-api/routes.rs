@@ -7,6 +7,7 @@
 
 //! Web server endpoint handlers.
 
+#![allow(clippy::let_unit_value)]
 use crate::web::{NodeOpt, WebState};
 use async_std::fs::{read_dir, File};
 use cap_rust_sandbox::{ledger::CapeLedger, model::Erc20Code};
@@ -164,7 +165,7 @@ mod backend {
         loader: &mut CapeLoader,
     ) -> Result<Backend, CapeWalletError> {
         CapeBackend::new(
-            &*UNIVERSAL_PARAM,
+            &UNIVERSAL_PARAM,
             CapeBackendConfig {
                 web3_provider: options.web3_provider(),
                 eqs_url: options.eqs_url(),
@@ -370,8 +371,7 @@ pub async fn read_last_path(options: &NodeOpt) -> Result<Option<PathBuf>, tide::
     if file_result.is_err()
         && file_result
             .as_ref()
-            .err()
-            .expect("Opening file is error but has no err")
+            .expect_err("Opening file is error but has no err")
             .kind()
             == std::io::ErrorKind::NotFound
     {

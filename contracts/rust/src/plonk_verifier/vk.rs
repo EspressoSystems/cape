@@ -51,7 +51,7 @@ async fn test_get_encoded_id() -> Result<()> {
 #[tokio::test]
 async fn test_get_vk_by_id() -> Result<()> {
     let contract = deploy_test_verifying_keys_contract().await;
-    let srs = &*UNIVERSAL_PARAM;
+    let srs = &UNIVERSAL_PARAM;
 
     for (note_type, num_input, num_output, tree_depth) in SUPPORTED_VKS {
         // load rust vk

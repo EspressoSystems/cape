@@ -385,7 +385,7 @@ impl GenerateCommand {
                 .map_err(wallet_error)?,
         );
         let backend = CapeBackend::new(
-            &*UNIVERSAL_PARAM,
+            &UNIVERSAL_PARAM,
             CapeBackendConfig {
                 web3_provider: Some(self.rpc_url),
                 eth_mnemonic: Some(self.eth_mnemonic.to_string()),

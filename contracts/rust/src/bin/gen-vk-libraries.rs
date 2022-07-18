@@ -30,7 +30,7 @@ const SUPPORTED_VKS: [(NoteType, u8, u8, u8); 7] = [
 ];
 
 fn main() {
-    let srs = &*UNIVERSAL_PARAM;
+    let srs = &UNIVERSAL_PARAM;
 
     for (note_type, num_input, num_output, tree_depth) in SUPPORTED_VKS {
         // calculate the path to solidity file

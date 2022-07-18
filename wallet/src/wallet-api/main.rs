@@ -56,7 +56,7 @@ async fn main() -> Result<(), std::io::Error> {
 
     // It can take a little while to unpack the universal params. Start doing this in the background
     // while the server is starting and the user is going through the login process.
-    async_std::task::spawn(async { &*UNIVERSAL_PARAM });
+    async_std::task::spawn(async { &UNIVERSAL_PARAM });
 
     init_server(ChaChaRng::from_entropy(), &NodeOpt::from_args())?.await?;
     Ok(())

@@ -91,7 +91,7 @@ async fn create_wallet(
         CapeLoader::latest_contract(opt.eqs_url.clone()).await?,
     );
     let backend = CapeBackend::new(
-        &*UNIVERSAL_PARAM,
+        &UNIVERSAL_PARAM,
         CapeBackendConfig {
             // We're not going to do any direct-to-contract operations that
             // would require a connection to the CAPE contract or an ETH

@@ -163,7 +163,7 @@ pub fn generate_burn_tx(
     // 2 inputs: fee input record and wrapped asset record
     // 2 outputs: changed fee asset record, burn output record
     let xfr_prove_key =
-        jf_cap::proof::transfer::preprocess(&*UNIVERSAL_PARAM, 2, 2, CapeLedger::merkle_height())
+        jf_cap::proof::transfer::preprocess(&UNIVERSAL_PARAM, 2, 2, CapeLedger::merkle_height())
             .unwrap()
             .0;
     let valid_until = 2u64.pow(jf_cap::constants::MAX_TIMESTAMP_LEN as u32) - 1;

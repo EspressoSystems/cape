@@ -46,12 +46,10 @@
         opensslMusl.dev
         opensslMusl.out
       ];
-      nightlyMuslRustToolchain =
-        pkgs.rust-bin.selectLatestNightlyWith (toolchain:
-          toolchain.minimal.override {
-            extensions = [ "rustfmt" "clippy" "llvm-tools-preview" "rust-src" ];
-            targets = [ "x86_64-unknown-linux-musl" ];
-          });
+      nightlyMuslRustToolchain = pkgs.rust-bin.nightly."2022-07-17".minimal.override {
+        extensions = [ "rustfmt" "clippy" "llvm-tools-preview" "rust-src" ];
+        targets = [ "x86_64-unknown-linux-musl" ];
+      };
 
       # glibc pkgs
       overlays = [ (import rust-overlay) ];
@@ -60,11 +58,9 @@
       pythonEnv = pkgs.poetry2nix.mkPoetryEnv { projectDir = ./.; };
       myPython = with pkgs; [ poetry pythonEnv ];
 
-      nightlyRustToolchain =
-        pkgs.rust-bin.selectLatestNightlyWith (toolchain:
-          toolchain.minimal.override {
-            extensions = [ "rustfmt" "clippy" "llvm-tools-preview" "rust-src" ];
-          });
+      nightlyRustToolchain = pkgs.rust-bin.nightly."2022-07-17".minimal.override {
+        extensions = [ "rustfmt" "clippy" "llvm-tools-preview" "rust-src" ];
+      };
       rustDeps = with pkgs;
         [
           pkgconfig

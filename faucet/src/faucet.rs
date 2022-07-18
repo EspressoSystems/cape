@@ -208,9 +208,6 @@ pub enum FaucetError {
 
     #[snafu(display("faucet service temporarily unavailable"))]
     Unavailable,
-
-    #[snafu(display("Address not found in address book"))]
-    AddressNotFound,
 }
 
 impl net::Error for FaucetError {
@@ -225,7 +222,6 @@ impl net::Error for FaucetError {
             Self::QueueFull { .. } => StatusCode::InternalServerError,
             Self::Persistence { .. } => StatusCode::InternalServerError,
             Self::Unavailable => StatusCode::ServiceUnavailable,
-            Self::AddressNotFound { .. } => StatusCode::BadRequest,
         }
     }
 }

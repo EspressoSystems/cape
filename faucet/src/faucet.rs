@@ -458,6 +458,10 @@ impl FaucetQueue {
     }
 
     async fn fail(&mut self, request: UserPubKey) {
+        // Sleep a second before retrying to avoid creating a busy loop
+        // in case of unforeseen errors.
+        async_std::task::sleep(Duration::from_secs(1)).await;
+
         if let Err(err) = self.sender.send(request).await {
             tracing::error!(
                 "error re-adding failed request; request will be dropped. {}",
@@ -595,9 +599,23 @@ async fn worker(id: usize, mut state: FaucetState) {
                 .await
             {
                 tracing::error!("worker {}: failed to transfer: {}", id, err);
-                // If we failed, mark the request as failed in the queue so it can be retried
-                // later.
-                state.queue.fail(pub_key).await;
+                if let CapeWalletError::PubkeyNotFound { address } = err {
+                    // If the address is missing in the address book we can't
+                    // transfer. Drop the faucet grant.
+                    tracing::warn!(
+                        "worker {}: pubkey for {} not found, removing key from index",
+                        id,
+                        address
+                    );
+                    {
+                        let mut index = state.queue.index.lock().await;
+                        index.remove(&pub_key).unwrap();
+                    }
+                } else {
+                    // If we failed, mark the request as failed in the queue so it can be retried
+                    // later.
+                    state.queue.fail(pub_key).await;
+                }
                 continue 'wait_for_requests;
             }
 

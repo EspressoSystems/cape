@@ -425,18 +425,22 @@ impl<'a> WalletBackend<'a, CapeLedger> for CapeBackend<'a> {
             .map_err(|err| CapeWalletError::Failed {
                 msg: format!("error requesting public key: {}", err),
             })?;
-        if response.status() == StatusCode::Ok {
-            let bytes = response
-                .body_bytes()
-                .await
-                .expect("failed deserializing response from address book");
-            let pub_key: UserPubKey = bincode::deserialize(&bytes)
-                .expect("failed deserializing UserPubKey from address book.");
-            Ok(pub_key)
-        } else {
-            Err(CapeWalletError::Failed {
+        match response.status() {
+            StatusCode::Ok => {
+                let bytes = response
+                    .body_bytes()
+                    .await
+                    .expect("failed deserializing response from address book");
+                let pub_key: UserPubKey = bincode::deserialize(&bytes)
+                    .expect("failed deserializing UserPubKey from address book.");
+                Ok(pub_key)
+            }
+            StatusCode::NotFound => Err(CapeWalletError::PubkeyNotFound {
+                address: address.clone(),
+            }),
+            _ => Err(CapeWalletError::Failed {
                 msg: "Error response from address book".into(),
-            })
+            }),
         }
     }
 

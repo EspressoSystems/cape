@@ -142,9 +142,10 @@
 </code></pre>
 <p>Create a records Merkle tree of the given height.</p>
 <h3 id="parameters"><a class="header" href="#parameters">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>merkleTreeHeight</code></td><td style="text-align: left">uint8</td><td style="text-align: left">The height</td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="_buildtreefromfrontier"><a class="header" href="#_buildtreefromfrontier">_buildTreeFromFrontier</a></h2>
 <pre><code class="language-solidity">  function _buildTreeFromFrontier(
@@ -153,13 +154,15 @@
 </code></pre>
 <p>Create a Merkle tree from the given frontier.</p>
 <h3 id="parameters-1"><a class="header" href="#parameters-1">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>nodes</code></td><td style="text-align: left">struct RecordsMerkleTree.Node[]</td><td style="text-align: left">The list of nodes to be filled or updated</td></tr>
 </tbody></table>
+</div>
 <h3 id="return-values"><a class="header" href="#return-values">Return Values</a></h3>
-<table><thead><tr><th style="text-align: left">Returns</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Returns</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left">⇒</td><td style="text-align: left">struct RecordsMerkleTree.Node[]</td><td style="text-align: left">cursor to the root node of the create tree</td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="updaterecordsmerkletree"><a class="header" href="#updaterecordsmerkletree">updateRecordsMerkleTree</a></h2>
 <pre><code class="language-solidity">  function updateRecordsMerkleTree(
@@ -168,9 +171,10 @@
 </code></pre>
 <p>Update the state of the record merkle tree by inserting new elements.</p>
 <h3 id="parameters-2"><a class="header" href="#parameters-2">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>elements</code></td><td style="text-align: left">uint256[]</td><td style="text-align: left">The list of elements to be appended to the current merkle tree described by the frontier.</td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="getrootvalue"><a class="header" href="#getrootvalue">getRootValue</a></h2>
 <pre><code class="language-solidity">  function getRootValue(

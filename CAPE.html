@@ -143,10 +143,11 @@
 </code></pre>
 <p>CAPE contract constructor method.</p>
 <h3 id="parameters"><a class="header" href="#parameters">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>nRoots</code></td><td style="text-align: left">uint64</td><td style="text-align: left">number of the most recent roots of the records merkle tree to be stored</td></tr>
 <tr><td style="text-align: left"><code>verifierAddr</code></td><td style="text-align: left">address</td><td style="text-align: left">address of the Plonk Verifier contract</td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="faucetsetupfortestnet"><a class="header" href="#faucetsetupfortestnet">faucetSetupForTestnet</a></h2>
 <pre><code class="language-solidity">  function faucetSetupForTestnet(
@@ -156,10 +157,11 @@
 </code></pre>
 <p>Allocate native token faucet to a manager. For testnet only.</p>
 <h3 id="parameters-1"><a class="header" href="#parameters-1">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>faucetManagerAddress</code></td><td style="text-align: left">struct EdOnBN254.EdOnBN254Point</td><td style="text-align: left">address of public key of faucet manager for CAP native token (testnet only!)</td></tr>
 <tr><td style="text-align: left"><code>faucetManagerEncKey</code></td><td style="text-align: left">bytes32</td><td style="text-align: left">public key of faucet manager for CAP native token (testnet only!)</td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="_publish"><a class="header" href="#_publish">_publish</a></h2>
 <pre><code class="language-solidity">  function _publish(
@@ -170,9 +172,10 @@
 <p>Requires all nullifiers to be unique and unpublished.
 A block creator must not submit notes with duplicate nullifiers.</p>
 <h3 id="parameters-2"><a class="header" href="#parameters-2">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>newNullifiers</code></td><td style="text-align: left">uint256[]</td><td style="text-align: left">list of nullifiers to publish</td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="_publish-1"><a class="header" href="#_publish-1">_publish</a></h2>
 <pre><code class="language-solidity">  function _publish(
@@ -182,9 +185,10 @@ A block creator must not submit notes with duplicate nullifiers.</p>
 <p>Publish a nullifier if it hasn't been published before.</p>
 <p>Reverts if the nullifier is already published.</p>
 <h3 id="parameters-3"><a class="header" href="#parameters-3">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>nullifier</code></td><td style="text-align: left">uint256</td><td style="text-align: left">nullifier to publish</td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="depositerc20"><a class="header" href="#depositerc20">depositErc20</a></h2>
 <pre><code class="language-solidity">  function depositErc20(
@@ -194,10 +198,11 @@ A block creator must not submit notes with duplicate nullifiers.</p>
 </code></pre>
 <p>Wraps ERC-20 tokens into a CAPE asset defined in the record opening.</p>
 <h3 id="parameters-4"><a class="header" href="#parameters-4">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>ro</code></td><td style="text-align: left">struct CAPE.RecordOpening</td><td style="text-align: left">record opening that will be inserted in the records merkle tree once the deposit is validated</td></tr>
 <tr><td style="text-align: left"><code>erc20Address</code></td><td style="text-align: left">address</td><td style="text-align: left">address of the ERC-20 token corresponding to the deposit</td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="submitcapeblockwithmemos"><a class="header" href="#submitcapeblockwithmemos">submitCapeBlockWithMemos</a></h2>
 <pre><code class="language-solidity">  function submitCapeBlockWithMemos(
@@ -207,10 +212,11 @@ A block creator must not submit notes with duplicate nullifiers.</p>
 </code></pre>
 <p>Submit a new block with extra data to the CAPE contract.</p>
 <h3 id="parameters-5"><a class="header" href="#parameters-5">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>newBlock</code></td><td style="text-align: left">struct CAPE.CapeBlock</td><td style="text-align: left">block to be processed by the CAPE contract</td></tr>
 <tr><td style="text-align: left"><code>extraData</code></td><td style="text-align: left">bytes</td><td style="text-align: left">data to be stored in calldata; this data is ignored by the contract function</td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="submitcapeblock"><a class="header" href="#submitcapeblock">submitCapeBlock</a></h2>
 <pre><code class="language-solidity">  function submitCapeBlock(
@@ -220,9 +226,10 @@ A block creator must not submit notes with duplicate nullifiers.</p>
 <p>Submit a new block to the CAPE contract.</p>
 <p>Transactions are validated and the blockchain state is updated. Moreover <em>BURN</em> transactions trigger the unwrapping of cape asset records into erc20 tokens.</p>
 <h3 id="parameters-6"><a class="header" href="#parameters-6">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>newBlock</code></td><td style="text-align: left">struct CAPE.CapeBlock</td><td style="text-align: left">block to be processed by the CAPE contract.</td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="_emitblockevent"><a class="header" href="#_emitblockevent">_emitBlockEvent</a></h2>
 <pre><code class="language-solidity">  function _emitBlockEvent(
@@ -237,9 +244,10 @@ A block creator must not submit notes with duplicate nullifiers.</p>
 </code></pre>
 <p>send the ERC-20 tokens equivalent to the asset records being burnt. Recall that the burned record opening is contained inside the note.</p>
 <h3 id="parameters-7"><a class="header" href="#parameters-7">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>note</code></td><td style="text-align: left">struct CAPE.BurnNote</td><td style="text-align: left">note of type <em>BURN</em></td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="_computenumcommitments"><a class="header" href="#_computenumcommitments">_computeNumCommitments</a></h2>
 <pre><code class="language-solidity">  function _computeNumCommitments(
@@ -254,9 +262,10 @@ A block creator must not submit notes with duplicate nullifiers.</p>
 </code></pre>
 <p>Verify if a note is of type <em>TRANSFER</em>.</p>
 <h3 id="parameters-8"><a class="header" href="#parameters-8">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>note</code></td><td style="text-align: left">struct CAPE.TransferNote</td><td style="text-align: left">note which could be of type <em>TRANSFER</em> or <em>BURN</em></td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="_isexpired"><a class="header" href="#_isexpired">_isExpired</a></h2>
 <pre><code class="language-solidity">  function _isExpired(
@@ -265,9 +274,10 @@ A block creator must not submit notes with duplicate nullifiers.</p>
 </code></pre>
 <p>Check if a note has expired.</p>
 <h3 id="parameters-9"><a class="header" href="#parameters-9">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>note</code></td><td style="text-align: left">struct CAPE.TransferNote</td><td style="text-align: left">note for which we want to check its timestamp against the current block height</td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="_checkburn"><a class="header" href="#_checkburn">_checkBurn</a></h2>
 <pre><code class="language-solidity">  function _checkBurn(
@@ -276,9 +286,10 @@ A block creator must not submit notes with duplicate nullifiers.</p>
 </code></pre>
 <p>Check if a burn note is well formed.</p>
 <h3 id="parameters-10"><a class="header" href="#parameters-10">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>note</code></td><td style="text-align: left">struct CAPE.BurnNote</td><td style="text-align: left">note of type <em>BURN</em></td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="_containsburnprefix"><a class="header" href="#_containsburnprefix">_containsBurnPrefix</a></h2>
 <pre><code class="language-solidity">  function _containsBurnPrefix(
@@ -287,9 +298,10 @@ A block creator must not submit notes with duplicate nullifiers.</p>
 </code></pre>
 <p>Checks if a sequence of bytes contains hardcoded prefix.</p>
 <h3 id="parameters-11"><a class="header" href="#parameters-11">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>byteSeq</code></td><td style="text-align: left">bytes</td><td style="text-align: left">sequence of bytes</td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="_containsburnrecord"><a class="header" href="#_containsburnrecord">_containsBurnRecord</a></h2>
 <pre><code class="language-solidity">  function _containsBurnRecord(
@@ -298,9 +310,10 @@ A block creator must not submit notes with duplicate nullifiers.</p>
 </code></pre>
 <p>Check if the burned record opening and the record commitment in position 1 are consistent.</p>
 <h3 id="parameters-12"><a class="header" href="#parameters-12">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>note</code></td><td style="text-align: left">struct CAPE.BurnNote</td><td style="text-align: left">note of type <em>BURN</em></td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="_deriverecordcommitment"><a class="header" href="#_deriverecordcommitment">_deriveRecordCommitment</a></h2>
 <pre><code class="language-solidity">  function _deriveRecordCommitment(
@@ -309,9 +322,10 @@ A block creator must not submit notes with duplicate nullifiers.</p>
 </code></pre>
 <p>Compute the commitment of a record opening.</p>
 <h3 id="parameters-13"><a class="header" href="#parameters-13">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>ro</code></td><td style="text-align: left">struct CAPE.RecordOpening</td><td style="text-align: left">record opening</td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="_prepareforproofverification"><a class="header" href="#_prepareforproofverification">_prepareForProofVerification</a></h2>
 <pre><code class="language-solidity">  function _prepareForProofVerification(
@@ -320,9 +334,10 @@ A block creator must not submit notes with duplicate nullifiers.</p>
 </code></pre>
 <p>An overloaded function (one for each note type) to prepare all inputs necessary for batch verification of the plonk proof.</p>
 <h3 id="parameters-14"><a class="header" href="#parameters-14">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>note</code></td><td style="text-align: left">struct CAPE.TransferNote</td><td style="text-align: left">note of type <em>TRANSFER</em></td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="_prepareforproofverification-1"><a class="header" href="#_prepareforproofverification-1">_prepareForProofVerification</a></h2>
 <pre><code class="language-solidity">  function _prepareForProofVerification(
@@ -331,9 +346,10 @@ A block creator must not submit notes with duplicate nullifiers.</p>
 </code></pre>
 <p>An overloaded function (one for each note type) to prepare all inputs necessary for batch verification of the plonk proof.</p>
 <h3 id="parameters-15"><a class="header" href="#parameters-15">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>note</code></td><td style="text-align: left">struct CAPE.BurnNote</td><td style="text-align: left">note of type <em>BURN</em></td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="_prepareforproofverification-2"><a class="header" href="#_prepareforproofverification-2">_prepareForProofVerification</a></h2>
 <pre><code class="language-solidity">  function _prepareForProofVerification(
@@ -342,9 +358,10 @@ A block creator must not submit notes with duplicate nullifiers.</p>
 </code></pre>
 <p>An overloaded function (one for each note type) to prepare all inputs necessary for batch verification of the plonk proof.</p>
 <h3 id="parameters-16"><a class="header" href="#parameters-16">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>note</code></td><td style="text-align: left">struct CAPE.MintNote</td><td style="text-align: left">note of type <em>MINT</em></td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="_prepareforproofverification-3"><a class="header" href="#_prepareforproofverification-3">_prepareForProofVerification</a></h2>
 <pre><code class="language-solidity">  function _prepareForProofVerification(
@@ -353,9 +370,10 @@ A block creator must not submit notes with duplicate nullifiers.</p>
 </code></pre>
 <p>An overloaded function (one for each note type) to prepare all inputs necessary for batch verification of the plonk proof.</p>
 <h3 id="parameters-17"><a class="header" href="#parameters-17">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>note</code></td><td style="text-align: left">struct CAPE.FreezeNote</td><td style="text-align: left">note of type <em>FREEZE</em></td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="getrootvalue"><a class="header" href="#getrootvalue">getRootValue</a></h2>
 <pre><code class="language-solidity">  function getRootValue(

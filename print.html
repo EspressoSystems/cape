@@ -200,10 +200,11 @@ In other words a token that implements the <a href="https://eips.ethereum.org/EI
 </code></pre>
 <p>CAPE contract constructor method.</p>
 <h3 id="parameters"><a class="header" href="#parameters">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>nRoots</code></td><td style="text-align: left">uint64</td><td style="text-align: left">number of the most recent roots of the records merkle tree to be stored</td></tr>
 <tr><td style="text-align: left"><code>verifierAddr</code></td><td style="text-align: left">address</td><td style="text-align: left">address of the Plonk Verifier contract</td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="faucetsetupfortestnet"><a class="header" href="#faucetsetupfortestnet">faucetSetupForTestnet</a></h2>
 <pre><code class="language-solidity">  function faucetSetupForTestnet(
@@ -213,10 +214,11 @@ In other words a token that implements the <a href="https://eips.ethereum.org/EI
 </code></pre>
 <p>Allocate native token faucet to a manager. For testnet only.</p>
 <h3 id="parameters-1"><a class="header" href="#parameters-1">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>faucetManagerAddress</code></td><td style="text-align: left">struct EdOnBN254.EdOnBN254Point</td><td style="text-align: left">address of public key of faucet manager for CAP native token (testnet only!)</td></tr>
 <tr><td style="text-align: left"><code>faucetManagerEncKey</code></td><td style="text-align: left">bytes32</td><td style="text-align: left">public key of faucet manager for CAP native token (testnet only!)</td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="_publish"><a class="header" href="#_publish">_publish</a></h2>
 <pre><code class="language-solidity">  function _publish(
@@ -227,9 +229,10 @@ In other words a token that implements the <a href="https://eips.ethereum.org/EI
 <p>Requires all nullifiers to be unique and unpublished.
 A block creator must not submit notes with duplicate nullifiers.</p>
 <h3 id="parameters-2"><a class="header" href="#parameters-2">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>newNullifiers</code></td><td style="text-align: left">uint256[]</td><td style="text-align: left">list of nullifiers to publish</td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="_publish-1"><a class="header" href="#_publish-1">_publish</a></h2>
 <pre><code class="language-solidity">  function _publish(
@@ -239,9 +242,10 @@ A block creator must not submit notes with duplicate nullifiers.</p>
 <p>Publish a nullifier if it hasn't been published before.</p>
 <p>Reverts if the nullifier is already published.</p>
 <h3 id="parameters-3"><a class="header" href="#parameters-3">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>nullifier</code></td><td style="text-align: left">uint256</td><td style="text-align: left">nullifier to publish</td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="depositerc20"><a class="header" href="#depositerc20">depositErc20</a></h2>
 <pre><code class="language-solidity">  function depositErc20(
@@ -251,10 +255,11 @@ A block creator must not submit notes with duplicate nullifiers.</p>
 </code></pre>
 <p>Wraps ERC-20 tokens into a CAPE asset defined in the record opening.</p>
 <h3 id="parameters-4"><a class="header" href="#parameters-4">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>ro</code></td><td style="text-align: left">struct CAPE.RecordOpening</td><td style="text-align: left">record opening that will be inserted in the records merkle tree once the deposit is validated</td></tr>
 <tr><td style="text-align: left"><code>erc20Address</code></td><td style="text-align: left">address</td><td style="text-align: left">address of the ERC-20 token corresponding to the deposit</td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="submitcapeblockwithmemos"><a class="header" href="#submitcapeblockwithmemos">submitCapeBlockWithMemos</a></h2>
 <pre><code class="language-solidity">  function submitCapeBlockWithMemos(
@@ -264,10 +269,11 @@ A block creator must not submit notes with duplicate nullifiers.</p>
 </code></pre>
 <p>Submit a new block with extra data to the CAPE contract.</p>
 <h3 id="parameters-5"><a class="header" href="#parameters-5">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>newBlock</code></td><td style="text-align: left">struct CAPE.CapeBlock</td><td style="text-align: left">block to be processed by the CAPE contract</td></tr>
 <tr><td style="text-align: left"><code>extraData</code></td><td style="text-align: left">bytes</td><td style="text-align: left">data to be stored in calldata; this data is ignored by the contract function</td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="submitcapeblock"><a class="header" href="#submitcapeblock">submitCapeBlock</a></h2>
 <pre><code class="language-solidity">  function submitCapeBlock(
@@ -277,9 +283,10 @@ A block creator must not submit notes with duplicate nullifiers.</p>
 <p>Submit a new block to the CAPE contract.</p>
 <p>Transactions are validated and the blockchain state is updated. Moreover <em>BURN</em> transactions trigger the unwrapping of cape asset records into erc20 tokens.</p>
 <h3 id="parameters-6"><a class="header" href="#parameters-6">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>newBlock</code></td><td style="text-align: left">struct CAPE.CapeBlock</td><td style="text-align: left">block to be processed by the CAPE contract.</td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="_emitblockevent"><a class="header" href="#_emitblockevent">_emitBlockEvent</a></h2>
 <pre><code class="language-solidity">  function _emitBlockEvent(
@@ -294,9 +301,10 @@ A block creator must not submit notes with duplicate nullifiers.</p>
 </code></pre>
 <p>send the ERC-20 tokens equivalent to the asset records being burnt. Recall that the burned record opening is contained inside the note.</p>
 <h3 id="parameters-7"><a class="header" href="#parameters-7">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>note</code></td><td style="text-align: left">struct CAPE.BurnNote</td><td style="text-align: left">note of type <em>BURN</em></td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="_computenumcommitments"><a class="header" href="#_computenumcommitments">_computeNumCommitments</a></h2>
 <pre><code class="language-solidity">  function _computeNumCommitments(
@@ -311,9 +319,10 @@ A block creator must not submit notes with duplicate nullifiers.</p>
 </code></pre>
 <p>Verify if a note is of type <em>TRANSFER</em>.</p>
 <h3 id="parameters-8"><a class="header" href="#parameters-8">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>note</code></td><td style="text-align: left">struct CAPE.TransferNote</td><td style="text-align: left">note which could be of type <em>TRANSFER</em> or <em>BURN</em></td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="_isexpired"><a class="header" href="#_isexpired">_isExpired</a></h2>
 <pre><code class="language-solidity">  function _isExpired(
@@ -322,9 +331,10 @@ A block creator must not submit notes with duplicate nullifiers.</p>
 </code></pre>
 <p>Check if a note has expired.</p>
 <h3 id="parameters-9"><a class="header" href="#parameters-9">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>note</code></td><td style="text-align: left">struct CAPE.TransferNote</td><td style="text-align: left">note for which we want to check its timestamp against the current block height</td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="_checkburn"><a class="header" href="#_checkburn">_checkBurn</a></h2>
 <pre><code class="language-solidity">  function _checkBurn(
@@ -333,9 +343,10 @@ A block creator must not submit notes with duplicate nullifiers.</p>
 </code></pre>
 <p>Check if a burn note is well formed.</p>
 <h3 id="parameters-10"><a class="header" href="#parameters-10">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>note</code></td><td style="text-align: left">struct CAPE.BurnNote</td><td style="text-align: left">note of type <em>BURN</em></td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="_containsburnprefix"><a class="header" href="#_containsburnprefix">_containsBurnPrefix</a></h2>
 <pre><code class="language-solidity">  function _containsBurnPrefix(
@@ -344,9 +355,10 @@ A block creator must not submit notes with duplicate nullifiers.</p>
 </code></pre>
 <p>Checks if a sequence of bytes contains hardcoded prefix.</p>
 <h3 id="parameters-11"><a class="header" href="#parameters-11">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>byteSeq</code></td><td style="text-align: left">bytes</td><td style="text-align: left">sequence of bytes</td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="_containsburnrecord"><a class="header" href="#_containsburnrecord">_containsBurnRecord</a></h2>
 <pre><code class="language-solidity">  function _containsBurnRecord(
@@ -355,9 +367,10 @@ A block creator must not submit notes with duplicate nullifiers.</p>
 </code></pre>
 <p>Check if the burned record opening and the record commitment in position 1 are consistent.</p>
 <h3 id="parameters-12"><a class="header" href="#parameters-12">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>note</code></td><td style="text-align: left">struct CAPE.BurnNote</td><td style="text-align: left">note of type <em>BURN</em></td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="_deriverecordcommitment"><a class="header" href="#_deriverecordcommitment">_deriveRecordCommitment</a></h2>
 <pre><code class="language-solidity">  function _deriveRecordCommitment(
@@ -366,9 +379,10 @@ A block creator must not submit notes with duplicate nullifiers.</p>
 </code></pre>
 <p>Compute the commitment of a record opening.</p>
 <h3 id="parameters-13"><a class="header" href="#parameters-13">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>ro</code></td><td style="text-align: left">struct CAPE.RecordOpening</td><td style="text-align: left">record opening</td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="_prepareforproofverification"><a class="header" href="#_prepareforproofverification">_prepareForProofVerification</a></h2>
 <pre><code class="language-solidity">  function _prepareForProofVerification(
@@ -377,9 +391,10 @@ A block creator must not submit notes with duplicate nullifiers.</p>
 </code></pre>
 <p>An overloaded function (one for each note type) to prepare all inputs necessary for batch verification of the plonk proof.</p>
 <h3 id="parameters-14"><a class="header" href="#parameters-14">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>note</code></td><td style="text-align: left">struct CAPE.TransferNote</td><td style="text-align: left">note of type <em>TRANSFER</em></td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="_prepareforproofverification-1"><a class="header" href="#_prepareforproofverification-1">_prepareForProofVerification</a></h2>
 <pre><code class="language-solidity">  function _prepareForProofVerification(
@@ -388,9 +403,10 @@ A block creator must not submit notes with duplicate nullifiers.</p>
 </code></pre>
 <p>An overloaded function (one for each note type) to prepare all inputs necessary for batch verification of the plonk proof.</p>
 <h3 id="parameters-15"><a class="header" href="#parameters-15">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>note</code></td><td style="text-align: left">struct CAPE.BurnNote</td><td style="text-align: left">note of type <em>BURN</em></td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="_prepareforproofverification-2"><a class="header" href="#_prepareforproofverification-2">_prepareForProofVerification</a></h2>
 <pre><code class="language-solidity">  function _prepareForProofVerification(
@@ -399,9 +415,10 @@ A block creator must not submit notes with duplicate nullifiers.</p>
 </code></pre>
 <p>An overloaded function (one for each note type) to prepare all inputs necessary for batch verification of the plonk proof.</p>
 <h3 id="parameters-16"><a class="header" href="#parameters-16">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>note</code></td><td style="text-align: left">struct CAPE.MintNote</td><td style="text-align: left">note of type <em>MINT</em></td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="_prepareforproofverification-3"><a class="header" href="#_prepareforproofverification-3">_prepareForProofVerification</a></h2>
 <pre><code class="language-solidity">  function _prepareForProofVerification(
@@ -410,9 +427,10 @@ A block creator must not submit notes with duplicate nullifiers.</p>
 </code></pre>
 <p>An overloaded function (one for each note type) to prepare all inputs necessary for batch verification of the plonk proof.</p>
 <h3 id="parameters-17"><a class="header" href="#parameters-17">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>note</code></td><td style="text-align: left">struct CAPE.FreezeNote</td><td style="text-align: left">note of type <em>FREEZE</em></td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="getrootvalue"><a class="header" href="#getrootvalue">getRootValue</a></h2>
 <pre><code class="language-solidity">  function getRootValue(
@@ -450,13 +468,15 @@ A block creator must not submit notes with duplicate nullifiers.</p>
 <p>Fetch the ERC-20 token address corresponding to the
 given asset definition.</p>
 <h3 id="parameters-18"><a class="header" href="#parameters-18">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>assetDefinition</code></td><td style="text-align: left">struct AssetRegistry.AssetDefinition</td><td style="text-align: left">an asset definition</td></tr>
 </tbody></table>
+</div>
 <h3 id="return-values"><a class="header" href="#return-values">Return Values</a></h3>
-<table><thead><tr><th style="text-align: left">Returns</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Returns</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left">⇒</td><td style="text-align: left">struct AssetRegistry.AssetDefinition</td><td style="text-align: left">ERC-20 address</td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="iscapeassetregistered"><a class="header" href="#iscapeassetregistered">isCapeAssetRegistered</a></h2>
 <pre><code class="language-solidity">  function isCapeAssetRegistered(
@@ -465,13 +485,15 @@ given asset definition.</p>
 </code></pre>
 <p>Is the given asset definition registered?</p>
 <h3 id="parameters-19"><a class="header" href="#parameters-19">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>assetDefinition</code></td><td style="text-align: left">struct AssetRegistry.AssetDefinition</td><td style="text-align: left">an asset definition</td></tr>
 </tbody></table>
+</div>
 <h3 id="return-values-1"><a class="header" href="#return-values-1">Return Values</a></h3>
-<table><thead><tr><th style="text-align: left">Returns</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Returns</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left">⇒</td><td style="text-align: left">struct AssetRegistry.AssetDefinition</td><td style="text-align: left">if the asset type is registered, false otherwise.</td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="sponsorcapeasset"><a class="header" href="#sponsorcapeasset">sponsorCapeAsset</a></h2>
 <pre><code class="language-solidity">  function sponsorCapeAsset(
@@ -483,10 +505,11 @@ given asset definition.</p>
 ERC-20 token. Will revert if the asset type is already
 registered or the ERC-20 token address is zero.</p>
 <h3 id="parameters-20"><a class="header" href="#parameters-20">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>erc20Address</code></td><td style="text-align: left">address</td><td style="text-align: left">An ERC-20 token address</td></tr>
 <tr><td style="text-align: left"><code>newAsset</code></td><td style="text-align: left">struct AssetRegistry.AssetDefinition</td><td style="text-align: left">An asset type to be registered in the contract</td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="_checkforeignassetcode"><a class="header" href="#_checkforeignassetcode">_checkForeignAssetCode</a></h2>
 <pre><code class="language-solidity">  function _checkForeignAssetCode(
@@ -501,12 +524,13 @@ not correctly derived from the ERC-20 address of the token and
 the address of the sponsor.</p>
 <p>Requires &quot;view&quot; to access msg.sender.</p>
 <h3 id="parameters-21"><a class="header" href="#parameters-21">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>assetDefinitionCode</code></td><td style="text-align: left">uint256</td><td style="text-align: left">The code of an asset definition</td></tr>
 <tr><td style="text-align: left"><code>erc20Address</code></td><td style="text-align: left">address</td><td style="text-align: left">The ERC-20 address bound to the asset definition</td></tr>
 <tr><td style="text-align: left"><code>sponsor</code></td><td style="text-align: left">address</td><td style="text-align: left">The sponsor address of this wrapped asset</td></tr>
 <tr><td style="text-align: left"><code>policy</code></td><td style="text-align: left">struct AssetRegistry.AssetPolicy</td><td style="text-align: left">asset policy</td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="_checkdomesticassetcode"><a class="header" href="#_checkdomesticassetcode">_checkDomesticAssetCode</a></h2>
 <pre><code class="language-solidity">  function _checkDomesticAssetCode(
@@ -516,10 +540,11 @@ the address of the sponsor.</p>
 </code></pre>
 <p>Checks if the asset definition code is correctly derived from the internal asset code.</p>
 <h3 id="parameters-22"><a class="header" href="#parameters-22">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>assetDefinitionCode</code></td><td style="text-align: left">uint256</td><td style="text-align: left">asset definition code</td></tr>
 <tr><td style="text-align: left"><code>internalAssetCode</code></td><td style="text-align: left">uint256</td><td style="text-align: left">internal asset code</td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="_computeassetdescription"><a class="header" href="#_computeassetdescription">_computeAssetDescription</a></h2>
 <pre><code class="language-solidity">  function _computeAssetDescription(
@@ -531,15 +556,17 @@ the address of the sponsor.</p>
 <p>Compute the asset description from the address of the
 ERC-20 token and the address of the sponsor.</p>
 <h3 id="parameters-23"><a class="header" href="#parameters-23">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>erc20Address</code></td><td style="text-align: left">address</td><td style="text-align: left">address of the erc20 token</td></tr>
 <tr><td style="text-align: left"><code>sponsor</code></td><td style="text-align: left">address</td><td style="text-align: left">address of the sponsor</td></tr>
 <tr><td style="text-align: left"><code>policy</code></td><td style="text-align: left">struct AssetRegistry.AssetPolicy</td><td style="text-align: left">asset policy</td></tr>
 </tbody></table>
+</div>
 <h3 id="return-values-2"><a class="header" href="#return-values-2">Return Values</a></h3>
-<table><thead><tr><th style="text-align: left">Returns</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Returns</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left">⇒</td><td style="text-align: left">address</td><td style="text-align: left">asset description</td></tr>
 </tbody></table>
+</div>
 <hr />
 <h1 id="events-1"><a class="header" href="#events-1">Events</a></h1>
 <h2 id="assetsponsored"><a class="header" href="#assetsponsored">AssetSponsored</a></h2>
@@ -555,9 +582,10 @@ ERC-20 token and the address of the sponsor.</p>
 </code></pre>
 <p>Create a records Merkle tree of the given height.</p>
 <h3 id="parameters-24"><a class="header" href="#parameters-24">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>merkleTreeHeight</code></td><td style="text-align: left">uint8</td><td style="text-align: left">The height</td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="_buildtreefromfrontier"><a class="header" href="#_buildtreefromfrontier">_buildTreeFromFrontier</a></h2>
 <pre><code class="language-solidity">  function _buildTreeFromFrontier(
@@ -566,13 +594,15 @@ ERC-20 token and the address of the sponsor.</p>
 </code></pre>
 <p>Create a Merkle tree from the given frontier.</p>
 <h3 id="parameters-25"><a class="header" href="#parameters-25">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>nodes</code></td><td style="text-align: left">struct RecordsMerkleTree.Node[]</td><td style="text-align: left">The list of nodes to be filled or updated</td></tr>
 </tbody></table>
+</div>
 <h3 id="return-values-3"><a class="header" href="#return-values-3">Return Values</a></h3>
-<table><thead><tr><th style="text-align: left">Returns</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Returns</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left">⇒</td><td style="text-align: left">struct RecordsMerkleTree.Node[]</td><td style="text-align: left">cursor to the root node of the create tree</td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="updaterecordsmerkletree"><a class="header" href="#updaterecordsmerkletree">updateRecordsMerkleTree</a></h2>
 <pre><code class="language-solidity">  function updateRecordsMerkleTree(
@@ -581,9 +611,10 @@ ERC-20 token and the address of the sponsor.</p>
 </code></pre>
 <p>Update the state of the record merkle tree by inserting new elements.</p>
 <h3 id="parameters-26"><a class="header" href="#parameters-26">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>elements</code></td><td style="text-align: left">uint256[]</td><td style="text-align: left">The list of elements to be appended to the current merkle tree described by the frontier.</td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="getrootvalue-1"><a class="header" href="#getrootvalue-1">getRootValue</a></h2>
 <pre><code class="language-solidity">  function getRootValue(
@@ -611,9 +642,10 @@ ERC-20 token and the address of the sponsor.</p>
 </code></pre>
 <p>Create a root store.</p>
 <h3 id="parameters-27"><a class="header" href="#parameters-27">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>nRoots</code></td><td style="text-align: left">uint64</td><td style="text-align: left">The maximum number of roots to store</td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="_addroot"><a class="header" href="#_addroot">_addRoot</a></h2>
 <pre><code class="language-solidity">  function _addRoot(
@@ -622,9 +654,10 @@ ERC-20 token and the address of the sponsor.</p>
 </code></pre>
 <p>Add a root value. Only keep the latest nRoots ones.</p>
 <h3 id="parameters-28"><a class="header" href="#parameters-28">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>newRoot</code></td><td style="text-align: left">uint256</td><td style="text-align: left">The value of the new root</td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="_containsroot"><a class="header" href="#_containsroot">_containsRoot</a></h2>
 <pre><code class="language-solidity">  function _containsRoot(
@@ -633,13 +666,15 @@ ERC-20 token and the address of the sponsor.</p>
 </code></pre>
 <p>Is the root value contained in the store?</p>
 <h3 id="parameters-29"><a class="header" href="#parameters-29">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>root</code></td><td style="text-align: left">uint256</td><td style="text-align: left">The root value to find</td></tr>
 </tbody></table>
+</div>
 <h3 id="return-values-4"><a class="header" href="#return-values-4">Return Values</a></h3>
-<table><thead><tr><th style="text-align: left">Returns</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Returns</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left">⇒</td><td style="text-align: left">uint256</td><td style="text-align: left">True if the root value is in the store, false otherwise</td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="_checkcontainsroot"><a class="header" href="#_checkcontainsroot">_checkContainsRoot</a></h2>
 <pre><code class="language-solidity">  function _checkContainsRoot(
@@ -648,9 +683,10 @@ ERC-20 token and the address of the sponsor.</p>
 </code></pre>
 <p>Raise an exception if the root is not present in the store.</p>
 <h3 id="parameters-30"><a class="header" href="#parameters-30">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>root</code></td><td style="text-align: left">uint256</td><td style="text-align: left">The required root value</td></tr>
 </tbody></table>
+</div>
 <hr />
 <div style="break-before: page; page-break-before: always;"></div><h1 id="functions-4"><a class="header" href="#functions-4">Functions</a></h1>
 <h2 id="batchverify"><a class="header" href="#batchverify">batchVerify</a></h2>
@@ -663,17 +699,19 @@ ERC-20 token and the address of the sponsor.</p>
 </code></pre>
 <p>Batch verify multiple TurboPlonk proofs.</p>
 <h3 id="parameters-31"><a class="header" href="#parameters-31">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>verifyingKeys</code></td><td style="text-align: left">struct IPlonkVerifier.VerifyingKey[]</td><td style="text-align: left">An array of verifying keys</td></tr>
 <tr><td style="text-align: left"><code>publicInputs</code></td><td style="text-align: left">uint256[][]</td><td style="text-align: left">A two-dimensional array of public inputs.</td></tr>
 <tr><td style="text-align: left"><code>proofs</code></td><td style="text-align: left">struct IPlonkVerifier.PlonkProof[]</td><td style="text-align: left">An array of Plonk proofs</td></tr>
 <tr><td style="text-align: left"><code>extraTranscriptInitMsgs</code></td><td style="text-align: left">bytes[]</td><td style="text-align: left">An array of bytes from</td></tr>
 <tr><td style="text-align: left">transcript initialization messages</td><td style="text-align: left"></td><td style="text-align: left"></td></tr>
 </tbody></table>
+</div>
 <h3 id="return-values-5"><a class="header" href="#return-values-5">Return Values</a></h3>
-<table><thead><tr><th style="text-align: left">Returns</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Returns</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left">⇒</td><td style="text-align: left">struct IPlonkVerifier.VerifyingKey[]</td><td style="text-align: left">A boolean that is true for successful verification, false otherwise</td></tr>
 </tbody></table>
+</div>
 <hr />
 <div style="break-before: page; page-break-before: always;"></div><h1 id="functions-5"><a class="header" href="#functions-5">Functions</a></h1>
 <h2 id="batchverify-1"><a class="header" href="#batchverify-1">batchVerify</a></h2>
@@ -686,13 +724,14 @@ ERC-20 token and the address of the sponsor.</p>
 </code></pre>
 <p>Batch verify multiple TurboPlonk proofs.</p>
 <h3 id="parameters-32"><a class="header" href="#parameters-32">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>verifyingKeys</code></td><td style="text-align: left">struct IPlonkVerifier.VerifyingKey[]</td><td style="text-align: left">An array of verifier keys</td></tr>
 <tr><td style="text-align: left"><code>publicInputs</code></td><td style="text-align: left">uint256[][]</td><td style="text-align: left">A two-dimensional array of public inputs.</td></tr>
 <tr><td style="text-align: left"><code>proofs</code></td><td style="text-align: left">struct IPlonkVerifier.PlonkProof[]</td><td style="text-align: left">An array of Plonk proofs</td></tr>
 <tr><td style="text-align: left"><code>extraTranscriptInitMsgs</code></td><td style="text-align: left">bytes[]</td><td style="text-align: left">An array of bytes from</td></tr>
 <tr><td style="text-align: left">transcript initialization messages</td><td style="text-align: left"></td><td style="text-align: left"></td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="_validateproof"><a class="header" href="#_validateproof">_validateProof</a></h2>
 <pre><code class="language-solidity">  function _validateProof(
@@ -702,9 +741,10 @@ ERC-20 token and the address of the sponsor.</p>
 <p>Validate all group points and scalar fields. Revert if
 any are invalid.</p>
 <h3 id="parameters-33"><a class="header" href="#parameters-33">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>proof</code></td><td style="text-align: left">struct IPlonkVerifier.PlonkProof</td><td style="text-align: left">A Plonk proof</td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="_preparepcsinfo"><a class="header" href="#_preparepcsinfo">_preparePcsInfo</a></h2>
 <pre><code class="language-solidity">  function _preparePcsInfo(
@@ -740,7 +780,7 @@ equivalent of JF's https://github.com/EspressoSystems/jellyfish/blob/main/plonk/
 caller allocates the memory fr commScalars and commBases
 requires Arrays of size 30.</p>
 <h3 id="parameters-34"><a class="header" href="#parameters-34">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>verifyingKey</code></td><td style="text-align: left">struct IPlonkVerifier.VerifyingKey</td><td style="text-align: left">A verifier key</td></tr>
 <tr><td style="text-align: left"><code>evalData</code></td><td style="text-align: left">struct PolynomialEval.EvalData</td><td style="text-align: left">A polynomial evaluation</td></tr>
 <tr><td style="text-align: left"><code>proof</code></td><td style="text-align: left">struct IPlonkVerifier.PlonkProof</td><td style="text-align: left">A Plonk proof</td></tr>
@@ -748,6 +788,7 @@ requires Arrays of size 30.</p>
 <tr><td style="text-align: left"><code>commScalars</code></td><td style="text-align: left">uint256[]</td><td style="text-align: left">Common scalars</td></tr>
 <tr><td style="text-align: left"><code>commBases</code></td><td style="text-align: left">struct BN254.G1Point[]</td><td style="text-align: left">Common bases</td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="_preparepolycommitments"><a class="header" href="#_preparepolycommitments">_preparePolyCommitments</a></h2>
 <pre><code class="language-solidity">  function _preparePolyCommitments(
@@ -769,12 +810,13 @@ Requires Arrays of size 30.</p>
 caller allocates the memory fr commScalars
 requires Arrays of size 30.</p>
 <h3 id="parameters-35"><a class="header" href="#parameters-35">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>linPolyConstant</code></td><td style="text-align: left">uint256</td><td style="text-align: left">A linear polynomial constant</td></tr>
 <tr><td style="text-align: left"><code>proof</code></td><td style="text-align: left">struct IPlonkVerifier.PlonkProof</td><td style="text-align: left">A Plonk proof</td></tr>
 <tr><td style="text-align: left"><code>commScalars</code></td><td style="text-align: left">uint256[]</td><td style="text-align: left">An array of common scalars</td></tr>
 <tr><td style="text-align: left">The returned value is the scalar in <code>[E]1</code> described in Sec 8.4, step 11 of https://eprint.iacr.org/2019/953.pdf</td><td style="text-align: left"></td><td style="text-align: left"></td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="_batchverifyopeningproofs"><a class="header" href="#_batchverifyopeningproofs">_batchVerifyOpeningProofs</a></h2>
 <pre><code class="language-solidity">  function _batchVerifyOpeningProofs(
@@ -785,9 +827,10 @@ requires Arrays of size 30.</p>
 <code>open_key</code> has been assembled from BN254.P1(), BN254.P2() and contract variable _betaH
 Returns true if the entire batch verifiies and false otherwise.</p>
 <h3 id="parameters-36"><a class="header" href="#parameters-36">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>pcsInfos</code></td><td style="text-align: left">struct PlonkVerifier.PcsInfo[]</td><td style="text-align: left">An array of PcsInfo</td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="_linearizationscalarsandbases"><a class="header" href="#_linearizationscalarsandbases">_linearizationScalarsAndBases</a></h2>
 <pre><code class="language-solidity">  function _linearizationScalarsAndBases(
@@ -803,7 +846,7 @@ Returns true if the entire batch verifiies and false otherwise.</p>
 The caller allocates the memory from commScalars and commBases.
 Requires arrays of size 30.</p>
 <h3 id="parameters-37"><a class="header" href="#parameters-37">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>verifyingKey</code></td><td style="text-align: left">struct IPlonkVerifier.VerifyingKey</td><td style="text-align: left">The verifying key</td></tr>
 <tr><td style="text-align: left"><code>challenge</code></td><td style="text-align: left">struct PlonkVerifier.Challenges</td><td style="text-align: left">A set of challenges</td></tr>
 <tr><td style="text-align: left"><code>evalData</code></td><td style="text-align: left">struct PolynomialEval.EvalData</td><td style="text-align: left">Polynomial evaluation data</td></tr>
@@ -811,6 +854,7 @@ Requires arrays of size 30.</p>
 <tr><td style="text-align: left"><code>bases</code></td><td style="text-align: left">struct BN254.G1Point[]</td><td style="text-align: left">An array of BN254 G1 points</td></tr>
 <tr><td style="text-align: left"><code>scalars</code></td><td style="text-align: left">uint256[]</td><td style="text-align: left">An array of scalars</td></tr>
 </tbody></table>
+</div>
 <hr />
 <div style="break-before: page; page-break-before: always;"></div><h1 id="security"><a class="header" href="#security">Security</a></h1>
 <div style="break-before: page; page-break-before: always;"></div><!--

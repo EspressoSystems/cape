@@ -145,13 +145,14 @@
 </code></pre>
 <p>Batch verify multiple TurboPlonk proofs.</p>
 <h3 id="parameters"><a class="header" href="#parameters">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>verifyingKeys</code></td><td style="text-align: left">struct IPlonkVerifier.VerifyingKey[]</td><td style="text-align: left">An array of verifier keys</td></tr>
 <tr><td style="text-align: left"><code>publicInputs</code></td><td style="text-align: left">uint256[][]</td><td style="text-align: left">A two-dimensional array of public inputs.</td></tr>
 <tr><td style="text-align: left"><code>proofs</code></td><td style="text-align: left">struct IPlonkVerifier.PlonkProof[]</td><td style="text-align: left">An array of Plonk proofs</td></tr>
 <tr><td style="text-align: left"><code>extraTranscriptInitMsgs</code></td><td style="text-align: left">bytes[]</td><td style="text-align: left">An array of bytes from</td></tr>
 <tr><td style="text-align: left">transcript initialization messages</td><td style="text-align: left"></td><td style="text-align: left"></td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="_validateproof"><a class="header" href="#_validateproof">_validateProof</a></h2>
 <pre><code class="language-solidity">  function _validateProof(
@@ -161,9 +162,10 @@
 <p>Validate all group points and scalar fields. Revert if
 any are invalid.</p>
 <h3 id="parameters-1"><a class="header" href="#parameters-1">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>proof</code></td><td style="text-align: left">struct IPlonkVerifier.PlonkProof</td><td style="text-align: left">A Plonk proof</td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="_preparepcsinfo"><a class="header" href="#_preparepcsinfo">_preparePcsInfo</a></h2>
 <pre><code class="language-solidity">  function _preparePcsInfo(
@@ -199,7 +201,7 @@ equivalent of JF's https://github.com/EspressoSystems/jellyfish/blob/main/plonk/
 caller allocates the memory fr commScalars and commBases
 requires Arrays of size 30.</p>
 <h3 id="parameters-2"><a class="header" href="#parameters-2">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>verifyingKey</code></td><td style="text-align: left">struct IPlonkVerifier.VerifyingKey</td><td style="text-align: left">A verifier key</td></tr>
 <tr><td style="text-align: left"><code>evalData</code></td><td style="text-align: left">struct PolynomialEval.EvalData</td><td style="text-align: left">A polynomial evaluation</td></tr>
 <tr><td style="text-align: left"><code>proof</code></td><td style="text-align: left">struct IPlonkVerifier.PlonkProof</td><td style="text-align: left">A Plonk proof</td></tr>
@@ -207,6 +209,7 @@ requires Arrays of size 30.</p>
 <tr><td style="text-align: left"><code>commScalars</code></td><td style="text-align: left">uint256[]</td><td style="text-align: left">Common scalars</td></tr>
 <tr><td style="text-align: left"><code>commBases</code></td><td style="text-align: left">struct BN254.G1Point[]</td><td style="text-align: left">Common bases</td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="_preparepolycommitments"><a class="header" href="#_preparepolycommitments">_preparePolyCommitments</a></h2>
 <pre><code class="language-solidity">  function _preparePolyCommitments(
@@ -228,12 +231,13 @@ Requires Arrays of size 30.</p>
 caller allocates the memory fr commScalars
 requires Arrays of size 30.</p>
 <h3 id="parameters-3"><a class="header" href="#parameters-3">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>linPolyConstant</code></td><td style="text-align: left">uint256</td><td style="text-align: left">A linear polynomial constant</td></tr>
 <tr><td style="text-align: left"><code>proof</code></td><td style="text-align: left">struct IPlonkVerifier.PlonkProof</td><td style="text-align: left">A Plonk proof</td></tr>
 <tr><td style="text-align: left"><code>commScalars</code></td><td style="text-align: left">uint256[]</td><td style="text-align: left">An array of common scalars</td></tr>
 <tr><td style="text-align: left">The returned value is the scalar in <code>[E]1</code> described in Sec 8.4, step 11 of https://eprint.iacr.org/2019/953.pdf</td><td style="text-align: left"></td><td style="text-align: left"></td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="_batchverifyopeningproofs"><a class="header" href="#_batchverifyopeningproofs">_batchVerifyOpeningProofs</a></h2>
 <pre><code class="language-solidity">  function _batchVerifyOpeningProofs(
@@ -244,9 +248,10 @@ requires Arrays of size 30.</p>
 <code>open_key</code> has been assembled from BN254.P1(), BN254.P2() and contract variable _betaH
 Returns true if the entire batch verifiies and false otherwise.</p>
 <h3 id="parameters-4"><a class="header" href="#parameters-4">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>pcsInfos</code></td><td style="text-align: left">struct PlonkVerifier.PcsInfo[]</td><td style="text-align: left">An array of PcsInfo</td></tr>
 </tbody></table>
+</div>
 <hr />
 <h2 id="_linearizationscalarsandbases"><a class="header" href="#_linearizationscalarsandbases">_linearizationScalarsAndBases</a></h2>
 <pre><code class="language-solidity">  function _linearizationScalarsAndBases(
@@ -262,7 +267,7 @@ Returns true if the entire batch verifiies and false otherwise.</p>
 The caller allocates the memory from commScalars and commBases.
 Requires arrays of size 30.</p>
 <h3 id="parameters-5"><a class="header" href="#parameters-5">Parameters</a></h3>
-<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
 <tr><td style="text-align: left"><code>verifyingKey</code></td><td style="text-align: left">struct IPlonkVerifier.VerifyingKey</td><td style="text-align: left">The verifying key</td></tr>
 <tr><td style="text-align: left"><code>challenge</code></td><td style="text-align: left">struct PlonkVerifier.Challenges</td><td style="text-align: left">A set of challenges</td></tr>
 <tr><td style="text-align: left"><code>evalData</code></td><td style="text-align: left">struct PolynomialEval.EvalData</td><td style="text-align: left">Polynomial evaluation data</td></tr>
@@ -270,6 +275,7 @@ Requires arrays of size 30.</p>
 <tr><td style="text-align: left"><code>bases</code></td><td style="text-align: left">struct BN254.G1Point[]</td><td style="text-align: left">An array of BN254 G1 points</td></tr>
 <tr><td style="text-align: left"><code>scalars</code></td><td style="text-align: left">uint256[]</td><td style="text-align: left">An array of scalars</td></tr>
 </tbody></table>
+</div>
 <hr />
 
                     </main>

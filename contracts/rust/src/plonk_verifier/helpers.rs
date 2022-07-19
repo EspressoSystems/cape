@@ -35,7 +35,7 @@ pub(crate) fn gen_plonk_proof_for_test(
 > {
     // 1. Simulate universal setup
     let rng = &mut test_rng();
-    let srs = &*UNIVERSAL_PARAM;
+    let srs = &UNIVERSAL_PARAM;
 
     // 2. Create circuits
     let circuits = (0..num_proof)

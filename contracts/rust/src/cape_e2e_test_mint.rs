@@ -57,7 +57,7 @@ async fn test_mint_maybe_submit(should_submit: bool) -> Result<()> {
 
     let mut prng = ChaChaRng::from_seed([0x8au8; 32]);
 
-    let (prove_keys, verif_keys) = keysets_for_test(&*UNIVERSAL_PARAM);
+    let (prove_keys, verif_keys) = keysets_for_test(&UNIVERSAL_PARAM);
 
     println!("CRS set up: {}s", now.elapsed().as_secs_f32());
     let now = Instant::now();

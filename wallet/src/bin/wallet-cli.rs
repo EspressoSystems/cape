@@ -395,7 +395,7 @@ async fn main() -> Result<(), std::io::Error> {
 
     // It can take a little while to unpack the universal params. Start doing this in the background
     // while the CLI is starting and the user is going through the login process.
-    async_std::task::spawn(async { &*UNIVERSAL_PARAM });
+    async_std::task::spawn(async { &UNIVERSAL_PARAM });
 
     // Initialize the wallet CLI.
     if let Err(err) = cli_main::<CapeLedger, CapeCli>(CapeArgs::from_args()).await {

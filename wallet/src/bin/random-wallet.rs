@@ -110,7 +110,7 @@ async fn main() {
 
     let mut rng = ChaChaRng::seed_from_u64(args.seed.unwrap_or(0));
 
-    let universal_param = &*UNIVERSAL_PARAM;
+    let universal_param = &UNIVERSAL_PARAM;
 
     // Everyone creates own relayer and EQS, not sure it works without EQS
     let (sender_key, relayer_url, address_book_url, contract_address, _) =

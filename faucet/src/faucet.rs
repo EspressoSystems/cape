@@ -665,6 +665,7 @@ async fn maintain_enough_records(state: FaucetState, mut wakeup: mpsc::Receiver<
         // drop and reacquisition of the wallet mutex guard.
         loop {
             let wallet = state.wallet.lock().await;
+            #[allow(clippy::explicit_auto_deref)]
             let records = spendable_records(&*wallet, state.grant_size)
                 .await
                 .collect::<Vec<_>>();
@@ -724,6 +725,7 @@ async fn break_up_records(state: &FaucetState) -> Option<Vec<TransactionReceipt<
             // Holding the lock for too long can unneccessarily slow down faucet requests.
             let mut wallet = state.wallet.lock().await;
             let address = wallet.pub_keys().await[0].address();
+            #[allow(clippy::explicit_auto_deref)]
             let records = spendable_records(&*wallet, state.grant_size)
                 .await
                 .collect::<Vec<_>>();
@@ -863,7 +865,7 @@ pub async fn init_web_server(
             .unwrap(),
     );
     let backend = CapeBackend::new(
-        &*UNIVERSAL_PARAM,
+        &UNIVERSAL_PARAM,
         CapeBackendConfig {
             // We're not going to do any direct-to-contract operations that would require a
             // connection to the CAPE contract or an ETH wallet. Everything we do will go through
@@ -1112,7 +1114,7 @@ mod test {
 
     async fn parallel_request(num_requests: usize, restart: bool) {
         let mut rng = ChaChaRng::from_seed([1u8; 32]);
-        let universal_param = &*UNIVERSAL_PARAM;
+        let universal_param = &UNIVERSAL_PARAM;
 
         // Create test network with a faucet key pair.
         let (key_stream, mnemonic) = KeyTree::random(&mut rng);

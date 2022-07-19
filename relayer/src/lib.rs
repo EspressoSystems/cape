@@ -475,7 +475,7 @@ mod test {
         receiver: UserPubKey,
         records: &MerkleTree,
     ) -> (CapeModelTxn, Vec<ReceiverMemo>, Signature) {
-        let srs = &*UNIVERSAL_PARAM;
+        let srs = &UNIVERSAL_PARAM;
         let xfr_prove_key =
             jf_cap::proof::transfer::preprocess(srs, 1, 2, CapeLedger::merkle_height())
                 .unwrap()

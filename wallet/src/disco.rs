@@ -7,6 +7,7 @@
 
 //! Configurable API loading.
 
+#![allow(clippy::format_push_string)]
 use std::fs::read_to_string;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;

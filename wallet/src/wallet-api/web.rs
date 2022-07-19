@@ -11,6 +11,7 @@
 //! configuration options, request parsing, and the main web server entrypoint. The implementation
 //! of the actual routes is defined in [crate::routes].
 
+#![allow(clippy::format_push_string)]
 use crate::routes::{dispatch_url, CapeAPIError, RouteBinding, UrlSegmentValue, Wallet};
 use async_std::{
     sync::{Arc, Mutex},

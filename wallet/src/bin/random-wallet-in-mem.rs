@@ -319,7 +319,7 @@ async fn main() {
     let mut balances = HashMap::new();
     let args = Args::from_args();
     let mut rng = ChaChaRng::seed_from_u64(args.seed.unwrap_or(0));
-    let universal_param = &*UNIVERSAL_PARAM;
+    let universal_param = &UNIVERSAL_PARAM;
     let tmp_dir = TempDir::new("random_in_mem_test_sender").unwrap();
     tmp_dirs.push(tmp_dir);
     let (network, mut wallet) = if args.demo_connection {

@@ -29,7 +29,7 @@ pub const SUPPORTED_FREEZE_SIZES: &[usize] = &[2, 3];
 /// Compute the verifier keys for different types and sizes of CAP transactions.
 pub fn verifier_keys() -> VerifierKeySet {
     use TransactionVerifyingKey::*;
-    let univ_setup = &*UNIVERSAL_PARAM;
+    let univ_setup = &UNIVERSAL_PARAM;
     let xfr_verif_keys = SUPPORTED_TRANSFER_SIZES.iter().map(|&(inputs, outputs)| {
         Transfer(
             jf_cap::proof::transfer::preprocess(univ_setup, inputs, outputs, CAPE_MERKLE_HEIGHT)

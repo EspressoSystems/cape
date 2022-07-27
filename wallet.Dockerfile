@@ -1,4 +1,4 @@
-FROM ubuntu:impish
+FROM ubuntu:jammy
 RUN apt-get update \
   && apt-get install -y libcurl4 \
   && rm -rf /var/lib/apt/lists/*

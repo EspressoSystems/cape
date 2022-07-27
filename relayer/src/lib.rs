@@ -238,7 +238,8 @@ async fn submit_block(web_state: &WebState, block: BlockWithMemos) -> Result<H25
         .await
         .map_err(|err| {
             let msg = err.to_string();
-            if msg.contains("replacement transaction underpriced") {
+            if msg.contains("replacement transaction underpriced") || msg.contains("nonce too low")
+            {
                 Error::Nonce { msg }
             } else if msg.contains("Root not found") {
                 Error::RootNotFound { msg }

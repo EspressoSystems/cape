@@ -48,6 +48,9 @@ pub enum Error {
     #[snafu(display("submitted root is outdated or invalid: {}", msg))]
     RootNotFound { msg: String },
 
+    #[snafu(display("block and pending deposits queue are both empty {}", msg))]
+    BlockAndPendingDepositsQueueEmpty { msg: String },
+
     #[snafu(display("internal server error: {}", msg))]
     Internal { msg: String },
 
@@ -65,9 +68,10 @@ impl net::Error for Error {
 
     fn status(&self) -> StatusCode {
         match self {
-            Self::Deserialize { .. } | Self::BadBlock { .. } | Self::RootNotFound { .. } => {
-                StatusCode::BadRequest
-            }
+            Self::Deserialize { .. }
+            | Self::BadBlock { .. }
+            | Self::RootNotFound { .. }
+            | Self::BlockAndPendingDepositsQueueEmpty { .. } => StatusCode::BadRequest,
             Self::Submission { .. }
             | Self::CallContract { .. }
             | Self::Internal { .. }
@@ -243,6 +247,8 @@ async fn submit_block(web_state: &WebState, block: BlockWithMemos) -> Result<H25
                 Error::Nonce { msg }
             } else if msg.contains("Root not found") {
                 Error::RootNotFound { msg }
+            } else if msg.contains("Block must be non-empty") {
+                Error::BlockAndPendingDepositsQueueEmpty { msg }
             } else {
                 Error::Submission { msg }
             }
@@ -293,7 +299,15 @@ pub async fn submit_empty_block_loop(
                 Ok(_) => {
                     event!(Level::INFO, "Empty block submitted.");
                 }
-                Err(err) => event!(Level::ERROR, "Failed to submit empty block {}", err),
+                Err(err) => match err {
+                    // This can still happen due to a race condition.
+                    Error::BlockAndPendingDepositsQueueEmpty { .. } => event!(
+                        Level::INFO,
+                        "Block rejected: both block and pending deposits queue are empty.{}",
+                        err
+                    ),
+                    _ => event!(Level::ERROR, "Failed to submit empty block {}", err),
+                },
             };
         }
     }

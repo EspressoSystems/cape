@@ -282,6 +282,9 @@ contract CAPE is RootStore, AssetRegistry, ReentrancyGuard {
         uint256 freezeIdx = 0;
         uint256 burnIdx = 0;
 
+        // We require either the block or the pending deposits queue to be non empty.
+        require(!((numNotes == 0) && (pendingDeposits.length == 0)), "Block must be non-empty");
+
         for (uint256 i = 0; i < numNotes; i++) {
             NoteType noteType = newBlock.noteTypes[i];
 

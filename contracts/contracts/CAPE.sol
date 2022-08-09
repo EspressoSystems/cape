@@ -282,7 +282,11 @@ contract CAPE is RootStore, AssetRegistry, ReentrancyGuard {
         uint256 freezeIdx = 0;
         uint256 burnIdx = 0;
 
-        // We require either the block or the pending deposits queue to be non empty.
+        // We require either the block or the pending deposits queue to be non empty. That is we expect the block submission to trigger some change in the blockchain state.
+        // The reason is that, due to race conditions, it is possible to have the relayer send an empty block while the pending deposits queue is still empty.
+        // If we do not reject the block, the `blockHeight` contract variable will be incremented.
+        // On the other side, the wallet will keep its local representation of the blockchain state identical and thus we end up in a situation
+        //  where the wallet and the contract states are inconsistent.
         require(!((numNotes == 0) && (pendingDeposits.length == 0)), "Block must be non-empty");
 
         for (uint256 i = 0; i < numNotes; i++) {

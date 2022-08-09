@@ -88,7 +88,7 @@ pub async fn submit_cape_block_with_memos(
         .await?;
 
     // The estimated gas cost can be too low. For example, if a deposit is made
-    // in an earlier transation in the same block the estimate would not include
+    // in an earlier transaction in the same block the estimate would not include
     // the cost for crediting the deposit.
     //
     // Note that the CAPE contract calls out to ERC20 contracts which means the
@@ -108,7 +108,6 @@ mod tests {
         cape::CapeBlock,
         deploy::deploy_test_cape,
         ledger::CapeLedger,
-        test_utils::PrintGas,
         types::{GenericInto, MerkleRootSol, NullifierSol},
     };
     use ark_ff::Fp256;
@@ -320,16 +319,11 @@ mod tests {
 
         let cape_block = CapeBlock::generate(params.txns, vec![], miner.address())?;
 
-        // Submitting an empty block does not yield a reject from the contract
         contract
             .submit_cape_block(cape_block.into())
-            .send()
-            .await?
-            .await?
-            .print_gas("Submit empty block");
-
-        // The height is incremented anyways.
-        assert_eq!(contract.block_height().call().await?, 1u64);
+            .call()
+            .await
+            .should_revert_with_message("Block must be non-empty");
 
         Ok(())
     }

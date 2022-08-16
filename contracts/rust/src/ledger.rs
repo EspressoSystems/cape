@@ -328,7 +328,6 @@ impl Ledger for CapeLedger {
         CAPE_MERKLE_HEIGHT
     }
 
-    #[allow(clippy::explicit_auto_deref)]
     fn srs() -> &'static UniversalParam {
         &UNIVERSAL_PARAM
     }

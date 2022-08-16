@@ -405,7 +405,7 @@ pub struct BalanceInfo {
 }
 
 #[ser_test(ark(false))]
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct WalletSummary {
     pub addresses: Vec<UserAddress>,
     pub sending_keys: Vec<UserPubKey>,
@@ -471,7 +471,7 @@ impl Ui for FreezerPubKey {
 }
 
 #[ser_test(ark(false))]
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Account {
     pub pub_key: String,
     pub records: Vec<Record>,

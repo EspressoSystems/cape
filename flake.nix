@@ -46,7 +46,7 @@
         opensslMusl.dev
         opensslMusl.out
       ];
-      nightlyMuslRustToolchain = pkgs.rust-bin.nightly."2022-07-17".minimal.override {
+      stableMuslRustToolchain = pkgs.rust-bin.stable."1.63.0".minimal.override {
         extensions = [ "rustfmt" "clippy" "llvm-tools-preview" "rust-src" ];
         targets = [ "x86_64-unknown-linux-musl" ];
       };
@@ -58,7 +58,7 @@
       pythonEnv = pkgs.poetry2nix.mkPoetryEnv { projectDir = ./.; };
       myPython = with pkgs; [ poetry pythonEnv ];
 
-      nightlyRustToolchain = pkgs.rust-bin.nightly."2022-07-17".minimal.override {
+      stableRustToolchain = pkgs.rust-bin.stable."1.63.0".minimal.override {
         extensions = [ "rustfmt" "clippy" "llvm-tools-preview" "rust-src" ];
       };
       rustDeps = with pkgs;
@@ -68,7 +68,7 @@
 
           curl
           plantuml
-          nightlyRustToolchain
+          stableRustToolchain
 
           cargo-edit
           cargo-sort
@@ -201,7 +201,7 @@
             moreutils # includes `ts`, used to add timestamps on CI
           ] ++ myPython ++ rustDeps;
 
-        RUST_SRC_PATH = "${nightlyRustToolchain}/lib/rustlib/src/rust/library";
+        RUST_SRC_PATH = "${stableRustToolchain}/lib/rustlib/src/rust/library";
         RUST_BACKTRACE = 1;
         RUST_LOG = "info";
 
@@ -286,7 +286,7 @@
             export PATH=''${my_pwd}/bin:$PATH
             export WALLET=''${my_pwd}/wallet
 
-            export PATH="${pkgs.nodePackages.pnpm}/bin:${pkgs.nodejs-16_x}/bin:${nightlyMuslRustToolchain}/bin:${pkgs.gcc}/bin/:$PATH"
+            export PATH="${pkgs.nodePackages.pnpm}/bin:${pkgs.nodejs-16_x}/bin:${stableMuslRustToolchain}/bin:${pkgs.gcc}/bin/:$PATH"
           '';
         };
       };

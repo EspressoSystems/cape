@@ -488,7 +488,6 @@ impl EthPolling {
 
         // persist the state block updates (will be more fine grained in r3)
         if persist_state {
-            #[allow(clippy::explicit_auto_deref)]
             self.state_persistence
                 .store_latest_state(&*self.query_result_state.read().await);
         }

@@ -1,0 +1,70 @@
+digraph {
+    rankdir="BT"
+    compound=true;
+    node [style=filled, color="chartreuse3"]
+    EC  [ label="Elliptic Curve: BN256 (*)" ]
+    SF  [ label="Scalar Field" ]
+    R   [ label="Rescue" ]
+    PRP [ label="Pseudo Random Permutation" ]
+    PRF [ label="Pseudo Random Function" ]
+    CRHF [ label="Collision-Resistant Hash Function" ]
+    CRM  [ label="Counter Rescue Mode" ]
+    EGE [ label="El Gamal Encryption" ]
+    CircuitEC [ label="Baby Jubjub (*)" ]
+    DSA [ label= "DSA"]
+    Plonk [ label= "Plonk"]
+    Comm  [ label= "Commitment"]
+    MT [ label= "(Records) \n Merkle Tree"]
+    OM  [label="Owner Memo" ]
+
+    subgraph cluster_0 {
+    style=filled;
+    color=lightgrey;
+    label="CAP Transaction";
+    fontsize="25pt"
+    node [style=filled,color="chocolate1"]
+        NL  [ label= "Nullifiers"]
+        TXProof [ label= "Transaction \n proof"]
+        Outputs [ label= "Outputs"]
+        AM [ label= "Audit Memo"]
+
+    }
+
+    subgraph cluster_01 {
+        label = "Libraries";
+        node [style=filled]
+        rank=same
+        Jellyfish [label="Jellyfish" , fillcolor="chartreuse3"  width=0.2];
+        cap [ label="cap", fillcolor="chocolate1" width=0.2];
+    }
+
+    subgraph cluster_02 {
+
+    node [shape=box]
+    note [label="(*) Can be instantiated with \n BLS12-381 / Jubjub" fillcolor="white"  color="white"];
+    }
+
+    EC -> SF
+    SF -> R
+    R -> PRP
+    PRP -> PRF
+    PRP -> CRHF
+    PRP -> CRM
+    SF -> CircuitEC
+    CircuitEC -> DSA
+    EC -> Plonk
+    CircuitEC -> EGE
+    CRM -> EGE
+    CRHF -> Comm
+    Comm -> MT
+    CRHF -> MT
+    PRF -> NL
+    Plonk -> TXProof
+    Comm -> Outputs
+    CRM -> AM
+    EGE -> AM
+    DSA -> OM
+    EGE -> OM
+    CRM -> OM
+
+}

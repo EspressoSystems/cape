@@ -87,6 +87,10 @@ pub async fn submit_cape_block_with_memos(
         .fill_transaction(&mut tx, Some(block_number.into()))
         .await?;
 
+    // Increase the gas price by 20% to increase the chances for the transaction
+    // to be mined.
+    tx.set_gas_price(tx.gas_price().unwrap() * 12 / 10);
+
     // The estimated gas cost can be too low. For example, if a deposit is made
     // in an earlier transaction in the same block the estimate would not include
     // the cost for crediting the deposit.

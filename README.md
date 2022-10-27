@@ -687,6 +687,3 @@ To run the tests against Arbitrum Goerli follow these steps:
 ```
 > env ETH_MNEMONIC="$YOUR_ETH_MNEMONIC" CAPE_WEB3_PROVIDER_URL=https://goerli-rollup.arbitrum.io/rpc cargo test --release test_2user_and_submit -- --nocapture
 ```
-
-You can check the deployment and transactions on Arbitrum for the contract
-at https://goerli.etherscan.io/address/0x2FB18F4b4519a5fc792cb6508C6505675BA659E9

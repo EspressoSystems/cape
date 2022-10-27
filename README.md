@@ -671,3 +671,22 @@ To start from scratch and ignore existing deployments pass `--reset`:
 ```console
 env MY_FAUCET_MANAGER_MNEMONIC="$TEST_MNEMONIC" smoke-test-goerli --reset
 ```
+
+# Arbitrum on Goerli
+
+To run the tests against Arbitrum Goerli follow these steps:
+
+- Install [Metamask](https://metamask.io/) in your browser and copy the mnemonic.
+- Switch metamask to the Goerli network.
+- Get some Goerli ethers at some faucet (see Goerli section above)
+- Go to the [Arbitrum bridge](https://bridge.arbitrum.io/) and deposit your
+  Goerli eth. Leave a bit for the ethereum gas fees. Wait a few minutes until
+  your account is funded.
+- Run the tests
+
+```
+> env ETH_MNEMONIC="$YOUR_ETH_MNEMONIC" CAPE_WEB3_PROVIDER_URL=https://goerli-rollup.arbitrum.io/rpc cargo test --release test_2user_and_submit -- --nocapture
+```
+
+You can check the deployment and transactions on Arbitrum for the contract
+at https://goerli.etherscan.io/address/0x2FB18F4b4519a5fc792cb6508C6505675BA659E9

@@ -212,7 +212,7 @@ pub async fn deploy<M: 'static + Middleware, T: Send + Tokenize>(
     link_unlinked_libraries(&mut bytecode, &client).await?;
     let factory = ContractFactory::new(abi.clone(), bytecode.into_bytes().unwrap(), client.clone());
 
-    let contract = factory.deploy(constructor_args)?.legacy().send().await?;
+    let contract = factory.deploy(constructor_args)?.send().await?;
     Ok(contract)
 }
 

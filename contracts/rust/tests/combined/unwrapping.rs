@@ -9,7 +9,7 @@ use anyhow::Result;
 use cap_rust_sandbox::assertion::{EnsureMined, Matcher};
 use cap_rust_sandbox::cape::CapeBlock;
 use cap_rust_sandbox::deploy::{deploy_cape, deploy_erc20_token};
-use cap_rust_sandbox::ethereum::get_funded_client;
+use cap_rust_sandbox::ethereum::{get_funded_client, GAS_LIMIT_OVERRIDE};
 use cap_rust_sandbox::ledger::CapeLedger;
 use cap_rust_sandbox::model::{erc20_asset_description, Erc20Code, EthereumAddr};
 use cap_rust_sandbox::test_utils::{
@@ -83,7 +83,8 @@ async fn integration_test_unwrapping() -> Result<()> {
         .approve(cape_contract_address, amount_u256)
         .send()
         .await?
-        .await?;
+        .await?
+        .ensure_mined();
 
     let wrapped_ro = RecordOpening::new(
         rng,
@@ -105,7 +106,8 @@ async fn integration_test_unwrapping() -> Result<()> {
         )
         .send()
         .await?
-        .await?;
+        .await?
+        .ensure_mined();
 
     // Submit empty block to trigger the inclusion of the pending deposit record commitment into the merkle tree
     let miner = UserPubKey::default();
@@ -113,6 +115,7 @@ async fn integration_test_unwrapping() -> Result<()> {
 
     cape_contract
         .submit_cape_block(empty_block.clone().into())
+        .gas(GAS_LIMIT_OVERRIDE) // out of gas with estimate
         .send()
         .await?
         .await?
@@ -160,9 +163,11 @@ async fn integration_test_unwrapping() -> Result<()> {
 
     cape_contract
         .submit_cape_block(cape_block.clone().into())
+        .gas(GAS_LIMIT_OVERRIDE) // out of gas with estimate
         .send()
         .await?
         .await?
+        .ensure_mined()
         .print_gas("Burn transaction");
 
     // The recipient has received the ERC20 tokens

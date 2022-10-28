@@ -87,10 +87,6 @@ pub async fn submit_cape_block_with_memos(
         .fill_transaction(&mut tx, Some(block_number.into()))
         .await?;
 
-    // Increase the gas price by 20% to increase the chances for the transaction
-    // to be mined.
-    tx.set_gas_price(tx.gas_price().unwrap() * 12 / 10);
-
     // The estimated gas cost can be too low. For example, if a deposit is made
     // in an earlier transaction in the same block the estimate would not include
     // the cost for crediting the deposit.
@@ -111,6 +107,7 @@ mod tests {
         assertion::{EnsureMined, Matcher},
         cape::CapeBlock,
         deploy::deploy_test_cape,
+        ethereum::GAS_LIMIT_OVERRIDE,
         ledger::CapeLedger,
         types::{GenericInto, MerkleRootSol, NullifierSol},
     };
@@ -227,14 +224,17 @@ mod tests {
             .add_root(root.generic_into::<MerkleRootSol>().0)
             .send()
             .await?
-            .await?;
+            .await?
+            .ensure_mined();
 
         // Submit to the contract
         contract
             .submit_cape_block(cape_block.into())
+            .gas(GAS_LIMIT_OVERRIDE) // runs out of gas with estimate
             .send()
             .await?
-            .await?;
+            .await?
+            .ensure_mined();
 
         // Check that now the nullifier has been inserted
         assert!(
@@ -353,6 +353,7 @@ mod tests {
 
         contract
             .submit_cape_block(cape_block.into())
+            .gas(GAS_LIMIT_OVERRIDE)
             .send()
             .await?
             .await?
@@ -377,13 +378,16 @@ mod tests {
             .add_root(root.generic_into::<MerkleRootSol>().0)
             .send()
             .await?
-            .await?;
+            .await?
+            .ensure_mined();
 
         contract
             .submit_cape_block(cape_block.into())
+            .gas(GAS_LIMIT_OVERRIDE)
             .send()
             .await?
-            .await?;
+            .await?
+            .ensure_mined();
 
         let logs = contract
             .block_committed_filter()

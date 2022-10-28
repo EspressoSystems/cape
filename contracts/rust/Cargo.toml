@@ -42,9 +42,9 @@ commit = { git = "https://github.com/EspressoSystems/commit.git", tag = "0.1.0" 
 espresso-macros = { git = "https://github.com/EspressoSystems/espresso-macros.git" }
 
 # We need the legacy feature in order to avoid gas estimation issues. See https://github.com/gakonst/ethers-rs/issues/825
-ethers = { features = ["legacy"], git = "https://github.com/gakonst/ethers-rs" }
-ethers-contract = { features = ["legacy"], git = "https://github.com/gakonst/ethers-rs" }
-ethers-core = { features = ["legacy"], git = "https://github.com/gakonst/ethers-rs" }
+ethers = { git = "https://github.com/gakonst/ethers-rs" }
+ethers-contract = { git = "https://github.com/gakonst/ethers-rs" }
+ethers-core = { git = "https://github.com/gakonst/ethers-rs" }
 futures = "0.3.16"
 generic-array = { version = "0.14.4", features = ["serde"] }
 hex = "0.4.3"

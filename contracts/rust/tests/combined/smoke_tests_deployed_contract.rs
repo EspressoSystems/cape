@@ -9,7 +9,7 @@ use anyhow::Result;
 use cap_rust_sandbox::assertion::EnsureMined;
 use cap_rust_sandbox::cape::CapeBlock;
 use cap_rust_sandbox::deploy::{deploy_cape, deploy_erc20_token};
-use cap_rust_sandbox::ethereum::get_funded_client;
+use cap_rust_sandbox::ethereum::{get_funded_client, GAS_LIMIT_OVERRIDE};
 use cap_rust_sandbox::helpers::compute_faucet_key_pair_from_mnemonic;
 use cap_rust_sandbox::ledger::CapeLedger;
 use cap_rust_sandbox::model::{erc20_asset_description, Erc20Code, EthereumAddr};
@@ -197,6 +197,7 @@ async fn smoke_tests() -> Result<()> {
 
     cape_contract
         .submit_cape_block(cape_block.clone().into())
+        .gas(GAS_LIMIT_OVERRIDE) // out of gas with estimate
         .send()
         .await?
         .await?

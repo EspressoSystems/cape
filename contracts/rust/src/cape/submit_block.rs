@@ -115,6 +115,7 @@ mod tests {
         assertion::{EnsureMined, Matcher},
         cape::CapeBlock,
         deploy::deploy_test_cape,
+        ethereum::GAS_LIMIT_OVERRIDE,
         ledger::CapeLedger,
         types::{GenericInto, MerkleRootSol, NullifierSol},
     };
@@ -239,10 +240,11 @@ mod tests {
         // Submit to the contract
         let receipt = contract
             .submit_cape_block(cape_block.into())
+            .gas(GAS_LIMIT_OVERRIDE) // runs out of gas with estimate
             .send()
             .await?
-            .await?;
-        println!("{:?}", receipt);
+            .await?
+            .ensure_mined();
 
         // Check that now the nullifier has been inserted
         for _ in 0..2 {
@@ -371,6 +373,7 @@ mod tests {
 
         contract
             .submit_cape_block(cape_block.into())
+            .gas(GAS_LIMIT_OVERRIDE)
             .send()
             .await?
             .await?
@@ -395,13 +398,16 @@ mod tests {
             .add_root(root.generic_into::<MerkleRootSol>().0)
             .send()
             .await?
-            .await?;
+            .await?
+            .ensure_mined();
 
         contract
             .submit_cape_block(cape_block.into())
+            .gas(GAS_LIMIT_OVERRIDE)
             .send()
             .await?
-            .await?;
+            .await?
+            .ensure_mined();
 
         let logs = contract
             .block_committed_filter()

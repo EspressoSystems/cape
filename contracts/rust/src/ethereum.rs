@@ -25,6 +25,10 @@ use ethers::{
 
 use std::{convert::TryFrom, env, fs, path::Path, sync::Arc, time::Duration};
 
+/// Supply this gas limit when the automatically filled estimated gas value is
+/// too low and the transaction runs out of gas.
+pub const GAS_LIMIT_OVERRIDE: u64 = 10_000_000;
+
 /// Utility to interact with the CAPE contract on some Ethereum blockchain
 #[derive(Clone, Debug)]
 pub struct EthConnection {

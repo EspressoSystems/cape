@@ -9,6 +9,7 @@ use anyhow::Result;
 use cap_rust_sandbox::assertion::EnsureMined;
 use cap_rust_sandbox::cape::CapeBlock;
 use cap_rust_sandbox::deploy::{deploy_cape, deploy_erc20_token};
+use cap_rust_sandbox::ethereum::GAS_LIMIT_OVERRIDE;
 use cap_rust_sandbox::ledger::CapeLedger;
 use cap_rust_sandbox::model::{erc20_asset_description, Erc20Code, EthereumAddr};
 use cap_rust_sandbox::test_utils::{
@@ -127,6 +128,7 @@ async fn integration_test_wrapped_assets_can_be_frozen() -> Result<()> {
 
     cape_contract
         .submit_cape_block(empty_block.clone().into())
+        .gas(GAS_LIMIT_OVERRIDE) // out of gas with estimate
         .send()
         .await?
         .await?
@@ -194,6 +196,7 @@ async fn integration_test_wrapped_assets_can_be_frozen() -> Result<()> {
     // Submit the block with the freeze note
     cape_contract
         .submit_cape_block(block_with_freeze_note.clone().into())
+        .gas(GAS_LIMIT_OVERRIDE) // out of gas with estimate
         .send()
         .await?
         .await?

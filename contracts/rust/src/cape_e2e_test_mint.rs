@@ -8,7 +8,9 @@
 #![cfg(test)]
 #![deny(warnings)]
 
+use crate::assertion::EnsureMined;
 use crate::deploy::deploy_test_cape;
+use crate::ethereum::GAS_LIMIT_OVERRIDE;
 use crate::{
     cape::*,
     ledger::CapeLedger,
@@ -87,43 +89,38 @@ async fn test_mint_maybe_submit(should_submit: bool) -> Result<()> {
     let alice_rec_comm = RecordCommitment::from(&alice_rec1);
     let alice_rec_field_elem = alice_rec_comm.to_field_element();
     t.push(alice_rec_field_elem);
-    let alice_rec_path = t.get_leaf(0).expect_ok().unwrap().1.path;
+    let alice_rec_path = t.get_leaf(0).expect_ok()?.1.path;
     assert_eq!(
         alice_rec_path.nodes.len(),
         CapeLedger::merkle_height() as usize
     );
 
     if let Some(contract) = contract.as_ref() {
-        assert_eq!(
-            contract.get_root_value().call().await.unwrap(),
-            U256::from(0u64)
-        );
+        assert_eq!(contract.get_root_value().call().await?, U256::from(0u64));
 
         contract
             .set_initial_record_commitments(vec![field_to_u256(alice_rec_field_elem)])
+            .gas(GAS_LIMIT_OVERRIDE)
             .send()
-            .await
-            .unwrap()
-            .await
-            .unwrap();
+            .await?
+            .await?
+            .ensure_mined();
 
         let first_root = t.commitment().root_value;
 
-        assert_eq!(
-            contract.get_num_leaves().call().await.unwrap(),
-            U256::from(1u64)
-        );
+        assert_eq!(contract.get_num_leaves().call().await?, U256::from(1u64));
 
         assert_eq!(
-            contract.get_root_value().call().await.unwrap(),
+            contract.get_root_value().call().await?,
             field_to_u256(first_root.to_scalar())
         );
 
-        assert!(contract
-            .contains_root(field_to_u256(first_root.to_scalar()))
-            .call()
-            .await
-            .unwrap());
+        assert!(
+            contract
+                .contains_root(field_to_u256(first_root.to_scalar()))
+                .call()
+                .await?
+        );
     }
 
     println!("Tree set up: {}s", now.elapsed().as_secs_f32());
@@ -162,9 +159,9 @@ async fn test_mint_maybe_submit(should_submit: bool) -> Result<()> {
         let description = "My Asset".as_bytes();
         let code = AssetCode::new_domestic(seed, description);
         let policy = AssetPolicy::default();
-        let new_coin = AssetDefinition::new(code, policy).unwrap();
+        let new_coin = AssetDefinition::new(code, policy)?;
 
-        let (fee_info, _fee_ro) = TxnFeeInfo::new(&mut prng, fee_input, 1u64.into()).unwrap();
+        let (fee_info, _fee_ro) = TxnFeeInfo::new(&mut prng, fee_input, 1u64.into())?;
         let mint_ro = RecordOpening::new(
             &mut prng,
             1u64.into(), /* 1 less, for the transaction fee */
@@ -180,8 +177,7 @@ async fn test_mint_maybe_submit(should_submit: bool) -> Result<()> {
             description,
             fee_info,
             &prove_keys.mint,
-        )
-        .unwrap()
+        )?
     };
 
     println!("Mint generated: {}s", now.elapsed().as_secs_f32());
@@ -204,11 +200,9 @@ async fn test_mint_maybe_submit(should_submit: bool) -> Result<()> {
 
     let txn1_cape = CapeModelTxn::CAP(TransactionNote::Mint(Box::new(txn1)));
 
-    let (new_state, effects) = validator
-        .submit_operations(vec![CapeModelOperation::SubmitBlock(vec![
-            txn1_cape.clone()
-        ])])
-        .unwrap();
+    let (new_state, effects) = validator.submit_operations(vec![
+        CapeModelOperation::SubmitBlock(vec![txn1_cape.clone()]),
+    ])?;
 
     if let Some(contract) = contract.as_ref() {
         let miner = UserPubKey::default();
@@ -217,9 +211,11 @@ async fn test_mint_maybe_submit(should_submit: bool) -> Result<()> {
         // Submit to the contract
         contract
             .submit_cape_block(cape_block.into())
+            .gas(GAS_LIMIT_OVERRIDE)
             .send()
             .await?
-            .await?;
+            .await?
+            .ensure_mined();
     }
 
     println!("Mint validated & applied: {}s", now.elapsed().as_secs_f32());
@@ -250,7 +246,7 @@ async fn test_mint_maybe_submit(should_submit: bool) -> Result<()> {
 
     if let Some(contract) = contract.as_ref() {
         assert_eq!(
-            contract.get_root_value().call().await.unwrap(),
+            contract.get_root_value().call().await?,
             field_to_u256(
                 new_state
                     .ledger

@@ -241,7 +241,6 @@ mod tests {
         let elems_u256 = insert_elements_into_jellyfish_mt(&mut mt, n_leaves_before);
         contract
             .update_records_merkle_tree(elems_u256)
-            .legacy()
             .send()
             .await
             .unwrap()
@@ -254,7 +253,6 @@ mod tests {
         let elems_u256 = insert_elements_into_jellyfish_mt(&mut mt, n_leaves_after);
         contract
             .update_records_merkle_tree(elems_u256)
-            .legacy()
             .send()
             .await
             .unwrap()

@@ -10,6 +10,7 @@
 
 use crate::assertion::EnsureMined;
 use crate::deploy::deploy_test_cape;
+use crate::ethereum::GAS_LIMIT_OVERRIDE;
 use crate::test_utils::keysets_for_test;
 use crate::{
     cape::*,

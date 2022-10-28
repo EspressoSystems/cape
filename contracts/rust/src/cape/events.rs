@@ -28,7 +28,7 @@ mod tests {
             submit_block::{fetch_cape_memos, submit_cape_block_with_memos},
             BlockWithMemos, CapeBlock,
         },
-        ethereum::EthConnection,
+        ethereum::{EthConnection, GAS_LIMIT_OVERRIDE},
         ledger::CapeLedger,
         types::{GenericInto, MerkleRootSol},
     };

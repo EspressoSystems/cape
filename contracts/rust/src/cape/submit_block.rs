@@ -107,6 +107,7 @@ mod tests {
         assertion::{EnsureMined, Matcher},
         cape::CapeBlock,
         deploy::deploy_test_cape,
+        ethereum::GAS_LIMIT_OVERRIDE,
         ledger::CapeLedger,
         types::{GenericInto, MerkleRootSol, NullifierSol},
     };

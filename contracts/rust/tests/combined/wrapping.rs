@@ -9,6 +9,7 @@ use anyhow::Result;
 use cap_rust_sandbox::assertion::EnsureMined;
 use cap_rust_sandbox::cape::CapeBlock;
 use cap_rust_sandbox::deploy::{deploy_erc20_token, deploy_test_cape};
+use cap_rust_sandbox::ethereum::GAS_LIMIT_OVERRIDE;
 use cap_rust_sandbox::helpers::compare_merkle_root_from_contract_and_jf_tree;
 use cap_rust_sandbox::ledger::CapeLedger;
 use cap_rust_sandbox::model::{erc20_asset_description, Erc20Code, EthereumAddr};
@@ -240,7 +241,7 @@ async fn integration_test_wrapping_erc20_tokens() -> Result<()> {
     // Submit to the contract
     cape_contract
         .submit_cape_block(cape_block.clone().into())
-        .gas(U256::from(GAS_LIMIT_OVERRIDE))
+        .gas(GAS_LIMIT_OVERRIDE)
         .send()
         .await?
         .await?

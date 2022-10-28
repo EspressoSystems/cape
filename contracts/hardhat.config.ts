@@ -83,6 +83,11 @@ const config: HardhatUserConfig = {
       accounts: { mnemonic: process.env.GOERLI_MNEMONIC },
       tags: ["public"],
     },
+    arbitrum: {
+      url: "https://goerli-rollup.arbitrum.io/rpc",
+      gasPrice: 100_000_000,
+      accounts: { mnemonic: process.env.GOERLI_MNEMONIC },
+    },
     localhost: {
       url: `http://localhost:${process.env.RPC_PORT || 8545}`,
       timeout: 120000, // when running against hardhat, some tests are very slow

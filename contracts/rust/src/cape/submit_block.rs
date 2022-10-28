@@ -46,7 +46,7 @@ pub async fn submit_cape_block_with_memos(
     contract: &CAPE<EthMiddleware>,
     block: BlockWithMemos,
     block_number: BlockNumber,
-    gas_limit: u64,
+    _gas_limit: u64,
 ) -> Result<PendingTransaction<'_, Http>, SignerMiddlewareError<Provider<Http>, Wallet<SigningKey>>>
 {
     let mut memos_bytes: Vec<u8> = vec![];
@@ -95,7 +95,15 @@ pub async fn submit_cape_block_with_memos(
     // gas usage of processing a burn note is potentially unbounded. Using
     // tokens whose transfer function far exceeds normal gas consumption is
     // currently not supported.
-    tx.set_gas(gas_limit);
+    //
+    // TODO: mathis: it's a bit wasteful to download the entire block for this
+    // but I don't know of another way to obtain the current block gas limit.
+    let block = contract
+        .client()
+        .get_block(BlockNumber::Latest)
+        .await?
+        .unwrap();
+    tx.set_gas(std::cmp::min(tx.gas().unwrap() * 2, block.gas_limit));
 
     contract.client().send_transaction(tx, None).await
 }
@@ -218,21 +226,35 @@ mod tests {
                 .await?
         );
 
+        println!("adding root");
         // Set the root
         contract
             .add_root(root.generic_into::<MerkleRootSol>().0)
             .send()
             .await?
-            .await?;
+            .await?
+            .ensure_mined();
 
+        println!("submit");
         // Submit to the contract
-        contract
+        let receipt = contract
             .submit_cape_block(cape_block.into())
             .send()
             .await?
             .await?;
+        println!("{:?}", receipt);
 
         // Check that now the nullifier has been inserted
+        for _ in 0..2 {
+            if contract
+                .nullifiers(nf.generic_into::<NullifierSol>().0)
+                .call()
+                .await?
+            {
+                break;
+            };
+        }
+
         assert!(
             contract
                 .nullifiers(nf.generic_into::<NullifierSol>().0)

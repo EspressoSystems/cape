@@ -197,7 +197,7 @@ async fn smoke_tests() -> Result<()> {
 
     cape_contract
         .submit_cape_block(cape_block.clone().into())
-        .gas(10_000_000) // out of gas with estimate
+        .gas(GAS_LIMIT_OVERRIDE) // out of gas with estimate
         .send()
         .await?
         .await?

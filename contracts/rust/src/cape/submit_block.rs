@@ -229,7 +229,7 @@ mod tests {
         // Submit to the contract
         contract
             .submit_cape_block(cape_block.into())
-            .gas(10_000_000) // runs out of gas with estimate
+            .gas(GAS_LIMIT_OVERRIDE) // runs out of gas with estimate
             .send()
             .await?
             .await?
@@ -352,7 +352,7 @@ mod tests {
 
         contract
             .submit_cape_block(cape_block.into())
-            .gas(10_000_000)
+            .gas(GAS_LIMIT_OVERRIDE)
             .send()
             .await?
             .await?
@@ -382,7 +382,7 @@ mod tests {
 
         contract
             .submit_cape_block(cape_block.into())
-            .gas(10_000_000)
+            .gas(GAS_LIMIT_OVERRIDE)
             .send()
             .await?
             .await?

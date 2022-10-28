@@ -127,7 +127,7 @@ async fn integration_test_wrapped_assets_can_be_frozen() -> Result<()> {
 
     cape_contract
         .submit_cape_block(empty_block.clone().into())
-        .gas(10_000_000) // out of gas with estimate
+        .gas(GAS_LIMIT_OVERRIDE) // out of gas with estimate
         .send()
         .await?
         .await?
@@ -195,7 +195,7 @@ async fn integration_test_wrapped_assets_can_be_frozen() -> Result<()> {
     // Submit the block with the freeze note
     cape_contract
         .submit_cape_block(block_with_freeze_note.clone().into())
-        .gas(10_000_000) // out of gas with estimate
+        .gas(GAS_LIMIT_OVERRIDE) // out of gas with estimate
         .send()
         .await?
         .await?

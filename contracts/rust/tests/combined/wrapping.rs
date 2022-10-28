@@ -240,7 +240,7 @@ async fn integration_test_wrapping_erc20_tokens() -> Result<()> {
     // Submit to the contract
     cape_contract
         .submit_cape_block(cape_block.clone().into())
-        .gas(U256::from(10_000_000))
+        .gas(U256::from(GAS_LIMIT_OVERRIDE))
         .send()
         .await?
         .await?

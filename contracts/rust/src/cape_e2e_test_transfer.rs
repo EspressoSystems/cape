@@ -206,7 +206,7 @@ async fn test_2user_maybe_submit(should_submit: bool) -> Result<()> {
         // Submit to the contract
         contract
             .submit_cape_block(cape_block.into())
-            .gas(10_000_000)
+            .gas(GAS_LIMIT_OVERRIDE)
             .send()
             .await?
             .await?

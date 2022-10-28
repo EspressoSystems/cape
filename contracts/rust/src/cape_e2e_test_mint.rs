@@ -99,7 +99,7 @@ async fn test_mint_maybe_submit(should_submit: bool) -> Result<()> {
 
         contract
             .set_initial_record_commitments(vec![field_to_u256(alice_rec_field_elem)])
-            .gas(10_000_000)
+            .gas(GAS_LIMIT_OVERRIDE)
             .send()
             .await?
             .await?
@@ -210,7 +210,7 @@ async fn test_mint_maybe_submit(should_submit: bool) -> Result<()> {
         // Submit to the contract
         contract
             .submit_cape_block(cape_block.into())
-            .gas(10_000_000)
+            .gas(GAS_LIMIT_OVERRIDE)
             .send()
             .await?
             .await?

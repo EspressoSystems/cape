@@ -96,7 +96,7 @@ mod tests {
             &connection.contract,
             block_with_memos.clone(),
             BlockNumber::Latest,
-            10_000_000, // gas limit
+            GAS_LIMIT_OVERRIDE, // gas limit
         )
         .await?
         .await?;

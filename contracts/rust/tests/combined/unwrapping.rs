@@ -83,7 +83,8 @@ async fn integration_test_unwrapping() -> Result<()> {
         .approve(cape_contract_address, amount_u256)
         .send()
         .await?
-        .await?;
+        .await?
+        .ensure_mined();
 
     let wrapped_ro = RecordOpening::new(
         rng,
@@ -105,7 +106,8 @@ async fn integration_test_unwrapping() -> Result<()> {
         )
         .send()
         .await?
-        .await?;
+        .await?
+        .ensure_mined();
 
     // Submit empty block to trigger the inclusion of the pending deposit record commitment into the merkle tree
     let miner = UserPubKey::default();
@@ -113,6 +115,7 @@ async fn integration_test_unwrapping() -> Result<()> {
 
     cape_contract
         .submit_cape_block(empty_block.clone().into())
+        .gas(10_000_000) // out of gas with estimate
         .send()
         .await?
         .await?
@@ -160,9 +163,11 @@ async fn integration_test_unwrapping() -> Result<()> {
 
     cape_contract
         .submit_cape_block(cape_block.clone().into())
+        .gas(10_000_000) // out of gas with estimate
         .send()
         .await?
         .await?
+        .ensure_mined()
         .print_gas("Burn transaction");
 
     // The recipient has received the ERC20 tokens

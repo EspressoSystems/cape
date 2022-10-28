@@ -223,14 +223,17 @@ mod tests {
             .add_root(root.generic_into::<MerkleRootSol>().0)
             .send()
             .await?
-            .await?;
+            .await?
+            .ensure_mined();
 
         // Submit to the contract
         contract
             .submit_cape_block(cape_block.into())
+            .gas(10_000_000) // runs out of gas with estimate
             .send()
             .await?
-            .await?;
+            .await?
+            .ensure_mined();
 
         // Check that now the nullifier has been inserted
         assert!(
@@ -349,6 +352,7 @@ mod tests {
 
         contract
             .submit_cape_block(cape_block.into())
+            .gas(10_000_000)
             .send()
             .await?
             .await?
@@ -373,13 +377,16 @@ mod tests {
             .add_root(root.generic_into::<MerkleRootSol>().0)
             .send()
             .await?
-            .await?;
+            .await?
+            .ensure_mined();
 
         contract
             .submit_cape_block(cape_block.into())
+            .gas(10_000_000)
             .send()
             .await?
-            .await?;
+            .await?
+            .ensure_mined();
 
         let logs = contract
             .block_committed_filter()

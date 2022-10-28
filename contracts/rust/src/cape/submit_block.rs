@@ -246,17 +246,6 @@ mod tests {
             .await?
             .ensure_mined();
 
-        // Check that now the nullifier has been inserted
-        for _ in 0..2 {
-            if contract
-                .nullifiers(nf.generic_into::<NullifierSol>().0)
-                .call()
-                .await?
-            {
-                break;
-            };
-        }
-
         assert!(
             contract
                 .nullifiers(nf.generic_into::<NullifierSol>().0)

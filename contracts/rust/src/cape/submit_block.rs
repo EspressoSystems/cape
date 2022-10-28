@@ -238,7 +238,7 @@ mod tests {
 
         println!("submit");
         // Submit to the contract
-        let receipt = contract
+        contract
             .submit_cape_block(cape_block.into())
             .gas(GAS_LIMIT_OVERRIDE) // runs out of gas with estimate
             .send()

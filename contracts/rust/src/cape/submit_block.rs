@@ -46,7 +46,7 @@ pub async fn submit_cape_block_with_memos(
     contract: &CAPE<EthMiddleware>,
     block: BlockWithMemos,
     block_number: BlockNumber,
-    _gas_limit: u64,
+    extra_gas: u64,
 ) -> Result<PendingTransaction<'_, Http>, SignerMiddlewareError<Provider<Http>, Wallet<SigningKey>>>
 {
     let mut memos_bytes: Vec<u8> = vec![];
@@ -103,7 +103,10 @@ pub async fn submit_cape_block_with_memos(
         .get_block(BlockNumber::Latest)
         .await?
         .unwrap();
-    tx.set_gas(std::cmp::min(tx.gas().unwrap() * 2, block.gas_limit));
+    tx.set_gas(std::cmp::min(
+        tx.gas().unwrap() + extra_gas,
+        block.gas_limit,
+    ));
 
     contract.client().send_transaction(tx, None).await
 }

@@ -20,4 +20,4 @@ export CAPE_WEB3_PROVIDER_URL=${CAPE_WEB3_PROVIDER_URL:-https://goerli-rollup.ar
 export ETH_MNEMONIC="${ETH_MNEMONIC:-$GOERLI_MNEMONIC}"
 
 echo "Running tests..."
-cargo test -p faucet --release -- --test-threads 1 "$@"
+cargo test --release -- --test-threads 1 "$@"

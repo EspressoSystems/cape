@@ -29,7 +29,7 @@ mod tests {
             submit_block::{fetch_cape_memos, submit_cape_block_with_memos},
             BlockWithMemos, CapeBlock,
         },
-        ethereum::{EthConnection, GAS_LIMIT_OVERRIDE},
+        ethereum::EthConnection,
         ledger::CapeLedger,
         types::{GenericInto, MerkleRootSol},
     };
@@ -98,7 +98,7 @@ mod tests {
             &connection.contract,
             block_with_memos.clone(),
             BlockNumber::Latest,
-            GAS_LIMIT_OVERRIDE, // gas limit
+            1_000_000, // extra gas. This transaction sometimes runs out of gas, reason unclear.
         )
         .await?
         .await?

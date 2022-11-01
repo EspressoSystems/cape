@@ -676,14 +676,32 @@ env MY_FAUCET_MANAGER_MNEMONIC="$TEST_MNEMONIC" smoke-test-goerli --reset
 
 To run the tests against Arbitrum Goerli follow these steps:
 
-- Install [Metamask](https://metamask.io/) in your browser and copy the mnemonic.
+- Install [Metamask](https://metamask.io/) in your browser and restore with
+  your GOERLI_MNEMONIC.
 - Switch metamask to the Goerli network.
 - Get some Goerli ethers at some faucet (see Goerli section above)
 - Go to the [Arbitrum bridge](https://bridge.arbitrum.io/) and deposit your
   Goerli eth. Leave a bit for the ethereum gas fees. Wait a few minutes until
   your account is funded.
+- Deploy the contracts
+
+```
+hardhat deploy --tags CAPE --network arbitrum_goerli --reset
+```
+
 - Run the tests
 
 ```
-> env ETH_MNEMONIC="$YOUR_ETH_MNEMONIC" CAPE_WEB3_PROVIDER_URL=https://goerli-rollup.arbitrum.io/rpc cargo test --release test_2user_and_submit -- --nocapture
+run-tests-arbitrum
+```
+
+This script will re-use the stateless libraries in order to save gas and speed
+up test execution. To run a single test, pass the test name to the script as
+argument, e.g. `run-tests-arbitrum backend::test::test_transfer`.
+
+If you are getting `Too Many Requests` errors, you may want to set up an infura
+project and use their arbitrum goerli RPC and use it via
+
+```
+CAPE_WEB3_PROVIDER_URL=https://arbitrum-goerli.infura.io/v3/... run-tests-arbitrum
 ```

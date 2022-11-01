@@ -8,11 +8,6 @@
 
 set -euo pipefail
 
-# Deploy all the contracts. Reuse the stateless libraries to save gas and time.
-# This currently fails at "Ensuring the CAPE faucet is initialized." on arbitrum
-# but we only need RescueLib, VerifyingKeys and PlonkVerifier to be deployed.
-# hardhat deploy --network arbitrum --reset || true
-
 function get_addr() {
     cat contracts/deployments/arbitrum/$1.json | jq -r .address
 }
@@ -21,8 +16,8 @@ export VERIFYING_KEYS_LIB_ADDRESS=$(get_addr VerifyingKeys)
 export RESCUE_LIB_ADDRESS=$(get_addr RescueLib)
 export VERIFIER_ADDRESS=$(get_addr PlonkVerifier)
 
-export CAPE_WEB3_PROVIDER_URL=https://goerli-rollup.arbitrum.io/rpc
-export ETH_MNEMONIC="$GOERLI_MNEMONIC"
+export CAPE_WEB3_PROVIDER_URL=${CAPE_WEB3_PROVIDER_URL:-https://goerli-rollup.arbitrum.io/rpc}
+export ETH_MNEMONIC="${ETH_MNEMONIC:-$GOERLI_MNEMONIC}"
 
 echo "Running tests..."
-cargo test --release -- --test-threads 1 "$@"
+cargo test -p faucet --release -- --test-threads 1 "$@"

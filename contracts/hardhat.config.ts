@@ -83,7 +83,7 @@ const config: HardhatUserConfig = {
       accounts: { mnemonic: process.env.GOERLI_MNEMONIC },
       tags: ["public"],
     },
-    arbitrum: {
+    arbitrum_goerli: {
       url: "https://goerli-rollup.arbitrum.io/rpc",
       gasPrice: 100_000_000,
       accounts: { mnemonic: process.env.GOERLI_MNEMONIC },

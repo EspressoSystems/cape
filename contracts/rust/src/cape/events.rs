@@ -23,6 +23,7 @@ pub fn decode_cape_block_from_event(block: BlockCommittedFilter) -> Result<CapeB
 #[cfg(test)]
 mod tests {
     use crate::{
+        assertion::EnsureMined,
         cape::{
             events::decode_cape_block_from_event,
             submit_block::{fetch_cape_memos, submit_cape_block_with_memos},
@@ -64,7 +65,8 @@ mod tests {
             .add_root(root.generic_into::<MerkleRootSol>().0)
             .send()
             .await?
-            .await?;
+            .await?
+            .ensure_mined();
 
         // Adapted from seahorse
         // https://github.com/EspressoSystems/seahorse/blob/ace20bc5f1bcf5b88ca0562799b8e80e6c52e933/src/persistence.rs#L574
@@ -99,7 +101,8 @@ mod tests {
             GAS_LIMIT_OVERRIDE, // gas limit
         )
         .await?
-        .await?;
+        .await?
+        .ensure_mined();
 
         // A connection with a random wallet (for queries only)
         let query_connection = EthConnection::from_config_for_query(

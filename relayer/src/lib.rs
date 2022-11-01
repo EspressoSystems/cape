@@ -438,7 +438,7 @@ pub mod testing {
 mod test {
     use super::*;
     use async_std::sync::{Arc, Mutex};
-    use cap_rust_sandbox::assertion::{EnsureMined, EnsureRejected};
+    use cap_rust_sandbox::assertion::EnsureMined;
     use cap_rust_sandbox::cape::RecordsMerkleTreeConstructorArgs;
     use cap_rust_sandbox::model::CAPE_MERKLE_HEIGHT;
     use cap_rust_sandbox::test_utils::upcast_test_cape_to_cape;

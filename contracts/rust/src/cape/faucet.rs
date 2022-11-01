@@ -12,23 +12,27 @@ mod test {
     use crate::{
         assertion::Matcher,
         deploy::deploy_test_cape_with_deployer,
-        ethereum::get_funded_client,
+        ethereum::{get_funded_client, get_provider},
         model::CAPE_MERKLE_HEIGHT,
         types::{self as sol, field_to_u256, GenericInto, TestCAPE},
     };
     use anyhow::Result;
-    use ethers::abi::AbiDecode;
+    use ethers::{abi::AbiDecode, prelude::SignerMiddleware, signers::LocalWallet};
     use jf_cap::{
         keys::UserKeyPair,
         structs::{AssetDefinition, BlindFactor, FreezeFlag, RecordCommitment, RecordOpening},
         BaseField, MerkleTree,
     };
+    use std::sync::Arc;
 
     #[tokio::test]
     async fn test_faucet() -> Result<()> {
         let rng = &mut ark_std::test_rng();
         let deployer = get_funded_client().await?;
-        let non_deployer = get_funded_client().await?;
+        let non_deployer = Arc::new(SignerMiddleware::new(
+            get_provider(),
+            LocalWallet::new(&mut rand::thread_rng()),
+        ));
         let contract = deploy_test_cape_with_deployer(deployer.clone()).await;
         let faucet_manager = UserKeyPair::generate(rng);
 
@@ -43,7 +47,7 @@ mod test {
                 faucet_manager.address().into(),
                 faucet_manager.pub_key().enc_key().into(),
             )
-            .send()
+            .call()
             .await
             .should_revert_with_message("Only invocable by deployer");
 

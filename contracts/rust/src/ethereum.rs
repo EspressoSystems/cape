@@ -26,7 +26,8 @@ use ethers::{
 use std::{convert::TryFrom, env, fs, path::Path, sync::Arc, time::Duration};
 
 /// Supply this gas limit when the automatically filled estimated gas value is
-/// too low and the transaction runs out of gas.
+/// too low and the transaction runs out of gas. This limit is large enough for
+/// arbitrum and small enough for L1 (block gas limit 30_000_000 @ 2022-11-01).
 pub const GAS_LIMIT_OVERRIDE: u64 = 25_000_000;
 
 /// Utility to interact with the CAPE contract on some Ethereum blockchain

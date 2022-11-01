@@ -25,4 +25,4 @@ export CAPE_WEB3_PROVIDER_URL=https://goerli-rollup.arbitrum.io/rpc
 export ETH_MNEMONIC="$GOERLI_MNEMONIC"
 
 echo "Running tests..."
-cargo test --release -- --test-threads 1
+cargo test --release -- --test-threads 1 "$@"

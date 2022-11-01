@@ -104,7 +104,10 @@ mod tests {
         // A connection with a random wallet (for queries only)
         let query_connection = EthConnection::from_config_for_query(
             &format!("{:?}", connection.contract.address()), // 0x123...cdf
-            "http://localhost:8545",
+            &match std::env::var("CAPE_WEB3_PROVIDER_URL") {
+                Ok(url) => url,
+                Err(_) => "http://localhost:8545".to_string(),
+            },
         );
 
         let events = query_connection

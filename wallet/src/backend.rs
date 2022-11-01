@@ -954,7 +954,8 @@ mod test {
                 // On private testnets use the unlocked account
                 let tx = TransactionRequest::new()
                     .to(Address::from(wallet.eth_address().await.unwrap()))
-                    .value(ethers::utils::parse_ether("1").unwrap());
+                    .value(ethers::utils::parse_ether("1").unwrap())
+                    .from(accounts[0]);
                 provider
                     .send_transaction(tx, None)
                     .await

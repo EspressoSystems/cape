@@ -230,7 +230,6 @@ mod tests {
                 .await?
         );
 
-        println!("adding root");
         // Set the root
         contract
             .add_root(root.generic_into::<MerkleRootSol>().0)
@@ -239,7 +238,6 @@ mod tests {
             .await?
             .ensure_mined();
 
-        println!("submit");
         // Submit to the contract
         contract
             .submit_cape_block(cape_block.into())

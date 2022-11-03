@@ -16,6 +16,8 @@ use crate::types::{
     TestTranscript, TestVerifyingKeys, CAPE,
 };
 use ethers::prelude::{k256::ecdsa::SigningKey, Http, Provider, SignerMiddleware, Wallet};
+use ethers::types::Address;
+use std::env;
 use std::sync::Arc;
 
 // Middleware used for locally signing transactions
@@ -35,13 +37,23 @@ pub async fn deploy_test_cape_with_deployer(
     deployer: Arc<EthMiddleware>,
 ) -> TestCAPE<EthMiddleware> {
     // deploy the PlonkVerifier
-    let verifier = deploy(
-        deployer.clone(),
-        &contract_abi_path("verifier/PlonkVerifier.sol/PlonkVerifier"),
-        (),
-    )
-    .await
-    .unwrap();
+
+    // If VERIFIER_ADDRESS is set, use that address instead of deploying a new
+    // contract.
+    let verifier_address = match env::var("VERIFIER_ADDRESS") {
+        Ok(val) => {
+            println!("Using Verifier at {val}");
+            val.parse::<Address>().unwrap()
+        }
+        Err(_) => deploy(
+            deployer.clone(),
+            &contract_abi_path("verifier/PlonkVerifier.sol/PlonkVerifier"),
+            (),
+        )
+        .await
+        .unwrap()
+        .address(),
+    };
 
     let records_merkle_tree = deploy(
         deployer.clone(),
@@ -57,7 +69,7 @@ pub async fn deploy_test_cape_with_deployer(
         &contract_abi_path("mocks/TestCAPE.sol/TestCAPE"),
         CAPEConstructorArgs::new(
             CAPE_NUM_ROOTS as u64,
-            verifier.address(),
+            verifier_address,
             records_merkle_tree.address(),
         )
         .to_tuple(),

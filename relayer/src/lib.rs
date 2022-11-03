@@ -30,7 +30,11 @@ use tide::{
 use tracing::{event, Level};
 
 pub const DEFAULT_RELAYER_PORT: &str = "50077";
-pub const DEFAULT_RELAYER_GAS_LIMIT: &str = "10000000"; // 10M
+
+/// The extra gas added to the gas estimate to account for the gas cost of
+/// crediting deposits.
+pub const DEFAULT_RELAYER_EXTRA_GAS: &str = "10000000"; // 10M
+
 pub const DEFAULT_RELAYER_RETRY_INTERVAL_MS: &str = "500";
 pub const DEFAULT_RELAYER_MAX_RETRIES: &str = "2";
 
@@ -88,7 +92,7 @@ fn server_error<E: Into<Error>>(err: E) -> tide::Error {
 pub struct WebState {
     contract: CAPE<EthMiddleware>,
     nonce_count_rule: NonceCountRule,
-    gas_limit: u64,
+    extra_gas: u64,
     max_retries: u64,
     retry_interval: Duration,
     block_submission_mutex: Arc<Mutex<()>>,
@@ -98,14 +102,14 @@ impl WebState {
     pub fn new(
         contract: CAPE<EthMiddleware>,
         nonce_count_rule: NonceCountRule,
-        gas_limit: u64,
+        extra_gas: u64,
         max_retries: u64,
         retry_interval: Duration,
     ) -> Self {
         Self {
             contract,
             nonce_count_rule,
-            gas_limit,
+            extra_gas,
             max_retries,
             retry_interval,
             block_submission_mutex: Arc::new(Mutex::new(())),
@@ -237,7 +241,7 @@ async fn submit_block(web_state: &WebState, block: BlockWithMemos) -> Result<H25
             &web_state.contract,
             block.clone(),
             web_state.nonce_count_rule.into(),
-            web_state.gas_limit,
+            web_state.extra_gas,
         )
         .await
         .map_err(|err| {
@@ -357,7 +361,7 @@ pub mod testing {
             Self::new(
                 upcast_test_cape_to_cape(contract.clone()),
                 NonceCountRule::Pending,
-                DEFAULT_RELAYER_GAS_LIMIT.parse().unwrap(),
+                DEFAULT_RELAYER_EXTRA_GAS.parse().unwrap(),
                 DEFAULT_RELAYER_MAX_RETRIES.parse().unwrap(),
                 Duration::from_millis(DEFAULT_RELAYER_RETRY_INTERVAL_MS.parse().unwrap()),
             )
@@ -434,7 +438,7 @@ pub mod testing {
 mod test {
     use super::*;
     use async_std::sync::{Arc, Mutex};
-    use cap_rust_sandbox::assertion::{EnsureMined, EnsureRejected};
+    use cap_rust_sandbox::assertion::EnsureMined;
     use cap_rust_sandbox::cape::RecordsMerkleTreeConstructorArgs;
     use cap_rust_sandbox::model::CAPE_MERKLE_HEIGHT;
     use cap_rust_sandbox::test_utils::upcast_test_cape_to_cape;
@@ -552,7 +556,7 @@ mod test {
         let web_state = WebState::new(
             upcast_test_cape_to_cape(contract.clone()),
             nonce_count_rule,
-            DEFAULT_RELAYER_GAS_LIMIT.parse().unwrap(),
+            DEFAULT_RELAYER_EXTRA_GAS.parse().unwrap(),
             DEFAULT_RELAYER_MAX_RETRIES.parse().unwrap(),
             Duration::from_millis(DEFAULT_RELAYER_RETRY_INTERVAL_MS.parse().unwrap()),
         );
@@ -573,49 +577,6 @@ mod test {
             res => panic!("expected submission error, got {:?}", res),
         }
         assert_eq!(contract.get_num_leaves().call().await.unwrap(), 3.into());
-    }
-
-    #[async_std::test]
-    async fn test_gas_limit_setting_has_effect() {
-        let mut rng = ChaChaRng::from_seed([42; 32]);
-        let user = UserKeyPair::generate(&mut rng);
-
-        let (contract, faucet, faucet_rec, records) = deploy_cape_contract_with_faucet(None).await;
-        let (transaction, memos, sig) =
-            generate_transfer(&mut rng, &faucet, faucet_rec, user.pub_key(), &records);
-        let provider = contract.client().provider().clone();
-
-        // Submit transaction with insufficient gas limit.
-        let web_state = WebState::new(
-            upcast_test_cape_to_cape(contract.clone()),
-            NonceCountRule::Pending,
-            1_000_000, // gas limit
-            DEFAULT_RELAYER_MAX_RETRIES.parse().unwrap(),
-            Duration::from_millis(DEFAULT_RELAYER_RETRY_INTERVAL_MS.parse().unwrap()),
-        );
-        let hash = relay(&web_state, transaction.clone(), memos.clone(), sig.clone())
-            .await
-            .unwrap();
-
-        PendingTransaction::new(hash, &provider)
-            .await
-            .unwrap()
-            .ensure_rejected();
-
-        // Submit transaction with sufficient gas limit.
-        let hash = relay(
-            &WebState::for_test(&contract),
-            transaction.clone(),
-            memos.clone(),
-            sig.clone(),
-        )
-        .await
-        .unwrap();
-
-        PendingTransaction::new(hash, &provider)
-            .await
-            .unwrap()
-            .ensure_mined();
     }
 
     fn get_client(port: u16) -> surf::Client {
@@ -707,7 +668,7 @@ mod test {
         let web_state = WebState::new(
             contract,
             NonceCountRule::Pending,
-            DEFAULT_RELAYER_GAS_LIMIT.parse().unwrap(),
+            DEFAULT_RELAYER_EXTRA_GAS.parse().unwrap(),
             DEFAULT_RELAYER_MAX_RETRIES.parse().unwrap(),
             Duration::from_millis(DEFAULT_RELAYER_RETRY_INTERVAL_MS.parse().unwrap()),
         );

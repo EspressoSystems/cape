@@ -23,12 +23,13 @@ pub fn decode_cape_block_from_event(block: BlockCommittedFilter) -> Result<CapeB
 #[cfg(test)]
 mod tests {
     use crate::{
+        assertion::EnsureMined,
         cape::{
             events::decode_cape_block_from_event,
             submit_block::{fetch_cape_memos, submit_cape_block_with_memos},
             BlockWithMemos, CapeBlock,
         },
-        ethereum::{EthConnection, GAS_LIMIT_OVERRIDE},
+        ethereum::EthConnection,
         ledger::CapeLedger,
         types::{GenericInto, MerkleRootSol},
     };
@@ -64,7 +65,8 @@ mod tests {
             .add_root(root.generic_into::<MerkleRootSol>().0)
             .send()
             .await?
-            .await?;
+            .await?
+            .ensure_mined();
 
         // Adapted from seahorse
         // https://github.com/EspressoSystems/seahorse/blob/ace20bc5f1bcf5b88ca0562799b8e80e6c52e933/src/persistence.rs#L574
@@ -96,15 +98,19 @@ mod tests {
             &connection.contract,
             block_with_memos.clone(),
             BlockNumber::Latest,
-            GAS_LIMIT_OVERRIDE, // gas limit
+            1_000_000, // extra gas. This transaction sometimes runs out of gas, reason unclear.
         )
         .await?
-        .await?;
+        .await?
+        .ensure_mined();
 
         // A connection with a random wallet (for queries only)
         let query_connection = EthConnection::from_config_for_query(
             &format!("{:?}", connection.contract.address()), // 0x123...cdf
-            "http://localhost:8545",
+            &match std::env::var("CAPE_WEB3_PROVIDER_URL") {
+                Ok(url) => url,
+                Err(_) => "http://localhost:8545".to_string(),
+            },
         );
 
         let events = query_connection

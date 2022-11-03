@@ -14,7 +14,7 @@ use ethers::prelude::{
     coins_bip39::English, Address, Middleware, MnemonicBuilder, Signer, SignerMiddleware,
 };
 use relayer::{
-    init_web_server, submit_empty_block_loop, NonceCountRule, WebState, DEFAULT_RELAYER_GAS_LIMIT,
+    init_web_server, submit_empty_block_loop, NonceCountRule, WebState, DEFAULT_RELAYER_EXTRA_GAS,
     DEFAULT_RELAYER_MAX_RETRIES, DEFAULT_RELAYER_PORT, DEFAULT_RELAYER_RETRY_INTERVAL_MS,
 };
 use std::{num::NonZeroU64, sync::Arc, time::Duration};
@@ -73,8 +73,8 @@ struct MinimalRelayerOptions {
     ///
     /// The default of 10M is enough to cover the gas cost of submitting one note
     /// and crediting up to 10 pending deposits in the smart contract.
-    #[structopt(long, env = "CAPE_RELAYER_GAS_LIMIT", default_value = DEFAULT_RELAYER_GAS_LIMIT)]
-    gas_limit: NonZeroU64,
+    #[structopt(long, env = "CAPE_RELAYER_EXTRA_GAS", default_value = DEFAULT_RELAYER_EXTRA_GAS)]
+    extra_gas: NonZeroU64,
 
     /// Maximum number of times to retry transaction submission.
     ///
@@ -121,7 +121,7 @@ async fn main() -> std::io::Result<()> {
     let web_state = WebState::new(
         contract,
         opt.nonce_count_rule,
-        opt.gas_limit.into(),
+        opt.extra_gas.into(),
         opt.max_retries,
         Duration::from_millis(opt.retry_interval),
     );

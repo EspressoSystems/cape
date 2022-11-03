@@ -14,6 +14,7 @@ use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ethers::prelude::signer::SignerMiddlewareError;
 use ethers::prelude::{BlockNumber, Provider, Wallet};
 use ethers::prelude::{Bytes, Http, Middleware, PendingTransaction, TxHash};
+use ethers::providers::ProviderError;
 use ethers_core::k256::ecdsa::SigningKey;
 
 use super::{BlockMemos, BlockWithMemos};
@@ -46,7 +47,7 @@ pub async fn submit_cape_block_with_memos(
     contract: &CAPE<EthMiddleware>,
     block: BlockWithMemos,
     block_number: BlockNumber,
-    gas_limit: u64,
+    extra_gas: u64,
 ) -> Result<PendingTransaction<'_, Http>, SignerMiddlewareError<Provider<Http>, Wallet<SigningKey>>>
 {
     let mut memos_bytes: Vec<u8> = vec![];
@@ -95,7 +96,23 @@ pub async fn submit_cape_block_with_memos(
     // gas usage of processing a burn note is potentially unbounded. Using
     // tokens whose transfer function far exceeds normal gas consumption is
     // currently not supported.
-    tx.set_gas(gas_limit);
+    //
+    // TODO: mathis: it's a bit wasteful to download the entire block for this
+    // but I don't know of another way to obtain the current block gas limit.
+    let block = contract
+        .client()
+        .get_block(BlockNumber::Latest)
+        .await?
+        .ok_or_else(|| {
+            SignerMiddlewareError::MiddlewareError(ProviderError::CustomError(
+                "Did not receive a block".to_string(),
+            ))
+        })?;
+
+    tx.set_gas(std::cmp::min(
+        tx.gas().ok_or(SignerMiddlewareError::GasMissing)? + extra_gas,
+        block.gas_limit,
+    ));
 
     contract.client().send_transaction(tx, None).await
 }
@@ -236,7 +253,6 @@ mod tests {
             .await?
             .ensure_mined();
 
-        // Check that now the nullifier has been inserted
         assert!(
             contract
                 .nullifiers(nf.generic_into::<NullifierSol>().0)

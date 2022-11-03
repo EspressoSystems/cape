@@ -26,8 +26,9 @@ use ethers::{
 use std::{convert::TryFrom, env, fs, path::Path, sync::Arc, time::Duration};
 
 /// Supply this gas limit when the automatically filled estimated gas value is
-/// too low and the transaction runs out of gas.
-pub const GAS_LIMIT_OVERRIDE: u64 = 10_000_000;
+/// too low and the transaction runs out of gas. This limit is large enough for
+/// arbitrum and small enough for L1 (block gas limit 30_000_000 @ 2022-11-01).
+pub const GAS_LIMIT_OVERRIDE: u64 = 25_000_000;
 
 /// Utility to interact with the CAPE contract on some Ethereum blockchain
 #[derive(Clone, Debug)]
@@ -157,7 +158,10 @@ async fn link_unlinked_libraries<M: 'static + Middleware>(
         // Connect to linked library if env var with address is set
         // otherwise, deploy the library.
         let rescue_lib_address = match env::var("RESCUE_LIB_ADDRESS") {
-            Ok(val) => val.parse::<Address>()?,
+            Ok(val) => {
+                println!("Using RescueLib library at {val}");
+                val.parse::<Address>()?
+            }
             Err(_) => deploy(
                 client.clone(),
                 &contract_abi_path("libraries/RescueLib.sol/RescueLib"),
@@ -181,7 +185,10 @@ async fn link_unlinked_libraries<M: 'static + Middleware>(
         // Connect to linked library if env var with address is set
         // otherwise, deploy the library.
         let verifying_keys_lib_address = match env::var("VERIFYING_KEYS_LIB_ADDRESS") {
-            Ok(val) => val.parse::<Address>()?,
+            Ok(val) => {
+                println!("Using VerifyingKeys library at {val}");
+                val.parse::<Address>()?
+            }
             Err(_) => deploy(
                 client.clone(),
                 &contract_abi_path("libraries/VerifyingKeys.sol/VerifyingKeys"),

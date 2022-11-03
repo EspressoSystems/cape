@@ -713,7 +713,9 @@ mod test {
         ui::AssetInfo,
     };
     use crate::{CapeWallet, CapeWalletExt};
-    use cap_rust_sandbox::{deploy::deploy_erc20_token, universal_param::UNIVERSAL_PARAM};
+    use cap_rust_sandbox::{
+        deploy::deploy_erc20_token, ethereum::get_funded_client, universal_param::UNIVERSAL_PARAM,
+    };
     use ethers::types::{TransactionRequest, U256};
     use jf_cap::structs::AssetCode;
     use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
@@ -932,19 +934,35 @@ mod test {
         // Fund the Ethereum wallets for contract calls.
         let provider =
             EthRpc::provider(&rpc_url_for_test()).interval(Duration::from_millis(100u64));
+
+        let deployer = get_funded_client().await.unwrap();
         let accounts = provider.get_accounts().await.unwrap();
-        assert!(!accounts.is_empty());
+
         for wallet in [&sponsor, &wrapper] {
-            let tx = TransactionRequest::new()
-                .to(Address::from(wallet.eth_address().await.unwrap()))
-                .value(ethers::utils::parse_ether(U256::from(1u64)).unwrap())
-                .from(accounts[0]);
-            provider
-                .send_transaction(tx, None)
-                .await
-                .unwrap()
-                .await
-                .unwrap();
+            if accounts.is_empty() {
+                // On public testnets we don't have unlocked accounts
+                let tx = TransactionRequest::new()
+                    .to(Address::from(wallet.eth_address().await.unwrap()))
+                    .value(ethers::utils::parse_ether("0.01").unwrap());
+                deployer
+                    .send_transaction(tx, None)
+                    .await
+                    .unwrap()
+                    .await
+                    .unwrap();
+            } else {
+                // On private testnets use the unlocked account
+                let tx = TransactionRequest::new()
+                    .to(Address::from(wallet.eth_address().await.unwrap()))
+                    .value(ethers::utils::parse_ether("1").unwrap())
+                    .from(accounts[0]);
+                provider
+                    .send_transaction(tx, None)
+                    .await
+                    .unwrap()
+                    .await
+                    .unwrap();
+            }
         }
 
         let erc20_contract = deploy_erc20_token().await;

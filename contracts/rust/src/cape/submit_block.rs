@@ -14,6 +14,7 @@ use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ethers::prelude::signer::SignerMiddlewareError;
 use ethers::prelude::{BlockNumber, Provider, Wallet};
 use ethers::prelude::{Bytes, Http, Middleware, PendingTransaction, TxHash};
+use ethers::providers::ProviderError;
 use ethers_core::k256::ecdsa::SigningKey;
 
 use super::{BlockMemos, BlockWithMemos};
@@ -102,9 +103,14 @@ pub async fn submit_cape_block_with_memos(
         .client()
         .get_block(BlockNumber::Latest)
         .await?
-        .unwrap();
+        .ok_or_else(|| {
+            SignerMiddlewareError::MiddlewareError(ProviderError::CustomError(
+                "Did not receive a block".to_string(),
+            ))
+        })?;
+
     tx.set_gas(std::cmp::min(
-        tx.gas().unwrap() + extra_gas,
+        tx.gas().ok_or(SignerMiddlewareError::GasMissing)? + extra_gas,
         block.gas_limit,
     ));
 

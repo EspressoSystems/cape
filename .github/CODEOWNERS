@@ -7,8 +7,8 @@
 #    https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
 # for more details.
 
-* alxiong philippecamacho sveitser
-/wallet/ jbearer shenkeyao
-/relayer/ nyospe
-/doc/ pictographer
-/.github/ Ancient123
+* @alxiong @philippecamacho @sveitser
+/wallet/ @jbearer @shenkeyao
+/relayer/ @nyospe
+/doc/ @pictographer
+/.github/ @Ancient123

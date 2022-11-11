@@ -73,19 +73,16 @@ const config: HardhatUserConfig = {
     },
     rinkeby: {
       url: process.env.RINKEBY_URL,
-      gasPrice: 2_000_000_000,
       accounts: { mnemonic: process.env.RINKEBY_MNEMONIC },
       tags: ["public"],
     },
     goerli: {
       url: process.env.GOERLI_URL,
-      gasPrice: 2_000_000_000,
       accounts: { mnemonic: process.env.GOERLI_MNEMONIC },
       tags: ["public"],
     },
     arbitrum_goerli: {
       url: "https://goerli-rollup.arbitrum.io/rpc",
-      gasPrice: 100_000_000,
       accounts: { mnemonic: process.env.GOERLI_MNEMONIC },
     },
     localhost: {

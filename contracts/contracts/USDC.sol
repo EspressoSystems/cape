@@ -13,4 +13,8 @@ import "./WrapToken.sol";
 
 contract USDC is WrapToken {
     constructor() WrapToken("USD Coin", "USDC") {}
+
+    function decimals() public pure override returns (uint8) {
+        return 6;
+    }
 }

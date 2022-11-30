@@ -13,9 +13,9 @@ RUN chmod +x /app/wallet-cli
 
 # Point at the Goerli testnet deployment by default; all of these settings can be overridden with
 # command line options.
-ENV CAPE_EQS_URL=https://eqs.goerli.cape.tech
-ENV CAPE_RELAYER_URL=https://relayer.goerli.cape.tech
-ENV CAPE_ADDRESS_BOOK_URL=https://address-book.goerli.cape.tech
+ENV CAPE_EQS_URL=https://eqs.arbitrum-goerli.cape.tech
+ENV CAPE_RELAYER_URL=https://relayer.arbitrum-goerli.cape.tech
+ENV CAPE_ADDRESS_BOOK_URL=https://address-book.arbitrum-goerli.cape.tech
 
 # Set the storage directory to allow the wallet to access the official assets library.
 ENV CAPE_WALLET_STORAGE=/.espresso

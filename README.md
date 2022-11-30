@@ -77,6 +77,7 @@ describes the project at a high level.
   - [Testnets](#testnets)
     - [Goerli](#goerli)
     - [Running the smoke tests](#running-the-smoke-tests)
+- [Arbitrum on Goerli](#arbitrum-on-goerli)
 
 ## Obtaining the source code
 
@@ -599,9 +600,14 @@ generator to authenticate itself in various ways:
   assets in the official asset library.
 
 You must also have a TOML file specifying the assets to create. There are already TOML files for
-the official asset libraries for [the Goerli deployment](wallet/official_assets/cape_v1_official_assets.toml)
-and [the local demo](wallet/official_assets/cape_demo_local_official_assets.toml). These can always
-be modified or copied to create fully customizable asset libraries.
+the official asset libraries for
+
+- [the Goerli deployment](wallet/official_assets/cape_v1_official_assets.toml)
+- [the local demo](wallet/official_assets/cape_demo_local_official_assets.toml)
+- [the Arbitrum goerli deployment](wallet/official_assets/cape_v2_official_assets.toml)
+
+These can always be modified or copied to create fully customizable asset
+libraries.
 
 Then, the command would look like
 
@@ -704,4 +710,18 @@ project and use their arbitrum goerli RPC and use it via
 
 ```
 CAPE_WEB3_PROVIDER_URL=https://arbitrum-goerli.infura.io/v3/... run-tests-arbitrum
+```
+
+To deploy mintable tokens that users can mint by sending Ether to it run
+
+```
+hardhat deploy --tags Token --network arbitrum_goerli --reset
+```
+
+The currently deployed token contracts on arbitrum goerli are
+
+```console
+WETH 0x4F1D9E040cf28A522ec79951cDb7B55c8aE4744E
+DAI 0xBeec50ed16E3559afCD582cC98ed2b5F5DcA189E
+USDC 0x9A4f4Ee35a8FfEE459B3187A372d422790fc8aAB
 ```

@@ -712,3 +712,11 @@ To deploy mintable tokens that users can mint by sending Ether to it run
 ```
 hardhat deploy --tags Token --network arbitrum_goerli --reset
 ```
+
+The currently deployed token contracts on arbitrum goerli are
+
+```console
+WETH 0x4F1D9E040cf28A522ec79951cDb7B55c8aE4744E
+DAI 0xBeec50ed16E3559afCD582cC98ed2b5F5DcA189E
+USDC 0x9A4f4Ee35a8FfEE459B3187A372d422790fc8aAB
+```

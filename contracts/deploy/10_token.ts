@@ -10,13 +10,18 @@ import { DeployFunction } from "hardhat-deploy/types";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
-  const { deploy } = deployments;
-  const { tokenOwner } = await getNamedAccounts();
+  const { deploy, log, read, execute } = deployments;
+  const { deployer } = await getNamedAccounts();
 
-  await deploy("SimpleToken", { from: tokenOwner, log: true });
-  await deploy("WETH", { from: tokenOwner, log: true });
-  await deploy("DAI", { from: tokenOwner, log: true });
-  await deploy("USDC", { from: tokenOwner, log: true });
+  const deployToken = async (name: string) => {
+    await deploy(name, { from: deployer, log: true });
+    let decimals = await read(name, "decimals");
+    log(`Deployed with ${decimals} decimals`);
+  };
+
+  await deployToken("WETH");
+  await deployToken("DAI");
+  await deployToken("USDC");
 };
 
 export default func;

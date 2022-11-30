@@ -12,5 +12,8 @@ pragma solidity ^0.8.0;
 import "./WrapToken.sol";
 
 contract SimpleToken is WrapToken {
-    constructor() WrapToken("Simple Token", "SIT") {}
+    /// @notice The deployer receives 1e9 units.
+    constructor() WrapToken("Simple Token", "SIT") {
+        _mint(msg.sender, 1_000_000_000);
+    }
 }

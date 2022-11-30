@@ -77,6 +77,7 @@ describes the project at a high level.
   - [Testnets](#testnets)
     - [Goerli](#goerli)
     - [Running the smoke tests](#running-the-smoke-tests)
+- [Arbitrum on Goerli](#arbitrum-on-goerli)
 
 ## Obtaining the source code
 
@@ -704,4 +705,10 @@ project and use their arbitrum goerli RPC and use it via
 
 ```
 CAPE_WEB3_PROVIDER_URL=https://arbitrum-goerli.infura.io/v3/... run-tests-arbitrum
+```
+
+To deploy mintable tokens that users can mint by sending Ether to it run
+
+```
+hardhat deploy --tags Token --network arbitrum_goerli --reset
 ```

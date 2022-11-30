@@ -1,0 +1,41 @@
+
+# Copyright (c) 2022 Espresso Systems (espressosys.com)
+# This file is part of the Configurable Asset Privacy for Ethereum (CAPE) library.
+#
+# This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+# You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+# The official asset library for CAPE v1 on Goerli
+
+[[assets]]
+symbol = 'CAPE'
+type = 'native'
+
+[[assets]]
+symbol = 'capedWETH'
+description = 'Wrapped WETH on Goerli'
+icon = 'icons/WGTH.png'
+type = 'wrapped'
+contract = '0x4F1D9E040cf28A522ec79951cDb7B55c8aE4744E'
+viewing_key = 'AUDPUBKEY~a0J7uXJcUxDnSONQamzF6bZXpTrvPeKHCGKLsFx9tQiI'
+
+[[assets]]
+symbol = 'capedDAI'
+description = 'Wrapped DAI'
+icon = 'icons/DAI.png'
+type = 'wrapped'
+contract = '0xBeec50ed16E3559afCD582cC98ed2b5F5DcA189E'
+# The viewing key is maintained by Espresso, but would belong to Maker Foundation in a real deployment
+viewing_key = 'AUDPUBKEY~z1xFfj2B6dTdUn1tcyexZd8v8foMPDJibT8hrmXXkAhx'
+
+[[assets]]
+symbol = 'capedUSDC'
+description = 'Wrapped USDC'
+icon = 'icons/USDC.png'
+type = 'wrapped'
+contract = '0x9A4f4Ee35a8FfEE459B3187A372d422790fc8aAB'
+# The viewing key is maintained by Espresso, but would belong to Circle in a real deployment
+viewing_key = 'AUDPUBKEY~A1EVmqt8rZc6ibPolJ0gVI-cUxTOark5L9e9TTEDt6G-'
+# The freezing key is maintained by Espresso, but would belong to Circle in a real deployment
+freezing_key = 'FREEZEPUBKEY~iCR07O3hlKc25lFd467Eqs3ZAF1ME1wT5aW9VqHa14e2'

@@ -600,9 +600,14 @@ generator to authenticate itself in various ways:
   assets in the official asset library.
 
 You must also have a TOML file specifying the assets to create. There are already TOML files for
-the official asset libraries for [the Goerli deployment](wallet/official_assets/cape_v1_official_assets.toml)
-and [the local demo](wallet/official_assets/cape_demo_local_official_assets.toml). These can always
-be modified or copied to create fully customizable asset libraries.
+the official asset libraries for
+
+- [the Goerli deployment](wallet/official_assets/cape_v1_official_assets.toml)
+- [the local demo](wallet/official_assets/cape_demo_local_official_assets.toml)
+- [the Arbitrum goerli deployment](wallet/official_assets/cape_v2_official_assets.toml)
+
+These can always be modified or copied to create fully customizable asset
+libraries.
 
 Then, the command would look like
 

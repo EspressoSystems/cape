@@ -7,9 +7,12 @@ COPY target/release/wallet-api /app/wallet-api
 COPY target/release/wallet-cli /app/wallet-cli
 COPY wallet/api /app/api
 COPY wallet/public /app/public
-COPY wallet/official_assets/cape_v1_official_assets.lib /.espresso/verified_assets
+COPY wallet/official_assets/cape_v2_official_assets.lib /.espresso/verified_assets
 RUN chmod +x /app/wallet-api
 RUN chmod +x /app/wallet-cli
+
+
+ENV CAPE_WALLET_ASSET_LIBRARY_VERIFIER_KEY=SCHNORRVERKEY~P-ZcYMUYtJ6O5UTpIeBCvfqekOVD_3i2PSEkD8feUJdp
 
 # Point at the Goerli testnet deployment by default; all of these settings can be overridden with
 # command line options.

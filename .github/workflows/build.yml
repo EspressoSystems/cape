@@ -119,12 +119,12 @@ jobs:
         with:
           path: wallet-checkout
 
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: wallet-webserver
           path: wallet-checkout/target/release/
 
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: wallet-cli
           path: wallet-checkout/target/release/
@@ -172,7 +172,7 @@ jobs:
         with:
           path: services-checkout
 
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: services-executables
           path: services-checkout/target/release/
@@ -216,7 +216,7 @@ jobs:
       - uses: actions/checkout@v3
         name: Checkout Repository
 
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: geth-data-dir
           path: scratch/geth-data-dir/

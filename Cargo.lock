@@ -1186,7 +1186,7 @@ dependencies = [
  "shellexpand",
  "snafu",
  "structopt",
- "strum 0.20.0",
+ "strum",
  "strum_macros 0.20.1",
  "surf",
  "tagged-base64 0.2.0 (git+https://github.com/EspressoSystems/tagged-base64.git?tag=0.2.0)",
@@ -2157,7 +2157,7 @@ dependencies = [
  "serde_json",
  "snafu",
  "structopt",
- "strum 0.20.0",
+ "strum",
  "strum_macros 0.20.1",
  "surf",
  "tagged-base64 0.2.0 (git+https://github.com/EspressoSystems/tagged-base64.git?tag=0.2.0)",
@@ -2402,7 +2402,7 @@ dependencies = [
  "rust_decimal",
  "serde",
  "serde_json",
- "strum 0.24.0",
+ "strum",
  "syn",
  "thiserror",
  "tiny-keccak",
@@ -5335,7 +5335,7 @@ dependencies = [
  "sha3 0.9.1",
  "snafu",
  "structopt",
- "strum 0.24.0",
+ "strum",
  "strum_macros 0.20.1",
  "surf",
  "tagged-base64 0.2.0 (git+https://github.com/EspressoSystems/tagged-base64.git?tag=0.2.0)",
@@ -5884,12 +5884,6 @@ dependencies = [
  "quote",
  "syn",
 ]
-
-[[package]]
-name = "strum"
-version = "0.20.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7318c509b5ba57f18533982607f24070a55d353e90d4cae30c467cdb2ad5ac5c"
 
 [[package]]
 name = "strum"

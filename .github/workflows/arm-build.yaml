@@ -37,7 +37,7 @@ jobs:
         run: |
           git checkout -f $(git -c user.name=x -c user.email=x@x commit-tree $(git hash-object -t tree /dev/null) < /dev/null) || :
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         name: Checkout Repository
 
       - name: Work around git issue after git CVE-2022-24765 fix.
@@ -78,7 +78,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         name: Checkout Repository
 
       - uses: actions/download-artifact@v2

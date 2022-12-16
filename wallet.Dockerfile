@@ -8,8 +8,10 @@ COPY target/release/wallet-cli /app/wallet-cli
 COPY wallet/api /app/api
 COPY wallet/public /app/public
 COPY wallet/official_assets/cape_v2_official_assets.lib /.espresso/verified_assets
+COPY bin/wait-for-it.sh /bin/wait-for-it.sh
 RUN chmod +x /app/wallet-api
 RUN chmod +x /app/wallet-cli
+RUN chmod +x /bin/wait-for-it.sh
 
 
 ENV CAPE_WALLET_ASSET_LIBRARY_VERIFIER_KEY=SCHNORRVERKEY~P-ZcYMUYtJ6O5UTpIeBCvfqekOVD_3i2PSEkD8feUJdp

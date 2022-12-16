@@ -1,5 +1,9 @@
 FROM nix-base-docker
 
+#Wait for it convenience script
+COPY bin/wait-for-it.sh /bin/wait-for-it.sh
+RUN chmod +x /bin/wait-for-it.sh
+
 # EQS
 # docker run --workdir /app/eqs -it cape/services /app/eqs/eqs
 COPY target/release/eqs /app/eqs/eqs

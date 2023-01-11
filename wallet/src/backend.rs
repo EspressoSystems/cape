@@ -6,8 +6,6 @@
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 //! An implementation of [seahorse::WalletBackend] for CAPE.
-#![deny(warnings)]
-
 use crate::{loader::CapeMetadata, CapeWalletBackend, CapeWalletError};
 use address_book::InsertPubKey;
 use async_std::{

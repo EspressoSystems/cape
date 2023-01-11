@@ -8,7 +8,6 @@
 // A wallet that generates random transactions, for testing purposes.
 // This test is still a work in progress and will not work until we have
 // integration with the EQS.  See Issue: https://github.com/EspressoSystems/cape/issues/548
-#![deny(warnings)]
 
 use async_std::task::sleep;
 use cap_rust_sandbox::{deploy::deploy_erc20_token, universal_param::UNIVERSAL_PARAM};

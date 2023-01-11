@@ -46,7 +46,7 @@
         opensslMusl.dev
         opensslMusl.out
       ];
-      stableMuslRustToolchain = pkgs.rust-bin.stable."1.63.0".minimal.override {
+      stableMuslRustToolchain = pkgs.rust-bin.stable.latest.minimal.override {
         extensions = [ "rustfmt" "clippy" "llvm-tools-preview" "rust-src" ];
         targets = [ "x86_64-unknown-linux-musl" ];
       };
@@ -58,7 +58,7 @@
       pythonEnv = pkgs.poetry2nix.mkPoetryEnv { projectDir = ./.; };
       myPython = with pkgs; [ poetry pythonEnv ];
 
-      stableRustToolchain = pkgs.rust-bin.stable."1.63.0".minimal.override {
+      stableRustToolchain = pkgs.rust-bin.stable.latest.minimal.override {
         extensions = [ "rustfmt" "clippy" "llvm-tools-preview" "rust-src" ];
       };
       rustDeps = with pkgs;

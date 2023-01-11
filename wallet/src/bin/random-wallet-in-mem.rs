@@ -11,7 +11,6 @@
 //
 // This test is still a work in progrogress.  See: https://github.com/EspressoSystems/cape/issues/649
 // for everything left before it works properly.
-#![deny(warnings)]
 
 use cap_rust_sandbox::{deploy::deploy_erc20_token, universal_param::UNIVERSAL_PARAM};
 use cape_wallet::backend::{CapeBackend, CapeBackendConfig};

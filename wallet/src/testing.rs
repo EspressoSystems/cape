@@ -6,7 +6,6 @@
 // You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 //! Utilities for writing wallet tests
-// #![deny(warnings)]
 
 use crate::backend::CapeBackend;
 use crate::mocks::*;

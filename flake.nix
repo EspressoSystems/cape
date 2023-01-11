@@ -109,7 +109,15 @@
             cargo-clippy = {
               enable = true;
               description = "Lint Rust code.";
-              entry = "cargo-clippy --workspace -- -D warnings";
+              entry = "cargo-clippy --workspace -- -D warnings" + pkgs.lib.strings.concatMapStrings (lint: " -A clippy::${lint} ") [
+                # These lints are new from 1.63 to 1.66.1, we should fix the code and remove the allowed lints.
+                "bool-to-int-with-if"
+                "explicit-auto-deref"
+                "needless_borrow"
+                "partialeq-to-none"
+                "result_large_err"
+                "unnecessary_cast"
+              ];
               files = "\\.rs$";
               pass_filenames = false;
             };

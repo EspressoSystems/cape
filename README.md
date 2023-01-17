@@ -569,7 +569,12 @@ After running `hardhat deploy`, run the [etherscan-verify](./bin/etherscan-verif
     etherscan-verify goerli
 
 This requires the `ETHERSCAN_API_KEY` env var to be set. Keys can be found at
-https://etherscan.io/myapikey.
+
+- goerli: https://etherscan.io/myapikey.
+- arbitrum goerli: https://arbiscan.io/myapikey
+
+For arbitrum goerli replace `goerli` with `arbitrum_goerli` in the above
+commands and set the api key via `ARBISCAN_API_KEY` instead.
 
 ## Official assets
 

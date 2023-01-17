@@ -9,19 +9,7 @@
 #
 # Verify contracts on etherscan.
 #
-# This requires the `ETHERSCAN_API_KEY` env var to be set. Keys can be found at
-# https://etherscan.io/myapikey.
-#
-# Usage:
-#
-#       hardhat deploy --network NETWORK
-#       etherscan-verify NETWORK
-#
-# For example
-#
-#       hardhat deploy --network goerli
-#       etherscan-verify goerli
-#
+# See "Etherscan verification" section in README.md for usage instructions.
 set -euo pipefail
 
 NETWORK=$1
@@ -72,6 +60,9 @@ function ensure_verified() {
         exit 1
     fi
 }
+
+echo "Removing old artifacts."
+rm -rf contracts/artifacts
 
 echo Verifying RescueLib
 ensure_verified hardhat verify --network $NETWORK $RESCUE_LIB_ADDRESS

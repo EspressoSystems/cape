@@ -54,9 +54,6 @@ subtask(TASK_COMPILE_SOLIDITY_GET_SOLC_BUILD, async (args: any, _hre, runSuper) 
 
 const config: HardhatUserConfig = {
   defaultNetwork: "localhost",
-  etherscan: {
-    apiKey: process.env.ETHERSCAN_API_KEY,
-  },
   namedAccounts: {
     deployer: 0,
     tokenOwner: 1,
@@ -90,6 +87,22 @@ const config: HardhatUserConfig = {
       timeout: 120000, // when running against hardhat, some tests are very slow
       tags: ["local"],
     },
+  },
+  etherscan: {
+    apiKey: {
+      arbitrumGoerli: process.env.ARBISCAN_API_KEY || "",
+      goerli: process.env.ETHERSCAN_API_KEY || "",
+    },
+    customChains: [
+      {
+        network: "arbitrumGoerli",
+        chainId: 421613,
+        urls: {
+          apiURL: "https://api-goerli.arbiscan.io/api",
+          browserURL: "https://goerli.arbiscan.io/",
+        },
+      },
+    ],
   },
   solidity: {
     version: process.env.SOLC_VERSION ? process.env.SOLC_VERSION : "0.8.0",

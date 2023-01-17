@@ -79,7 +79,6 @@ const config: HardhatUserConfig = {
       tags: ["public"],
     },
     arbitrum_goerli: {
-      chainId: 421613,
       url: "https://goerli-rollup.arbitrum.io/rpc",
       accounts: { mnemonic: process.env.GOERLI_MNEMONIC },
     },

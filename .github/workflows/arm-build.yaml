@@ -91,7 +91,7 @@ jobs:
           patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 ./target/release/wallet-api
           patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 ./target/release/wallet-cli
 
-      - uses: docker/setup-qemu-action@v2
+      - uses: docker/setup-qemu-action@v3
         with:
           platforms: arm64
 

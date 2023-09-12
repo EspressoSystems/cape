@@ -147,7 +147,7 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: docker/metadata-action@v4
+      - uses: docker/metadata-action@v5
         name: Generate Docker Metadata
         id: meta
         with:
@@ -190,7 +190,7 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: docker/metadata-action@v4
+      - uses: docker/metadata-action@v5
         name: Generate Docker Metadata
         id: meta
         with:
@@ -232,7 +232,7 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: docker/metadata-action@v4
+      - uses: docker/metadata-action@v5
         name: Generate Docker Metadata
         id: meta
         with:

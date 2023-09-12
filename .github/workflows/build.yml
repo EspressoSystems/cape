@@ -134,7 +134,7 @@ jobs:
           patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 ./wallet-checkout/target/release/wallet-api
           patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 ./wallet-checkout/target/release/wallet-cli
 
-      - uses: docker/setup-buildx-action@v2
+      - uses: docker/setup-buildx-action@v3
         name: Setup Docker BuildKit (buildx)
         with:
           driver: docker
@@ -177,7 +177,7 @@ jobs:
           name: services-executables
           path: services-checkout/target/release/
 
-      - uses: docker/setup-buildx-action@v2
+      - uses: docker/setup-buildx-action@v3
         name: Setup Docker BuildKit (buildx)
         with:
           driver: docker
@@ -221,7 +221,7 @@ jobs:
           name: geth-data-dir
           path: scratch/geth-data-dir/
 
-      - uses: docker/setup-buildx-action@v2
+      - uses: docker/setup-buildx-action@v3
         name: Setup Docker BuildKit (buildx)
 
       - uses: docker/login-action@v2

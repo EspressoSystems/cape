@@ -83,19 +83,19 @@ jobs:
       - name: Build demo geth data dir
         run: nix-shell --run "demo/initialize-demo-geth"
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: wallet-webserver
           path: |
             target/release/wallet-api
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: wallet-cli
           path: |
             target/release/wallet-cli
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: services-executables
           path: |
@@ -104,7 +104,7 @@ jobs:
             target/release/faucet
             target/release/minimal-relayer
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: geth-data-dir
           path: |
